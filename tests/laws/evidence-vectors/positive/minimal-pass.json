@@ -1,0 +1,13 @@
+{
+  "format_version": 0,
+  "law_id": "L0.1",
+  "milestone": "M0",
+  "verdict": "pass",
+  "run_at": "2026-08-24T12:00:00Z",
+  "seed": null,
+  "descriptors": [],
+  "environment": {
+    "python": "3.14.7",
+    "packages": { "pytest": "9.1.1", "hypothesis": "6.165.10" }
+  }
+}

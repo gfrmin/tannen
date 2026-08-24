@@ -1,0 +1,28 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0030
+title: Session 0 continued into M0 Session A under owner instruction; A/B separation preserved
+tier: A
+date: "2026-08-24"
+decision: >-
+  On the owner's live instruction ("why queued then? dont stop unless necessary",
+  2026-08-24) and the §9.2 non-blocking rule, this session continued past governance
+  bootstrap into M0 Session A (spec + law freeze) instead of ending at the queued
+  opening sitting. CLAUDE.md's fresh-session-per-phase discipline is deviated from
+  for the 0→A boundary only, at the owner's word; the load-bearing separation — the
+  spec/freeze session never carrying into implementation — is preserved absolutely:
+  Session B runs as a fresh session in the M0 worktree, and per BRIEF §9.1 it cannot
+  start before the opening sitting anyway, because the m0-laws-freeze tag is a
+  milestone boundary and the attention receipt is stale, so work pauses there.
+  "Plan mode" for Session A is read as its substance (specification only, no
+  implementation): no kernel module was written this session.
+rationale: >-
+  The owner's instruction outranks the session convention it waives; recording the
+  deviation keeps the protocol's history honest and non-precedential.
+reversibility: >-
+  None needed; the next phase boundary reverts to the standing discipline.
+status: accepted
+bindings:
+  - type: file
+    target: docs/specs/m0.md
+    detail: "§7 records the boundary pause this continuation lands on"
+risk_flags: [governance-paths]

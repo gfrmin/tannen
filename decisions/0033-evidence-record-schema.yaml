@@ -1,0 +1,31 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0033
+title: Evidence-record schema (Grade-S, owned) ships with the M0 laws
+tier: A
+date: "2026-08-24"
+decision: >-
+  governance/schemas/evidence-record.schema.json defines the law-evidence record
+  (BRIEF P6): format_version, law_id (L<n>.<m>), milestone, verdict, run_at
+  (RFC 3339, the runner's clock — the shell's, never the kernel's), seed (replay
+  token, nullable), descriptors (pinned-grammar refs, possibly empty), environment
+  (python + package versions). The record's id is the content address of its
+  canonical encoding and therefore not a field. Vectors live at
+  tests/laws/evidence-vectors/ (positive and negative), frozen with the laws per
+  BRIEF §7 ("their schema and vectors ship alongside the laws that emit them");
+  L0.10 is the parse-all-positives / reject-all-negatives conformance law and runs
+  green from the freeze. No separate concept record: this is an export of the owned
+  semiring-relations row, not a ninth BRIEF §2 row.
+rationale: >-
+  Wire-first rule: evidence records cross toward the Governor seam as data, so they
+  must be Grade S from birth. Shipping schema+vectors at the freeze makes the
+  Session-B emitter conform to a treaty it cannot negotiate with itself.
+reversibility: >-
+  format_version 0; evolution is a new version + new vectors at a freeze point.
+status: accepted
+bindings:
+  - type: manifest
+    target: governance/schemas/evidence-record.schema.json
+  - type: manifest
+    target: tests/laws/m0/test_l0_evidence.py
+  - type: file
+    target: tests/laws/evidence-vectors/positive/minimal-pass.json

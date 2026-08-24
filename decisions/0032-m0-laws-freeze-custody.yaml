@@ -1,0 +1,33 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0032
+title: m0-laws-freeze builder-signed under the drafted standing delegation
+tier: A
+date: "2026-08-24"
+decision: >-
+  The M0 freeze set (docs/specs/m0.md, the four law files, golden-vectors.json, the
+  evidence-record schema and vectors) is added to MANIFEST.sha256 and sealed by the
+  m0-laws-freeze tag, builder-signed with DELEGATIONS.md quoted as the tag message.
+  Custody caveat, recorded rather than hidden: the standing delegation is drafted
+  but not yet owner-blessed (that happens when brief-freeze is signed quoting the
+  same text), so this tag's authority is contingent — the opening sitting either
+  blesses it (by signing brief-freeze, whose delegation text explicitly covers
+  law-freeze tags) or the owner amends the frozen set at the sitting via the
+  supersede protocol. Either way the tag is a milestone boundary (BRIEF §9.1), the
+  attention receipt is stale, and Session B cannot begin before the sitting — the
+  contingency resolves before any implementation relies on it.
+rationale: >-
+  The non-blocking rule (§9.2) says proceed rather than park Session A on the queued
+  sitting; the frozen-oracle protocol wants the freeze before any implementation
+  session exists. Sequencing the freeze before its blessing is safe exactly because
+  the boundary pause lands between them.
+reversibility: >-
+  If the owner vetoes at the sitting: new law files supersede, old rows annotated in
+  the manifest notes, the tag stays as history (append-only record of the path).
+status: accepted
+bindings:
+  - type: file
+    target: DELEGATIONS.md
+    detail: the delegation text the tag quotes
+  - type: manifest
+    target: docs/specs/m0.md
+risk_flags: [governance-paths]

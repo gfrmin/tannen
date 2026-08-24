@@ -1,0 +1,37 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0031
+title: M0 canonical-encoding ambiguity pins (docs/specs/m0.md §2)
+tier: A
+date: "2026-08-24"
+decision: >-
+  Where BRIEF §4's encoding decision left freedom, M0 pins it, each pin bound to a
+  frozen law: value domain None/bool/int/str/Decimal/list/dict[str] with everything
+  else refused (L0.3); NFC on every string with NFC-colliding keys refused, never
+  merged (L0.3/L0.4); decimals as {"$decimal": s} with s the exponent-free minimal
+  form of the normalised value, so numeric equality implies identical encoding
+  (L0.4); the "$decimal" key refused by name in user maps rather than escaped (the
+  door style); JSON null as the image of Option.none, never SQL NULL; string escapes
+  exactly as the production canonical_json precedent emits (renavon-monorepo
+  shared/src/shared/ingest/descriptor.py at pinned commit ab68dd9c: sort_keys,
+  separators (",",":"), ensure_ascii=False, sha256 over UTF-8); decode lenient
+  outside the canonical image (canonicalisation is encode's job) but strict about
+  float literals, duplicate keys, and malformed tags; the kernel/store split puts
+  encoding+descriptor in tannen.kernel (pure) and the filesystem store in
+  tannen.store (shell), keeping the kernel-no-io contract exact. Golden vectors were
+  authored by hand from these rules before any implementation exists.
+rationale: >-
+  BRIEF §4: silence is resolved by a pinning property test, recorded as a decision
+  bound to that test. Every pin above is an assertion in the frozen L0 suite;
+  bindings use file type and harden to pytest node bindings when M0 turns them from
+  skips to runs (a skipped pytest binding would read as non-enforcement, D0008).
+reversibility: >-
+  Frozen: a wrong pin is superseded by a new law file plus a defect record, never
+  edited (CLAUDE.md).
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m0/test_l0_encoding.py
+  - type: manifest
+    target: tests/laws/m0/golden-vectors.json
+  - type: manifest
+    target: docs/specs/m0.md

@@ -1,0 +1,26 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0029
+title: Mechanical [owns]/[cites] marker check — scope pinned to docs/specs/
+tier: A
+date: "2026-08-24"
+decision: >-
+  check_concepts enforces BRIEF §2's marker discipline mechanically: every
+  docs/specs/*.md must carry [owns] or at least one [cites: <concept-id>] marker,
+  and every citation must resolve to a registered concept id. Scope is pinned to
+  docs/specs/ — the normative prose this repo writes; the constitution (BRIEF.md,
+  CLAUDE.md) predates the marker convention and is frozen, generated projections are
+  queries, and vendored snapshots are the owners' words. Semantic paraphrase
+  detection is not attempted (BRIEF §2: the defence is having almost nothing to
+  paraphrase).
+rationale: >-
+  Session-0 charter machinery; the narrowest scope that makes the discipline real
+  without retrofitting markers into frozen or foreign text.
+reversibility: >-
+  Widening scope later is additive; docs/specs/m0.md already conforms.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/check_concepts.py
+  - type: file
+    target: docs/specs/m0.md
+    detail: first document written under the discipline

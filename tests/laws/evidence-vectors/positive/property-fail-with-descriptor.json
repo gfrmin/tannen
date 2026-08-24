@@ -1,0 +1,15 @@
+{
+  "format_version": 0,
+  "law_id": "L0.5",
+  "milestone": "M0",
+  "verdict": "fail",
+  "run_at": "2026-08-24T12:34:56.789+02:00",
+  "seed": "hypothesis:0xdeadbeef",
+  "descriptors": [
+    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ],
+  "environment": {
+    "python": "3.14.7",
+    "packages": { "pytest": "9.1.1", "hypothesis": "6.165.10" }
+  }
+}

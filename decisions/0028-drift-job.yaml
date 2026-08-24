@@ -1,0 +1,30 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0028
+title: Upstream-drift job (BRIEF §2) — check_drift.py; scheduling deferred with hosting
+tier: A
+date: "2026-08-24"
+decision: >-
+  scripts/check_drift.py compares every pinned concept source against the owner's
+  current HEAD (via the fetched .reference clone) and reports drift only when the
+  CITED DOCUMENT changed between pin and HEAD (an owner moving elsewhere in their
+  repo is noise, printed as "pin still exact"). With --file-records (the `make drift`
+  default) each drifted concept gets a drafted Tier-B re-pin record at the next free
+  sequence, which the digest then queues. Exit 3 signals drift, 1 operational error,
+  0 clean. Scheduling: BRIEF §2 wants a scheduled job; a cron/CI schedule needs the
+  repo hosted, and hosting is Tier-C door external-bytes, so until that door is
+  signed the job runs at session starts via `make drift` — first run 2026-08-24,
+  clean (life-agent's HEAD had already moved; cited documents unchanged).
+rationale: >-
+  Session-0 charter machinery the original deliverable list omitted; BRIEF §2
+  mandates it. Diffing the cited document rather than the commit avoids re-pin churn
+  for unrelated owner activity.
+reversibility: >-
+  Pure reporting plus drafted records; nothing binds until a drafted record survives
+  its veto.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/check_drift.py
+  - type: file
+    target: Makefile
+    detail: the drift target

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tannen.invalid/schemas/evidence-record.schema.json",
+  "title": "Law evidence record (BRIEF P6, §6, §7 — Grade S, owned by tannen)",
+  "description": "One record per law run, emitted by the laws runner and stored content-addressed (the record's id is the content address of its canonical encoding and is therefore not a field of the record). Frozen at m0-laws-freeze; vectors under tests/laws/evidence-vectors/. This is the future belief-update stream for the Governor seam.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "law_id", "milestone", "verdict", "run_at", "seed", "descriptors", "environment"],
+  "properties": {
+    "format_version": { "const": 0 },
+    "law_id": {
+      "type": "string",
+      "pattern": "^L[0-9]+\\.[0-9]+$",
+      "description": "The law identifier as named in the milestone spec (e.g. L0.4)."
+    },
+    "milestone": { "type": "string", "pattern": "^M[0-9]b?$" },
+    "verdict": { "enum": ["pass", "fail"] },
+    "run_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "description": "Wall-clock timestamp of the RUNNER (effectful shell), never of the kernel; RFC 3339."
+    },
+    "seed": {
+      "type": ["string", "null"],
+      "description": "The generator seed/derandomisation token for property laws; null for example-only laws. Recorded so every verdict is replayable (BRIEF P6)."
+    },
+    "descriptors": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+      "description": "Descriptor refs the run covered (empty for laws over the encoding alone). Refs use the pinned grammar (concepts/provenance-ref-grammar.yaml)."
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "packages"],
+      "properties": {
+        "python": { "type": "string" },
+        "packages": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Version-relevant packages (at minimum pytest and hypothesis)."
+        }
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ Exits non-zero on any violation.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -93,6 +94,20 @@ def main() -> int:
         for entry in sorted(p for p in vectors_root.iterdir() if p.is_dir()):
             if entry not in cited_vector_dirs:
                 fail.add(f"orphan vector corpus (no grade-S record cites it): {entry.relative_to(root)}")
+
+    # Normative-prose markers (BRIEF §2): spec documents must declare what they own
+    # or cite ([owns] / [cites: <concept-id>]), and every citation must resolve to a
+    # registered concept. Scope: docs/specs/ (the normative prose this repo writes);
+    # constitution and generated files are out of scope (decision D0029).
+    marker_re = re.compile(r"\[cites:\s*([a-z0-9-]+)\]")
+    for doc in sorted((root / "docs" / "specs").glob("*.md")):
+        text = doc.read_text(encoding="utf-8")
+        rel_doc = doc.relative_to(root)
+        if "[owns]" not in text and not marker_re.search(text):
+            fail.add(f"{rel_doc}: normative prose without [owns] or [cites: <concept-id>] markers")
+        for cited in marker_re.findall(text):
+            if cited not in seen_ids:
+                fail.add(f"{rel_doc}: [cites: {cited}] does not resolve to a registered concept")
 
     projection = root / "CONCEPTS.md"
     if record_paths:

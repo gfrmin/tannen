@@ -1,0 +1,57 @@
+[
+  {
+    "name": "sorted-object",
+    "canonical": "{\"a\":[1,2],\"b\":1}",
+    "address": "sha256:94a786c3662bc7beeb598efa7d8cb58d7bea25d6c275ea9785a0230ff1f8c2ba"
+  },
+  {
+    "name": "nfc-string",
+    "canonical": "\"héllo\"",
+    "address": "sha256:a537896e9aa53fa93651715b791fabe8a1843c12ffe14d96404ec89c5b89818b"
+  },
+  {
+    "name": "tagged-decimal",
+    "canonical": "{\"$decimal\":\"1.5\"}",
+    "address": "sha256:0bf4a96f21fd05f230bdf04a6efd269961faabec4634d1e5daae7279d9e82e8a"
+  },
+  {
+    "name": "decimal-integral",
+    "canonical": "{\"$decimal\":\"100\"}",
+    "address": "sha256:ef9f07e2da36b05db7e4515c66f0ae14edd181ade560c5afcede06930cf7ab08"
+  },
+  {
+    "name": "scalars",
+    "canonical": "[true,false,null]",
+    "address": "sha256:4d0f18de2133118249c26acc481838d4f6bb6bc1de882d99abbd19ae9397e8df"
+  },
+  {
+    "name": "empty-object",
+    "canonical": "{}",
+    "address": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  {
+    "name": "empty-array",
+    "canonical": "[]",
+    "address": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "name": "empty-string",
+    "canonical": "\"\"",
+    "address": "sha256:12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126"
+  },
+  {
+    "name": "big-int",
+    "canonical": "12345678901234567890123456789",
+    "address": "sha256:9ef8d7e50e74aefd788212fe813b0ecb6012de526a9ec1c0d0348fdd5576b006"
+  },
+  {
+    "name": "escapes",
+    "canonical": "\"a\\\"b\\n\\u0001\"",
+    "address": "sha256:3b823525fc312cd5e35f60956a1fdc6404c2f74fe4be87a949dd04b5bb25f066"
+  },
+  {
+    "name": "nested-sorted",
+    "canonical": "{\"nested\":{\"x\":\"é\",\"y\":[{\"z\":null}]}}",
+    "address": "sha256:0af1d7ec55bb8e882f4ee0952309cd2358ba2f614211e6008a29241da0acb0c3"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "format_version": 0,
+  "law_id": "L0.2",
+  "milestone": "M0",
+  "run_at": "2026-08-24T12:00:00Z",
+  "seed": null,
+  "descriptors": [],
+  "environment": {
+    "python": "3.14.7",
+    "packages": {}
+  }
+}
