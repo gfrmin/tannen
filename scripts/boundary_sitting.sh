@@ -260,16 +260,21 @@ verify_owner governance/custody.sha256 tannen-custody \
 
 # ---------------------------------------------------------------- 8. resolve the queue
 say "Step 8 — the records this sitting resolves"
-note "D0047 (is there a close tag, and whose key?) and D0060 (this queue) are recorded"
-note "blocked-on-owner. Completing the sitting is what resolves them."
-for rec in decisions/0047-*.yaml decisions/0060-*.yaml; do
-    [ -f "$rec" ] || continue
-    grep -q '^status: blocked-on-owner$' "$rec" || { note "$rec already resolved"; continue; }
-    if confirm "Mark $(basename "$rec" .yaml) accepted (resolved by this sitting)?"; then
+note "Every Tier-C record still recorded blocked-on-owner is a question this sitting was"
+note "convened to answer. Accepting one is the affirmative act; leaving it blocked is"
+note "also an answer, and it queues to the next sitting without stopping any work."
+while IFS= read -r rec; do
+    [ "$(sed -n 's/^tier: *//p' "$rec" | head -1)" = "C" ] || continue
+    grep -q '^status: blocked-on-owner$' "$rec" || continue
+    printf '\n'
+    sed -n '1,/^rationale:/p' "$rec" | head -40
+    if confirm "Mark $(sed -n 's/^id: *//p' "$rec" | head -1) accepted (resolved by this sitting)?"; then
         sed -i 's/^status: blocked-on-owner$/status: accepted/' "$rec"
         rm -f "$rec.sig"
+    else
+        note "left blocked — it will appear in the next digest's owner queue"
     fi
-done
+done < <(ls -1 decisions/*.yaml | sort)
 sign_tier_c_records
 
 # ---------------------------------------------------------------- 9. gate + receipt
