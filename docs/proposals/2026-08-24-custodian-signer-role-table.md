@@ -101,6 +101,29 @@ and inside the loop, immediately after `say "tag verifies: $tag"`:
 
 `$out` already holds this tag's `git verify-tag` output, so no extra git invocation.
 
+## Companion: DELEGATIONS.md joins the custody set
+
+D0051 added `DELEGATIONS.md` to `MANIFEST.sha256`, and that half is done and verified —
+staging an edit now fails the pre-commit `frozen-paths` hook and the commit is rejected.
+But a manifest **row** can be deleted as easily as it was added, and nothing in
+`check_manifest` notices: default mode checks that every *listed* path still hashes
+correctly, so dropping a row silently unfreezes its file. Only the custodian's check 2
+asserts that specific paths *are* listed, and its list is `scripts/custodian.sh`,
+`allowed_signers`, `.github/workflows/ci.yml` and `tests/poison/**`.
+
+So the freeze is only as durable as the custody set. In `scripts/custodian.sh` check 2:
+
+```sh
+for path in scripts/custodian.sh allowed_signers .github/workflows/ci.yml \
+    DELEGATIONS.md \
+    $(find tests/poison -type f | sort); do
+```
+
+Marker for the fixture: `not manifested: DELEGATIONS.md`.
+
+Without this line, D0051's binding is one `git` command from being undone by the party it
+constrains. With it, removing the row makes the custodian say so by name.
+
 ## What this does not fix, stated plainly
 
 The pin above lives in `scripts/custodian.sh`, which is frozen by a `MANIFEST.sha256`
