@@ -12,6 +12,7 @@ verify:
 	uv run python scripts/check_manifest.py
 	uv run python scripts/check_concepts.py
 	uv run python scripts/check_decisions.py
+	uv run python scripts/check_tag_signers.py
 	uv run pytest -q
 	uv run tannen laws report
 	uv run lint-imports

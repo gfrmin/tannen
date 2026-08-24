@@ -1,0 +1,40 @@
+# governance/tag-roles.yaml — which principal may sign which class of tag (decision
+# D0050). CONSUMED BY THE GUARD scripts/check_tag_signers.py, which the custodian
+# invokes; this file is the list the human reads and the machine enforces (BRIEF §9).
+#
+# A tag's NAME declares what kind of authority it claims. This table says who may make
+# that claim. Changing it is a trust-root change (Tier-C door trust-root-changes), so
+# it is proposed for MANIFEST.sha256 and the custodian's custody set at the M0 sitting.
+version: 1
+
+# The trust root is pinned by tag-object hash. Re-issuing brief-freeze under any key is
+# the one act that would otherwise redefine every other check in the custody floor:
+# its message carries the blessed delegation text, and its date is the bless_epoch for
+# the delegation-precedes-signature rule (D0036). Confirmed re-issuable by the builder,
+# undetected, before this guard existed.
+trust_root:
+  tag: brief-freeze
+  object: c219e63819beb4052b326e47b9cbd5d208779cda
+  signer: owner
+
+# Matched in order; first match wins. fnmatch patterns over the tag name.
+roles:
+  - pattern: brief-freeze
+    signer: owner
+    note: "Trust root: founding signature, blessed delegation text, bless_epoch."
+  - pattern: "*-laws-freeze"
+    signer: builder
+    note: "Standing delegation 1 (DELEGATIONS.md): builder signs law-freeze tags."
+  - pattern: "*-close"
+    signer: owner
+    note: "Milestone close; anchors the receipt-freshness clock (D0049)."
+  - pattern: "amendment-*"
+    signer: owner
+    note: "Constitution amendments (Tier-C door constitution-amendments)."
+  - pattern: "receipt-*"
+    signer: owner
+    note: "Reserved: receipts are files today, but the name is claimed so it cannot be squatted."
+
+# An unmatched tag class is REFUSED, not waved through. Without this the next hole is
+# simply a tag kind the table never heard of.
+unknown: refuse

@@ -52,54 +52,55 @@ could rewrite the delegation *and* re-bless it with a signature of its own, end 
 with every guard green. Neither hole is reachable by accident — both take deliberate
 acts — but a custody floor that only stops accidents is not a custody floor.
 
-## The patch
+## The patch (reduced: two lines in the trust-root file)
 
-In `scripts/custodian.sh`, extend check 3. Above the tag loop:
+The first draft of this proposal put the whole signer-role table inside
+`scripts/custodian.sh`. That was the wrong home. The custodian is author-key territory,
+so every line added there is a line the owner must review by hand and the poison corpus
+must keep honest — and a table that will grow one row per future tag class is exactly the
+kind of thing that should not live behind an author key.
 
-```sh
-# Tag classes and their authorised signing principal (D0050). A tag's NAME declares
-# what kind of authority it claims; this table says who may make that claim.
-#   brief-freeze   owner    trust root: founding signature, blessed delegation text,
-#                           and bless_epoch for the delegation-precedes-signature rule
-#   *-laws-freeze  builder  standing delegation 1 (DELEGATIONS.md)
-#   *-close        owner    milestone close; anchors the receipt clock (D0049)
-#   amendment-*    owner    constitution amendments (Tier-C door 4)
-#   receipt-*      owner    reserved
-# An UNKNOWN tag class is refused rather than waved through: otherwise the next hole
-# is simply a tag kind this table never heard of.
-tag_signer_role() {
-    case "$1" in
-        brief-freeze)  echo owner   ;;
-        *-laws-freeze) echo builder ;;
-        *-close)       echo owner   ;;
-        amendment-*)   echo owner   ;;
-        receipt-*)     echo owner   ;;
-        *)             echo unknown ;;
-    esac
-}
+So the policy and the logic have been built where the builder may build them, and are
+already in the repo and tested:
 
-# The trust root is pinned by tag-object hash: re-issuing brief-freeze under any key
-# is the one act that would otherwise redefine every other check in this file.
-TRUST_ROOT_TAG="c219e63819beb4052b326e47b9cbd5d208779cda"   # brief-freeze, owner@tannen
-if git rev-parse -q --verify refs/tags/brief-freeze >/dev/null 2>&1; then
-    if [ "$(git rev-parse refs/tags/brief-freeze)" != "$TRUST_ROOT_TAG" ]; then
-        bad "trust root re-issued: brief-freeze is not tag object $TRUST_ROOT_TAG"
-    fi
-fi
-```
+- **`governance/tag-roles.yaml`** — the table as data: the trust-root pin, the
+  class→principal rows, and `unknown: refuse`. The list the human reads.
+- **`scripts/check_tag_signers.py`** — the guard. Takes `--root` (where the table and
+  `allowed_signers` live) and `--repo` (whose tags are checked), so it can be pointed at
+  a poison fixture, exactly like the other four guards.
+- **`tests/test_tag_signers.py`** — nine hermetic tests that mint ephemeral owner/builder
+  keys with `ssh-keygen` and build throwaway repos, so they depend on neither of the real
+  signing keys. All three reproductions from the table above are among them, as
+  regression tests: builder-signed close, builder-signed amendment, re-issued trust root.
+- **`make verify`** already runs the guard.
 
-and inside the loop, immediately after `say "tag verifies: $tag"`:
+What remains for the owner is genuinely two lines. In `scripts/custodian.sh`, after
+check 3's tag loop:
 
 ```sh
-    role=$(tag_signer_role "$tag")
-    if [ "$role" = "unknown" ]; then
-        bad "tag class not in the signer-role table — add it deliberately or rename: $tag"
-    elif ! printf '%s' "$out" | grep -q "signature for ${role}@tannen"; then
-        bad "tag signed by the wrong principal (expected ${role}@tannen): $tag"
-    fi
+# 3b. The right principal signed the right class of tag (D0050/D0054).
+uv run python scripts/check_tag_signers.py || bad "tag signer roles violated"
 ```
 
-`$out` already holds this tag's `git verify-tag` output, so no extra git invocation.
+and one more `poison` line in check 5:
+
+```sh
+poison check_tag_signers "wrong principal" \
+    uv run python scripts/check_tag_signers.py \
+    --root . --repo docs/redteam/fixture-candidates/custodian-tag-signer/repo.git
+```
+
+(adjusting the path once the fixture is installed under `tests/poison/`).
+
+Three more owner-side additions, all small and all in frozen or author-key files:
+
+1. `MANIFEST.sha256` rows for `governance/tag-roles.yaml` and
+   `scripts/check_tag_signers.py`, so the table and the guard cannot be softened
+   silently — the guard is only as trustworthy as its own immutability.
+2. `governance/tag-roles.yaml` into the custodian's check-2 custody set (see the
+   companion section below for why a manifest row alone is not enough).
+3. `.github/workflows/ci.yml` gains the guard. That file is manifested, so the builder
+   cannot add it; `make verify` covers the local path meanwhile.
 
 ## Companion: DELEGATIONS.md joins the custody set
 

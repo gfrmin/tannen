@@ -43,6 +43,15 @@ bindings:
       author-key territory so the builder cannot apply it; this binding proves the
       remedy exists, not that it is in force. Upgrades to a manifest binding on
       scripts/custodian.sh when the owner applies the patch (D0045).
+  - type: pytest
+    target: tests/test_tag_signers.py
+    detail: >-
+      ENFORCED, added 2026-08-24 under D0045 (bindings are the present-tense attachment;
+      the decision text above is unchanged). All three reproductions are regression tests
+      here — builder-signed close, builder-signed amendment, re-issued trust root — over
+      hermetic throwaway repos with ephemeral keys. The guard they exercise is
+      scripts/check_tag_signers.py, which runs in `make verify`. What remains owner-side
+      is the custodian invocation and the poison fixture (D0054).
   - type: manifest
     target: scripts/custodian.sh
     detail: >-

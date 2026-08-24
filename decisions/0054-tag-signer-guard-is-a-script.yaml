@@ -1,0 +1,51 @@
+id: D0054
+title: "The tag-signer table is data plus a script, not lines inside the custodian"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  D0050's signer-role table is implemented as governance/tag-roles.yaml (the policy, as
+  data) plus scripts/check_tag_signers.py (the logic), with tests/test_tag_signers.py
+  covering it and `make verify` running it — not as a case statement inside
+  scripts/custodian.sh as first drafted. The guard takes --root and --repo so it can be
+  aimed at a poison fixture like the other four. What stays owner-side shrinks to two
+  lines in the custodian (invoke, and poison), manifest rows for the table and the guard,
+  the table joining the custody set, and the CI line.
+rationale: >-
+  scripts/custodian.sh is author-key territory, so every line added to it is a line the
+  owner must review by hand and the poison corpus must keep honest. A signer-role table
+  grows one row per future tag class; putting it behind an author key means each new tag
+  kind costs a sitting, which is precisely the owner-dependence BRIEF §9 exists to
+  minimise. Splitting policy (a YAML table the human reads) from logic (a script the
+  machine runs) also follows the rule tier-c.yaml already states for itself — "the list
+  the human reads is the list the machine enforces; one source" — and makes the guard
+  testable and poisonable, which a shell case statement inside the custodian is neither.
+  The trust-root surface gets smaller, not larger, while the checking gets stronger:
+  nine hermetic tests now exist where before there was a proposal.
+reversibility: >-
+  Fully reversible: delete two files and a Makefile line. The owner may still prefer the
+  logic inside the custodian, in which case the proposal's original inline patch is in
+  git history at c5e1848. Nothing about the decision D0050 recorded changes either way —
+  only where the code lives.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_tag_signers.py
+    detail: >-
+      ENFORCED: nine tests over hermetic throwaway repos with ephemeral ssh keys (so
+      neither real signing key is needed, and CI has neither). Covers the three confirmed
+      reproductions, unknown-class refusal and its deliberate opt-out, an unenrolled
+      signer, and a repo that has not minted the trust root yet.
+  - type: config
+    target: governance/tier-c.yaml#guard_enforced
+    detail: >-
+      ENFORCED: tag-signer-roles is listed among the guard_enforced rules, so the closed
+      Tier-C list the owner reads names the guard that replaces the approval.
+  - type: file
+    target: governance/tag-roles.yaml
+    detail: >-
+      The policy as data: trust-root pin, class-to-principal rows, unknown-refuse. Read
+      by the guard at runtime, so a change to it changes behaviour rather than
+      documenting it. Proposed for MANIFEST.sha256 and the custody set at the sitting —
+      until then the table itself is editable, which the proposal states plainly.
+links: ["D0016", "D0045", "D0049", "D0050"]

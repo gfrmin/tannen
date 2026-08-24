@@ -42,6 +42,11 @@ guard_enforced:
     guard: "pyproject.toml import-linter contract kernel-no-io"
   - id: kernel-clock
     guard: "pyproject.toml import-linter contract kernel-no-clock (BRIEF P7; arrived M0 with the kernel)"
+  - id: tag-signer-roles
+    guard: "scripts/check_tag_signers.py over governance/tag-roles.yaml (D0050/D0054): the
+      right principal signed the right class of tag, unknown classes refused, trust root
+      pinned by tag-object hash. Arrived at the M0 boundary; custodian invocation and the
+      poison fixture are owner-applied (trust-root file)"
 
 non_goals:  # BRIEF §10 verbatim list; changing it is door constitution-amendments
   - "No orchestrator, scheduler, retries, cron."

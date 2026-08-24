@@ -1,0 +1,39 @@
+id: D0055
+title: "Guards that name a repo strip git's location variables first"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  scripts/_gov.py gains git_env(), which returns os.environ minus GIT_DIR,
+  GIT_WORK_TREE, GIT_INDEX_FILE, GIT_COMMON_DIR, GIT_OBJECT_DIRECTORY,
+  GIT_ALTERNATE_OBJECT_DIRECTORIES, GIT_NAMESPACE and GIT_PREFIX. Every helper that
+  shells out to git about a NAMED repository uses it: check_tag_signers.py's git() and
+  verify_tag(), and _gov.boundary_tag_dates(). tests/test_tag_signers.py uses it too,
+  and carries a regression test that sets GIT_DIR to the real repo and asserts the guard
+  still reports on the repo it was handed.
+rationale: >-
+  A git hook runs with GIT_DIR and GIT_INDEX_FILE exported, and those beat `git -C
+  <path>`. The new tag-signer tests passed standalone and errored under pre-commit,
+  which is how this surfaced: `git init` and `git -C <tmp>` inside the tests were being
+  redirected at the real repository. They failed loudly rather than quietly — the
+  fixture's assertions caught it and nothing in the real repo was touched, confirmed by
+  the brand-new trust-root pin still reading c219e638 — but the same leak in the GUARD is
+  the dangerous direction: a guard aimed at a poison fixture with `--repo`, or run from a
+  hook, would answer about the wrong repository and print OK about tags it never looked
+  at. A guard that can be silently redirected is worse than no guard, because it produces
+  a false green. _gov.boundary_tag_dates() had the same latent bug, which matters for
+  receipt freshness computed against a poison-fixture root; it is fixed in the same
+  change rather than left for whoever writes that fixture to rediscover.
+reversibility: >-
+  Trivial: one helper and five call sites. There is no cost to keeping it — the sanitised
+  environment is what the callers already meant.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_tag_signers.py::test_the_guard_answers_about_the_repo_it_was_given_not_GIT_DIR
+    detail: >-
+      ENFORCED: sets GIT_DIR/GIT_INDEX_FILE to the real repo, points the guard at a
+      throwaway repo carrying a builder-signed m0-close, and asserts the guard fails on
+      the tag that lives in the repo it was GIVEN. Without git_env() the guard reads the
+      real repo, finds two well-assigned tags, and exits 0.
+links: ["D0050", "D0054"]

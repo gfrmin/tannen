@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -22,6 +23,25 @@ METRICS_RE = re.compile(r"<!-- metrics: unenforced=(\d+) residue=(\d+) -->")
 
 # Milestone-boundary tags = owner sittings (BRIEF §8, §9.1 cadence).
 BOUNDARY_TAG_RE = re.compile(r"^(brief-freeze|.+-laws-freeze|.+-close)$")
+
+
+#: Git environment variables that override repository discovery. A git hook runs with
+#: GIT_DIR (and friends) exported, and they beat `git -C <path>` — so a guard invoked
+#: from pre-commit, or pointed at a poison fixture, would silently answer about the
+#: WRONG repository. Every helper here that names a repo strips them first.
+GIT_LOCATION_VARS = (
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE",
+    "GIT_PREFIX",
+)
+
+
+def git_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    """os.environ minus the location overrides, so `git -C <path>` means what it says."""
+    env = {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARS}
+    if extra:
+        env.update(extra)
+    return env
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -127,7 +147,7 @@ def boundary_tag_dates(root: Path) -> list[dt.date]:
     try:
         out = subprocess.run(
             ["git", "-C", str(root), "tag", "-l", "--format=%(refname:short) %(creatordate:short)"],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, check=True, env=git_env(),
         ).stdout
     except (OSError, subprocess.CalledProcessError):
         return []
