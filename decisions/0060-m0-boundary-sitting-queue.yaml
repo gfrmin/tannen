@@ -1,0 +1,58 @@
+id: D0060
+title: "The M0 boundary sitting: what needs the owner's key, in the order it needs it"
+tier: C
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  Queued for the M0→M1 boundary sitting, in this order (the order is load-bearing).
+  (1) Apply docs/proposals/2026-08-24-custodian-signer-role-table.md: two lines invoking
+  scripts/check_tag_signers.py from the custodian, one poison line, MANIFEST rows for
+  governance/tag-roles.yaml and scripts/check_tag_signers.py, tag-roles.yaml into the
+  custodian's check-2 custody set, and the CI line. (2) Apply
+  docs/proposals/2026-08-24-policy-in-repo-mechanics.md (the in_repo_mechanics clause
+  with D0053's push refinement) and re-sign governance/policy.yaml. (3) Apply
+  docs/proposals/2026-08-24-binding-strength-grade.md — schema field first, then ONE
+  digest with true numbers, then ratchet the metric; the order is the hazard. (4) Install
+  the red-team fixtures from docs/redteam/fixture-candidates/: three bite today
+  (lint-imports-kernel, check-decisions-ratchet, check-decisions-nested-hatch) and are a
+  git mv plus manifest rows; three need their guard patch first; custodian-close-tag needs
+  the owner's key to generate. (5) SIGN MANIFEST.sha256 and add it to required_signatures
+  — the largest single improvement available, since every seal added today is otherwise
+  only as strong as the builder's honesty (RT-01, RT-14). (6) The remaining open red-team
+  findings: RT-06 (Tier-C affirmative signature enforced by nothing), RT-07 (ratchet
+  baseline is a hand-editable comment), RT-10/11/12 (bindings that resolve without
+  enforcing; digest invisibility; append-only unenforced), RT-13 (tier-c.yaml unfrozen).
+  (7) LAST, after the above are green: sign `m0-close`.
+rationale: >-
+  D0047 queued the sitting; this record says what the sitting now contains, because the
+  answer changed substantially after the red-team pass. It is Tier C and
+  blocked-on-owner deliberately: the digest's "Requires owner" section is a query over
+  Tier-C records, so a Tier-A record — however urgent — is invisible there. That is
+  RT-06's second half, and rather than describe it, this record uses the mechanism
+  correctly so the owner opening the digest sees the actual queue. Signing m0-close last
+  is the point of the ordering: the first owner-signed close tag this project mints is
+  then validated by the very rule requiring closes to be owner-signed, in the same
+  custodian run that proves that rule bites a fixture. A guard should be born having
+  already caught something real. Signing the manifest is listed above the fixtures'
+  completion because it is the only item that changes the trust model rather than adding
+  a check: everything else raises the cost of cheating, that one makes the seal answer to
+  someone other than the party it constrains.
+reversibility: >-
+  Nothing here is irreversible except the m0-close signature, which is a one-way door by
+  construction (BRIEF §9.2). Every applied patch can be reverted; the fixtures can be
+  removed; the manifest signature can be re-issued over a later state.
+status: blocked-on-owner
+bindings:
+  - type: file
+    target: docs/redteam/fixture-candidates/README.md
+    detail: >-
+      The seven fixtures with guard, violation, marker, exact command and required patch.
+      DOCUMENTARY by nature — a queue cannot enforce itself; its enforcement is that
+      tests/poison/ is author-key territory, so the corpus cannot grow without the owner.
+  - type: manifest
+    target: tests/poison/README.md
+    detail: >-
+      ENFORCED: the corpus README is frozen and records the standing exception (BRIEF
+      §9.1 point 5) under which red-team findings become fixtures — the builder drafts,
+      the owner installs. Its freeze is why item (4) cannot be self-served.
+links: ["D0021", "D0047", "D0049", "D0052", "D0056", "D0057", "D0058", "D0059"]
