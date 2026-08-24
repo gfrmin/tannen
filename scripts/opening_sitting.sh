@@ -60,12 +60,29 @@ if confirm "Run the clean-clone inspection now?"; then
 fi
 
 say "Step 1 — owner key, enrolled in allowed_signers"
+gen_software_key() {
+    note "software-key custody note: SET A PASSPHRASE. With no touch to prove"
+    note "presence, typing the passphrase is the presence proxy — a passphrase-less"
+    note "key would let the unattended Monday cron sign attention receipts with"
+    note "nobody there, silently defeating the receipt design (BRIEF §9.1)."
+    ssh-keygen -t ed25519 -f "$OWNER_KEY" -C "tannen owner key" || die "keygen failed"
+    if ssh-keygen -y -P '' -f "$OWNER_KEY" >/dev/null 2>&1; then
+        note "WARNING: this key has NO passphrase — unattended cron runs WILL sign"
+        note "receipts, so a receipt will no longer prove anyone was present."
+        confirm "Proceed anyway, accepting that?" \
+            || { rm -f "$OWNER_KEY" "$OWNER_KEY.pub"; die "key discarded — re-run to try again"; }
+    fi
+}
 if [ -f "$OWNER_KEY" ]; then
     note "key already at $OWNER_KEY — keygen skipped"
 elif confirm "Generate hardware-backed ed25519-sk key (FIDO2 plugged in; touch when it blinks)?"; then
-    ssh-keygen -t ed25519-sk -f "$OWNER_KEY" -C "tannen owner key" || die "keygen failed"
+    if ! ssh-keygen -t ed25519-sk -f "$OWNER_KEY" -C "tannen owner key"; then
+        note "ed25519-sk keygen failed (no FIDO2 device present?)"
+        confirm "Fall back to plain ed25519 (weaker custody, BRIEF §9.1)?" || die "keygen failed"
+        gen_software_key
+    fi
 elif confirm "No FIDO2 key here? Fall back to plain ed25519 (weaker custody, BRIEF §9.1)?"; then
-    ssh-keygen -t ed25519 -f "$OWNER_KEY" -C "tannen owner key" || die "keygen failed"
+    gen_software_key
 else
     die "no key, no sitting"
 fi
