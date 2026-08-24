@@ -69,6 +69,30 @@ batch to boundary sittings like every other Tier-C act. `pyproject.toml` is deli
 outside the set so dependency work does not halt mid-milestone; its import contracts are
 covered instead by the contract-shape check inside `check_manifest`.
 
+## Two standing rules the sitting enforces
+
+**The floor may depend only on tools the OS provides and paths named literally**
+(D0063 ruling 3). The custodian's checks use `sha256sum`, `ssh-keygen`, `git` and `grep`;
+where a Python guard is unavoidable it is the venv interpreter at a literal path in
+isolated mode, never `uv run` and never a console entry point. The custody set covers a
+guard's code; this covers its resolution, and resolution is enforcement.
+
+**Presence and authorisation are different speech acts** (D0063 ruling 2, BRIEF §9.1). A
+signature over a projection — a digest — says "I saw what I was shown". A signature over a
+record says "this door opens". Batch attestation over a digest is a fine receipt and a
+terrible authorisation, because the digest is composed by the party it measures. Never let
+one substitute for the other.
+
+## The receipt chain
+
+Each receipt records the HEAD it was taken at, and each HEAD must be an ancestor of the
+next and of the current HEAD (D0063 ruling 4). Owner-signed receipts are the only artifact
+in this repo a builder cannot forge, so requiring ancestry across them makes history
+rewritten *between* sittings detectable. Two consequences worth knowing before you sign:
+`git commit --amend` or a rebase across a receipt boundary turns the gate red, and a
+shallow clone cannot answer the ancestry question at all — which is why CI fetches full
+history and tags.
+
 ## Preconditions
 
 - `make verify` green. Nothing is signed over a red gate — a signature over a red gate

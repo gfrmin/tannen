@@ -28,7 +28,14 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from _gov import Failures, REPO_ROOT, git_env, load_yaml, owner_key_enrolled
+# Run under `python -I -P` (conferral ruling 3, D0063): isolated mode ignores
+# PYTHONPATH, PYTHONHOME and user site-packages, and -P stops any directory being
+# prepended to sys.path implicitly — including this script's own. The floor may depend
+# only on tools the OS provides and paths named literally, so the one path this guard
+# needs is named literally here, derived from __file__ rather than inherited.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _gov import Failures, REPO_ROOT, git_env, load_yaml, owner_key_enrolled  # noqa: E402
 
 #: `git verify-tag` prints e.g. `Good "git" signature for owner@tannen with ED25519 ...`
 SIGNER_RE = re.compile(r'signature for (\S+)')

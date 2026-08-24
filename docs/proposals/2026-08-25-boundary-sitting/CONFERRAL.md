@@ -16,6 +16,33 @@ of an instruction the owner already gave.
 
 ---
 
+## Rulings (2026-08-25) — the conferral is closed; this section is the outcome
+
+Recorded in full as **D0063**. The document below is left as it was written, so the
+questions and the answers can be read against each other.
+
+| # | Ruling | Landed as |
+|---|---|---|
+| 1 | **Keep the shadow.** The custody set stays a second generated file; the manifest split is rejected. Tree-anchoring is the next structural sitting. | no change — §1 stands |
+| 2 | **Per-record Tier-C signatures**, whole bytes, re-signed on binding upgrade. A digest signature is a *receipt*, never an authorisation. | §2 as written, plus a BRIEF §9.1 bullet |
+| 3 | **Attack 5 closed as a class.** Contracts leave `pyproject.toml` for `governance/importlinter.toml`; every guard runs as the venv interpreter at a literal path under `-I -P`. | new config file, `Makefile`, `.pre-commit-config.yaml`, custodian, `ci.yml` |
+| 4 | **The receipts become a witness.** Each records its HEAD; each HEAD must be an ancestor of the next. | `scripts/check_receipts.py`, custodian check 4b |
+| 5 | **Promote two rules to BRIEF §9.1**: metric calibration, and presence-vs-authorisation. | `brief-9.1-amendment.md` (owner-applied) |
+| 6 | **Generate the poison bundle at the sitting**, for opacity rather than semantics. | driver step 5; the pre-built bundle deleted |
+
+Two things surfaced while implementing ruling 3, both worth keeping because they are the
+kind of error this shape produces:
+
+- `python -m importlinter.cli` **exits 0 without checking anything** — the console script
+  calls a function the module does not — so the obvious spelling of "invoke it as a
+  module" would have made the strongest guard silently vacuous. Caught only because the
+  output was read rather than the exit code trusted.
+- Running import-linter with a poison fixture as the working directory writes a cache
+  directory **inside a sealed directory**, breaking the seal. Every poison invocation now
+  passes `--no-cache`.
+
+---
+
 ## Context a reviewer needs first
 
 **The enforcement surface is one machine.** There is no git remote. CI has never run.
@@ -87,6 +114,14 @@ named in the signer-role proposal and deliberately deferred; it wants its own si
 > **Question worth conferring on:** is the custody set the right shape, or should
 > `MANIFEST.sha256` be *split* into a builder manifest and an owner manifest rather than
 > shadowed by a second file? The split is cleaner conceptually and a larger change.
+>
+> **RULED (1): keep the shadow.** The duplication is not a DRY violation — DRY governs
+> definitions, and the definition lives once in `tier-c.yaml`; both `.sha256` files are
+> generated projections, which is this repo's own doctrine for why they cannot drift. The
+> overlap buys two *independent* verification channels on the guarded paths (pre-commit's
+> Python, and the custodian's bare `sha256sum` + `ssh-keygen`), and a split would make
+> every path single-channel — strictly weaker. It also competes for a sitting with
+> tree-anchoring, which would partly discard it.
 
 ---
 
@@ -113,6 +148,15 @@ sign the *digest* instead, one signature per sitting covering the batch.
 > **Question worth conferring on:** per-record signature, or per-digest batch attestation?
 > The first is precise and re-signs on binding drift; the second is one signature and
 > attests to a projection rather than to the records themselves.
+>
+> **RULED (2): per-record, whole bytes, no canonicaliser.** The decisive argument is
+> RT-11, from this document's own open-findings list: a digest is a projection the builder
+> composes, so signing it attests to *what the owner was shown*. Per-record signatures are
+> what make RT-11 harmless at Tier C — a record hidden from every projection still cannot
+> reach `accepted` without the owner's key touching its bytes. Authorisation attaches to
+> the artifact of record, never to a report about it. The batch signature is not discarded:
+> it is the attention receipt, a different speech act. Presence and authorisation may not
+> substitute for one another, and BRIEF §9.1 now says so.
 
 **Sequencing oddity you will see.** The driver signs these records, then **pauses and hands
 back to a builder session** to land the guard. The guard cannot land first: it would turn
@@ -265,14 +309,24 @@ where these answers are wrong — the last two are the ones the builder is least
    sitting. A builder editing it *between* sittings reddens the gate until the next one —
    which is the general cost of §1, landing here on a file that will genuinely change.
 5. **Add a new guard that is not in the custody set, and route enforcement through it.**
-   *Believed closed, and this is why `Makefile` and `.pre-commit-config.yaml` are in the
-   set:* every call site that decides what the gate runs is covered, so a new
-   `scripts/check_foo.py` cannot be reached without an edit the owner signs for. The
-   builder is not confident this enumeration of call sites is complete — `pyproject.toml`
-   is outside the set and configures `lint-imports`, and `uv` resolves entry points from
-   it. **This is the item most worth a second pair of eyes.**
+   *Was the real one, and is now closed as a class (ruling 3).* The builder's doubt was
+   correct: the custody set covered the guards' code, `pyproject.toml` covered their
+   resolution, and resolution is enforcement. Two changes rather than one patch — the
+   import contracts moved into `governance/importlinter.toml`, which is in the custody
+   set, and every guard is now invoked as the venv interpreter at a literal path under
+   `-I -P`, never `uv run` and never a console entry point. The custodian's header states
+   the principle: *the floor may depend only on tools the OS provides and paths named
+   literally.* What is still outside both: site-packages itself.
 
-A sixth, which the builder cannot answer at all: none of this constrains what happens
+A sixth, which the builder could not answer at all: none of this constrains what happens
 before a commit exists. Every check runs on a working tree the builder controls, on a
-machine with no second observer. The custody set makes weakening a guard *visible at the
-next gate run*; it does not make it impossible, and no arrangement inside this repo can.
+machine with no second observer.
+
+**Partially answered (ruling 4), with something the repo already owned.** The standard
+remedy is an external witness, and the receipts are one: owner-signed, and therefore the
+single artifact a builder cannot forge. Each now records the HEAD it was taken at, and
+each HEAD must be an ancestor of the next — so history rewritten *between* two
+attestations becomes detectable. It remains silent about what happens inside one interval,
+and about a builder who simply never takes a receipt (that one is caught differently, by
+a stale receipt suspending Tier-B consent). When a remote is eventually added — a Tier-C
+door in its own right — this is its justification: an unrewritable witness, not backup.

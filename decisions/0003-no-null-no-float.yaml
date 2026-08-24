@@ -23,7 +23,7 @@ bindings:
       refused by name at the encoder. No float is encodable at M0 at all; Lossy(f, grid)
       is the declared door and arrives with the Rel layer at M1.
   - type: config
-    target: "pyproject.toml#tool.importlinter.contracts"
+    target: "governance/importlinter.toml#tool.importlinter.contracts"
     detail: >-
       The kernel-no-clock contract (added at M0, D0042) is the mechanical form of "now()
       does not exist in the kernel namespace": tannen.kernel may not import time,

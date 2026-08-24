@@ -57,7 +57,7 @@ bindings:
       "unsigned (expected before the opening sitting)" and passes — the custodian's own
       leniency is trust-root territory and stays queued for the owner.
   - type: config
-    target: pyproject.toml#tool.importlinter.contracts
+    target: governance/importlinter.toml#tool.importlinter.contracts
     detail: >-
       ENFORCED: the key the shape check reads. Verified both ways — ignore_imports on
       kernel-no-io and a narrowed no-cross-repo source_modules each fail check_manifest,

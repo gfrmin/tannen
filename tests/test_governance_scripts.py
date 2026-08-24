@@ -54,10 +54,25 @@ def test_guard_fails_its_poison(args: list[str], marker: str) -> None:
     assert marker in combined, f"guard failed poison for the wrong reason:\n{combined}"
 
 
+LINT_ISOLATED = [
+    str(REPO_ROOT / ".venv" / "bin" / "python"), "-I", "-c",
+    "import sys; from importlinter.cli import lint_imports_command; "
+    "sys.exit(lint_imports_command())",
+]
+#: --no-cache is not optional for a poison run: the cache directory would land inside
+#: tests/poison/, a sealed directory where every file must carry a manifest row.
+
+
 def test_lint_imports_fails_its_poison() -> None:
-    result = run(
-        ["uv", "run", "lint-imports", "--config", "tests/poison/lint-imports/pyproject.toml"],
-        env={"PATH": __import__("os").environ["PATH"], "PYTHONPATH": "tests/poison/lint-imports"},
+    # Invoked exactly as the custodian invokes it (D0063 ruling 3): the venv interpreter
+    # at a literal path, isolated, with the poison tree supplied as the working directory
+    # rather than through PYTHONPATH — which -I ignores, and which was the same inherited
+    # environment channel RT-08 exploited. A liveness test that used a different
+    # invocation from the floor would be proving the wrong thing works.
+    result = subprocess.run(
+        [*LINT_ISOLATED, "--no-cache", "--config", "pyproject.toml"],
+        cwd=REPO_ROOT / "tests" / "poison" / "lint-imports",
+        capture_output=True, text=True,
     )
     combined = result.stdout + result.stderr
     assert result.returncode != 0, f"lint-imports PASSED its poison — weakened:\n{combined}"

@@ -23,7 +23,7 @@ reversibility: >-
 status: accepted
 bindings:
   - type: config
-    target: "pyproject.toml#tool.importlinter.contracts"
+    target: "governance/importlinter.toml#tool.importlinter.contracts"
     detail: the kernel-no-clock contract, run by lint-imports in CI and pre-commit
   - type: config
     target: "governance/tier-c.yaml#forbidden_imports.nondeterminism_modules"

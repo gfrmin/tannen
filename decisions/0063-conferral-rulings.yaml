@@ -1,0 +1,91 @@
+id: D0063
+title: "Boundary-sitting conferral: six rulings on the custody floor"
+tier: C
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  The owner ruled on the two questions CONFERRAL.md put and on the attacks it listed.
+  (1) KEEP THE SHADOW: the custody set stays a second generated file alongside
+  MANIFEST.sha256; the definition lives once in tier-c.yaml and both .sha256 files remain
+  generated-only, so they cannot drift. Splitting the manifest is rejected — it would make
+  every guarded path single-channel, and it competes for a sitting with tree-anchoring,
+  which partly discards it. (2) PER-RECORD TIER-C SIGNATURES over whole bytes; re-sign on
+  binding upgrade, batched to sittings; no canonicaliser. A digest signature is an
+  attention receipt and never an authorisation. (3) ATTACK 5 CLOSED AS A CLASS: the import
+  contracts move out of pyproject.toml into governance/importlinter.toml, which is in the
+  custody set, and every guard is invoked as the venv interpreter at a literal path in
+  isolated mode (-I -P), never through `uv run` or a console entry point. The principle is
+  stated in the custodian's header: the floor may depend only on tools the OS provides and
+  paths named literally. (4) THE RECEIPTS BECOME A WITNESS: each records the HEAD it was
+  taken at, and each HEAD must be an ancestor of the next and of the current HEAD;
+  scripts/check_receipts.py and the custodian both verify it. (5) The metric-calibration
+  rule and the presence-versus-authorisation distinction are promoted to BRIEF §9.1
+  verbatim (owner-applied; drafted). (6) The tag-signer poison bundle is generated at the
+  sitting, not shipped pre-built.
+rationale: >-
+  Recorded because each ruling turned on an argument the builder had not made, and the
+  arguments are the part worth keeping. On (1): the apparent duplication is not a DRY
+  violation, because DRY governs definitions and this duplicates an enforcement channel —
+  independence of channels is exactly what is wanted on guarded paths, and a split makes
+  each path single-channel, strictly weaker. On (2): RT-11 is the killer argument for
+  per-record signing, and it is in the builder's own findings list — a digest is a
+  projection the builder composes, so signing it attests to what the owner was shown; only
+  a signature on the record itself stops a record hidden from every projection from
+  reaching `accepted`. The binding-mutability cost is smaller than it looks, because a
+  binding upgrade on a Tier-C record is a remedy landing on a one-way door, the one
+  category where re-attestation is content rather than ceremony. And a canonical
+  "immutable core" to sign instead would be somewhere for a bug to hide. On (3): the
+  custody set covers a guard's CODE; pyproject.toml covered its RESOLUTION, and resolution
+  is enforcement — the file deliberately left outside the set (so dependency work does not
+  halt) was the file deciding what the strongest guard checked. Fixing the class rather
+  than the instance is what makes this different from patching RT-02. On (4): the sixth
+  question in CONFERRAL.md — that nothing constrains the pre-commit working tree — has a
+  cheap partial answer the repo already owns, since owner-signed receipts are the one
+  artifact a builder cannot forge; requiring ancestry across them turns them into a poor
+  transparency log, and gives a future remote its real justification. Two things found
+  while implementing, both worth recording as the kind of error this shape produces:
+  `python -m importlinter.cli` exits 0 without checking anything (the console entry point
+  calls a function the module does not), which would have made the strongest guard
+  silently vacuous; and running import-linter with a poison fixture as the working
+  directory writes a cache INSIDE a sealed directory, breaking the seal, so every poison
+  invocation passes --no-cache.
+reversibility: >-
+  Each ruling is a file, a flag or a config move; all are revertible in an afternoon. The
+  standing costs are deliberate: guard changes now batch to sittings (custody set),
+  Tier-C binding upgrades need a re-signature, and `git commit --amend` or a rebase across
+  a receipt boundary turns the gate red — which is the receipt chain doing its job.
+status: accepted
+bindings:
+  - type: config
+    target: governance/tier-c.yaml#custody.set
+    detail: >-
+      ENFORCED (ruling 1): the definition, in one place, read by gen_custody and by
+      check_manifest::check_custody. Ruling 1's "generated-only" condition is enforced by
+      check_custody rejecting any hand-edit as drift.
+  - type: manifest
+    target: governance/importlinter.toml
+    detail: >-
+      ENFORCED (ruling 3): the contracts are frozen and in the custody set, so narrowing
+      source_modules or adding ignore_imports is no longer a normal builder edit. The
+      contract-SHAPE check in check_manifest reads this file and fails on either.
+  - type: pytest
+    target: tests/test_receipt_chain.py
+    detail: >-
+      ENFORCED (ruling 4): six hermetic tests with an ephemeral owner key — a linear
+      history verifies; a rewrite between receipts is caught; a rewrite after the last
+      receipt is caught at the tip; an unsigned receipt, an edited receipt and a receipt
+      naming a vanished commit are each refused.
+  - type: pytest
+    target: tests/test_governance_scripts.py
+    detail: >-
+      ENFORCED (ruling 3): the lint-imports liveness test now invokes the guard exactly as
+      the custodian does — literal interpreter, isolated, poison tree as working directory
+      rather than PYTHONPATH. A liveness test using a different invocation from the floor
+      proves the wrong thing works.
+  - type: file
+    target: docs/proposals/2026-08-25-boundary-sitting/brief-9.1-amendment.md
+    detail: >-
+      DOCUMENTARY (ruling 5): BRIEF.md is frozen owner text, so the builder drafts the two
+      bullets and the owner applies them. Upgrades to a manifest binding on BRIEF.md once
+      applied (D0045).
+links: ["D0045", "D0049", "D0052", "D0056", "D0059", "D0061", "D0062"]

@@ -1,0 +1,73 @@
+# governance/importlinter.toml — the import contracts, as their own custody-set file.
+#
+# WHY NOT pyproject.toml (conferral ruling 3, decision D0063). The custody set covers the
+# guards' CODE; pyproject.toml covered their RESOLUTION, and resolution is enforcement.
+# pyproject.toml is deliberately outside the custody set so dependency work does not halt
+# mid-milestone (D0061) — which meant the one file the builder could freely edit was also
+# the file that decided what the strongest guard checked. Narrowing `source_modules` to a
+# single module is the spelling of RT-02 that no poison fixture can reach.
+#
+# This file holds the contracts and nothing else, so it can sit in the custody set while
+# dependencies stay out of it. Every call site passes it explicitly:
+#   lint-imports --config governance/importlinter.toml
+# The forbidden-modules lists below must cover governance/tier-c.yaml's forbidden_imports
+# lists — scripts/check_manifest.py enforces that consistency (D0016), so tier-c.yaml
+# stays the single human-readable source, and the contract-SHAPE check (D0056) enforces
+# that the source_modules and the absence of ignore_imports are not quietly changed here.
+
+[tool.importlinter]
+root_packages = ["tannen"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "kernel imports no IO modules (BRIEF §5.3)"
+id = "kernel-no-io"
+type = "forbidden"
+source_modules = ["tannen.kernel"]
+forbidden_modules = [
+    "io",
+    "os",
+    "pathlib",
+    "socket",
+    "subprocess",
+    "shutil",
+    "tempfile",
+    "urllib",
+    "http",
+    "ftplib",
+    "asyncio",
+    "aiohttp",
+    "requests",
+    "httpx",
+    "sqlite3",
+    "duckdb",
+]
+
+[[tool.importlinter.contracts]]
+name = "kernel has no clock and no other nondeterminism (BRIEF P1, P7, §5.7)"
+id = "kernel-no-clock"
+type = "forbidden"
+source_modules = ["tannen.kernel"]
+forbidden_modules = [
+    "time",
+    "datetime",
+    "calendar",
+    "zoneinfo",
+    "random",
+    "secrets",
+    "uuid",
+]
+
+[[tool.importlinter.contracts]]
+name = "no cross-repo imports, in either direction (BRIEF §1, Tier C)"
+id = "no-cross-repo"
+type = "forbidden"
+source_modules = ["tannen"]
+forbidden_modules = [
+    "pkm",
+    "life_agent",
+    "credence",
+    "proplang",
+    "renavon",
+    "renavon_monorepo",
+]

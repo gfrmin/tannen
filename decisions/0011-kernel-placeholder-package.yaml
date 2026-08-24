@@ -18,7 +18,7 @@ reversibility: >-
 status: accepted
 bindings:
   - type: config
-    target: "pyproject.toml#tool.importlinter"
+    target: "governance/importlinter.toml#tool.importlinter"
     detail: both contracts name tannen / tannen.kernel as source modules
   - type: file
     target: src/tannen/kernel/__init__.py

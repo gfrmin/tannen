@@ -7,31 +7,31 @@ repos:
     hooks:
       - id: frozen-paths
         name: reject edits to frozen paths (MANIFEST.sha256)
-        entry: uv run python scripts/check_manifest.py --staged
+        entry: .venv/bin/python -I -P scripts/check_manifest.py --staged
         language: system
         pass_filenames: false
         always_run: true
       - id: regen-projections
         name: regenerate stale projections (CONCEPTS.md, DECISIONS.md)
-        entry: uv run python scripts/gen_projections.py
+        entry: .venv/bin/python -I -P scripts/gen_projections.py
         language: system
         pass_filenames: false
         always_run: true
       - id: check-concepts
         name: concept records ↔ vendored artifacts complete
-        entry: uv run python scripts/check_concepts.py
+        entry: .venv/bin/python -I -P scripts/check_concepts.py
         language: system
         pass_filenames: false
         always_run: true
       - id: check-decisions
         name: decision records valid; bindings resolve
-        entry: env -u TANNEN_CHECK_DECISIONS_NESTED uv run python scripts/check_decisions.py
+        entry: env -u TANNEN_CHECK_DECISIONS_NESTED .venv/bin/python -I -P scripts/check_decisions.py
         language: system
         pass_filenames: false
         always_run: true
       - id: lint-imports
         name: kernel has no IO; no cross-repo imports
-        entry: uv run lint-imports
+        entry: .venv/bin/python -I -P -c 'import sys; from importlinter.cli import lint_imports_command; sys.exit(lint_imports_command())' --config governance/importlinter.toml
         language: system
         pass_filenames: false
         always_run: true

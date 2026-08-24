@@ -38,6 +38,7 @@ DOCUMENTARY = [
     ("0060", "docs/redteam/fixture-candidates/README.md"),
     ("0061", "docs/SITTING.md"),
     ("0062", "docs/SITTING.md"),
+    ("0063", "docs/proposals/2026-08-25-boundary-sitting/brief-9.1-amendment.md"),
 ]
 
 SCHEMA_OLD = '''          "target": { "type": "string", "minLength": 1 },

@@ -11,3 +11,6 @@ dist/
 # running the laws, so it is kept out of git rather than growing there for ever
 # (decision D0041). Its durable home arrives with R2 at M4.
 evidence/
+
+# import-linter's graph cache (created by lint-imports in the working directory)
+.import_linter_cache/

@@ -101,8 +101,10 @@ frozen_paths:
 # the guards — you cannot weaken the custody floor without the owner noticing — and it
 # means guard changes batch to boundary sittings like every other Tier-C act.
 # pyproject.toml is deliberately NOT listed: dependency work would otherwise halt
-# mid-milestone. Its import-linter contracts are covered instead by the contract-shape
-# check in check_manifest (itself a custody-set member).
+# mid-milestone. The import contracts it used to hold have MOVED to
+# governance/importlinter.toml, which IS listed — a guard's configuration is part of the
+# guard, and leaving the contracts in the one file the builder could freely edit was the
+# resolution half of RT-02 (conferral ruling 3, D0063).
 custody:
   file: governance/custody.sha256
   set:
@@ -116,6 +118,7 @@ custody:
     - governance/policy.yaml
     - governance/tier-c.yaml
     - governance/tag-roles.yaml
+    - governance/importlinter.toml
     - governance/schemas/*.json
     - scripts/_gov.py
     - scripts/custodian.sh
@@ -123,6 +126,7 @@ custody:
     - scripts/check_concepts.py
     - scripts/check_decisions.py
     - scripts/check_tag_signers.py
+    - scripts/check_receipts.py
     - scripts/gen_projections.py
     - scripts/gen_custody.py
     - scripts/opening_sitting.sh

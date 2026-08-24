@@ -35,62 +35,8 @@ packages = ["src/tannen"]
 testpaths = ["tests"]
 
 # Import contracts (BRIEF §5.3: no hidden IO; §1/§2: no cross-repo imports).
-# The forbidden-modules lists below must cover governance/tier-c.yaml's
-# forbidden_imports lists — scripts/check_manifest.py enforces that consistency
-# (decision D0016), so tier-c.yaml stays the single human-readable source.
-[tool.importlinter]
-root_packages = ["tannen"]
-include_external_packages = true
 
-[[tool.importlinter.contracts]]
-name = "kernel imports no IO modules (BRIEF §5.3)"
-id = "kernel-no-io"
-type = "forbidden"
-source_modules = ["tannen.kernel"]
-forbidden_modules = [
-    "io",
-    "os",
-    "pathlib",
-    "socket",
-    "subprocess",
-    "shutil",
-    "tempfile",
-    "urllib",
-    "http",
-    "ftplib",
-    "asyncio",
-    "aiohttp",
-    "requests",
-    "httpx",
-    "sqlite3",
-    "duckdb",
-]
-
-[[tool.importlinter.contracts]]
-name = "kernel has no clock and no other nondeterminism (BRIEF P1, P7, §5.7)"
-id = "kernel-no-clock"
-type = "forbidden"
-source_modules = ["tannen.kernel"]
-forbidden_modules = [
-    "time",
-    "datetime",
-    "calendar",
-    "zoneinfo",
-    "random",
-    "secrets",
-    "uuid",
-]
-
-[[tool.importlinter.contracts]]
-name = "no cross-repo imports, in either direction (BRIEF §1, Tier C)"
-id = "no-cross-repo"
-type = "forbidden"
-source_modules = ["tannen"]
-forbidden_modules = [
-    "pkm",
-    "life_agent",
-    "credence",
-    "proplang",
-    "renavon",
-    "renavon_monorepo",
-]
+# Import contracts live in governance/importlinter.toml, NOT here: this file is outside
+# the custody set (dependency work must not halt mid-milestone) and the contracts must be
+# inside it, because a guard's configuration is part of the guard (D0063, conferral ruling
+# 3). Every call site passes `--config governance/importlinter.toml` explicitly.

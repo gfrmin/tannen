@@ -27,7 +27,7 @@ bindings:
     target: "tests/test_kernel_surface.py::test_one_home_for_the_grammar"
     detail: every ref the system emits is minted by tannen.kernel.refs
   - type: config
-    target: "pyproject.toml#tool.importlinter.contracts"
+    target: "governance/importlinter.toml#tool.importlinter.contracts"
     detail: the kernel-no-io contract keeps the split honest — tannen.store may import pathlib, tannen.kernel may not
 links:
   - "docs/specs/m0.md §1"

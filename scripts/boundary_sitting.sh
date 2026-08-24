@@ -167,6 +167,41 @@ else
     fi
 fi
 
+# ---------------------------------------------------------------- 4b. frozen text
+say "Step 4b — the two frozen files the sitting amends"
+if grep -q 'Metric calibration' BRIEF.md; then
+    note "BRIEF §9.1 amendment already applied — skipped"
+else
+    note "Two additive bullets for BRIEF §9.1: the metric-calibration rule, and the"
+    note "distinction between a signature as presence and a signature as authorisation."
+    note "Both were conferral rulings; neither is stated by any artifact today."
+    if confirm "Read the drafted amendment?"; then
+        "${PAGER:-less}" "$PROPOSALS/brief-9.1-amendment.md"
+    fi
+    note "BRIEF.md is owner text and frozen — apply the two blocks in your editor."
+    if confirm "Open BRIEF.md now?"; then
+        "${EDITOR:-nano}" BRIEF.md
+        git --no-pager diff BRIEF.md
+        if confirm "Keep this edit?"; then
+            regen_manifest_row BRIEF.md
+        else
+            git checkout -- BRIEF.md
+        fi
+    fi
+fi
+if diff -q .github/workflows/ci.yml "$PROPOSALS/ci.yml" >/dev/null; then
+    note "ci.yml already current — skipped"
+else
+    note "ci.yml is frozen, so the builder cannot add the fetch-depth the new guards need:"
+    note "a shallow checkout arrives without tags, which the custody floor refuses (RT-15),"
+    note "and without the history the receipt chain walks."
+    diff -u .github/workflows/ci.yml "$PROPOSALS/ci.yml" | "${PAGER:-less}"
+    if confirm "Install this ci.yml?"; then
+        cp "$PROPOSALS/ci.yml" .github/workflows/ci.yml
+        regen_manifest_row .github/workflows/ci.yml
+    fi
+fi
+
 # ---------------------------------------------------------------- 5. poison fixtures
 say "Step 5 — install the red-team poison fixtures (author-key territory)"
 note "Seven fixtures, all drafted under $CANDIDATES and verified to fail their guard for"
@@ -176,9 +211,13 @@ note "every line, so the fixtures must land first or it will fail on missing pat
 FIXTURES="lint-imports-kernel check-decisions-ratchet check-decisions-nested-hatch
           check-manifest-sealed check-manifest-unsigned-policy
           check-decisions-unsigned-tier-c custodian-tag-signer"
-if [ ! -f "$CANDIDATES/custodian-tag-signer/repo.bundle" ]; then
-    note "the tag-signer fixture's bundle is missing — it carries a builder-signed tag"
-    confirm "Generate it now (needs the builder key)?" \
+if [ ! -d tests/poison/custodian-tag-signer ]; then
+    note "The tag-signer fixture is a git bundle carrying a builder-signed close tag."
+    note "It is generated HERE, at the sitting, and never shipped pre-built (conferral"
+    note "ruling 6): a bundle is opaque, and an opaque artifact you did not watch being"
+    note "made is one you are taking on trust — the one thing this corpus exists to avoid."
+    rm -f "$CANDIDATES/custodian-tag-signer/repo.bundle"
+    confirm "Generate it now (uses the builder key to sign the poison tag)?" \
         && bash "$CANDIDATES/custodian-tag-signer/make-fixture.sh"
 fi
 for fixture in $FIXTURES; do

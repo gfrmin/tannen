@@ -7,7 +7,7 @@ path — the staged blob must hash to the manifest's value.
 
 Also enforces the tier-c.yaml single-source rule (decision D0016): the manifest
 named by governance/tier-c.yaml exists, the budget file it names exists, and every
-module in its forbidden_imports lists is covered by a pyproject.toml import-linter
+module in its forbidden_imports lists is covered by a governance/importlinter.toml
 contract, so the human-readable list and the machine-enforced list cannot drift.
 
 Exits non-zero on any violation.
@@ -21,7 +21,15 @@ import sys
 import tomllib
 from pathlib import Path
 
-from _gov import (Failures, custody_declaration, custody_rows, load_yaml, parse_manifest,
+# Run under `python -I -P` (conferral ruling 3, D0063): isolated mode ignores
+# PYTHONPATH, PYTHONHOME and user site-packages, and -P stops any directory being
+# prepended to sys.path implicitly — including this script's own. The floor may depend
+# only on tools the OS provides and paths named literally, so the one path this guard
+# needs is named literally here, derived from __file__ rather than inherited.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _gov import (  # noqa: E402
+    Failures, custody_declaration, custody_rows, load_yaml, parse_manifest,
                   sha256_bytes, sha256_file, REPO_ROOT)
 
 
@@ -220,11 +228,14 @@ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
                     f"budget envelope (max {max_envelope}) — Tier-C door spend-envelopes"
                 )
 
-    pyproject = root / "pyproject.toml"
-    if not pyproject.exists():
-        fail.add("pyproject.toml is missing")
+    # The contracts live in their own custody-set file, not in pyproject.toml: a guard's
+    # configuration is part of the guard, and pyproject.toml is deliberately outside the
+    # custody set so dependency work does not halt mid-milestone (D0063, ruling 3).
+    contract_file = root / "governance" / "importlinter.toml"
+    if not contract_file.exists():
+        fail.add("governance/importlinter.toml is missing — the import contracts have no home")
         return
-    contracts = tomllib.loads(pyproject.read_text(encoding="utf-8")) \
+    contracts = tomllib.loads(contract_file.read_text(encoding="utf-8")) \
         .get("tool", {}).get("importlinter", {}).get("contracts", [])
     covered = {m for c in contracts for m in c.get("forbidden_modules", [])}
     forbidden = tier_c.get("forbidden_imports", {})
@@ -236,7 +247,8 @@ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
             if mod not in covered:
                 fail.add(
                     f"tier-c.yaml forbidden_imports.{kind} lists {mod!r} but no "
-                    "pyproject.toml import-linter contract forbids it (one source, D0016)"
+                    "import-linter contract in governance/importlinter.toml forbids it "
+                    "(one source, D0016)"
                 )
 
     # A contract's teeth are its SHAPE, not just its forbidden list (RT-02, D0056).
@@ -252,7 +264,8 @@ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
     seen_ids = {c.get("id") for c in contracts}
     for cid, expected in expected_sources.items():
         if cid not in seen_ids:
-            fail.add(f"import contract {cid!r} is missing from pyproject.toml entirely")
+            fail.add(f"import contract {cid!r} is missing from "
+                     "governance/importlinter.toml entirely")
     for contract in contracts:
         cid = contract.get("id")
         if cid not in expected_sources:

@@ -33,7 +33,14 @@ from pathlib import Path
 
 import yaml
 
-from _gov import (
+# Run under `python -I -P` (conferral ruling 3, D0063): isolated mode ignores
+# PYTHONPATH, PYTHONHOME and user site-packages, and -P stops any directory being
+# prepended to sys.path implicitly — including this script's own. The floor may depend
+# only on tools the OS provides and paths named literally, so the one path this guard
+# needs is named literally here, derived from __file__ rather than inherited.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _gov import (  # noqa: E402
     Failures,
     binding_strengths,
     input_hash,

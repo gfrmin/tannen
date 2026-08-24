@@ -15,6 +15,8 @@ break. The table below is the applying document.
 | `policy-append.yaml` | `governance/policy.yaml` | Owner-signed; any edit invalidates the signature. The `in_repo_mechanics` clause (D0048, D0053). |
 | `apply_binding_strength.py` | `governance/schemas/decision-record.schema.json` + 14 records | The schema is frozen. Idempotent, and lands both halves together: a schema allowing `strength` while no record uses it would report `0 documentary`, a false number rather than no number. |
 | `poison-readme-rows.md` | `tests/poison/README.md` | `tests/poison/` is author-key territory. |
+| `brief-9.1-amendment.md` | `BRIEF.md` §9.1 | Frozen owner text. Two additive bullets promoted from conferral rulings 2 and 5: metric calibration, and presence-vs-authorisation. |
+| `ci.yml` | `.github/workflows/ci.yml` | Frozen. Adds `fetch-depth: 0` — a shallow checkout arrives without tags, which the custody floor refuses (RT-15), and without the history the receipt chain walks. |
 
 Fixture candidates live one directory up, under `docs/redteam/fixture-candidates/`; the
 driver `git mv`s them into `tests/poison/` and adds a manifest row per file, because
