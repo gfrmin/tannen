@@ -7,7 +7,7 @@ fold of the records; this file is a query over them. Effective status is compute
 a provisional Tier-B record past its veto date is accepted by lapse ONLY while the
 attention receipt is fresh; on a stale receipt it blocks instead.
 
-Attention receipt: **STALE** — no attention receipt exists yet (first receipt lands at the opening sitting)
+Attention receipt: **FRESH** — receipt 2026-08-24.md fresh (no milestone boundary since)
 
 | Id | Tier | Title | Decision | Status (effective) | Veto by | Risk flags | Enforcement |
 |---|---|---|---|---|---|---|---|
