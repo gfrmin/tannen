@@ -1,0 +1,42 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0037
+title: Opening-sitting driver script — builder-drafted, owner-executed, signs nothing itself
+tier: A
+date: "2026-08-24"
+decision: >-
+  scripts/opening_sitting.sh drives docs/OPENING.md interactively: precondition
+  verify, the step-0 clean-clone trust-root inspection, keygen and allowed_signers
+  enrolment, policy signature, the optional D0036 custodian patch (exact-match
+  block replacement, aborting untouched unless the original check-3 block occurs
+  exactly once), the brief-freeze tag, the first receipt, and the custodian cron.
+  It has the same custody status as OPENING.md's copy-pasteable commands — an
+  executable form of instructions the builder already legitimately drafts. The
+  author-territory line is preserved dynamically rather than statically: every
+  edit to allowed_signers, scripts/custodian.sh, or their MANIFEST rows happens
+  only under the owner's explicit per-edit confirmation with the diff shown, and
+  every signature is the owner's hardware key answering a touch — the script can
+  produce no attestation on its own. Idempotent: completed steps are detected and
+  skipped, so a failed touch resumes cleanly. It also mkdir-p's receipts/ before
+  the first full custodian run (custodian.sh assumes the directory and is not
+  builder-editable). Verified in a scratch clone before commit: the embedded
+  patch applied exactly once, the patched custodian ran green pre-blessing, and
+  a backdated builder tag beside a stub brief-freeze went red with the exact
+  "predates its delegation's blessing" message.
+rationale: >-
+  The owner asked for help performing the sitting. A driver that sequences the
+  mechanical surgery exactly and pauses for the human acts keeps the sitting at
+  its designed length while making the fiddly parts (manifest-row regeneration,
+  heredoc-exact patching) unmistakable; encoding attention as confirmation gates
+  rather than transcription work is the custody floor's own trade.
+reversibility: >-
+  Fully reversible; the script is unmanifested convenience tooling and can be
+  deleted or rewritten freely. What it produces (signatures, receipts) has the
+  reversibility of the acts themselves, which the script neither adds to nor
+  subtracts from.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/opening_sitting.sh
+  - type: file
+    target: docs/OPENING.md
+    detail: '"Driver:" paragraph pointing the sitting at the script'

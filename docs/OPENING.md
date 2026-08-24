@@ -5,6 +5,13 @@ project runs without you until the M5 close, except what the five Tier-C doors g
 (`governance/tier-c.yaml`). Run everything from the repo root. Precondition:
 `make verify` is green before you start.
 
+**Driver:** `bash scripts/opening_sitting.sh` walks every step below in order —
+it pauses for each confirmation, shows the diff of every author-territory edit
+before it lands, and never signs anything itself (each signature is your key
+answering your touch; expect four touches). Read the script first, then run it;
+the sections below remain the reference for doing it by hand. It is safe to
+re-run — completed steps are detected and skipped.
+
 ## 0. Inspect the trust root (read-only, ~5 minutes, before signing anything)
 
 Everything after this sitting trusts what you are about to sign, so this is the one
