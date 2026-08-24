@@ -1,0 +1,62 @@
+id: D0061
+title: "The owner signs a custody set, not MANIFEST.sha256"
+tier: C
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  D0060 item 5 said "SIGN MANIFEST.sha256 and add it to required_signatures". That is
+  refused, and replaced. governance/tier-c.yaml gains a `custody` block naming
+  governance/custody.sha256 and enumerating the paths it covers: BRIEF.md, CLAUDE.md,
+  DELEGATIONS.md, Makefile, .pre-commit-config.yaml, .github/workflows/ci.yml,
+  allowed_signers, the governance configs and schemas, every scripts/ guard and both
+  sitting drivers, and all of tests/poison/. scripts/gen_custody.py generates the file
+  from that list; scripts/check_manifest.py::check_custody fails on drift or on a pattern
+  that matches nothing; the custodian verifies its hashes with sha256sum and its owner
+  signature (namespace tannen-custody) without trusting any Python guard, since every
+  Python guard is inside the set. MANIFEST.sha256 stays builder-maintained and unsigned.
+  Also landed with it, closing RT-13: MANIFEST.sha256 rows for governance/tier-c.yaml,
+  governance/tag-roles.yaml and scripts/check_tag_signers.py.
+rationale: >-
+  Signing the manifest looks like the largest single improvement available and is in fact
+  a protocol violation. The manifest GROWS AT EVERY LAW FREEZE — CLAUDE.md's build
+  protocol has Session A add the milestone's law files to it and builder-sign the
+  laws-freeze tag under DELEGATIONS.md delegation 1, without the owner. An owner signature
+  over the manifest puts the owner's key in the path of every milestone's Session A, five
+  more times, spending precisely the attention the standing delegation exists to conserve
+  (BRIEF §9.2). The defect was not visible from D0060's queue; it appeared on trying to
+  implement it, which is why this record refuses an item the owner already queued rather
+  than executing it. The custody set is the same signature applied to the stable subset:
+  it changes only when the custody floor changes. It also answers RT-01 in the direction
+  the manifest structurally cannot — a manifest row can be deleted, silently unfreezing
+  its path, because nothing enumerates what the manifest should contain; the custody set
+  IS that enumeration, so a missing path is a hole that is named rather than an absence
+  that is silent. What it does NOT fix, stated plainly: MANIFEST.sha256's own rows for
+  law files and specs remain covered only by the seal rule and the builder's honesty.
+reversibility: >-
+  Delete a config block, a 60-line generator, a 30-line check and one signature. The
+  ongoing cost is deliberate and is the point: after this, any edit to a listed path
+  turns the gate red until a sitting re-signs, so guard changes batch to boundary
+  sittings. pyproject.toml is deliberately excluded so dependency work does not halt
+  mid-milestone; its import contracts are covered by the contract-shape check in
+  check_manifest instead.
+status: blocked-on-owner
+bindings:
+  - type: config
+    target: governance/tier-c.yaml#custody.file
+    detail: >-
+      ENFORCED: read at runtime by scripts/gen_custody.py and by
+      check_manifest::check_custody, both of which run in `make verify`. The declaration
+      is the trigger — nothing is required of a path that is not listed, and a listed
+      pattern that matches no file is reported as a hole.
+  - type: pytest
+    target: tests/test_custody_set.py
+    detail: >-
+      ENFORCED: the guard bites both ways — drift in a listed file is caught, a pattern
+      matching nothing is caught, and an unlisted file is correctly ignored.
+  - type: file
+    target: docs/SITTING.md
+    detail: >-
+      The reasoning above, written where the next sitting will read it, so "just sign the
+      manifest" is not re-proposed every boundary. Documentary by construction: a doc
+      enforces nothing.
+links: ["D0016", "D0051", "D0056", "D0059", "D0060"]

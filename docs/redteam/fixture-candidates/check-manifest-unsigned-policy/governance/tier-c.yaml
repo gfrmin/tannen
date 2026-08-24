@@ -5,3 +5,9 @@ frozen_paths:
 forbidden_imports: {}
 policy:
   file: governance/policy.yaml
+# The declaration is the trigger: check_manifest.check_required_signatures reads this
+# list, so the fixture must declare what it then deletes the signature for (D0056).
+required_signatures:
+  - path: governance/policy.yaml
+    namespace: tannen-policy
+    signer: owner@tannen

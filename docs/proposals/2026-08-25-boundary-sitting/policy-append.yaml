@@ -1,0 +1,24 @@
+
+# In-repo mechanics (BRIEF §9.2 reversibility tiers; decisions D0048, D0053). Reversible
+# operations on this repo's own history are Tier A: the builder performs them and records
+# them, and does NOT ask. Asking about anything in `covers` is itself a defect — file it
+# as a decision record citing this file. The failure mode this closes is not laziness but
+# its opposite: deference spends owner attention, which is the one resource the autonomy
+# protocol exists to conserve.
+in_repo_mechanics:
+  tier: A
+  covers:
+    - merging a milestone branch into master once its gate is green
+    - creating, deleting or moving worktrees under ~/git/worktrees/tannen/
+    - branching, rebasing, fast-forwarding and resetting refs that carry no signature
+    - regenerating projections and digests
+    - installing or updating dev dependencies already pinned in pyproject.toml
+    - pushing to a private origin already configured in this repo
+  excludes:
+    # NOT in-repo mechanics. Nothing here is relaxed by the list above.
+    - creating, moving or deleting any git tag (custody; DELEGATIONS.md, D0049)
+    - any edit to a frozen path, to allowed_signers, to tests/poison/, or to a signed
+      file (governance/policy.yaml itself included)
+    - adding a git remote, or changing the visibility of an existing one
+      (Tier-C door external-bytes)
+    - pushing to any remote other than a private origin already configured here

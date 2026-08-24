@@ -1,5 +1,0 @@
-# The signer set the fixture is checked against. The owner replaces the placeholder
-# below with the REAL builder@tannen public key from the repo's own allowed_signers
-# when running make-fixture.sh — the fixture must verify (the tag is validly signed);
-# what must FAIL is the principal-vs-tag-kind rule, not the signature.
-builder@tannen ssh-ed25519 REPLACE-WITH-THE-REAL-BUILDER-PUBLIC-KEY

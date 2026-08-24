@@ -18,11 +18,10 @@ Findings are `RT-nn` from `docs/redteam/2026-08-24-m0-boundary.md`.
 | `lint-imports-kernel/` | `lint-imports` against the **repo's own** contracts | RT-02 | **yes** |
 | `check-decisions-ratchet/` | `scripts/check_decisions.py` (ratchet sub-check) | RT-07, D0047 ask | **yes** |
 | `check-decisions-nested-hatch/` | `scripts/check_decisions.py` (pytest bindings) | RT-08 | **yes** (pins the pytest-binding tooth; the hatch itself needs a call-site fix, not a fixture) |
-| `check-manifest-sealed/` | `scripts/check_manifest.py` (new sealed-paths check) | RT-01, RT-03, RT-13 | needs patch |
-| `check-manifest-unsigned-policy/` | `scripts/check_manifest.py` (new custody-signature check) | RT-04 | needs patch |
-| `check-decisions-unsigned-tier-c/` | `scripts/check_decisions.py` (new Tier-C signature check) | RT-06 | needs patch |
-| `custodian-close-tag/` | `scripts/custodian.sh` check 3 (signer ↔ tag kind) | D0049's open ask | needs owner to build (keys) |
-| *(none drafted)* | `scripts/check_tag_signers.py` (required tags) | RT-15 | shares `custodian-close-tag/`'s generator — see below |
+| `check-manifest-sealed/` | `scripts/check_manifest.py` (sealed-paths check) | RT-01, RT-03, RT-13 | **yes** (patch landed, D0056) |
+| `check-manifest-unsigned-policy/` | `scripts/check_manifest.py` (required-signature check) | RT-04 | **yes** (patch landed, D0056) |
+| `check-decisions-unsigned-tier-c/` | `scripts/check_decisions.py` (Tier-C signature check) | RT-06 | needs patch — lands mid-sitting, after the records are signed |
+| `custodian-tag-signer/` | `scripts/check_tag_signers.py` | D0049's open ask **and** RT-15 | **yes** — one bundle, two teeth (renamed from `custodian-tag-signer/`, 2026-08-25) |
 
 ---
 
@@ -287,7 +286,9 @@ Tier-C value in policy becomes builder-editable. D0048's premise — "the builde
 edit it — any edit invalidates the signature" — is true only while the signature is
 required to exist.
 
-**Marker:** `owner signature missing while an owner key is enrolled`
+**Marker:** `missing owner signature` — the shipped check is data-driven from
+`tier-c.yaml`'s `required_signatures` rather than a hard-coded tuple, so the fixture
+declares what it then deletes the signature for (updated 2026-08-25, D0056).
 
 **Command that must exit non-zero:**
 
@@ -393,7 +394,7 @@ the always-shown set alongside `risk_flags`:
 
 ---
 
-## `custodian-close-tag/` — **needs the owner to build it** — a builder-signed close tag
+## `custodian-tag-signer/` — **needs the owner to build it** — a builder-signed close tag
 
 **Guard:** `scripts/custodian.sh` check 3 (signer principal ↔ tag kind).
 
@@ -415,9 +416,9 @@ arbitrary repo, i.e. extracting it from `custodian.sh` into `scripts/check_tags.
 real repo, once on the fixture:
 
 ```sh
-tmp=$(mktemp -d) && git clone -q tests/poison/custodian-close-tag/repo.bundle "$tmp/repo"
+tmp=$(mktemp -d) && git clone -q tests/poison/custodian-tag-signer/repo.bundle "$tmp/repo"
 bash scripts/check_tags.sh --root "$tmp/repo" \
-    --signers tests/poison/custodian-close-tag/allowed_signers
+    --signers tests/poison/custodian-tag-signer/allowed_signers
 ```
 
 The check-3 body itself is already drafted by the parent session at
@@ -455,7 +456,7 @@ being the thing the gate trusts.
 `ca48a8b`, i.e. against `scripts/check_tag_signers.py` as it shipped: with every tag
 deleted the guard prints `trust root: brief-freeze does not exist yet (nothing to pin)`
 and `0 tag(s); every signer matches its tag class`, and the custodian says
-`custody floor intact`. The fixture is the same shape as `custodian-close-tag/` — a
+`custody floor intact`. The fixture is the same shape as `custodian-tag-signer/` — a
 `repo.bundle` the owner generates, here simply with the tags stripped — so the two
 should share one generator rather than getting two. The guard change it pins:
 

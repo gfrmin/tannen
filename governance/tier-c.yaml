@@ -79,6 +79,56 @@ frozen_paths:
     - tests/poison
     - governance/schemas
 
+# The CUSTODY SET (decision D0061). A positive enumeration of the bytes the OWNER
+# vouches for by signature, generated into `file` by scripts/gen_custody.py and verified
+# by scripts/check_manifest.py::check_custody and by the custodian's own sha256sum pass.
+#
+# Why this exists as well as MANIFEST.sha256, and why the manifest itself is NOT signed:
+# the manifest is builder-maintained and GROWS AT EVERY LAW FREEZE — DELEGATIONS.md
+# delegation 1 has the builder freeze each milestone's laws without the owner. An owner
+# signature over the manifest would therefore put the owner's key in the path of every
+# milestone's Session A, spending the attention the delegation exists to save (BRIEF
+# §9.2). The custody set is the stable subset that changes only when the trust root
+# changes, so signing it costs one signature per boundary sitting and no more.
+#
+# It also answers RT-01 in the direction the manifest cannot: a manifest ROW can be
+# deleted and the path silently unfreezes, because nothing enumerates what the manifest
+# should contain. The custody set IS that enumeration, so deleting a row here is a
+# missing pattern, not a silent absence.
+#
+# COST, stated plainly: any edit to a listed path invalidates the owner signature and
+# the gate goes red until the next sitting re-signs. That is the intended property for
+# the guards — you cannot weaken the custody floor without the owner noticing — and it
+# means guard changes batch to boundary sittings like every other Tier-C act.
+# pyproject.toml is deliberately NOT listed: dependency work would otherwise halt
+# mid-milestone. Its import-linter contracts are covered instead by the contract-shape
+# check in check_manifest (itself a custody-set member).
+custody:
+  file: governance/custody.sha256
+  set:
+    - BRIEF.md
+    - CLAUDE.md
+    - DELEGATIONS.md
+    - Makefile
+    - .pre-commit-config.yaml
+    - .github/workflows/ci.yml
+    - allowed_signers
+    - governance/policy.yaml
+    - governance/tier-c.yaml
+    - governance/tag-roles.yaml
+    - governance/schemas/*.json
+    - scripts/_gov.py
+    - scripts/custodian.sh
+    - scripts/check_manifest.py
+    - scripts/check_concepts.py
+    - scripts/check_decisions.py
+    - scripts/check_tag_signers.py
+    - scripts/gen_projections.py
+    - scripts/gen_custody.py
+    - scripts/opening_sitting.sh
+    - scripts/boundary_sitting.sh
+    - tests/poison/**/*
+
 # Files whose owner signature is REQUIRED, not merely verified-if-present. RT-04: the
 # custodian's policy check reads "if governance/policy.yaml.sig exists, verify it; else
 # say 'unsigned (expected before the opening sitting)' and pass" — so DELETING the

@@ -27,4 +27,14 @@ status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-08-24-custodian-tag-ordering.md
+  - type: manifest
+    target: scripts/custodian.sh
+    detail: >-
+      ENFORCED, added 2026-08-25 under D0045 (the decision text above is unchanged; the
+      binding is its present-tense attachment). The owner applied this patch at the
+      opening sitting, so the guard now lives in a frozen, custody-set file: check 3's
+      FOUNDING_TAGS block cannot be softened without a manifest row change and, from
+      this boundary, without invalidating the owner's signature over the custody set
+      (D0061). Until this row existed the record pointed only at the proposal — proof
+      that a remedy was drafted, not that it was in force.
 risk_flags: [governance-paths]

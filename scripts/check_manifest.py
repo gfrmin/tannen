@@ -21,7 +21,8 @@ import sys
 import tomllib
 from pathlib import Path
 
-from _gov import Failures, load_yaml, parse_manifest, sha256_bytes, sha256_file, REPO_ROOT
+from _gov import (Failures, custody_declaration, custody_rows, load_yaml, parse_manifest,
+                  sha256_bytes, sha256_file, REPO_ROOT)
 
 
 def check_frozen_files(root: Path, fail: Failures) -> None:
@@ -151,6 +152,43 @@ def check_required_signatures(root: Path, fail: Failures) -> None:
             fail.add(f"signature does not verify for {entry['path']} against {entry['signer']}")
 
 
+def check_custody(root: Path, fail: Failures) -> None:
+    """The custody set is current, and its holes are named (decision D0061).
+
+    MANIFEST.sha256 is a whitelist of hashes with nothing enumerating what it should
+    contain, so a row can be deleted and the path silently unfreezes (RT-01). The custody
+    set is that missing enumeration for the subset the owner signs. It is deliberately
+    NOT the manifest: the manifest grows at every law freeze under the builder's standing
+    delegation, so signing it would put the owner's key in the path of every milestone.
+    """
+    declaration = custody_declaration(root)
+    if not declaration:
+        return
+    rows, problems = custody_rows(root)
+    for problem in problems:
+        fail.add(problem)
+    target = root / declaration["file"]
+    if not target.exists():
+        fail.add(f"custody file missing: {declaration['file']} — run scripts/gen_custody.py")
+        return
+    want = {row.split("  ", 1)[1]: row.split("  ", 1)[0] for row in rows}
+    have = parse_manifest(target)
+    for rel in sorted(set(have) - set(want)):
+        fail.add(f"custody drift: {rel} is signed for but no longer declared in "
+                 "tier-c.yaml custody.set")
+    for rel in sorted(set(want) - set(have)):
+        fail.add(f"custody drift: {rel} is declared in the custody set but absent from "
+                 f"{declaration['file']} — run scripts/gen_custody.py")
+    for rel in sorted(set(want) & set(have)):
+        if want[rel] != have[rel]:
+            fail.add(
+                f"custody drift: {rel} changed since the custody file was written. Any "
+                "owner signature over it no longer covers these bytes — regenerate with "
+                "scripts/gen_custody.py and have the owner re-sign at the next boundary "
+                "sitting (this is the alarm, not a bug)."
+            )
+
+
 def check_tier_c_consistency(root: Path, fail: Failures) -> None:
     tier_c_path = root / "governance" / "tier-c.yaml"
     if not tier_c_path.exists():
@@ -247,10 +285,12 @@ def main() -> int:
     check_frozen_files(root, fail)
     check_sealed_paths(root, fail)
     check_required_signatures(root, fail)
+    check_custody(root, fail)
     if args.staged:
         check_staged(root, fail)
     check_tier_c_consistency(root, fail)
-    return fail.finish("frozen paths intact; seals unbroken; required signatures present; tier-c.yaml consistent with the guards")
+    return fail.finish("frozen paths intact; seals unbroken; custody set current; "
+                       "required signatures present; tier-c.yaml consistent with the guards")
 
 
 if __name__ == "__main__":

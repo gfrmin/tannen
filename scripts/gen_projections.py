@@ -26,6 +26,7 @@ from pathlib import Path
 
 from _gov import (
     GEN_MARKER,
+    binding_strengths,
     effective_status,
     input_hash,
     load_yaml,
@@ -282,6 +283,7 @@ def gen_digest(root: Path, today: dt.date) -> str:
     else:
         lines.append("- Queue empty.")
 
+    enforced_n, documentary_n = binding_strengths(records)
     lines += ["", "## Laws & evidence", ""] + laws_section(root)
     lines += [
         "",
@@ -291,6 +293,9 @@ def gen_digest(root: Path, today: dt.date) -> str:
         + (f" (previous digest {prev[0]}: {prev[1]})" if prev else " (no previous digest)"),
         f"- Grade-P / S-pending residue: **{residue_count}**"
         + (f" (previous digest {prev[0]}: {prev[2]})" if prev else " (no previous digest)"),
+        f"- Bindings: **{enforced_n} enforced**, **{documentary_n} documentary** "
+        + ("(documentary bindings record an intent no guard yet enforces — each one "
+           "is a proposal awaiting the owner's key)" if documentary_n else "(none awaiting application)"),
         f"<!-- metrics: unenforced={unenforced_count} residue={residue_count} -->",
     ]
 

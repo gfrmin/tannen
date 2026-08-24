@@ -24,6 +24,8 @@ import fnmatch
 import re
 import subprocess
 import sys
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 from _gov import Failures, REPO_ROOT, git_env, load_yaml, owner_key_enrolled
@@ -92,16 +94,41 @@ def check_trust_root(repo: Path, pin: dict, fail: Failures, opened: bool) -> Non
         print(f"  trust root: {tag} pinned at {actual[:12]}…")
 
 
+@contextmanager
+def repo_at(target: Path):
+    """Yield a working repo for `target`, cloning it first if it is a git bundle.
+
+    The poison fixture for this guard cannot be a directory of files the way the other
+    four are: the violation is a *signed git object*. A bare repo would be a dozen
+    manifest rows of loose objects; a bundle is one file, one row — so the guard knows
+    how to open one rather than the custodian growing a temp-dir dance around it.
+    """
+    if target.suffix != ".bundle":
+        yield target
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        clone = Path(tmp) / "repo"
+        run = subprocess.run(["git", "clone", "--quiet", str(target), str(clone)],
+                             capture_output=True, text=True, check=False, env=git_env())
+        if run.returncode != 0:
+            raise SystemExit(f"check_tag_signers: cannot clone bundle {target}: {run.stderr.strip()}")
+        yield clone
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=REPO_ROOT,
                         help="repo holding governance/tag-roles.yaml and allowed_signers")
     parser.add_argument("--repo", type=Path, default=None,
                         help="repo whose tags are checked (default: --root); a poison "
-                             "fixture points this at a bare repo carrying a bad tag")
+                             "fixture points this at a .bundle carrying a bad tag")
     args = parser.parse_args()
     root = args.root.resolve()
-    repo = (args.repo or root).resolve()
+    with repo_at((args.repo or root).resolve()) as repo:
+        return check(root, repo)
+
+
+def check(root: Path, repo: Path) -> int:
     fail = Failures("check_tag_signers")
 
     table = load_yaml(root / "governance" / "tag-roles.yaml")

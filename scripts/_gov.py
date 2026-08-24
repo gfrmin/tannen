@@ -116,6 +116,27 @@ def ratchet_metrics(records: list[dict], concepts: list[dict]) -> tuple[int, int
     return unenforced, residue
 
 
+def binding_strengths(records: list[dict]) -> tuple[int, int]:
+    """(enforced, documentary) binding counts (decision D0052).
+
+    A binding either prevents or detects a violation, or it merely records that someone
+    meant to. `binding_violation` cannot tell the difference — it asks whether a target
+    exists, resolves or passes — so a drafted proposal awaiting the owner's key counts
+    exactly like a frozen path. Absent `strength` reads as `enforced`, so records written
+    before the field existed keep their meaning; the number is only true once the batch
+    they belong to has been marked, which is why the ratchet must not compare it until a
+    digest has carried honest values once (the sequencing hazard in the proposal).
+    """
+    enforced = documentary = 0
+    for record in records:
+        for binding in record.get("bindings") or []:
+            if binding.get("strength", "enforced") == "documentary":
+                documentary += 1
+            else:
+                enforced += 1
+    return enforced, documentary
+
+
 def previous_metrics(root: Path, today: dt.date) -> tuple[str, int, int] | None:
     """(date, unenforced, residue) from the most recent digest STRICTLY OLDER than today.
 
@@ -130,6 +151,51 @@ def previous_metrics(root: Path, today: dt.date) -> tuple[str, int, int] | None:
         if match:
             return path.stem, int(match.group(1)), int(match.group(2))
     return None
+
+
+def custody_declaration(root: Path) -> dict:
+    """The `custody` block of governance/tier-c.yaml, or {} if there is none.
+
+    A root without the file is a poison fixture or a pre-governance tree, not an error:
+    check_tier_c_consistency reports the absence. Crashing here would replace another
+    guard's clean marker with a traceback (the same defect check_sealed_paths had).
+    """
+    tier_c_path = root / "governance" / "tier-c.yaml"
+    if not tier_c_path.exists():
+        return {}
+    tier_c = load_yaml(tier_c_path)
+    if not isinstance(tier_c, dict):
+        return {}
+    declared = tier_c.get("custody")
+    return declared if isinstance(declared, dict) else {}
+
+
+def custody_rows(root: Path) -> tuple[list[str], list[str]]:
+    """(rows, problems) — the exact intended content of the custody file.
+
+    The custody set is a POSITIVE enumeration of the bytes the owner vouches for, which
+    is what MANIFEST.sha256 is not: the manifest is a whitelist of hashes that says
+    nothing about what it should contain, so a row can be deleted and the path silently
+    unfreezes (RT-01). A pattern matching nothing is therefore a hole in the set, not an
+    empty set, and is reported as a problem rather than skipped.
+    """
+    patterns = custody_declaration(root).get("set") or []
+    seen: dict[str, str] = {}
+    problems: list[str] = []
+    for pattern in patterns:
+        matches = [
+            path for path in sorted(root.glob(pattern))
+            if path.is_file() and "__pycache__" not in path.parts
+        ]
+        if not matches:
+            problems.append(
+                f"custody pattern matches nothing: {pattern} — a pattern that matches no "
+                "file is a hole in the custody set, not an empty set"
+            )
+            continue
+        for path in matches:
+            seen[path.relative_to(root).as_posix()] = sha256_file(path)
+    return [f"{seen[rel]}  {rel}" for rel in sorted(seen)], problems
 
 
 def resolve_dotted(obj: object, dotted: str) -> object:

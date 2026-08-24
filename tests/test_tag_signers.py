@@ -250,3 +250,25 @@ def test_the_guard_answers_about_the_repo_it_was_given_not_GIT_DIR(monkeypatch, 
     run = world.run()
     assert run.returncode != 0, "the guard read GIT_DIR's repo, not --repo"
     assert "m0-close" in run.stderr
+
+
+def test_a_poison_bundle_is_cloned_and_its_bad_tag_caught(world, tmp_path):
+    """The fixture for this guard cannot be a tree of files (D0062).
+
+    Its violation is a *signed git object*, so it ships as a one-file git bundle and the
+    guard opens it. Without this test the fixture's plumbing — not its finding — is what
+    would rot, and a poison fixture that fails to load looks exactly like a guard that
+    passed its poison.
+    """
+    root_obj = world.tag("brief-freeze", world.owner_key)
+    world.tag("m9-close", world.builder_key)
+    world.write_table(root_obj)
+    bundle = tmp_path / "poison.bundle"
+    sh("git", "-C", str(world.repo), "bundle", "create", "-q", str(bundle), "--all")
+
+    run = subprocess.run(
+        [sys.executable, str(GUARD), "--root", str(world.root), "--repo", str(bundle)],
+        capture_output=True, text=True, check=False, env=git_env(),
+    )
+    assert run.returncode != 0
+    assert "wrong principal (expected owner@tannen, got builder@tannen): m9-close" in run.stderr

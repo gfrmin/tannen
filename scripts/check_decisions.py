@@ -35,6 +35,7 @@ import yaml
 
 from _gov import (
     Failures,
+    binding_strengths,
     input_hash,
     load_schema,
     load_yaml,
@@ -257,6 +258,7 @@ def main() -> int:
         print(f"  veto clock: {line}")
     for line in unenforced:
         print(f"  unenforced (visible debt): {line}")
+    enforced_n, documentary_n = binding_strengths(valid_records)
     pytest_verdict = (
         f"{len(pytest_bindings)} pytest binding(s) NOT CHECKED (nested run)"
         if unresolved else f"{len(pytest_bindings)} pytest binding(s) green"
@@ -264,6 +266,7 @@ def main() -> int:
     return fail.finish(
         f"{len(record_paths)} records valid; {pytest_verdict}; "
         f"{len(unenforced)} unenforced (with reasons); "
+        f"{enforced_n} enforced / {documentary_n} documentary binding(s); "
         f"{len(clocks)} Tier-B clock(s) computed; DECISIONS.md fresh"
     )
 

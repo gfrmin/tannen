@@ -1,0 +1,51 @@
+id: D0062
+title: "The boundary sitting gets a driver, and the fixtures are generated before it runs"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  scripts/boundary_sitting.sh drives a milestone boundary sitting the way
+  scripts/opening_sitting.sh drives the opening one: interactive, idempotent, diff-first,
+  and signing nothing itself. docs/SITTING.md is its reference checklist. The materials it
+  applies are staged under docs/proposals/2026-08-25-boundary-sitting/ — a proposed
+  replacement scripts/custodian.sh (reviewed as a whole-file diff rather than as prose
+  patches), the policy.yaml clause, an idempotent applier for the binding-strength schema
+  field, and the tests/poison/README.md rows. The builder also generated the tag-signer
+  poison bundle in advance (docs/redteam/fixture-candidates/custodian-tag-signer/), and
+  taught scripts/check_tag_signers.py to clone a .bundle passed to --repo.
+rationale: >-
+  The opening sitting proved the shape: an owner steps through a script that shows every
+  author-territory edit as a diff before it lands, and the script never holds the key. A
+  boundary sitting is longer than an opening one — signatures, frozen-path patches, trust
+  root, seven fixtures, a receipt and a close tag — so doing it from a prose checklist
+  invites exactly the ordering mistakes the checklist warns about. Two design points are
+  load-bearing. First, the driver PAUSES and hands back to a builder session for the
+  RT-06 Tier-C signature check: that guard cannot land before the signatures exist, or
+  the gate would be red before the owner could sign, and pre-commit would block the
+  builder's own commit. Second, the close tag is step 10 of 11, after the rule requiring
+  owner-signed closes is installed and its poison fixture is watched failing — a guard
+  should be born having already caught something real. On generating the poison bundle:
+  the fixture needs a builder-signed tag, and creating tags in THIS repo is outside Tier A
+  (D0053), but the tag lives in a throwaway repo that ships as an opaque bundle, so this
+  is builder work. make-fixture.sh is idempotent; delete repo.bundle and re-run it at the
+  sitting if the owner would rather the signature came from their own invocation.
+reversibility: >-
+  Delete a script, a doc and a staging directory. Nothing in them is load-bearing at
+  runtime; the sitting can be done by hand from docs/SITTING.md.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    detail: >-
+      ENFORCED, weakly but really: the driver is in the custody set (D0061), so its bytes
+      are covered by the owner's signature and a change to it is a change the owner is
+      asked to sign for. What it cannot enforce is that a sitting uses it.
+  - type: file
+    target: docs/SITTING.md
+    detail: The checklist the driver implements; a doc enforces nothing.
+  - type: pytest
+    target: tests/test_tag_signers.py
+    detail: >-
+      ENFORCED: the bundle path added to check_tag_signers has a test that a fixture
+      bundle is cloned and its bad tag caught, so the fixture's own plumbing cannot rot.
+links: ["D0037", "D0049", "D0053", "D0059", "D0060", "D0061"]

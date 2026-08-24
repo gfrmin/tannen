@@ -1,0 +1,17 @@
+# Poison fixture signer-role table. Same shape as governance/tag-roles.yaml; the
+# trust-root object is a hash that exists in no repo, so the pin cannot accidentally
+# match the bundle.
+version: 1
+trust_root:
+  tag: brief-freeze
+  object: "0000000000000000000000000000000000000000"
+  signer: owner
+roles:
+  - {pattern: brief-freeze, signer: owner}
+  - {pattern: "*-laws-freeze", signer: builder}
+  - {pattern: "*-close", signer: owner}
+  - {pattern: "amendment-*", signer: owner}
+  - {pattern: "receipt-*", signer: owner}
+required_tags:
+  - brief-freeze
+unknown: refuse
