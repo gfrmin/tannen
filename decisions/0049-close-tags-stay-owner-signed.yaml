@@ -1,0 +1,56 @@
+id: D0049
+title: "Milestone close tags remain owner-signed; the standing delegation is not extended"
+tier: C
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  Owner decision at the M0 boundary, answering question (1) of D0047: milestone
+  `<milestone>-close` tags stay owner-signed, and DELEGATIONS.md is NOT extended to
+  cover them. The builder continues to mint `<milestone>-laws-freeze` tags and
+  implementation commits under the standing delegation, and mints no close tag. The
+  custodian patch that turns this from an instruction into a guard is drafted at
+  docs/proposals/2026-08-24-custodian-close-tag-signer.md; scripts/custodian.sh is
+  trust-root, so the owner applies it. Questions (2) the boundary sitting and its
+  red-team pass, and (3) the fixture blessing, remain open under D0047 — this record
+  resolves one of its three parts, not the record.
+rationale: >-
+  Owner's reasoning, recorded as given: "The builder mints the opening tags that start
+  the consent clocks, so the owner must sign the closes that anchor presence —
+  delegating both ends would hollow the receipt mechanism." The structure is visible in
+  the code: receipt_state() in scripts/_gov.py computes freshness as the first boundary
+  tag after the receipt plus seven days, and BOUNDARY_TAG_RE matches brief-freeze,
+  *-laws-freeze and *-close. The builder may already mint *-laws-freeze, so it controls
+  when the clock starts; if it could also mint *-close it would control both ends of the
+  mechanism that measures owner presence, and a measurement its subject controls
+  measures nothing. Minimisation is the right default for this project and was argued
+  for here — close tags are reversible, and delegating them would remove owner
+  touchpoints, which §9 explicitly wants. It is refused anyway: the cost is six
+  signatures across the whole project, and what they buy is that the attention floor
+  cannot be quietly self-certified. Reversible-in-isolation is not the same as
+  reversible-in-aggregate when the thing being delegated is the audit of the delegate.
+reversibility: >-
+  One-way in practice while it holds, trivial to relax. Extending the delegation later
+  means amending DELEGATIONS.md and re-blessing it — an owner act with a signature.
+  Reverting the custodian patch is deleting a nine-line case block. What is NOT cheaply
+  reversible is the counterfactual: close tags minted by the builder cannot be
+  un-minted from the record, and every receipt clock they anchored stays anchored to a
+  self-issued attestation.
+status: accepted
+bindings:
+  - type: file
+    target: DELEGATIONS.md
+    detail: >-
+      The blessed delegation text, quoted verbatim in the owner-signed brief-freeze tag
+      message. It enumerates "law-freeze tags and implementation commits"; close tags
+      are outside it, and the standing rule "delegation precedes signature" forbids
+      inventing the authority. KNOWN WEAKNESS, found while drafting and carried in the
+      proposal: DELEGATIONS.md is not in MANIFEST.sha256 and not in the custodian's
+      custody set, so no guard compares the file against the tag message that blessed
+      it. Freezing it is the companion patch in the same proposal.
+  - type: file
+    target: docs/proposals/2026-08-24-custodian-close-tag-signer.md
+    detail: >-
+      The drafted guard: custodian check 3 gains a `*-close` case requiring
+      "signature for owner@tannen", plus the companion DELEGATIONS.md freeze. Upgrades
+      to a manifest binding on scripts/custodian.sh once the owner applies it (D0045).
+links: ["D0015", "D0032", "D0035", "D0036", "D0045", "D0047"]

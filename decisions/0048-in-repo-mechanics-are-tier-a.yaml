@@ -1,0 +1,49 @@
+id: D0048
+title: "Defect: the builder asked a policy-answerable question; in-repo mechanics are Tier A"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  Reversible git operations on this repo's own history — merging a milestone branch into
+  master once its gate is green, creating and removing worktrees under
+  ~/git/worktrees/tannen/, branching, rebasing, fast-forwarding unsigned refs,
+  regenerating projections — are Tier A. The builder performs them and records them, and
+  does not ask. Excluded, and not relaxed by this: creating or moving any git tag
+  (custody, D0049), editing a frozen path or any signed file, and any byte leaving the
+  repo boundary. The clause is drafted for governance/policy.yaml at
+  docs/proposals/2026-08-24-policy-in-repo-mechanics.md; policy.yaml is owner-signed, so
+  the owner applies and re-signs it at the M0-boundary sitting. The m0 -> master merge
+  that occasioned this record was performed as a fast-forward, not asked about.
+rationale: >-
+  At the close of M0 Session B the builder ended its report with "say the word and it's
+  done in a minute" about merging m0 into master. governance/policy.yaml's own header
+  says "GUARDS CONSUME THIS FILE. Being asked something answerable from it is a bug —
+  file the bug as a decision record citing this file." This is that record. The bug is
+  not laziness but its opposite: deference spends owner attention, which is the single
+  resource the autonomy protocol (BRIEF §9, §9.1, §9.2) exists to conserve. An owner
+  interrupted to authorise a fast-forward has less attention left for the five one-way
+  doors that genuinely need a signature, so over-asking degrades exactly the same
+  quantity that over-acting would. Policy today enumerates spend, licences, external
+  surface and the spot-check rate, and says nothing about ordinary git mechanics; an
+  agent under a custody floor reads that silence conservatively. State the authority
+  rather than leaving it to be inferred, and fence it in the same breath — tags are
+  mechanically indistinguishable from the permitted operations and are custody, so the
+  exclusion list is as load-bearing as the permission.
+reversibility: >-
+  Cheap both ways. Undoing the policy clause is deleting a block from policy.yaml and
+  re-signing. Undoing the merge is `git -C /home/g/git/tannen reset --hard 55d8d28`,
+  which discards nothing (the m0 branch still points at 8ad2087).
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-24-policy-in-repo-mechanics.md
+    detail: >-
+      DOCUMENTARY STRENGTH, stated plainly: this binding proves the remedy is drafted,
+      not that it is in force. governance/policy.yaml is owner-signed and the custodian
+      verifies that signature, so the builder cannot apply the clause itself. On
+      application at the sitting this binding upgrades to
+      `config: governance/policy.yaml#in_repo_mechanics.tier`, which resolves only once
+      the patch lands (decision D0045: the decision is immutable, the binding is the
+      present-tense attachment). No guard can mechanically catch "the agent asked
+      anyway"; the enforceable part is that policy answers the question next time.
+links: ["D0024", "D0045", "D0049"]
