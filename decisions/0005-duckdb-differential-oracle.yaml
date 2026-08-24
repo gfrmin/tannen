@@ -1,0 +1,24 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0005
+title: DuckDB is the L6 differential oracle
+tier: A
+date: "2026-08-24"
+decision: >-
+  Law L6 (differential correctness on the SQL-expressible fragment) tests against
+  DuckDB, with the no-NULL mapping explicit. DuckDB enters the stack as a dev
+  dependency at M1, outside the kernel package (the kernel-no-io import contract
+  already forbids the kernel importing it).
+rationale: >-
+  Pre-decided in BRIEF §6/§9 as never-ask-again; the pkm constellation already uses
+  DuckDB, and the DBSP differential-testing method (BRIEF §11) needs a trusted
+  relational oracle.
+reversibility: >-
+  Swapping oracles rewrites the L6 harness only; laws and evidence records identify
+  the oracle, so old evidence stays valid as evidence about the old oracle.
+status: accepted
+bindings: []
+unenforced_reason: >-
+  pre-M0: binds to the L6 suite when M1 freezes it (harness names DuckDB and the
+  no-NULL mapping).
+links:
+  - "BRIEF.md §6 (L6), §9, §11"

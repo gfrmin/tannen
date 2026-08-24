@@ -1,0 +1,48 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+id: frozen-oracle-protocol
+title: Frozen-oracle build protocol (tests frozen + manifest signed before implementation; key custody; delegation in tag messages)
+posture: adopt
+grade: P
+brief_row: >-
+  BRIEF §2: "Frozen-oracle build protocol (tests frozen + manifest signed before
+  implementation; author/builder key custody; delegation recorded in tag messages)" —
+  owner proplang WRITEUP.md / CLAUDE.md. Adopt as process (BRIEF §8), with standing
+  delegation to minimise owner touchpoints (BRIEF §9).
+notes: >-
+  Process/judgment-shaped: its executable form here is this repo's own machinery —
+  MANIFEST.sha256 + scripts/check_manifest.py + the pre-commit frozen-paths guard +
+  DELEGATIONS.md + allowed_signers — which adopts the protocol rather than testing the
+  owner's statement of it. The review_marker cites the owner; the machinery enforces the
+  practice per milestone (CLAUDE.md build protocol).
+sources:
+  - repo: https://github.com/gfrmin/proplang
+    document: CLAUDE.md
+    section: "Two-phase build (the frozen oracle) + Gates (definition of done)"
+    commit: 94fd4ebbc0bc2cb6d14af25f049270008822365c
+    lines: 19-57
+    snapshot:
+      path: concepts/snapshots/frozen-oracle-protocol/proplang-CLAUDE-two-phase-and-gates.md
+      sha256: 7e6e93d828507deb455594c796f2376be6ad11d7a25a672d7b5f009ddf426900
+  - repo: https://github.com/gfrmin/proplang
+    document: CLAUDE.md
+    section: "Custody (builder/author keys; tags as attestation; delegation recorded verbatim in tag messages)"
+    commit: 94fd4ebbc0bc2cb6d14af25f049270008822365c
+    lines: 600-609
+    snapshot:
+      path: concepts/snapshots/frozen-oracle-protocol/proplang-CLAUDE-custody.md
+      sha256: f12dc12a62d577690085dad435f7231956296ec4cede65e1251783946b4fe98c
+  - repo: https://github.com/gfrmin/proplang
+    document: WRITEUP.md
+    section: "§3 The enforcement architecture (two phases, frozen oracle; custody bullet)"
+    commit: 94fd4ebbc0bc2cb6d14af25f049270008822365c
+    lines: 99-135
+    snapshot:
+      path: concepts/snapshots/frozen-oracle-protocol/proplang-WRITEUP-s3.md
+      sha256: 3abe63268cd4eaa416792dc5be931db44d846c3cf34781b4972dcaf35c35b629
+conformance:
+  tests: []
+  review_marker: >-
+    Process gate, citing proplang CLAUDE.md: per milestone, law/property files freeze and
+    MANIFEST.sha256 is signed before implementation (builder-signed under the standing
+    delegation in DELEGATIONS.md); any diff under a frozen path is a protocol violation;
+    wrong frozen laws are superseded by new files, never edited.

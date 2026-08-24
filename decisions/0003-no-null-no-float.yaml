@@ -1,0 +1,24 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0003
+title: No NULLs; no unpriced floats; no hidden clock
+tier: A
+date: "2026-08-24"
+decision: >-
+  Optionality is Option[T], never NULL. Bare floats are rejected in keys by the
+  canonical encoding; Lossy(f, grid) is the only door, priced and visible. now() does
+  not exist in the kernel namespace; the Clock oracle is the only source of time.
+rationale: >-
+  Pre-decided as principle P7 and BRIEF §5.7–§5.8, listed in §9 as never-ask-again;
+  adopts the exactness-and-the-door concept (proplang KERNEL.md, pinned in
+  concepts/exactness-and-the-door.yaml).
+reversibility: >-
+  Admitting NULLs or bare floats later would change key identity for affected
+  pipelines; effectively irreversible without a full re-key, which is the point.
+status: accepted
+bindings: []
+unenforced_reason: >-
+  pre-M0: binds to the M0 canonical-encoding property tests (bare float in key
+  rejected; Lossy the only admission) and the kernel-namespace check for now().
+links:
+  - "BRIEF.md P7, §5.7, §5.8, §9"
+  - "concepts/exactness-and-the-door.yaml"

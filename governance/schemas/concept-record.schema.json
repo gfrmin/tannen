@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tannen.invalid/schemas/concept-record.schema.json",
+  "title": "Concept record (BRIEF §2)",
+  "description": "One schema-validated record per row of BRIEF §2's concept-ownership table. Records are the test manifest: the conformance suite is parameterised over them at collection time. CONCEPTS.md is a generated projection and is never hand-edited.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "posture", "grade", "brief_row", "sources", "conformance"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Kebab-case concept id; also names concepts/snapshots/<id>/ and conformance/vectors/<id>/."
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "posture": {
+      "enum": ["adopt", "own", "acknowledge"],
+      "description": "Tannen's posture per the BRIEF §2 table row."
+    },
+    "grade": {
+      "enum": ["S", "S-pending", "L", "P"],
+      "description": "BRIEF §2.1. S-pending: data-shaped but the owner has not yet published vectors; the prose pin stands in (CLAUDE.md: never write vectors on the owner's behalf)."
+    },
+    "brief_row": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Verbatim-enough citation of the BRIEF §2 table row this record executes."
+    },
+    "notes": { "type": "string" },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repo", "document", "section", "commit", "snapshot"],
+        "properties": {
+          "repo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Canonical repo identity (URL, or 'this repo (tannen)' for owned concepts)."
+          },
+          "document": { "type": "string", "minLength": 1, "description": "Path of the cited document within the owner repo." },
+          "section": { "type": "string", "minLength": 1, "description": "The cited section(s), as cited by BRIEF §2." },
+          "commit": {
+            "type": ["string", "null"],
+            "pattern": "^[0-9a-f]{40}$",
+            "description": "Pinned commit SHA of the owner repo. Null only when the owner repo has no commit to pin (e.g. tannen itself pre-brief-freeze); then commit_note is required."
+          },
+          "commit_note": { "type": "string", "minLength": 1 },
+          "lines": {
+            "type": "string",
+            "pattern": "^([0-9]+-[0-9]+(,[0-9]+-[0-9]+)*|whole file)$",
+            "description": "Line range(s) of the cited section within the pinned document, or 'whole file'."
+          },
+          "snapshot": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256"],
+            "properties": {
+              "path": { "type": "string", "pattern": "^concepts/snapshots/", "description": "Repo-relative path of the vendored snapshot." },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the snapshot file bytes." }
+            }
+          }
+        },
+        "if": { "properties": { "commit": { "const": null } } },
+        "then": { "required": ["commit_note"] }
+      }
+    },
+    "conformance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tests"],
+      "properties": {
+        "vectors": {
+          "type": ["string", "null"],
+          "pattern": "^conformance/vectors/",
+          "description": "Grade S only: repo-relative path of the vendored frozen vector corpus. A grade-S record naming a missing corpus fails pytest collection (BRIEF §2)."
+        },
+        "pending_reason": { "type": "string", "minLength": 1, "description": "Grade S-pending only: why no vectors yet." },
+        "tests": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Law/property/conformance test paths or pytest node ids enforcing this concept. May be empty pre-M0."
+        },
+        "review_marker": { "type": "string", "description": "Grade P: how the concept gates PRs through review, citing the owner." }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "grade": { "const": "S" } } },
+      "then": { "properties": { "conformance": { "required": ["vectors"], "properties": { "vectors": { "type": "string" } } } } }
+    },
+    {
+      "if": { "properties": { "grade": { "const": "S-pending" } } },
+      "then": { "properties": { "conformance": { "required": ["pending_reason"], "properties": { "vectors": { "type": "null" } } } } }
+    },
+    {
+      "if": { "properties": { "grade": { "const": "P" } } },
+      "then": { "properties": { "conformance": { "required": ["review_marker"] } } }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0024
+title: governance/policy.yaml (§9.2) — structure, defaults, signing, consumption
+tier: A
+date: "2026-08-24"
+decision: >-
+  governance/policy.yaml holds budget_envelopes per milestone (all zero), licence
+  defaults (MIT code / CC-BY-SA-4.0 docs, per proplang — a default, not a publication
+  decision: door external-bytes still gates any release), external_surface rules
+  (publishing forbidden; cross-repo PRs forbidden; network writes captured-oracles-
+  only), and spot_check.sample_rate_k (3). The owner signs it at the opening sitting
+  as a detached signature governance/policy.yaml.sig (ssh-keygen -Y, namespace
+  tannen-policy, owner@tannen); custodian verifies the signature whenever it exists.
+  Guards consume it today: check_manifest asserts the file exists and that budget.yaml
+  ceilings never exceed the policy envelopes; the digest reads K from it. Being asked
+  something answerable from policy.yaml is a bug — the answerer files it as a decision
+  record citing this file. budget.yaml remains the operational SpendGuard input;
+  policy envelopes are the authorisation it must stay within (full per-milestone
+  wiring lands with SpendGuard at M4).
+rationale: >-
+  Owner amendment 2 of 2026-08-24 (BRIEF §9.2 "policy as data"). The budget.yaml /
+  policy.yaml split resolves the duplication the amendment would otherwise create:
+  one file authorises (owner-signed), the other operates (guard-consumed), and the
+  guard asserts operate ≤ authorise.
+reversibility: >-
+  Values change only by owner signature (door spend-envelopes for budgets); structure
+  is versioned data.
+status: accepted
+bindings:
+  - type: file
+    target: governance/policy.yaml
+  - type: file
+    target: scripts/check_manifest.py
+    detail: existence + budget-within-envelope checks
+  - type: config
+    target: "governance/tier-c.yaml#policy.file"
+    detail: tier-c.yaml names policy.yaml as a consumed guard input
+risk_flags: [spend, governance-paths]
+links:
+  - "BRIEF.md §9.2"

@@ -1,0 +1,29 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0013
+title: Projection freshness via input-hash headers; regenerate-only-if-changed
+tier: A
+date: "2026-08-24"
+decision: >-
+  Every generated projection (CONCEPTS.md, DECISIONS.md, digest/<date>.md) opens with
+  a one-line comment carrying an input-hash: sha256 over the sorted (relpath, sha256)
+  pairs of its input records. check_concepts and check_decisions recompute and fail on
+  mismatch, so a hand-edit or a stale projection turns CI red. gen_projections writes
+  a file only when content changed, so the pre-commit regeneration hook is idempotent
+  and a clean tree stays clean.
+rationale: >-
+  BRIEF §2/§9: projections are queries, never authorship; freshness-gating in
+  pre-commit is mandated, and a content hash of the inputs is the cheapest exact
+  freshness witness (no clocks, no mtimes).
+reversibility: >-
+  Header format changes regenerate every projection in one command; the records are
+  untouched.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/gen_projections.py
+  - type: file
+    target: scripts/check_concepts.py
+    detail: enforces the CONCEPTS.md header
+  - type: file
+    target: scripts/check_decisions.py
+    detail: enforces the DECISIONS.md header

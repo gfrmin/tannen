@@ -1,0 +1,30 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+# CONCEPTS.md is generated from these records; never hand-edit it.
+id: pkm-event-identity
+title: Source identity, event identity, cache-as-view, recording makes no truth claims
+posture: adopt
+grade: L
+brief_row: >-
+  BRIEF §2: "Source identity (bytes hashed outside the system); event identity (hash of
+  inputs incl. producer config); cache as view over the event record; recording makes no
+  truth claims" — owner pkm SPEC-PRINCIPLES §1–§4. Tannen's "descriptor + derivation +
+  trace store" must satisfy pkm's event-tuple diagnostic; conformance test asserts the
+  mapping.
+notes: >-
+  Grade L, not S: the treaty artifact is behavioural — a conformance property test at M0
+  asserting that tannen's (descriptor, derivation, trace) triple satisfies the pkm
+  event-tuple diagnostic ("if this thing changed, would I want it to count as a different
+  event?"). No data crosses the repo boundary for this concept at Session 0; if pkm later
+  publishes an event-envelope schema plus vectors, this row upgrades to S by re-pin
+  (decision D0009).
+sources:
+  - repo: https://github.com/gfrmin/pkm
+    document: SPEC-PRINCIPLES.md
+    section: "§1–§4 (with the diagnostics they carry)"
+    commit: 566ed4eca304b3ce040369e0d8f3587aea35c139
+    lines: whole file
+    snapshot:
+      path: concepts/snapshots/pkm-event-identity/pkm-SPEC-PRINCIPLES.md
+      sha256: e1bda76682a779846e9dc104f0619fbcf4b9bdff4a50ac05886356e428d283a5
+conformance:
+  tests: []   # M0: event-tuple diagnostic mapping test over descriptors + derivations

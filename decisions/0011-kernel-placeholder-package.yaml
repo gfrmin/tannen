@@ -1,0 +1,24 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0011
+title: Empty tannen.kernel package exists so the import contracts are checkable now
+tier: A
+date: "2026-08-24"
+decision: >-
+  src/tannen/kernel/__init__.py exists, containing only a docstring. It is not kernel
+  code (writing any at Session 0 is a protocol violation); it exists solely so the
+  import-linter contracts (kernel-no-io, no-cross-repo) resolve a real module and run
+  from day zero, trivially satisfied, instead of arriving untested at M0.
+rationale: >-
+  "Declare the kernel no-IO/no-cross-repo contract now, trivially satisfied" (Session-0
+  instruction) requires an importable root; an empty package is the minimum that makes
+  the guard live. Guard liveness for these contracts is proven by the
+  tests/poison/lint-imports fixture (custodian, D0017).
+reversibility: >-
+  M0 fills the package; nothing to undo.
+status: accepted
+bindings:
+  - type: config
+    target: "pyproject.toml#tool.importlinter"
+    detail: both contracts name tannen / tannen.kernel as source modules
+  - type: file
+    target: src/tannen/kernel/__init__.py

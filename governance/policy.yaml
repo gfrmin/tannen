@@ -1,0 +1,36 @@
+# governance/policy.yaml — owner policy as data (BRIEF §9.2; decision D0024).
+# Owner-signed at the opening sitting: the owner sets values, then signs the file
+# (detached signature governance/policy.yaml.sig, namespace tannen-policy, hardware
+# key); scripts/custodian.sh verifies the signature on every run once it exists.
+# GUARDS CONSUME THIS FILE. Being asked something answerable from it is a bug —
+# file the bug as a decision record citing this file.
+version: 0
+
+# Per-milestone spend envelopes (USD). Raising any value above zero is Tier-C door 1
+# (affirmative signature). budget.yaml's operational ceilings may never exceed the
+# current milestone's envelope; check_manifest enforces the zero-state consistency
+# and SpendGuard enforces it operationally from M4.
+budget_envelopes:
+  M0: 0
+  M1: 0
+  M2: 0
+  M3: 0
+  M4: 0
+  M5: 0
+
+# Licence defaults (per the proplang precedent). NOTE: a licence default is not a
+# publication decision — any byte leaving the repo boundary remains Tier-C door 2.
+licence_defaults:
+  code: MIT
+  docs: CC-BY-SA-4.0
+
+# External-surface rules (Tier-C door 2). Defaults: nothing leaves.
+external_surface:
+  publishing: forbidden
+  cross_repo_prs: forbidden
+  network_writes: captured-oracles-only
+
+# Spot-check sample rate: K decision records sampled into each digest for owner
+# review (BRIEF §9.1/§9.2). The digest generator reads this value.
+spot_check:
+  sample_rate_k: 3

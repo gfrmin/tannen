@@ -1,0 +1,38 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+id: derive-decide-split
+title: Derive/decide split; faculties over language-neutral seams; governor-is-premature
+posture: adopt
+grade: P
+brief_row: >-
+  BRIEF §2: "Derive/decide split; faculties over language-neutral seams;
+  governor-is-premature-until-demand-logs" — owner life-agent PRINCIPLES §1, §3, §5;
+  derivation-engine-design §0. Encoded as the Governor seam (BRIEF §7): interface now,
+  implementation never (here).
+notes: >-
+  Judgment-shaped (BRIEF §2.1 names this concept as the Grade-P exemplar): formalising
+  buys nothing; it gates PRs through review, citing the owner. The mechanical shadow of
+  the doctrine is governance/tier-c.yaml (implement-governor is Tier C) and, at M-later,
+  the Grade-S governor wire schema tannen owns.
+sources:
+  - repo: https://github.com/gfrmin/life-agent
+    document: PRINCIPLES.md
+    section: "§1 (kernel: KB derives, agent decides), §3 (agent layer), §5 (polyglot faculties over language-neutral seams)"
+    commit: fc431488c6e739905d9d3c2b8cfd26510b97c261
+    lines: 11-20,28-38,43-48
+    snapshot:
+      path: concepts/snapshots/derive-decide-split/life-agent-PRINCIPLES-s1-s3-s5.md
+      sha256: 44b9934fb27bf021d61b3d2a2b65767ceaeef1bbc47b694df90999870e71eb80
+  - repo: https://github.com/gfrmin/life-agent
+    document: docs/derivation-engine-design.md
+    section: "§0 North star (L0–L4 layer cycle; VOI governor explicitly downstream)"
+    commit: fc431488c6e739905d9d3c2b8cfd26510b97c261
+    lines: 11-50
+    snapshot:
+      path: concepts/snapshots/derive-decide-split/life-agent-derivation-engine-design-s0.md
+      sha256: 5b51495762593496df5100191b66316ed94e3924724c371e31aa759a9583d67e
+conformance:
+  tests: []
+  review_marker: >-
+    PR review gate: any surface that decides (ranks, schedules, spends, prefers) rather
+    than derives is rejected citing life-agent PRINCIPLES §1; the Governor seam ships as
+    interface + Grade-S wire only (tier-c.yaml: implement-governor).

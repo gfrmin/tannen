@@ -1,0 +1,27 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0012
+title: Session-0 composition of make verify; tannen laws report joins at M0
+tier: A
+date: "2026-08-24"
+decision: >-
+  make verify runs, in order: check_manifest, check_concepts, check_decisions, pytest,
+  lint-imports, and custodian.sh --check-only (guard liveness). CI runs exactly make
+  verify. CLAUDE.md's six-command verification list includes `uv run tannen laws
+  report`, which cannot run before the tannen CLI and a frozen law set exist; it joins
+  make verify at the M0 laws freeze, and until then the digest's Laws & evidence
+  section says so explicitly.
+rationale: >-
+  CLAUDE.md's list describes implementation sessions; Session 0 is governance
+  bootstrap. Running the five that exist and recording the sixth as a dated obligation
+  beats a stub CLI that fakes green. Interpretation-pinning = Tier A.
+reversibility: >-
+  Adding the laws-report line to the Makefile at M0 is one line; this record is its
+  reminder.
+status: accepted
+bindings:
+  - type: file
+    target: Makefile
+    detail: the verify target is the artifact
+  - type: file
+    target: .github/workflows/ci.yml
+    detail: CI is defined as make verify, so local and CI gates cannot drift

@@ -1,0 +1,27 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0025
+title: Non-blocking rule (§9.2) — Tier-C requests queue; work continues elsewhere
+tier: A
+date: "2026-08-24"
+decision: >-
+  No Tier-C request may halt the project. Mechanics: the request is filed as a
+  decision record with status blocked-on-owner; the digest's "Requires owner" section
+  is the queue (a query over those records plus derived custody state, so it cannot
+  omit one); the blocked branch is parked and other work proceeds; the queue is
+  batched to the next boundary sitting. Session 0 exercises the rule already: the
+  opening-sitting items (keys, policy signature, brief-freeze, first receipt) are
+  queued in the digest while everything buildable without them was built.
+rationale: >-
+  Owner amendment 2 of 2026-08-24 (BRIEF §9.2 non-blocking rule). Making the digest
+  section the queue reuses the existing projection machinery instead of adding a
+  second list that could drift.
+reversibility: >-
+  Queueing mechanics live in the generator; the rule itself is constitutional (§9.2).
+status: accepted
+bindings:
+  - type: file
+    target: scripts/gen_projections.py
+    detail: "the Requires-owner section renders blocked-on-owner records + derived custody state"
+risk_flags: []
+links:
+  - "BRIEF.md §9.2"

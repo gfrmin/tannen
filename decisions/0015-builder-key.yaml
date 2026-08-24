@@ -1,0 +1,29 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0015
+title: Builder key generated at Session 0; distinct signing principals builder@tannen / owner@tannen
+tier: A
+date: "2026-08-24"
+decision: >-
+  An ed25519 builder key was generated (private half at ~/.ssh/tannen_builder on the
+  builder machine, never in the repo) and the repo is configured locally to ssh-sign
+  builder commits with it. Signing principals are deliberately distinct: the builder
+  key is enrolled in allowed_signers as builder@tannen and repo-local git identity is
+  set to match; the owner key will enroll as owner@tannen. An artifact that must be
+  AUTHOR-signed (attention receipts, brief-freeze, M5 close) verifies only against
+  owner@tannen, so a builder signature can never satisfy an owner check.
+rationale: >-
+  DELEGATIONS.md's standing delegation ("builder key signs law-freeze tags and
+  implementation commits") needs a real key to be exercisable, and the §9.1 custody
+  floor needs the builder/owner distinction to be a verification fact, not a comment.
+  Sharing one principal would let either key satisfy the other's checks.
+reversibility: >-
+  Key rotation = new keypair + allowed_signers line + manifest update at a sitting
+  (author-key territory per CLAUDE.md hard rules).
+status: accepted
+bindings:
+  - type: file
+    target: allowed_signers
+    detail: carries the builder@tannen key and the TODO-owner placeholder for owner@tannen
+  - type: file
+    target: DELEGATIONS.md
+risk_flags: [governance-paths]

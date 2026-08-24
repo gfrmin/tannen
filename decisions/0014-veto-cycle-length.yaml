@@ -1,0 +1,29 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0014
+title: One review cycle = 7 calendar days, stamped per record; consent additionally gated by receipt freshness
+tier: B
+date: "2026-08-24"
+decision: >-
+  BRIEF §9's "one review cycle" is pinned at 7 calendar days: every Tier-B record is
+  stamped with an explicit veto_by = date + 7 at creation, and clocks are computed from
+  the stamp (never from a global constant at read time). Under the §9.1 custody floor
+  (owner amendment, 2026-08-24), veto lapse converts to acceptance ONLY while the
+  latest attention receipt is fresh; on a stale receipt the record stays provisional
+  and is reported as blocked.
+rationale: >-
+  The brief leaves the cycle length implicit while CLAUDE.md says "weekly batch";
+  7 days is the only reading consistent with both. Stamping per record keeps records
+  self-contained event records (append-only fold). Governance-ergonomics taste ⇒
+  Tier B.
+reversibility: >-
+  A different cycle length applies to future records only; existing stamps stand.
+status: provisional
+veto_by: "2026-08-31"
+veto_procedure: >-
+  Say so at the opening sitting or in any digest review; a superseding record restamps
+  nothing retroactively.
+bindings:
+  - type: file
+    target: scripts/check_decisions.py
+    detail: computes clocks from per-record stamps and applies the receipt gate
+risk_flags: [governance-paths]

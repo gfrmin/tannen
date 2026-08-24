@@ -1,0 +1,35 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0023
+title: Tiers reclassified by reversibility (§9.2) — tier-c.yaml restructured; existing records stand
+tier: A
+date: "2026-08-24"
+decision: >-
+  governance/tier-c.yaml v1 encodes the amended taxonomy: tier_c is exactly the five
+  one-way doors (spend-envelopes; external-bytes; renavon-first-contact;
+  constitution-amendments; trust-root-changes), each requiring an AFFIRMATIVE owner
+  signature, never silence; a new guard_enforced section lists the former Tier-C
+  approvals that are now impossibilities with their enforcing guard named (cross-repo
+  imports, frozen-path edits, store mutation, spend-beyond-envelope, kernel IO) —
+  changing those rules, not doing the acts, is what remains Tier C. Existing decision
+  records keep the tier they were filed under (append-only fold; the taxonomy of the
+  day is part of the event): D0006 remains a valid Tier B under the new definition
+  (the name is an externally visible pre-release surface); D0014 would file as Tier A
+  today — its open veto stands harmlessly and lapse-or-veto resolves it.
+rationale: >-
+  Owner amendment 2 of 2026-08-24 (BRIEF §9.2). Restructuring the consumed data file
+  and pinning how legacy records are read are implementation judgments (Tier A —
+  which this taxonomy itself confirms: reversible, in-repo, machine-gated).
+reversibility: >-
+  tier-c.yaml is versioned data; the doors themselves can only be changed through
+  door 4/5.
+status: accepted
+bindings:
+  - type: file
+    target: governance/tier-c.yaml
+    detail: v1 structure carries the doors and guard_enforced sections
+  - type: file
+    target: scripts/check_manifest.py
+    detail: consumes tier-c.yaml and fails on drift from the machine configs
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.2"

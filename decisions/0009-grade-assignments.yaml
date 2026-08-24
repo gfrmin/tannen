@@ -1,0 +1,35 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0009
+title: Initial grade assignments for the eight BRIEF §2 rows
+tier: A
+date: "2026-08-24"
+decision: >-
+  pkm-event-identity: L (event-tuple diagnostic is behaviour over executions; upgrades
+  to S by re-pin if pkm publishes an envelope schema + vectors). pkm-determinism: L
+  (BRIEF §2.1's own exemplar of behaviour-shaped). provenance-ref-grammar: S-pending
+  (data-shaped, wire-first rule forces S; neither owner has published vectors, and
+  tannen never writes vectors on an owner's behalf). derive-decide-split: P (§2.1's
+  Grade-P exemplar). exactness-and-the-door: L (its disciplines land as mechanically
+  checkable encoding/key-admission properties at M0/M1). frozen-oracle-protocol: P
+  (process concept; enforced by this repo's own custody machinery, gated by review
+  citing the owner). semiring-relations (own): P until code exists (normative home is
+  prose in BRIEF §4–§6; its exports become Grade-S artifacts as milestones land).
+  credence-functor-seam (acknowledge): P (documented seam, out of scope to implement).
+rationale: >-
+  Grade follows shape (BRIEF §2.1): data-shaped ⇒ S, behaviour-shaped ⇒ L,
+  judgment/process-shaped ⇒ P; S-pending where the wire-first rule demands S but the
+  owner has published no vectors. Test-design judgment = Tier A (BRIEF §9).
+reversibility: >-
+  Re-grading is a record edit + new conformance artifact; upgrades (P/L → S) are the
+  designed direction and cost only the new artifact.
+status: accepted
+bindings:
+  - type: file
+    target: concepts/provenance-ref-grammar.yaml
+    detail: carries the one S-pending marking with its pending_reason
+  - type: file
+    target: scripts/check_concepts.py
+    detail: enforces grade-dependent artifact requirements (S needs a non-empty corpus; only S may name one)
+  - type: file
+    target: tests/test_conformance.py
+    detail: parameterises the conformance suite over the graded records at collection time

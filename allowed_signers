@@ -1,0 +1,17 @@
+# tannen allowed_signers — key custody per DELEGATIONS.md and BRIEF §9.1.
+# AUTHOR-KEY TERRITORY (CLAUDE.md hard rules): only the owner edits this file and its
+# MANIFEST.sha256 entry. Principals are deliberately distinct (decision D0015): an
+# artifact that must be author-signed (attention receipts, brief-freeze, M5 close)
+# verifies only against owner@tannen, so a builder signature can never satisfy it.
+#
+# Builder key (generated Session 0, 2026-08-24; signs implementation commits and
+# law-freeze tags under the standing delegation; private half stays on the builder
+# machine at ~/.ssh/tannen_builder, never in the repo):
+builder@tannen ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIw1aGU616gN1UKSQw9xiZHxKNRStcJRF9NtkJjXVnuc
+#
+# TODO-owner: paste the owner (author) public key on the line below at the opening
+# sitting (docs/OPENING.md step 1) — a hardware-backed key (ed25519-sk, touch =
+# presence) per BRIEF §9.1 — then remove this TODO block. Until then no owner
+# attestation (receipt, brief-freeze) can verify, and every Tier-B decision stays
+# blocked rather than lapsing to consent.
+# TODO-owner owner@tannen sk-ssh-ed25519@openssh.com <OWNER-PUBLIC-KEY-GOES-HERE>

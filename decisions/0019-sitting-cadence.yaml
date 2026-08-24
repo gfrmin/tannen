@@ -1,0 +1,32 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0019
+title: Owner-sitting cadence (§9.1 point 3) — boundaries only; M4/M5 gate sittings
+tier: A
+date: "2026-08-24"
+decision: >-
+  Owner sittings happen at milestone boundaries only; boundary = a signed tag matching
+  brief-freeze, *-laws-freeze, or *-close (the machine definition in
+  scripts/_gov.py:BOUNDARY_TAG_RE). Receipt validity = next boundary + 7 days.
+  Mandatory extra sittings gate M4 (before any nonzero budget — which is also Tier-C
+  door spend-envelopes, so the signature and the sitting coincide) and M5 (before
+  touching Renavon inputs — Tier-C door renavon-first-contact). Those two gates are
+  recorded here and in tier-c.yaml; their mechanical enforcement (SpendGuard refusing
+  without a signed envelope; the M5 vertical refusing without the door signature)
+  lands with M4/M5 code.
+rationale: >-
+  Owner amendment 1 of 2026-08-24 (BRIEF §9.1 point 3). Pinning "boundary" to the
+  signed-tag pattern makes the cadence computable by the receipt logic instead of
+  being a calendar convention.
+reversibility: >-
+  Cadence changes are governance-record changes; the tag pattern is one regex.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/_gov.py
+    detail: BOUNDARY_TAG_RE + receipt_state implement the cadence window
+  - type: file
+    target: governance/tier-c.yaml
+    detail: doors spend-envelopes and renavon-first-contact carry the M4/M5 gates
+risk_flags: [spend]
+links:
+  - "BRIEF.md §9.1"

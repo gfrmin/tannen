@@ -1,0 +1,97 @@
+# governance/tier-c.yaml — the closed Tier-C list and the guard-enforced rules
+# (BRIEF §9 as amended by §9.1 custody floor and §9.2 reversibility tiers, plus §10
+# non-goals). This file is CONSUMED BY THE GUARDS (BRIEF §9: "the list the human reads
+# is the list the machine enforces; one source"):
+#   - frozen_paths.manifest names the authoritative frozen-paths list; the pre-commit
+#     frozen-guard and scripts/check_manifest.py read it.
+#   - forbidden_imports must be covered by pyproject.toml's import-linter contracts;
+#     scripts/check_manifest.py fails if they drift apart (decision D0016).
+#   - budget.file and policy.file name the SpendGuard/policy inputs; check_manifest
+#     asserts they exist and that budget ceilings stay within policy envelopes.
+# Changing the Tier-C doors below is itself Tier C (door 4/5): owner signature only.
+version: 1
+source: "BRIEF.md §9 (as amended by §9.1, §9.2) and §10 (non-goals)"
+
+tier_c:
+  # The five one-way doors (BRIEF §9.2) — AFFIRMATIVE owner signature only, never
+  # silence. Per the non-blocking rule, a door request queues to the next boundary
+  # sitting; work continues elsewhere.
+  - id: spend-envelopes
+    text: "Nonzero or raised spend envelopes (budget.yaml ceilings, policy.yaml budget_envelopes)."
+  - id: external-bytes
+    text: "Bytes leaving the repo boundary: publishing, PRs to any other constellation repo, network writes outside captured oracles."
+  - id: renavon-first-contact
+    text: "First contact with Renavon inputs (the M5 gate; mandatory sitting per §9.1)."
+  - id: constitution-amendments
+    text: "Constitution amendments: BRIEF §3 (principles) or §10 (non-goals)."
+  - id: trust-root-changes
+    text: "Trust-root changes: scripts/custodian.sh, allowed_signers, tests/poison/, and their MANIFEST.sha256 rows."
+
+guard_enforced:
+  # Former Tier-C approvals that are now impossibilities (BRIEF §9.2): the guard, not
+  # an approval, prevents them. Changing these RULES is Tier C (doors 4/5 above).
+  - id: cross-repo-imports
+    guard: "pyproject.toml import-linter contract no-cross-repo (CI + pre-commit lint-imports)"
+  - id: frozen-path-edits
+    guard: "pre-commit frozen-paths hook + scripts/check_manifest.py (default and --staged modes)"
+  - id: store-mutation
+    guard: "append-only store; gc prints a refusal (arrives M0; no store exists before then)"
+  - id: spend-beyond-envelope
+    guard: "SpendGuard default-deny over budget.yaml (arrives M4; ceilings zero until owner signature)"
+  - id: kernel-io
+    guard: "pyproject.toml import-linter contract kernel-no-io"
+
+non_goals:  # BRIEF §10 verbatim list; changing it is door constitution-amendments
+  - "No orchestrator, scheduler, retries, cron."
+  - "No distributed execution."
+  - "No SQL parsing."
+  - "No schema evolution beyond descriptor bump + re-derive."
+  - "No UI."
+  - "No performance work before M5."
+  - "No NULLs."
+  - "No store mutation, ever."
+  - "No decision layer, utility model, or governor implementation."
+  - "No repo unification, in either direction."
+  - "No extending proplang."
+  - "No dependency on the Renavon monorepo, pkm, credence, or life-agent code."
+
+frozen_paths:
+  # The authoritative frozen-paths list is the manifest itself: a path is frozen
+  # iff it is listed in this file. Guards read the manifest, not a second list.
+  manifest: MANIFEST.sha256
+
+forbidden_imports:
+  # Modules the kernel package may never import (BRIEF §5.3: the kernel imports no
+  # IO modules; oracles/ is the only IO doorway).
+  io_modules:
+    - io
+    - os
+    - pathlib
+    - socket
+    - subprocess
+    - shutil
+    - tempfile
+    - urllib
+    - http
+    - ftplib
+    - asyncio
+    - aiohttp
+    - requests
+    - httpx
+    - sqlite3
+    - duckdb
+  # Module names of the constellation repos; forbidden everywhere in tannen
+  # (BRIEF §1 standing rule; guard_enforced cross-repo-imports).
+  cross_repo:
+    - pkm
+    - life_agent
+    - credence
+    - proplang
+    - renavon
+    - renavon_monorepo
+
+budget:
+  file: budget.yaml
+
+policy:
+  file: governance/policy.yaml

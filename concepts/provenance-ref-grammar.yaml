@@ -1,0 +1,42 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+id: provenance-ref-grammar
+title: Provenance ref grammar (sha256:<hex> prefix discipline; typed opaque refs)
+posture: adopt
+grade: S-pending
+brief_row: >-
+  BRIEF §2: "Provenance ref grammar (`sha256:<hex>` prefix discipline; typed opaque
+  refs)" — owners pkm SPEC-PRINCIPLES §1 (hash prefix) and Renavon ADR-002 (ref kinds).
+  Tannen's Why-semiring elements are refs in this grammar, so lineage is portable across
+  all systems.
+notes: >-
+  Data-shaped: refs cross repo boundaries as data, so the wire-first rule makes this
+  Grade S. Neither owner has published an executable grammar or a frozen vector corpus,
+  so the row is S-pending: the prose sections are pinned and vendored, and the vectors
+  are NOT written here on the owners' behalf (CLAUDE.md, Conformance section). When an
+  owner publishes vectors they land under conformance/vectors/provenance-ref-grammar/
+  and this record upgrades to S.
+sources:
+  - repo: https://github.com/gfrmin/pkm
+    document: SPEC-PRINCIPLES.md
+    section: "§1 Sources (sha256 identity) and 'sha256 is the canonical hash' (the sha256: prefix reservation)"
+    commit: 566ed4eca304b3ce040369e0d8f3587aea35c139
+    lines: whole file
+    snapshot:
+      path: concepts/snapshots/provenance-ref-grammar/pkm-SPEC-PRINCIPLES.md
+      sha256: e1bda76682a779846e9dc104f0619fbcf4b9bdff4a50ac05886356e428d283a5
+  - repo: https://github.com/renavondata/renavon-monorepo
+    document: docs/architecture/decisions/002-pipeline-rigour-stance.md
+    section: "[withdrawn: D0180]"
+    commit: [withdrawn: D0180]
+    lines: whole file
+    snapshot:
+      path: concepts/snapshots/provenance-ref-grammar/renavon-adr-002.md
+      sha256: [withdrawn: D0180]
+conformance:
+  vectors: null
+  pending_reason: >-
+    Neither pkm nor Renavon has published an executable ref grammar or frozen
+    positive/negative vectors; the pinned prose stands in. Vectors are never written
+    here on an owner's behalf — adoption waits for the owner to publish (Tier C to do
+    otherwise: modifying an owned concept).
+  tests: []   # on upgrade to S: parse-all-positives / reject-all-negatives / round-trip

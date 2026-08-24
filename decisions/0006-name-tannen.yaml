@@ -1,0 +1,25 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0006
+title: The project is named tannen
+tier: B
+date: "2026-08-24"
+decision: >-
+  The kernel, repo, package, and CLI are named "tannen" (after Green–Karvounarakis–
+  Tannen, the semiring-provenance paper, BRIEF §11).
+rationale: >-
+  Pre-decided in BRIEF §9 with an explicit veto affordance ("veto in a weekly batch if
+  disliked"), which makes it the one pre-decision that is Tier B rather than A.
+reversibility: >-
+  Rename before M0 is a mechanical sweep (package name, CLI entry point, records);
+  after M0 it also touches descriptors' module-path-derived labels, so veto now.
+status: provisional
+veto_by: "2026-08-31"
+veto_procedure: >-
+  Say so in the 2026-08-31 digest review (or any earlier message); the rename lands as
+  a superseding record.
+bindings:
+  - type: config
+    target: "pyproject.toml#project.name"
+    detail: the installable package is literally named tannen; a rename fails this binding
+links:
+  - "BRIEF.md §9, §11"

@@ -1,0 +1,11 @@
+# budget.yaml — SpendGuard ceilings (BRIEF §4 oracles, §5.10, §9 standing delegation:
+# "budget file authorises oracle spend up to its ceiling without asking").
+# Every ceiling is ZERO until the owner raises it at the opening sitting
+# (docs/OPENING.md, step 3). With ceilings at zero, `tannen run --spend` can never
+# authorise a novel oracle invocation; replay-only remains the only path.
+version: 0
+currency: USD
+ceilings:
+  total: 0        # hard ceiling across all oracles, per milestone
+  fetch: 0        # Fetch oracle (WARC-shaped captures)
+  llm: 0          # LLM oracle (full request/response envelopes)

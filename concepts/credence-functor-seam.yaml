@@ -1,0 +1,30 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+id: credence-functor-seam
+title: Credence-functor generalisation — derivation codomain lifted to (Distribution[Value], Provenance)
+posture: acknowledge
+grade: P
+brief_row: >-
+  BRIEF §2: "Credence-functor generalisation: derivation codomain lifted to
+  (Distribution[Value], Provenance)" — owner life-agent derivation-engine-design §0.
+  Acknowledge as the L2 generalisation of tannen's semiring parameter. Documented seam;
+  out of scope to implement.
+notes: >-
+  Acknowledged, not adopted: no tannen artifact conforms to it; the record exists so the
+  seam is pinned and upstream drift in the owner's design is reported (BRIEF §2 drift
+  job) rather than silently diverging from what tannen's semiring parameter must one day
+  generalise to.
+sources:
+  - repo: https://github.com/gfrmin/life-agent
+    document: docs/derivation-engine-design.md
+    section: "§0 North star (L2 credence layer as a functor over the derivation DAG)"
+    commit: fc431488c6e739905d9d3c2b8cfd26510b97c261
+    lines: 11-50
+    snapshot:
+      path: concepts/snapshots/credence-functor-seam/life-agent-derivation-engine-design-s0.md
+      sha256: 5b51495762593496df5100191b66316ed94e3924724c371e31aa759a9583d67e
+conformance:
+  tests: []
+  review_marker: >-
+    Documented-seam gate: PRs may cite this concept when shaping the semiring parameter,
+    but any implementation of a Distribution codomain is out of scope (BRIEF §2 row;
+    tier-c.yaml non-goals) and is rejected in review.

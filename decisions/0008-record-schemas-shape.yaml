@@ -1,0 +1,32 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0008
+title: Record schema shapes — postures, multi-source pins, nullable commit, binding vocabulary
+tier: A
+date: "2026-08-24"
+decision: >-
+  Concept records carry posture ∈ {adopt, own, acknowledge} and a LIST of sources (each
+  with repo, document, section, pinned commit, line range, vendored snapshot + sha256),
+  so every row of BRIEF §2's table — including the owned semiring-relations row and the
+  acknowledged credence-functor row, and the dual-owner provenance-ref-grammar row — is
+  exactly one record. commit is nullable only with a commit_note (used once: tannen's
+  own row pre-brief-freeze). Decision-record bindings use a closed type vocabulary:
+  file (path exists), config (path#dotted.key resolves), pytest (node collects, not
+  skipped), manifest (path frozen in MANIFEST.sha256).
+rationale: >-
+  BRIEF §2 says one record per adopted concept; the Session-0 instruction says one per
+  table row. Postures reconcile the two without inventing side registries. Multi-source
+  handles rows whose normative home spans two documents/owners. The binding vocabulary
+  is the minimum that makes "CI fails if a binding's target is missing or skipped"
+  (BRIEF §9) mechanically checkable.
+reversibility: >-
+  Schemas are frozen; extending them is a new schema version + manifest update at a
+  freeze point, with old records remaining valid (additive evolution only).
+status: accepted
+bindings:
+  - type: manifest
+    target: governance/schemas/concept-record.schema.json
+  - type: manifest
+    target: governance/schemas/decision-record.schema.json
+  - type: file
+    target: scripts/check_decisions.py
+    detail: implements the binding-type vocabulary as resolution checks

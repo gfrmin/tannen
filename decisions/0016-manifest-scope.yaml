@@ -1,0 +1,30 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0016
+title: Session-0 frozen set; tier-c.yaml consistency enforced inside check_manifest
+tier: A
+date: "2026-08-24"
+decision: >-
+  MANIFEST.sha256 at Session 0 covers BRIEF.md, CLAUDE.md, the two governance schemas,
+  and — per the §9.1 custody floor — the custody set: scripts/custodian.sh,
+  allowed_signers, every file under tests/poison/, and the CI config
+  (.github/workflows/ci.yml). governance/tier-c.yaml itself joins the manifest at the
+  brief-freeze sitting (it may still need owner edits before signing); until then its
+  single-source guarantee is enforced by check_manifest's consistency check: the
+  frozen-paths pointer, budget pointer, and forbidden-imports lists must agree with
+  the machine configs, so the human-readable list and the enforced list cannot drift.
+rationale: >-
+  Freeze what is normative and stable now; keep owner-editable surfaces (budget,
+  tier-c pending owner review) out of the frozen set until the owner signs. Editing a
+  frozen path legitimately requires touching its MANIFEST line in the same commit —
+  loud, reviewed, and (for the custody set) author-key territory per CLAUDE.md hard
+  rules.
+reversibility: >-
+  Manifest scope grows at each freeze point; shrinking it is a Tier-C act.
+status: accepted
+bindings:
+  - type: file
+    target: MANIFEST.sha256
+  - type: file
+    target: scripts/check_manifest.py
+    detail: implements both the hash check and the tier-c consistency check
+risk_flags: [governance-paths]

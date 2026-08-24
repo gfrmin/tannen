@@ -1,0 +1,24 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0001
+title: Canonical encoding is canonical JSON
+tier: A
+date: "2026-08-24"
+decision: >-
+  The canonical encoding for all content addressing is canonical JSON: UTF-8, NFC,
+  sorted keys, integers exact, decimals as tagged strings, no untagged floats —
+  following the production canonical_json precedent, golden-tested across interpreters.
+  CBOR is a benchmark-gated future migration, not a discussion.
+rationale: >-
+  Pre-decided in BRIEF §4 ("DECIDED") and listed in §9 as never-ask-again. Recorded as
+  data so the M0 encoding suite has a record to bind to and the digest can show the
+  pre-decisions alongside everything else.
+reversibility: >-
+  Migration to CBOR (or anything else) re-keys every content address in the store;
+  gated on benchmarks post-M5, never on taste.
+status: accepted
+bindings: []
+unenforced_reason: >-
+  pre-M0: binds to the canonical-encoding golden/property suite when the M0 law set is
+  frozen (goldens across interpreters; float rejection per D0003).
+links:
+  - "BRIEF.md §4, §9"

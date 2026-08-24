@@ -1,0 +1,28 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0007
+title: Governance tooling deps — jsonschema + pyyaml added; JSON Schema files are the validators
+tier: A
+date: "2026-08-24"
+decision: >-
+  Beyond the instructed pins (pytest, hypothesis, pydantic, import-linter, pre-commit),
+  the dev group adds jsonschema and pyyaml. The frozen governance schemas
+  (governance/schemas/*.schema.json) are the source of truth and are validated with the
+  jsonschema library; pydantic is pinned for kernel-era models but deliberately NOT used
+  to define the governance record shapes.
+rationale: >-
+  Records are YAML (pyyaml) validated against schemas that MANIFEST.sha256 freezes.
+  Deriving those schemas from pydantic models would put the normative shape in code
+  outside the frozen set and create a generated-vs-frozen freshness problem; validating
+  frozen JSON Schema files directly keeps the treaty artifact primary. In-stack
+  dependency choice = Tier A (BRIEF §9). All dev deps pinned exact (==).
+reversibility: >-
+  Swapping validators is internal to scripts/; the schema files, being the normative
+  artifact, survive any such swap unchanged.
+status: accepted
+bindings:
+  - type: config
+    target: "pyproject.toml#dependency-groups.dev"
+    detail: the pinned dev group carries jsonschema and pyyaml
+  - type: manifest
+    target: governance/schemas/concept-record.schema.json
+    detail: the schema file, not any code, is the frozen normative shape

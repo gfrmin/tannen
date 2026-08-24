@@ -1,0 +1,33 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+id: semiring-relations
+title: Semiring-annotated relations; operator algebra; laws L1–L6; layers as sublanguages; correct-by-default catalogue
+posture: own
+grade: P
+brief_row: >-
+  BRIEF §2: "Semiring-annotated relations; operator algebra with type/delta/provenance
+  rules; laws L1–L6; layers as sublanguages; correct-by-default catalogue" — owner tannen
+  (this repo): this brief until code exists, then KERNEL.md here. Other repos may one day
+  adopt from here by the same mechanism; tannen never exports by copy-paste.
+notes: >-
+  The one owned row. Grade P at Session 0 because the normative home is still prose
+  (BRIEF §4–§6); as milestones land, its data-shaped exports (descriptors, evidence
+  records, the governor wire) become Grade-S artifacts published FROM here with schemas
+  and frozen vectors, and its behavioural content becomes the L1–L6 law suites. The
+  commit pin is null: this repo has no commits at record-creation time; re-pin at the
+  owner-signed brief-freeze tag (docs/OPENING.md).
+sources:
+  - repo: this repo (tannen)
+    document: BRIEF.md
+    section: "§4 core calculus, §5 correct-by-default catalogue, §6 laws L1–L6"
+    commit: null
+    commit_note: repo unborn at Session 0; re-pin to the brief-freeze tag at the opening sitting
+    lines: 88-120
+    snapshot:
+      path: concepts/snapshots/semiring-relations/tannen-BRIEF-s4-s6.md
+      sha256: 2afb09b3cdaeed84f552faee9d08c4946e258c9f93f6a6a292457a6312e2a6ce
+conformance:
+  tests: []
+  review_marker: >-
+    Owned, not adopted: normative text lives in BRIEF §4–§6 (frozen via MANIFEST.sha256)
+    and carries [owns]; any restatement elsewhere in the constellation is the owner's
+    Tier-C act, not tannen's. Executable form arrives with the M0–M3 law freezes.

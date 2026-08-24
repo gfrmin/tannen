@@ -1,0 +1,28 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+id: exactness-and-the-door
+title: Exactness at the decision layer; the door; the world supplies every constant
+posture: adopt
+grade: L
+brief_row: >-
+  BRIEF §2: "Exactness at the decision layer (Rational, no floats, no tolerances); the
+  door (declared namespace covered exactly or refused by name; no silent defaults); the
+  world supplies every constant" — owner proplang KERNEL.md. Kernel keys refuse floats by
+  default (BRIEF §5.8); anything crossing toward a decision layer is exact or explicitly
+  declared lossy.
+notes: >-
+  Behaviour-shaped in tannen's adoption: the disciplines land as mechanically checkable
+  properties of the canonical encoding and key admission (bare floats rejected;
+  Lossy(f, grid) the explicit, priced door; refusal-by-name over silent defaults). The
+  M0/M1 property suites are the treaty artifact; until then the pin is the vendored
+  KERNEL.md page (decision D0009).
+sources:
+  - repo: https://github.com/gfrmin/proplang
+    document: KERNEL.md
+    section: "whole page (proplang on one page: exact Rationals, the door, world-supplied constants)"
+    commit: 94fd4ebbc0bc2cb6d14af25f049270008822365c
+    lines: whole file
+    snapshot:
+      path: concepts/snapshots/exactness-and-the-door/proplang-KERNEL.md
+      sha256: 6aee1018d24839c83632e45485300e447b3dfe2a5d259089b3496be8ad0994a6
+conformance:
+  tests: []   # M0: canonical-encoding rejects bare floats in keys; Lossy is the only door

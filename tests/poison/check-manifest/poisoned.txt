@@ -1,0 +1,2 @@
+This file's bytes deliberately do not hash to the all-zero digest recorded in the
+fixture's MANIFEST.sha256, so check_manifest must report "frozen path modified".

@@ -1,0 +1,27 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0021
+title: Red team at each milestone boundary; findings become poison fixtures (§9.1 point 5)
+tier: A
+date: "2026-08-24"
+decision: >-
+  Every boundary sitting includes a red-team pass over the guards (attempt to slip a
+  violation past each one). Each finding becomes a poison fixture: the builder drafts
+  the fixture tree + marker from the finding, and it lands through the boundary sitting
+  where the owner re-signs the manifest rows (tests/poison/ is trust-root, Tier-C door
+  5). The intake path is documented in tests/poison/README.md; the standing first
+  targets are the two guards recorded in D0017 as having no dedicated fixture (the
+  --staged frozen-path mode and the projection-regeneration hook).
+rationale: >-
+  Owner amendment 1 of 2026-08-24 (BRIEF §9.1 point 5). Routing findings into poison
+  makes red-team output cumulative and machine-checked forever after, instead of a
+  one-time report.
+reversibility: >-
+  Additive corpus growth; removing a fixture is a trust-root change (Tier C).
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/poison/README.md
+    detail: documents the intake path and the fixture-per-guard table
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.1"

@@ -1,0 +1,18 @@
+# Poison fixture: schema-valid record whose vendored snapshot no longer hashes to the
+# recorded sha256 — check_concepts must report "snapshot content drifted".
+id: poison-snapshot-drift
+title: Poison — vendored snapshot drifted from its recorded hash
+posture: adopt
+grade: L
+brief_row: "poison fixture; no BRIEF row (guard-liveness corpus, BRIEF §9.1)"
+sources:
+  - repo: https://example.invalid/poison
+    document: OWNER-DOC.md
+    section: "§0"
+    commit: deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+    lines: whole file
+    snapshot:
+      path: concepts/snapshots/poison-snapshot-drift/owner-doc.md
+      sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+conformance:
+  tests: []

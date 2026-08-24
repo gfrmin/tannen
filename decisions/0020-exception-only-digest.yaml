@@ -1,0 +1,41 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0020
+title: Exception-only digest with ratcheted metrics (§9.1 point 4) — mechanics
+tier: B
+date: "2026-08-24"
+decision: >-
+  The digest surfaces (a) every risk-flagged record (schema field risk_flags, enum:
+  spend, public-surface, ref-grammar, governance-paths); (b) K records sampled from
+  the unflagged remainder, K read from governance/policy.yaml spot_check.sample_rate_k,
+  sampled DETERMINISTICALLY (seed = decision input-hash XOR date, so a digest is
+  reproducible and freshness-checkable — no wall-clock randomness); the rest
+  auto-consent under a fresh receipt. Ratcheted metrics — unenforced count and
+  Grade-P/S-pending residue — are embedded machine-readably in each digest, compared
+  against the previous digest, and a rise is flagged as RATCHET BREACH under "Requires
+  owner". Interpretation pinned here: pre-M0 the breach is a flag, not a CI failure
+  (bootstrap legitimately adds unenforced records); it hardens to a check_decisions
+  failure at the M0 boundary.
+rationale: >-
+  Owner amendment 1 of 2026-08-24 (BRIEF §9.1 point 4). The enforcement level of the
+  ratchet pre-M0 is taste-laden (a hard ratchet during bootstrap would forbid recording
+  debt honestly), hence Tier B rather than A.
+reversibility: >-
+  Display and sampling mechanics are one generator; hardening the ratchet is a small
+  check_decisions change at M0.
+status: provisional
+veto_by: "2026-08-31"
+veto_procedure: >-
+  Say so at the opening sitting (e.g. "hard ratchet now"); note that with no receipt
+  yet, this record blocks rather than lapse-accepts, so it WILL be seen at the opening.
+bindings:
+  - type: file
+    target: scripts/gen_projections.py
+    detail: implements flags, K-sampling, auto-consent note, metrics + breach flags
+  - type: manifest
+    target: governance/schemas/decision-record.schema.json
+    detail: carries the risk_flags field
+  - type: config
+    target: "governance/policy.yaml#spot_check.sample_rate_k"
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.1, §9.2"

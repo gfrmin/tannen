@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tannen.invalid/schemas/decision-record.schema.json",
+  "title": "Decision record (BRIEF §9)",
+  "description": "Append-only event records under decisions/<seq>-<slug>.yaml. DECISIONS.md and the digest are generated projections; truth is the fold of the records. A record binds to the artifact that enforces it; an unbound record is flagged 'unenforced' and must state why.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "tier", "date", "decision", "rationale", "reversibility", "status", "bindings"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^D[0-9]{4}$",
+      "description": "D<seq>, matching the filename's zero-padded sequence number."
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "tier": {
+      "enum": ["A", "B", "C"],
+      "description": "A: decide, record, proceed. B: provisional, veto_by required, proceed-unless-vetoed. C: owner-only; a record exists only to log the block and its resolution."
+    },
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "Date the decision was recorded (ISO 8601)." },
+    "decision": { "type": "string", "minLength": 1 },
+    "rationale": { "type": "string", "minLength": 1 },
+    "reversibility": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What undoing this would cost, concretely."
+    },
+    "status": {
+      "enum": ["accepted", "provisional", "blocked-on-owner", "superseded", "rejected"],
+      "description": "Recorded status. Effective status is computed: a provisional record past veto_by is accepted-by-lapse (silence for one review cycle = consent, BRIEF §9); the record file itself is never edited to say so."
+    },
+    "veto_by": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "Tier B only: end of the review cycle. Computed clocks live in the digest, not here."
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "target"],
+        "properties": {
+          "type": {
+            "enum": ["file", "config", "pytest", "manifest"],
+            "description": "file: target path must exist. config: 'path#dotted.key' must resolve in a TOML/YAML file. pytest: node id must collect and not be skipped. manifest: target path must be listed in MANIFEST.sha256."
+          },
+          "target": { "type": "string", "minLength": 1 },
+          "detail": { "type": "string", "description": "What about the target enforces the decision." }
+        }
+      }
+    },
+    "unenforced_reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required when bindings is empty: why no enforcing artifact exists yet (e.g. 'pre-M0'), and which future artifact will bind."
+    },
+    "veto_procedure": { "type": "string", "description": "Tier B: how the owner vetoes (default: say so in the weekly digest review)." },
+    "supersedes": { "type": "string", "pattern": "^D[0-9]{4}$" },
+    "links": { "type": "array", "items": { "type": "string" } },
+    "risk_flags": {
+      "type": "array",
+      "items": { "enum": ["spend", "public-surface", "ref-grammar", "governance-paths"] },
+      "uniqueItems": true,
+      "description": "BRIEF §9.1: flagged records always surface in the exception-only digest; unflagged ones auto-consent under a fresh attention receipt (minus a K=3 random sample)."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "tier": { "const": "B" } } },
+      "then": { "required": ["veto_by"] }
+    },
+    {
+      "if": { "properties": { "bindings": { "maxItems": 0 } } },
+      "then": { "required": ["unenforced_reason"] }
+    }
+  ]
+}

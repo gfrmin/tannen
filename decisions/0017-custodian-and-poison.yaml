@@ -1,0 +1,37 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0017
+title: The custodian and the poison corpus (§9.1 point 1) — implementation shape
+tier: A
+date: "2026-08-24"
+decision: >-
+  scripts/custodian.sh is a small author-frozen bash script, manifested together with
+  allowed_signers and every file under tests/poison/. It verifies frozen-path hashes
+  (sha256sum -c, independent of the Python stack), that the custody set and CI config
+  are manifested, that every git tag verifies against allowed_signers, the policy
+  signature once present, and guard liveness by poison. The guard list is four:
+  check_manifest, check_concepts, check_decisions, lint-imports; each has one fixture
+  under tests/poison/, and the custodian requires the guard to fail it AND to emit the
+  fixture's intended marker string, so a guard failing for an accidental collateral
+  reason still counts as weakened. It runs as `--check-only` in make verify and CI
+  (no signing); the receipt-writing mode exists only for the owner's machine.
+rationale: >-
+  Owner amendment 1 of 2026-08-24 (BRIEF §9.1 point 1). Implementation judgments
+  (guard list, marker discipline, --check-only split, minimal fixture trees with
+  schema fallback to the frozen schemas) are Tier A. The pre-commit --staged mode and
+  the projection-regeneration hook share their logic with manifested guards and get
+  no separate fixture; that choice is recorded here and is red-team bait.
+reversibility: >-
+  Custodian and poison are trust-root: changing them post-freeze is Tier-C door 5.
+  This record documents the shape they freeze in.
+status: accepted
+bindings:
+  - type: manifest
+    target: scripts/custodian.sh
+  - type: manifest
+    target: tests/poison/README.md
+  - type: file
+    target: Makefile
+    detail: verify runs custodian.sh --check-only
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.1"

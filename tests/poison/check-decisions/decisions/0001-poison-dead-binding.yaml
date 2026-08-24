@@ -1,0 +1,13 @@
+# Poison fixture: schema-valid record whose binding points at a missing target —
+# check_decisions must report "binding does not resolve".
+id: D0001
+title: Poison — binding target does not exist
+tier: A
+date: "2026-08-24"
+decision: Bind this record to a file that is deliberately absent.
+rationale: Guard-liveness corpus (BRIEF §9.1); a guard that accepts a dead binding is weakened.
+reversibility: n/a (fixture)
+status: accepted
+bindings:
+  - type: file
+    target: this-target-is-deliberately-absent.txt

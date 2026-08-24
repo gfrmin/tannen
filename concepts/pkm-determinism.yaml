@@ -1,0 +1,35 @@
+# Concept record — validated against governance/schemas/concept-record.schema.json.
+id: pkm-determinism
+title: Determinism contract; reproducibility as a declared per-producer property
+posture: adopt
+grade: L
+brief_row: >-
+  BRIEF §2: "Determinism contract (semantic equivalence; a cache hit is deterministic
+  regardless of producer behaviour on a miss); reproducibility as a declared per-producer
+  property (bit / in-distribution / non-reproducible)" — owner pkm SPEC-PRINCIPLES +
+  SPEC §7.1. Every oracle declares its reproducibility class; the kernel treats the
+  declaration as data. Do not redefine, do not "fix".
+notes: >-
+  Grade L per BRIEF §2.1's own example (determinism is behaviour-shaped). The
+  reproducibility-class enum will surface as a field of tannen's oracle descriptors —
+  a Grade-S artifact tannen owns — but the contract itself is pkm's and is enforced
+  here by law L1 (replay determinism) once M0 freezes it (decision D0009).
+sources:
+  - repo: https://github.com/gfrmin/pkm
+    document: SPEC-PRINCIPLES.md
+    section: "Implications worth stating (reproducibility is a per-producer property, declared)"
+    commit: 566ed4eca304b3ce040369e0d8f3587aea35c139
+    lines: whole file
+    snapshot:
+      path: concepts/snapshots/pkm-determinism/pkm-SPEC-PRINCIPLES.md
+      sha256: e1bda76682a779846e9dc104f0619fbcf4b9bdff4a50ac05886356e428d283a5
+  - repo: https://github.com/gfrmin/pkm
+    document: SPEC.md
+    section: "§7.1 Common interface (determinism contract; declared reproducibility)"
+    commit: 566ed4eca304b3ce040369e0d8f3587aea35c139
+    lines: 351-458
+    snapshot:
+      path: concepts/snapshots/pkm-determinism/pkm-SPEC-s7.1.md
+      sha256: 789f88613db926499e4663476a96dfca042194baf7476182d90e621a9a931758
+conformance:
+  tests: []   # M0: L1 replay-determinism law; oracle descriptors carry a declared class

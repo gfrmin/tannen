@@ -1,0 +1,22 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0002
+title: Default semiring is ℤ × Why
+tier: A
+date: "2026-08-24"
+decision: >-
+  Rel's default annotation semiring is the product ℤ × Why: every pipeline gets deltas
+  and support-set provenance unless it explicitly opts down (annotations=Z_ONLY) with a
+  recorded reason.
+rationale: >-
+  Pre-decided in BRIEF §5.5 and listed in §9 as never-ask-again. Lineage without asking
+  is the correct-by-default posture; opting down is the ugly, explicit path.
+reversibility: >-
+  A different default changes what un-annotated pipelines compute; existing explicit
+  annotations are unaffected. One-line default change plus regenerated goldens.
+status: accepted
+bindings: []
+unenforced_reason: >-
+  pre-M0: binds to the M1 Rel constructor-default property test (a pipeline built with
+  no annotation argument carries ℤ × Why).
+links:
+  - "BRIEF.md §5.5, §9, P4"

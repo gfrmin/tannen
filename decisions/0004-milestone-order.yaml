@@ -1,0 +1,24 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0004
+title: Milestone order M0→M5 (+ optional M5b), one in flight
+tier: A
+date: "2026-08-24"
+decision: >-
+  Milestones run M0 (store & identity) → M1 (Rel + algebra + reference executor) → M2
+  (provenance, L5) → M3 (delta executor, L2–L4) → M4 (boundary) → M5 (Renavon dogfood)
+  → optional M5b (pkm generality test). One milestone in flight, ever; each under the
+  per-milestone frozen-oracle protocol. Kill-criterion: flaky L6 at M1 means fix the
+  encoding before anything else.
+rationale: >-
+  Pre-decided in BRIEF §8 and listed in §9 as never-ask-again. Recorded so milestone
+  specs bind to it and the digest can show progress against a fixed order.
+reversibility: >-
+  Reordering un-started milestones is a records-only change; reordering after a law
+  freeze would orphan frozen suites and is effectively Tier B at minimum.
+status: accepted
+bindings: []
+unenforced_reason: >-
+  pre-M0: binds to docs/specs/<milestone>.md as each spec lands (specs cite this order;
+  the one-in-flight rule is session discipline enforced by CLAUDE.md review).
+links:
+  - "BRIEF.md §8, §9"

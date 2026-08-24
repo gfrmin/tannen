@@ -1,0 +1,23 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0010
+title: Owner-repo reference clones live in .reference/, gitignored, read-only by convention
+tier: A
+date: "2026-08-24"
+decision: >-
+  The owner repos (pkm, life-agent, proplang, renavon-monorepo) are cloned read-only
+  into .reference/<name> for pinning and section extraction. The directory is
+  gitignored; the durable pins are the commit SHAs + vendored snapshots + content
+  hashes inside concepts/*.yaml, so the clones are disposable and re-creatable.
+  Never import from them, never edit them (Tier C: cross-repo-code-dependency,
+  modify-owned-concept-elsewhere).
+rationale: >-
+  The registry mechanism (BRIEF §2) needs owner bytes to pin and vendor; committing
+  whole foreign repos would bloat this one and blur the no-cross-repo boundary.
+  Module layout judgment = Tier A.
+reversibility: >-
+  rm -rf .reference and re-clone at the pinned SHAs; nothing in-repo changes.
+status: accepted
+bindings:
+  - type: file
+    target: .gitignore
+    detail: ".reference/ is ignored, so clone content cannot enter the repo"

@@ -1,0 +1,26 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0027
+title: Opening sitting reduced to exactly four owner steps (§9.2)
+tier: A
+date: "2026-08-24"
+decision: >-
+  docs/OPENING.md contains exactly four owner steps, each copy-pasteable: (1) keys —
+  generate a hardware-backed owner key and enroll it in allowed_signers (updating its
+  manifest row, author-key territory); (2) policy.yaml values — set envelopes/K,
+  then sign the file (detached tannen-policy signature; nonzero envelopes are Tier-C
+  door 1, exercised here); (3) brief-freeze signature — owner-signed tag with
+  DELEGATIONS.md quoted as the tag message; (4) custodian cron + first receipt on the
+  owner's machine (touch = presence). Nothing else in this project may require the
+  owner before the M5 close, except what the five Tier-C doors themselves gate.
+rationale: >-
+  Owner amendment 2 of 2026-08-24 (OPENING.md point), tightening amendment 1's
+  opening additions and the original Session-0 deliverable 8 into one four-step list.
+reversibility: >-
+  The checklist is a doc; the acts it scripts are the owner's signatures.
+status: accepted
+bindings:
+  - type: file
+    target: docs/OPENING.md
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.1, §9.2"

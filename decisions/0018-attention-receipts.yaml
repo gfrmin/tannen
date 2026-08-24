@@ -1,0 +1,37 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0018
+title: Attention receipts (§9.1 point 2) — format, verification, and gating mechanics
+tier: A
+date: "2026-08-24"
+decision: >-
+  A receipt is receipts/<YYYY-MM-DD>.md plus a detached signature <name>.md.sig made
+  with ssh-keygen -Y sign in namespace tannen-receipt by the OWNER key (principal
+  owner@tannen; the builder principal cannot satisfy it, D0015). Freshness is computed
+  by scripts/_gov.py:receipt_state: the latest verifiable receipt is fresh until the
+  first milestone-boundary tag after it plus 7 days; no receipt, an unsigned receipt,
+  an unverifiable signature, or no enrolled owner key all mean STALE. While stale,
+  Tier-B veto lapse does NOT convert to acceptance: check_decisions reports BLOCKED,
+  DECISIONS.md and the digest show the accumulating blocks, and CLAUDE.md's hard rule
+  pauses work at the next milestone boundary.
+rationale: >-
+  Owner amendment 1 of 2026-08-24 (BRIEF §9.1 point 2). Consent by silence is only
+  meaningful given evidence of attention; the receipt is that evidence, and making
+  pre-opening Tier-B records block (rather than lapse-accept) is the conservative
+  reading. Mechanics are Tier-A implementation judgment.
+reversibility: >-
+  Freshness-window mechanics are code in scripts/; the receipts themselves are
+  append-only files.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/_gov.py
+    detail: receipt_state and effective_status implement the gate
+  - type: file
+    target: scripts/check_decisions.py
+    detail: reports receipt state and blocked-not-consented clocks
+  - type: manifest
+    target: scripts/custodian.sh
+    detail: writes and signs receipts on the owner's machine
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.1"

@@ -1,0 +1,12 @@
+# Poison fixture config: the contract below must come out BROKEN, because
+# poisonpkg/__init__.py deliberately imports a forbidden module.
+[tool.importlinter]
+root_packages = ["poisonpkg"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "poison: package must not import os (deliberately violated)"
+id = "poison-no-os"
+type = "forbidden"
+source_modules = ["poisonpkg"]
+forbidden_modules = ["os"]

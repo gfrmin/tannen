@@ -1,0 +1,29 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0026
+title: Graduated autonomy (§9.2) — evidence-ratcheted defaults; auto-narrow on tripped guards
+tier: A
+date: "2026-08-24"
+decision: >-
+  Autonomy defaults widen by ratchet as law evidence accumulates and auto-narrow for
+  the affected class on any tripped guard or failed law, until re-earned — no owner
+  action in either direction. Pre-M0 there is no evidence stream, so the mechanism is
+  specified but idle: the widen/narrow automation binds to the evidence records
+  (BRIEF P6) and `tannen laws report` when M0 freezes them; until then the digest's
+  Laws & evidence section states the idle state explicitly, and the only operating
+  ratchet is §9.1's metrics ratchet (D0020). This record is the standing obligation
+  to wire the automation at M0 rather than re-ask the owner.
+rationale: >-
+  Owner amendment 2 of 2026-08-24 (BRIEF §9.2 graduated autonomy). Recording the idle
+  state honestly beats pretending an evidence-driven ratchet can run before any law
+  exists.
+reversibility: >-
+  The automation is code over append-only evidence records; narrowing is always
+  available by construction.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/gen_projections.py
+    detail: digest states the pre-M0 idle state; the metrics ratchet already operates
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.2, P6"
