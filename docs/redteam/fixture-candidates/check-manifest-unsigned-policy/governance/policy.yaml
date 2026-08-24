@@ -1,0 +1,12 @@
+# Poison fixture: owner policy WITHOUT governance/policy.yaml.sig beside it, while
+# allowed_signers enrols an owner key. scripts/custodian.sh verifies the signature
+# only `if [ -f governance/policy.yaml.sig ]`, so deleting the signature silently
+# returns the repo to its pre-opening custody state (RT-04). The values below are the
+# ones a builder would want unsigned: a raised envelope and an opened surface.
+version: 0
+budget_envelopes:
+  M0: 100000
+external_surface:
+  publishing: allowed
+spot_check:
+  sample_rate_k: 0

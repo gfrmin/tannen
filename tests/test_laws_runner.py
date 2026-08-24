@@ -28,6 +28,19 @@ SPEC = REPO_ROOT / "docs" / "specs" / "m0.md"
 # ------------------------------------------------------------------ discovery
 
 
+@pytest.fixture(autouse=True)
+def _isolated_from_the_ambient_evidence_store(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests build their own evidence stores under a tmp tree.
+
+    TANNEN_EVIDENCE_ROOT is an ambient override honoured by both the plugin and the
+    report (D0041), and `make verify` now sets it to a freshly removed per-run store so
+    the gate's report can only see records the gate's own run produced (RT-05). Without
+    clearing it here, every "isolated" store in this file would silently BE that shared
+    store, and these tests would assert about records they never wrote — which is the
+    same confusion RT-05 is about, one level down.
+    """
+    monkeypatch.delenv("TANNEN_EVIDENCE_ROOT", raising=False)
+
 def spec_law_table() -> dict[str, str]:
     """The law table of the frozen spec §5, as {law id: file}."""
     rows = re.findall(r"^\|\s*(L0\.\d+)\s*\|.*\|\s*`([^`]+)`\s*\|\s*$", SPEC.read_text(encoding="utf-8"), re.M)

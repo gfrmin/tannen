@@ -35,6 +35,18 @@ roles:
     signer: owner
     note: "Reserved: receipts are files today, but the name is claimed so it cannot be squatted."
 
+# Tags that must EXIST. RT-15: no guard required any tag to be present, so `git tag -d`
+# erased the trust root, emptied the bless_epoch that delegation-precedes-signature
+# depends on, and made the attention receipt fresh for ever — every guard green,
+# including check_tag_signers.py itself, which read an absent brief-freeze as "not
+# created yet". That reading is right for a fresh repo and wrong for one that has been
+# through its opening sitting, which is what `owner_key_enrolled` distinguishes.
+# Reachable by accident: shallow clones, exports and `git push` without --tags all
+# produce a working copy that looks exactly like this attack.
+required_tags:
+  - brief-freeze
+  - m0-laws-freeze
+
 # An unmatched tag class is REFUSED, not waved through. Without this the next hole is
 # simply a tag kind the table never heard of.
 unknown: refuse

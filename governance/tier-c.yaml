@@ -67,6 +67,34 @@ frozen_paths:
   # iff it is listed in this file. Guards read the manifest, not a second list.
   manifest: MANIFEST.sha256
 
+  # ...but a whitelist of hashes is not a seal. The M0-boundary red team showed that a
+  # manifest ROW can be deleted (unfreezing the path with no trace: RT-01) and a FILE
+  # can be added inside a frozen directory (a tests/laws/m0/conftest.py with an autouse
+  # fixture makes a violating implementation pass its own frozen law: RT-03) with
+  # `make verify` green end to end. Under a seal both are the same violation: every
+  # file under a sealed directory carries a manifest row. Enforced by
+  # scripts/check_manifest.py::check_sealed_paths (decision D0056).
+  sealed_dirs:
+    - tests/laws
+    - tests/poison
+    - governance/schemas
+
+# Files whose owner signature is REQUIRED, not merely verified-if-present. RT-04: the
+# custodian's policy check reads "if governance/policy.yaml.sig exists, verify it; else
+# say 'unsigned (expected before the opening sitting)' and pass" — so DELETING the
+# signature lowers the custody floor silently, and the file the guards consume for spend
+# envelopes and external-surface rules becomes editable with every guard green. A
+# signature that is optional is not a signature. Enforced by
+# scripts/check_manifest.py::check_required_signatures (decision D0056).
+required_signatures:
+  - path: governance/policy.yaml
+    namespace: tannen-policy
+    signer: owner@tannen
+  # MANIFEST.sha256 belongs here too — nothing signs the manifest, so the seal above is
+  # only as strong as the builder's honesty (RT-01, RT-14). Adding it requires the owner
+  # to sign the manifest first, so it is queued for the boundary sitting rather than
+  # landed here, where it would leave the gate red.
+
 forbidden_imports:
   # Modules the kernel package may never import (BRIEF §5.3: the kernel imports no
   # IO modules; oracles/ is the only IO doorway).

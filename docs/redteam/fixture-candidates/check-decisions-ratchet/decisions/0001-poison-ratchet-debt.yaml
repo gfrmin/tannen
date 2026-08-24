@@ -1,0 +1,12 @@
+# Poison fixture: two unbound (unenforced) records against a baseline digest that
+# recorded zero — check_decisions must report "RATCHET BREACH".
+id: D0001
+title: Poison — unenforced debt above the baseline
+tier: A
+date: "2020-01-02"
+decision: Add an unenforced record so the ratcheted unenforced count rises above the baseline digest.
+rationale: Guard-liveness corpus (BRIEF §9.1 point 4); a ratchet nobody has watched fail is a ratchet nobody knows works.
+reversibility: n/a (fixture)
+status: accepted
+bindings: []
+unenforced_reason: Deliberate visible debt — this record exists to make the ratchet count rise.

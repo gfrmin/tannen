@@ -1,0 +1,4 @@
+# Poison fixture allowed_signers. The key below is NOT a real key and verifies
+# nothing — the check under test only asks whether a principal named owner@tannen is
+# enrolled, and then demands that the artifacts the owner signs are still signed.
+owner@tannen ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPOISONPOISONPOISONPOISONPOISONPOISONPOISONPO

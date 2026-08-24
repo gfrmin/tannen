@@ -26,7 +26,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _gov import Failures, REPO_ROOT, git_env, load_yaml
+from _gov import Failures, REPO_ROOT, git_env, load_yaml, owner_key_enrolled
 
 #: `git verify-tag` prints e.g. `Good "git" signature for owner@tannen with ED25519 ...`
 SIGNER_RE = re.compile(r'signature for (\S+)')
@@ -59,13 +59,27 @@ def role_for(tag: str, roles: list[dict]) -> str | None:
     return None
 
 
-def check_trust_root(repo: Path, pin: dict, fail: Failures) -> None:
+def check_trust_root(repo: Path, pin: dict, fail: Failures, opened: bool) -> None:
     """The pin exists because the trust root defines every other check: bless_epoch
-    comes from its date and the blessed delegation text from its message. A repo that
-    has not created it yet is fine; one that has created a DIFFERENT one is not."""
+    comes from its date and the blessed delegation text from its message.
+
+    A repo that has not had its opening sitting yet legitimately has no trust root. One
+    that HAS — which is what an enrolled owner key means — and no longer has the tag has
+    lost it, and absence is the more dangerous state than a wrong hash: it switches off
+    delegation-precedes-signature and freezes the attention receipt fresh (RT-15).
+    """
     tag = pin["tag"]
     if git(repo, "rev-parse", "-q", "--verify", f"refs/tags/{tag}").returncode != 0:
-        print(f"  trust root: {tag} does not exist yet (nothing to pin)")
+        if opened:
+            fail.add(
+                f"trust root MISSING: {tag} does not exist, but an owner key is enrolled "
+                "in allowed_signers, so this repo has had its opening sitting. Deleting "
+                "it empties bless_epoch and holds the attention receipt fresh for ever "
+                "(RT-15). Restore it, or the repo is not the one the custody floor "
+                "describes."
+            )
+        else:
+            print(f"  trust root: {tag} does not exist yet (no owner key enrolled)")
         return
     actual = git(repo, "rev-parse", f"refs/tags/{tag}").stdout.strip()
     if actual != pin["object"]:
@@ -96,9 +110,18 @@ def main() -> int:
         fail.add("allowed_signers does not exist, so no tag can be attributed")
         return fail.finish("")
 
-    check_trust_root(repo, table["trust_root"], fail)
+    opened = owner_key_enrolled(root)
+    check_trust_root(repo, table["trust_root"], fail, opened)
 
     tags = [t for t in git(repo, "tag", "-l").stdout.splitlines() if t.strip()]
+    for required in table.get("required_tags") or []:
+        if required not in tags:
+            fail.add(
+                f"required tag missing: {required} — the tag set is part of the custody "
+                "floor, not an optional decoration (RT-15). A shallow clone or an export "
+                "that arrives without tags is indistinguishable from one where they were "
+                "deleted, so both are refused here."
+            )
     for tag in tags:
         verified, principal = verify_tag(repo, signers, tag)
         if not verified:

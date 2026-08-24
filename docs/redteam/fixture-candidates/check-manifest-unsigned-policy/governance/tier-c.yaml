@@ -1,0 +1,7 @@
+version: 1
+source: "poison fixture (guard-liveness corpus, BRIEF §9.1)"
+frozen_paths:
+  manifest: MANIFEST.sha256
+forbidden_imports: {}
+policy:
+  file: governance/policy.yaml

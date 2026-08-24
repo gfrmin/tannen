@@ -1,0 +1,50 @@
+id: D0059
+title: "M0-boundary red-team pass: 15 confirmed findings accepted; six closed, the rest queued"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  The M0→M1 red-team pass required by BRIEF §9.1 point 5 ran on 2026-08-24. Its report is
+  docs/redteam/2026-08-24-m0-boundary.md (15 confirmed, 3 suspected) and its drafted
+  fixtures are docs/redteam/fixture-candidates/. Closed in this session by D0056, D0057
+  and D0058: RT-01, RT-02(b), RT-03, RT-04, RT-05, RT-08, RT-15. Left open and queued for
+  the owner, with reasons: RT-02(a,c) and the six other fixture candidates (tests/poison/
+  is author-key territory); RT-06 (Tier-C affirmative signature is enforced by nothing);
+  RT-07 (the ratchet baseline is a hand-editable comment); RT-10, RT-11, RT-12 (bindings
+  that resolve without enforcing; digest invisibility; append-only unenforced); RT-13,
+  RT-14 (tier-c.yaml and the guards themselves are unfrozen); RT-09 (the law descriptor
+  does not address the harness) is deferred to the START of M1, since widening it
+  invalidates all existing evidence by design.
+rationale: >-
+  Recorded as one record because the findings share a root and reading them apart
+  understates them. Three of the four criticals were variations on the same thing: the
+  custody floor was a whitelist of hashes with nothing enumerating what the whitelist
+  should contain, so it could be shortened from inside. And the context the red team
+  supplies raises every severity — this repo has NO git remote, so CI has never run once.
+  `make verify` on the builder's machine is the entire enforcement surface, and the three
+  Python guards that make it up are themselves unfrozen. That is the honest state, and it
+  belongs in the record rather than in a session's memory: the guards written today are
+  guards the builder can also unwrite, and only an owner signature over the manifest
+  changes that. Two findings landed on code written earlier the same session (RT-15 on
+  the tag-signer guard, RT-08 on the nested-run hatch), which is the argument for the
+  adversarial pass being a separate context rather than a self-review.
+reversibility: >-
+  The report and fixtures are documents; nothing here is irreversible. The queued items
+  accumulate as visible debt in the digest until the sitting, which is the intended
+  behaviour under the non-blocking rule (BRIEF §9.2): no Tier-C request halts work.
+status: accepted
+bindings:
+  - type: file
+    target: docs/redteam/2026-08-24-m0-boundary.md
+    detail: >-
+      The findings with their reproductions, severities, accident-reachability and
+      closures. DOCUMENTARY for the open findings; the closed ones carry their own
+      enforced bindings under D0056, D0057 and D0058.
+  - type: file
+    target: docs/redteam/fixture-candidates/README.md
+    detail: >-
+      Seven drafted fixtures with guard, violation, marker, exact command and the patch
+      each needs. Three bite today (lint-imports-kernel, check-decisions-ratchet,
+      check-decisions-nested-hatch) and are a `git mv` plus a manifest row from being
+      installed; three need their guard patch first; one needs the owner's key to build.
+links: ["D0021", "D0047", "D0056", "D0057", "D0058"]

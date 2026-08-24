@@ -1,0 +1,4 @@
+A file inside a sealed directory that carries NO manifest row. Stands for both
+halves of the hole: a row deleted from MANIFEST.sha256 (RT-01) and a file added
+inside a frozen directory (RT-03). Under the sealed-paths check this must be
+reported as "unmanifested file in sealed path".

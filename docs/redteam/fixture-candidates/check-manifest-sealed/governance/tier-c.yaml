@@ -1,0 +1,11 @@
+# Poison fixture tier-c.yaml — only the keys the sealed-paths check reads.
+# Collateral failures from the other check_manifest sub-checks (missing budget.yaml,
+# missing policy.yaml, missing pyproject.toml) are expected; the marker pins the
+# intended tooth, per tests/poison/README.md.
+version: 1
+source: "poison fixture (guard-liveness corpus, BRIEF §9.1)"
+frozen_paths:
+  manifest: MANIFEST.sha256
+  sealed_dirs:
+    - sealed
+forbidden_imports: {}

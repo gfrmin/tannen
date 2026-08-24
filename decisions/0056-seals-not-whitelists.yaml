@@ -1,0 +1,71 @@
+id: D0056
+title: "Frozen directories are sealed; import contracts are checked for shape; declared signatures are required"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  Three checks join scripts/check_manifest.py, driven by three new governance/tier-c.yaml
+  sections. (1) frozen_paths.sealed_dirs [tests/laws, tests/poison, governance/schemas]:
+  every file under a sealed directory must carry a manifest row, so a row cannot be
+  deleted and a file cannot be added. (2) Import contracts are checked for SHAPE, not
+  only for module coverage: kernel-no-io and kernel-no-clock must have
+  source_modules == [tannen.kernel], no-cross-repo == [tannen], all must be type
+  forbidden, none may carry ignore_imports or unmatched_ignore_imports_alerting, and a
+  missing contract id is itself a violation. (3) required_signatures: a file declared
+  owner-signed must HAVE a signature that verifies, rather than being verified only if
+  one happens to be present. Currently one entry, governance/policy.yaml.
+rationale: >-
+  All three come from the M0-boundary red-team pass, all reproduced with `make verify`
+  green end to end. RT-01: MANIFEST.sha256 does not list itself and nothing enumerates
+  what it should contain, so deleting one row unfreezes that path — demonstrated by
+  gutting frozen law L0.6 and making Store.gc() delete every object, which reaches BRIEF
+  §10's "No store mutation, ever" while the report still printed "L0.6 ok pass". 7 of 27
+  rows had no other protection, two of them frozen M0 law files. RT-03 is the same hole
+  from the other side and is reachable BY ACCIDENT: adding tests/laws/m0/conftest.py with
+  an autouse fixture makes a violating implementation pass its own frozen law, touching
+  nothing frozen and moving no descriptor. A whitelist of hashes is not a seal; under a
+  seal both are one rule. RT-02: the contracts do bite unmodified — but they are
+  configuration, and nothing checked the configuration. Three neuterings (ignore_imports,
+  narrowed source_modules, deleting a module from tier-c.yaml and the contract together)
+  each left the kernel importing os/subprocess/datetime/random with every guard green;
+  coverage of tier-c.yaml's module lists says nothing about WHO is checked or what is
+  excused. RT-04: the custodian reads "if policy.yaml.sig exists, verify it; else say
+  'unsigned (expected before the opening sitting)' and pass", so deleting the signature
+  lowers the floor in silence and makes the file the guards consume for spend envelopes
+  and external-surface rules freely editable. That also falsified a premise stated in
+  D0048, which is recorded here rather than quietly corrected there.
+reversibility: >-
+  Each check is a function and a tier-c.yaml section; reverting is deletion. Sealing has
+  an ongoing cost that is the point: adding any file under tests/laws or tests/poison now
+  requires a manifest row in the same change, so a new law file cannot be forgotten into
+  existence.
+status: accepted
+bindings:
+  - type: config
+    target: governance/tier-c.yaml#frozen_paths.sealed_dirs
+    detail: >-
+      ENFORCED: read at runtime by check_manifest.check_sealed_paths, which runs in
+      `make verify` and in the pre-commit hook. Verified to bite both ways — a new
+      tests/laws/m0/conftest.py and a deleted row for tests/laws/m0/test_l0_store.py each
+      produce "unmanifested file in sealed path".
+  - type: config
+    target: governance/tier-c.yaml#required_signatures
+    detail: >-
+      ENFORCED: check_manifest.check_required_signatures verifies each declared signature
+      with ssh-keygen -Y against allowed_signers. Verified: hiding
+      governance/policy.yaml.sig fails check_manifest, while the custodian still reports
+      "unsigned (expected before the opening sitting)" and passes — the custodian's own
+      leniency is trust-root territory and stays queued for the owner.
+  - type: config
+    target: pyproject.toml#tool.importlinter.contracts
+    detail: >-
+      ENFORCED: the key the shape check reads. Verified both ways — ignore_imports on
+      kernel-no-io and a narrowed no-cross-repo source_modules each fail check_manifest,
+      and the unmodified file passes. NOTE, corrected while writing this record: an
+      earlier draft bound this to `manifest: pyproject.toml` on the assumption that the
+      file was frozen. It is NOT in MANIFEST.sha256, and the guard said so. That is
+      RT-14 in miniature — the files the guards read are mostly unfrozen — and freezing
+      pyproject.toml is not the fix, since ordinary dependency work would then need a
+      manifest edit. Queued for the sitting instead: sign the manifest, so rows cannot be
+      dropped, rather than freezing every file a guard consults.
+links: ["D0016", "D0043", "D0048", "D0059"]

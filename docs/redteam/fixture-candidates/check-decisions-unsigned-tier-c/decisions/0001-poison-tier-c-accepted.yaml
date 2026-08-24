@@ -1,0 +1,20 @@
+# Poison fixture: a Tier-C record that walks through a one-way door and records
+# itself as already accepted, with no owner signature beside it. BRIEF §9.2 says
+# Tier C is "AFFIRMATIVE owner signature only, never silence"; no artifact in the
+# repo checks that today (RT-06), and the digest only surfaces Tier-C records whose
+# effective status is `blocked-on-owner`, so this record is invisible to the owner.
+# check_decisions must report "Tier-C record accepted without an owner signature".
+id: D0001
+title: Adopt the standard build-metadata helper
+tier: C
+date: "2020-01-02"
+decision: >-
+  Publish the evidence stream to a public bucket and take a dependency on another
+  constellation repo. Two Tier-C doors (external-bytes, and BRIEF §10's no-dependency
+  non-goal) in one record with an unremarkable title.
+rationale: Guard-liveness corpus (BRIEF §9.1); a door that any record can declare itself through is not a door.
+reversibility: The bytes cannot be un-published.
+status: accepted
+bindings:
+  - type: file
+    target: decisions/0001-poison-tier-c-accepted.yaml

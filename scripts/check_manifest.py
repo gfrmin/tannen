@@ -79,6 +79,78 @@ def check_staged(root: Path, fail: Failures) -> None:
             )
 
 
+def check_sealed_paths(root: Path, fail: Failures) -> None:
+    """A sealed directory is sealed, not a whitelist (RT-01, RT-03; decision D0056).
+
+    MANIFEST.sha256 does not list itself and nothing enumerates what it *should*
+    contain, so a row can be deleted — unfreezing the path — and a file can be added
+    inside a frozen directory, changing what the frozen tests mean, both with no trace
+    and with every guard green. Under a seal the two are one rule: every file under a
+    sealed directory carries a manifest row.
+    """
+    tier_c_path = root / "governance" / "tier-c.yaml"
+    if not tier_c_path.exists():
+        return  # check_tier_c_consistency reports the absence; do not crash here
+    tier_c = load_yaml(tier_c_path) or {}
+    sealed = (tier_c.get("frozen_paths") or {}).get("sealed_dirs") or []
+    manifest = root / "MANIFEST.sha256"
+    entries = parse_manifest(manifest) if manifest.exists() else {}
+    for rel in sealed:
+        base = root / rel
+        if not base.is_dir():
+            fail.add(f"sealed directory does not exist: {rel}")
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or "__pycache__" in path.parts:
+                continue
+            key = path.relative_to(root).as_posix()
+            if key not in entries:
+                fail.add(
+                    f"unmanifested file in sealed path: {key} — a sealed directory is "
+                    "sealed, not a whitelist: rows may not be removed from it and files "
+                    "may not be added to it (BRIEF §9.1 custody floor)"
+                )
+
+
+def check_required_signatures(root: Path, fail: Failures) -> None:
+    """An optional signature is not a signature (RT-04, decision D0056).
+
+    The custodian verifies governance/policy.yaml.sig *if it exists* and otherwise
+    reports "unsigned (expected before the opening sitting)" and passes — correct before
+    the sitting, and a silent floor-lowering after it. Deleting the file is enough to
+    make the owner-signed policy the guards consume freely editable.
+    """
+    tier_c_path = root / "governance" / "tier-c.yaml"
+    if not tier_c_path.exists():
+        return
+    required = (load_yaml(tier_c_path) or {}).get("required_signatures") or []
+    signers = root / "allowed_signers"
+    for entry in required:
+        target = root / entry["path"]
+        sig = target.with_name(target.name + ".sig")
+        if not target.exists():
+            fail.add(f"required-signature target does not exist: {entry['path']}")
+            continue
+        if not sig.exists():
+            fail.add(
+                f"missing owner signature: {entry['path']}.sig — this file is declared "
+                "owner-signed in tier-c.yaml, so its signature is required, not "
+                "optional. Deleting it would otherwise lower the custody floor in "
+                "silence (RT-04)."
+            )
+            continue
+        if not signers.exists():
+            fail.add(f"allowed_signers is missing, so {entry['path']}.sig cannot verify")
+            continue
+        verify = subprocess.run(
+            ["ssh-keygen", "-Y", "verify", "-f", str(signers), "-I", entry["signer"],
+             "-n", entry["namespace"], "-s", str(sig)],
+            input=target.read_bytes(), capture_output=True,
+        )
+        if verify.returncode != 0:
+            fail.add(f"signature does not verify for {entry['path']} against {entry['signer']}")
+
+
 def check_tier_c_consistency(root: Path, fail: Failures) -> None:
     tier_c_path = root / "governance" / "tier-c.yaml"
     if not tier_c_path.exists():
@@ -129,6 +201,39 @@ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
                     "pyproject.toml import-linter contract forbids it (one source, D0016)"
                 )
 
+    # A contract's teeth are its SHAPE, not just its forbidden list (RT-02, D0056).
+    # Coverage of tier-c.yaml's modules says nothing about who is checked or what is
+    # excused: narrowing source_modules to one module excuses the rest of the package,
+    # and an ignore_imports line excuses everything, both while every other guard stays
+    # green and `Contracts: 3 kept` is printed.
+    expected_sources = {
+        "kernel-no-io": ["tannen.kernel"],
+        "kernel-no-clock": ["tannen.kernel"],
+        "no-cross-repo": ["tannen"],
+    }
+    seen_ids = {c.get("id") for c in contracts}
+    for cid, expected in expected_sources.items():
+        if cid not in seen_ids:
+            fail.add(f"import contract {cid!r} is missing from pyproject.toml entirely")
+    for contract in contracts:
+        cid = contract.get("id")
+        if cid not in expected_sources:
+            continue
+        if contract.get("type") != "forbidden":
+            fail.add(f"import contract {cid} is not a 'forbidden' contract")
+        if contract.get("source_modules") != expected_sources[cid]:
+            fail.add(
+                f"import contract {cid} source_modules is "
+                f"{contract.get('source_modules')!r}, expected {expected_sources[cid]!r} "
+                "— narrowing the source silently excuses the rest of the package"
+            )
+        for key in ("ignore_imports", "unmatched_ignore_imports_alerting"):
+            if contract.get(key):
+                fail.add(
+                    f"import contract {cid} carries {key} — a contract with exceptions "
+                    "is not the contract tier-c.yaml declares"
+                )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -140,10 +245,12 @@ def main() -> int:
 
     fail = Failures("check_manifest")
     check_frozen_files(root, fail)
+    check_sealed_paths(root, fail)
+    check_required_signatures(root, fail)
     if args.staged:
         check_staged(root, fail)
     check_tier_c_consistency(root, fail)
-    return fail.finish("frozen paths intact; tier-c.yaml consistent with the guards")
+    return fail.finish("frozen paths intact; seals unbroken; required signatures present; tier-c.yaml consistent with the guards")
 
 
 if __name__ == "__main__":

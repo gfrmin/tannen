@@ -1,0 +1,11 @@
+# Second unbound record: one alone could be argued away as an off-by-one.
+id: D0002
+title: Poison — a second unenforced record
+tier: A
+date: "2020-01-02"
+decision: A second unbound record, so the rise is unambiguous (0 to 2).
+rationale: Guard-liveness corpus (BRIEF §9.1 point 4).
+reversibility: n/a (fixture)
+status: accepted
+bindings: []
+unenforced_reason: Deliberate visible debt — this record exists to make the ratchet count rise.

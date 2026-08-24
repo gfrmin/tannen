@@ -75,9 +75,13 @@ def world(tmp_path: Path):
            "tag", "-s", name, "-m", f"{name} (test)")
         return sh("git", "-C", str(repo), "rev-parse", f"refs/tags/{name}").stdout.strip()
 
-    def write_table(trust_object: str, unknown: str = "refuse") -> None:
+    def write_table(trust_object: str, unknown: str = "refuse",
+                    required: tuple[str, ...] = ()) -> None:
+        required_block = "".join(f"  - {name}\n" for name in required)
         (root / "governance" / "tag-roles.yaml").write_text(
             "version: 1\n"
+            + (f"required_tags:\n{required_block}" if required else "")
+            +
             "trust_root:\n"
             "  tag: brief-freeze\n"
             f"  object: {trust_object}\n"
@@ -179,14 +183,46 @@ def test_tag_signed_by_an_unenrolled_key_is_refused(world):
     assert "does not verify against allowed_signers: m1-laws-freeze" in run.stderr
 
 
-def test_missing_trust_root_is_reported_not_assumed(world):
-    """A repo that has not minted the trust root yet is legitimate (a fresh clone of an
-    early state); one that minted a DIFFERENT one is not. The guard distinguishes."""
+def test_missing_trust_root_is_tolerated_before_the_opening_sitting(world):
+    """No owner key enrolled = the sitting has not happened = no trust root is expected."""
+    signers = world.root / "allowed_signers"
+    kept = [l for l in signers.read_text().splitlines() if l.startswith("builder@")]
+    signers.write_text("# TODO-owner: placeholder until the opening sitting\n"
+                       + "\n".join(kept) + "\n")
     world.write_table("0" * 40)
     world.tag("m0-laws-freeze", world.builder_key)
     run = world.run()
     assert run.returncode == 0, run.stdout + run.stderr
     assert "does not exist yet" in run.stdout
+
+
+def test_deleting_the_trust_root_after_the_sitting_is_refused(world):
+    """RT-15. `git tag -d` is local, unsignable and untracked, and before this check it
+    erased the trust root, emptied bless_epoch and held the receipt fresh for ever with
+    every guard green — including this one, which read absence as 'not created yet'."""
+    original = world.tag("brief-freeze", world.owner_key)
+    world.write_table(original)
+    sh("git", "-C", str(world.repo), "tag", "-d", "brief-freeze")
+    run = world.run()
+    assert run.returncode != 0
+    assert "trust root MISSING" in run.stderr
+
+
+def test_a_required_tag_that_was_never_there_is_refused(world):
+    """The accident case: a shallow clone or an export arrives without tags and is
+    indistinguishable from deletion, so both are refused."""
+    original = world.tag("brief-freeze", world.owner_key)
+    world.write_table(original, required=("brief-freeze", "m0-laws-freeze"))
+    run = world.run()
+    assert run.returncode != 0
+    assert "required tag missing: m0-laws-freeze" in run.stderr
+
+
+def test_required_tags_present_pass(world):
+    original = world.tag("brief-freeze", world.owner_key)
+    world.tag("m0-laws-freeze", world.builder_key)
+    world.write_table(original, required=("brief-freeze", "m0-laws-freeze"))
+    assert world.run().returncode == 0
 
 
 def test_the_real_repo_passes_its_own_table():

@@ -1,0 +1,3 @@
+A file inside a sealed directory that DOES carry a manifest row. Present so the
+fixture proves the sealed-path check distinguishes manifested from unmanifested,
+rather than rejecting every sealed directory outright.

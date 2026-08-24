@@ -56,6 +56,11 @@ FILENAME_RE = re.compile(r"^(\d{4})-[a-z0-9]+(-[a-z0-9]+)*$")
 #: run is the one that enforces; nothing is checked less, it is just not checked twice.
 NESTED_ENV = "TANNEN_CHECK_DECISIONS_NESTED"
 
+#: Distinct from None ("resolved, no problem"): the binding was not checked at all. A
+#: guard that reports unchecked bindings as green is worse than one that says nothing
+#: (RT-08) — `make verify` clears the variable so the honest path is the default one.
+NOT_RESOLVED = object()
+
 
 def binding_violation(root: Path, kind: str, target: str) -> str | None:
     if kind == "file":
@@ -120,8 +125,10 @@ def resolve_pytest_bindings(root: Path, targets: list[str]) -> dict[str, str | N
     if not targets:
         return {}
     if os.environ.get(NESTED_ENV):
-        print(f"  pytest bindings: {len(targets)} not re-resolved (nested run; the outer run enforces)")
-        return {target: None for target in targets}
+        print(f"  pytest bindings: {len(targets)} NOT RESOLVED (nested run; the outer run "
+              "enforces). If you did not expect a nested run, this variable is set in your "
+              "ambient environment and binding enforcement is OFF (RT-08).")
+        return {target: NOT_RESOLVED for target in targets}
     batch = run_pytest(root, targets)
     combined = batch.stdout + batch.stderr
     if batch.returncode == 0 and not re.search(r"\b[1-9]\d* skipped\b", combined):
@@ -228,8 +235,10 @@ def main() -> int:
                     "is stale — BLOCKED, not consented (BRIEF §9.1; blocks accumulate)"
                 )
 
-    for target, problem in resolve_pytest_bindings(root, sorted(pytest_bindings)).items():
-        if problem:
+    resolved = resolve_pytest_bindings(root, sorted(pytest_bindings))
+    unresolved = sum(1 for v in resolved.values() if v is NOT_RESOLVED)
+    for target, problem in resolved.items():
+        if problem and problem is not NOT_RESOLVED:
             for rel in pytest_bindings[target]:
                 fail.add(f"{rel}: binding does not resolve — {problem}")
 
@@ -248,8 +257,12 @@ def main() -> int:
         print(f"  veto clock: {line}")
     for line in unenforced:
         print(f"  unenforced (visible debt): {line}")
+    pytest_verdict = (
+        f"{len(pytest_bindings)} pytest binding(s) NOT CHECKED (nested run)"
+        if unresolved else f"{len(pytest_bindings)} pytest binding(s) green"
+    )
     return fail.finish(
-        f"{len(record_paths)} records valid; {len(pytest_bindings)} pytest binding(s) green; "
+        f"{len(record_paths)} records valid; {pytest_verdict}; "
         f"{len(unenforced)} unenforced (with reasons); "
         f"{len(clocks)} Tier-B clock(s) computed; DECISIONS.md fresh"
     )

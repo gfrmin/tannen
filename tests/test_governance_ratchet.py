@@ -120,4 +120,9 @@ def test_the_guard_is_wired_into_the_real_check() -> None:
         env={**os.environ, "TANNEN_CHECK_DECISIONS_NESTED": "1"},
     )
     assert "ratchet:" in result.stdout, result.stdout + result.stderr
-    assert "not re-resolved (nested run" in result.stdout
+    # RT-08: unchecked bindings must never be described as green. The "NOT RESOLVED"
+    # line prints whatever else the run concludes; the "green" phrasing must never
+    # appear in a run that resolved nothing. Asserting the OK-summary wording instead
+    # would make this test fail for any unrelated violation, which is a worse test.
+    assert "NOT RESOLVED (nested run" in result.stdout
+    assert "binding(s) green" not in result.stdout

@@ -25,7 +25,7 @@ repos:
         always_run: true
       - id: check-decisions
         name: decision records valid; bindings resolve
-        entry: uv run python scripts/check_decisions.py
+        entry: env -u TANNEN_CHECK_DECISIONS_NESTED uv run python scripts/check_decisions.py
         language: system
         pass_filenames: false
         always_run: true

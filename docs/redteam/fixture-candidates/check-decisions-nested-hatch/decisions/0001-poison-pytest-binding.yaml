@@ -1,0 +1,15 @@
+# Poison fixture: a pytest binding whose node id does not collect. check_decisions
+# must report "binding does not resolve" EVEN WHEN TANNEN_CHECK_DECISIONS_NESTED is
+# set in the environment — the escape hatch exists for the script's own child runs,
+# not for whoever happens to have the variable exported.
+id: D0001
+title: Poison — pytest binding that does not collect
+tier: A
+date: "2020-01-02"
+decision: Bind this record to a pytest node id that does not exist.
+rationale: Guard-liveness corpus (BRIEF §9.1); a binding that is never resolved is not enforcement.
+reversibility: n/a (fixture)
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/this_test_file_does_not_exist.py::test_nothing

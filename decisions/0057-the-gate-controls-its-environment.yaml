@@ -1,0 +1,49 @@
+id: D0057
+title: "The verification gate controls its own environment: no inherited hatch, no inherited evidence"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  `make verify` clears TANNEN_CHECK_DECISIONS_NESTED at every call site (env -u) and runs
+  pytest and `tannen laws report` against a freshly removed per-run evidence store
+  (TANNEN_EVIDENCE_ROOT=$(CURDIR)/.verify-evidence, removed before and after). The
+  pre-commit hook clears the hatch too. Separately, check_decisions no longer describes
+  unresolved bindings as green: a nested run prints "N pytest binding(s) NOT CHECKED" and
+  names the variable that caused it.
+rationale: >-
+  RT-08: the nested-run hatch is a plain inherited environment variable, so setting it
+  anywhere — a debugging session, a shell profile — turned off all 17 pytest bindings
+  while the summary line read "17 pytest binding(s) green". The red team judged this the
+  most likely accident in the whole report, and it is: the bindings are the mechanism
+  that makes decisions load-bearing, and they were switchable from outside the repo. An
+  inherited signal cannot be authenticated — any nonce a parent passes is equally
+  settable by whoever launched the parent — so the honest fix is two-part: remove the
+  accidental case at the call sites, and stop claiming green for what was not checked.
+  RT-05: evidence records are content-addressed but unauthenticated, and both the plugin
+  and the report honour TANNEN_EVIDENCE_ROOT, so a prepared or merely stale evidence/
+  directory made `tannen laws report` green for code this run never exercised. Running the
+  gate against a store it creates and destroys means the report can only see records the
+  gate's own run produced — which is what "fresh evidence" was always supposed to mean.
+  The same isolation had to be applied inside tests/test_laws_runner.py, whose "isolated"
+  stores would otherwise silently become the shared one: the same confusion, one level
+  down.
+reversibility: >-
+  Four lines of Makefile and one of pre-commit config. The evidence isolation costs a
+  full law re-run per gate invocation (~18s today), which is the price of the report
+  meaning what it says.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_governance_ratchet.py::test_the_guard_is_wired_into_the_real_check
+    detail: >-
+      ENFORCED: asserts the nested run prints "NOT RESOLVED", that the summary says
+      "NOT CHECKED (nested run)", and that the string "binding(s) green" does NOT appear.
+      The old assertion accepted the old wording, so this test now pins the RT-08 fix
+      rather than the behaviour it replaced.
+  - type: file
+    target: Makefile
+    detail: >-
+      ENFORCED for the gate path: VERIFY_EVIDENCE and UNHATCH are used by every line of
+      the verify target. A binding on a Makefile can only assert the file exists, so the
+      real check is the test above plus the gate's own output.
+links: ["D0012", "D0041", "D0042", "D0059"]

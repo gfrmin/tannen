@@ -1,0 +1,43 @@
+id: D0058
+title: "The tag set is part of the custody floor: required tags must exist"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  governance/tag-roles.yaml gains required_tags [brief-freeze, m0-laws-freeze], and
+  scripts/check_tag_signers.py fails when one is absent. check_trust_root no longer reads
+  a missing brief-freeze as "not created yet" unconditionally: it does so only when no
+  owner key is enrolled in allowed_signers (i.e. the opening sitting has not happened);
+  after enrolment, absence is a failure. Each future milestone's *-laws-freeze tag joins
+  required_tags as it is minted.
+rationale: >-
+  RT-15, found against the guard that landed hours earlier the same day. D0050 pinned
+  WHICH object brief-freeze is; nothing required it to be any object at all. `git tag -d`
+  is local, unsignable and untracked, and deleting the tags erased the trust root, emptied
+  the bless_epoch that delegation-precedes-signature depends on (switching that rule off
+  for every tag created afterwards), and made the attention receipt fresh for ever —
+  receipt_state returns fresh whenever no boundary tag postdates the receipt, verified
+  green for dates out to 2030. Every guard passed, this one included, reporting
+  "0 tag(s); every signer matches its tag class". The accident case is the reason this is
+  not merely an anti-cheating measure: tags do not travel with a shallow clone, are
+  dropped by some export and mirror workflows, and `git push` without --tags never carries
+  them, so an innocent working copy is indistinguishable from the attack. Both are refused.
+  Distinguishing by owner-key enrolment keeps a genuinely fresh pre-sitting repo working.
+reversibility: >-
+  Delete a list and a branch. The ongoing cost is that a tannen checkout without its tags
+  is not a valid tannen checkout, which is the intended claim.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_tag_signers.py
+    detail: >-
+      ENFORCED: three added tests over hermetic throwaway repos — deleting the trust root
+      after enrolment is refused, a required tag that was never present is refused, and a
+      pre-sitting repo with no owner key enrolled still passes. Thirteen tests total.
+  - type: config
+    target: governance/tag-roles.yaml#required_tags
+    detail: >-
+      ENFORCED: read at runtime by the guard, which runs in `make verify`. The table
+      itself still needs a MANIFEST.sha256 row and custody-set membership — queued for
+      the sitting, and stated in the proposal rather than assumed.
+links: ["D0050", "D0054", "D0059"]
