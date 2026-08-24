@@ -43,13 +43,30 @@ for path in scripts/custodian.sh allowed_signers .github/workflows/ci.yml \
 done
 [ "$manifested_ok" -eq 1 ] && say "custody set and CI config are manifested"
 
-# 3. Signed tags: every tag must verify against allowed_signers.
+# 3. Signed tags: every tag must verify against allowed_signers; and no
+#    builder-signed tag may predate the blessing of the delegation it invokes
+#    (DELEGATIONS.md "Founding ratification": delegation precedes signature).
+#    FOUNDING_TAGS enumerates the only exceptions, by tag-object hash.
+FOUNDING_TAGS="531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6"   # m0-laws-freeze (D0032/D0035)
+bless_epoch=""
+if git rev-parse -q --verify refs/tags/brief-freeze >/dev/null 2>&1; then
+    bless_epoch=$(git for-each-ref --format='%(taggerdate:unix)' refs/tags/brief-freeze)
+fi
 for tag in $(git tag -l 2>/dev/null); do
-    if git -c gpg.format=ssh -c gpg.ssh.allowedSignersFile="$PWD/allowed_signers" \
-        verify-tag "$tag" >/dev/null 2>&1; then
-        say "tag verifies: $tag"
-    else
+    out=$(git -c gpg.format=ssh -c gpg.ssh.allowedSignersFile="$PWD/allowed_signers" \
+        verify-tag "$tag" 2>&1)
+    if [ $? -ne 0 ]; then
         bad "tag does not verify against allowed_signers: $tag"
+        continue
+    fi
+    say "tag verifies: $tag"
+    if [ -n "$bless_epoch" ] && printf '%s' "$out" | grep -q 'signature for builder@tannen'; then
+        tag_hash=$(git rev-parse "refs/tags/$tag")
+        tag_epoch=$(git for-each-ref --format='%(taggerdate:unix)' "refs/tags/$tag")
+        if [ "$tag_epoch" -lt "$bless_epoch" ] \
+            && ! printf '%s\n' $FOUNDING_TAGS | grep -qx "$tag_hash"; then
+            bad "builder tag predates its delegation's blessing and is not enumerated: $tag"
+        fi
     fi
 done
 

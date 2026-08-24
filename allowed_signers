@@ -9,9 +9,8 @@
 # machine at ~/.ssh/tannen_builder, never in the repo):
 builder@tannen ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIw1aGU616gN1UKSQw9xiZHxKNRStcJRF9NtkJjXVnuc
 #
-# TODO-owner: paste the owner (author) public key on the line below at the opening
 # sitting (docs/OPENING.md step 1) — a hardware-backed key (ed25519-sk, touch =
 # presence) per BRIEF §9.1 — then remove this TODO block. Until then no owner
 # attestation (receipt, brief-freeze) can verify, and every Tier-B decision stays
 # blocked rather than lapsing to consent.
-# TODO-owner owner@tannen sk-ssh-ed25519@openssh.com <OWNER-PUBLIC-KEY-GOES-HERE>
+owner@tannen ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICcKr/SBcAmgWHiJvjuQpHkVGWyqrAQNNomsc+e51PKl
