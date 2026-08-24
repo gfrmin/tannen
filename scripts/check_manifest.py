@@ -42,6 +42,17 @@ def check_frozen_files(root: Path, fail: Failures) -> None:
             fail.add(f"frozen path missing: {rel}")
         elif sha256_file(target) != expected:
             fail.add(f"frozen path modified: {rel} (sha256 differs from MANIFEST.sha256)")
+    # A manifest row must reference a committed artifact — an untracked file
+    # (bytecode cache, local scratch) verifies on the machine that wrote the row
+    # and fails on every clean clone (defect D0034).
+    ls = subprocess.run(
+        ["git", "-C", str(root), "ls-files"], capture_output=True, text=True, check=False
+    )
+    if ls.returncode == 0:
+        tracked = set(ls.stdout.splitlines())
+        for rel in entries:
+            if rel not in tracked:
+                fail.add(f"frozen path not git-tracked: {rel} (manifest rows must be committed artifacts, D0034)")
 
 
 def check_staged(root: Path, fail: Failures) -> None:

@@ -1,0 +1,31 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0035
+title: m0-laws-freeze ratified by explicit enumeration in the delegation text, never by pattern
+tier: A
+date: "2026-08-24"
+decision: >-
+  DELEGATIONS.md (still a draft until brief-freeze quotes it) gains a "Founding
+  ratification" section that names the m0-laws-freeze tag by tag-object hash
+  (531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6, sealing commit 9421d5b) and states the
+  standing rule "delegation precedes signature": no builder-signed tag is valid if
+  created before its delegation's blessing, save a tag enumerated there. The owner's
+  one brief-freeze signature therefore blesses the standing delegations AND
+  retroactively ratifies the one pre-delegation tag — by closed enumeration, so
+  retroactive blessing cannot become a pattern the builder relies on. This resolves
+  the D0032 custody contingency explicitly instead of implicitly.
+rationale: >-
+  Owner-relayed expert advice at sitting prep, 2026-08-24: handle the pre-existing
+  tag "by explicit listing, not habit". An implicit blessing ("the delegation text
+  covers law-freeze tags generally") would set the precedent that signing first and
+  authorising later is normal; enumeration makes the exception self-limiting.
+  Editing the draft is Tier-A builder work — the text carries no authority until
+  the owner signs it, and the signature is what confers it.
+reversibility: >-
+  Fully reversible until brief-freeze is signed (the text is a draft); after
+  signing, changing it is a delegation amendment requiring a new owner signature.
+status: accepted
+bindings:
+  - type: file
+    target: DELEGATIONS.md
+    detail: '"Founding ratification (one-time, by enumeration)" section'
+risk_flags: [governance-paths]

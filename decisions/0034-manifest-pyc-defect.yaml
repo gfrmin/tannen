@@ -1,0 +1,31 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0034
+title: "Defect: pytest bytecode caches were swept into MANIFEST.sha256 at the M0 freeze"
+tier: A
+date: "2026-08-24"
+decision: >-
+  The Session-A manifest regeneration globbed tests/laws/m0/** and captured four
+  __pycache__/*.pyc files — volatile, git-untracked bytecode. Consequence: the
+  custodian's frozen-hash check verified only on the machine that wrote the rows and
+  would fail on any clean clone (exactly the clean-clone inspection OPENING step 0
+  prescribes), and would drift red on any pytest or CPython upgrade. Fix: the four
+  rows are removed; the intended freeze set (D0032: spec, four law files, golden
+  vectors, evidence schema and vectors) is unchanged — no frozen artifact's hash
+  moved, so this narrows the manifest to the recorded intent rather than weakening
+  the freeze. Recurrence guard: check_manifest.py now fails any manifest row whose
+  path is not git-tracked.
+rationale: >-
+  A manifest row must reference a committed artifact; freezing derived files makes
+  the custody floor machine-dependent, which inverts its purpose. The guard makes
+  the mistake structurally unrepeatable rather than relying on care.
+reversibility: >-
+  Fully reversible in-repo; the removed rows named derived files that regenerate on
+  every test run.
+status: accepted
+bindings:
+  - type: file
+    target: MANIFEST.sha256
+    detail: the four __pycache__ rows removed; all intended freeze-set rows intact
+  - type: file
+    target: scripts/check_manifest.py
+    detail: untracked-manifest-row check (grep "not git-tracked")

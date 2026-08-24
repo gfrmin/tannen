@@ -5,6 +5,24 @@ project runs without you until the M5 close, except what the five Tier-C doors g
 (`governance/tier-c.yaml`). Run everything from the repo root. Precondition:
 `make verify` is green before you start.
 
+## 0. Inspect the trust root (read-only, ~5 minutes, before signing anything)
+
+Everything after this sitting trusts what you are about to sign, so this is the one
+occasion where genuine attention matters most. From a **clean clone** — not the
+builder's working tree:
+
+```sh
+git clone ~/git/tannen /tmp/tannen-inspect && cd /tmp/tannen-inspect && uv sync --frozen
+less scripts/custodian.sh            # read it end to end — it is sized for exactly this
+bash scripts/custodian.sh --check-only   # watch every guard FAIL its poison fixture
+```
+
+Expect: frozen hashes verify, `m0-laws-freeze` verifies (builder-signed), "policy.yaml
+unsigned (expected before the opening sitting)", each of the four guards "fails its
+poison as required", exit 0. Then read `DELEGATIONS.md` in full — it is the text your
+step-3 signature makes binding. Signs nothing, configures nothing: this inspection *is*
+the attention the signatures attest. Return to the real repo root for steps 1–4.
+
 ## 1. Keys
 
 Generate a hardware-backed owner key (touch = presence; BRIEF §9.1). If you have no
@@ -47,6 +65,11 @@ git -c gpg.format=ssh -c user.signingkey="$HOME/.ssh/tannen_owner" \
 git -c gpg.ssh.allowedSignersFile="$PWD/allowed_signers" verify-tag brief-freeze
 ```
 
+The file you are quoting ratifies the pre-existing `m0-laws-freeze` tag **by explicit
+hash enumeration** (its "Founding ratification" section; D0035) and states the standing
+rule that from here on delegation precedes signature. This is the one retroactive
+blessing there will ever be — read that section before signing.
+
 ## 4. Custodian cron + the first receipt
 
 ```sh
@@ -70,5 +93,8 @@ make verify && make digest
 ```
 
 The digest's "Requires owner" section should now be empty except for genuinely queued
-Tier-C doors. Afterwards (builder task, not yours): the next session re-pins
+Tier-C doors. One such door is already queued for this sitting: the custodian
+tag-ordering guard (`docs/proposals/2026-08-24-custodian-tag-ordering.md`, D0036) —
+apply it while the owner key is out, or veto it; either resolves the queue entry.
+Afterwards (builder task, not yours): the next session re-pins
 `concepts/semiring-relations.yaml` from `commit: null` to the brief-freeze tag.

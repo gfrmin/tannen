@@ -32,6 +32,22 @@ Expanded, with the custody semantics adopted from the `frozen-oracle-protocol` c
    (one-command, reviewable diff); a golden change without a descriptor change remains
    a CI failure (BRIEF §5.2).
 
+## Founding ratification (one-time, by enumeration)
+
+One builder-signed tag predates the blessing of delegation 1: `m0-laws-freeze`,
+tag object `531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6`, sealing commit
+`9421d5befe8094c3c3d473ba24305fc63bb4c15d` (custody contingency recorded in
+decision D0032). The owner's `brief-freeze` signature over this file ratifies
+that tag retroactively — by this explicit enumeration, and it alone.
+
+Standing rule, in force from that same signature: **delegation precedes
+signature.** No builder-signed tag is valid if it was created before the
+delegation it invokes was blessed, save a tag enumerated above. Retroactive
+blessing is a founding-moment oddity, never a pattern the builder may rely on.
+Custodian enforcement of this rule is a trust-root change and therefore
+owner-applied: the proposed patch is at
+`docs/proposals/2026-08-24-custodian-tag-ordering.md` (decision D0036).
+
 ## Keys
 
 Signing principals are distinct by design (decision D0015): `builder@tannen` and

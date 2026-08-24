@@ -1,0 +1,30 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0036
+title: Custodian tag-ordering guard (delegation precedes signature) — proposed, owner-applied
+tier: C
+date: "2026-08-24"
+decision: >-
+  Proposed trust-root change, queued to the opening sitting per the non-blocking
+  rule (BRIEF §9.2): custodian.sh check 3 gains an ordering guard — a builder-signed
+  tag whose tagger date precedes the brief-freeze blessing fails unless its
+  tag-object hash is enumerated in DELEGATIONS.md's founding ratification. Exact
+  patch, verification recipe (including a negative control on a throwaway clone),
+  and honest limits (taggerdate forgeability, pre-blessing vacuity, the
+  poison-fixture gap and its red-team disposition) are in
+  docs/proposals/2026-08-24-custodian-tag-ordering.md. Tier C door 5: custodian.sh
+  and its manifest row are author-key territory, so the builder drafts and the
+  owner applies or vetoes at the sitting; work continues elsewhere meanwhile.
+rationale: >-
+  Owner-relayed expert advice, 2026-08-24: the standing rule should be stated
+  alongside the one-time enumeration AND enforced — "the custodian accepts no
+  builder tag older than its authority". Stating a custody rule the custodian
+  cannot check would leave it prose; D0035 states it, this record mechanises it.
+reversibility: >-
+  One-way as a custody guarantee once applied and relied upon (weakening the
+  custodian is itself a trust-root change); the patch text is trivially revisable
+  until the owner applies it.
+status: blocked-on-owner
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-24-custodian-tag-ordering.md
+risk_flags: [governance-paths]

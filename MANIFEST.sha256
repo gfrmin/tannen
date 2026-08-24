@@ -13,10 +13,6 @@ cc925c7a911eecd90be9c8d0cace98b44db0aca3ec29f25ad83e760b2e810d51  scripts/custod
 b69155df12aef9f18967432e488f6a4c9bdd86bce0b353bfa57735b033e815c7  tests/laws/evidence-vectors/positive/minimal-pass.json
 b82c432c3b924c05feca464bd3e8af782745e6b875ab8b87d475732a88236f3a  tests/laws/evidence-vectors/positive/property-fail-with-descriptor.json
 2baa309862a5a25ae142fbaea71d2f217ccc5e4689b2579d8969df370009e1a0  tests/laws/m0/golden-vectors.json
-bad0321fc6f0067e49f869f08c44fcaf1c5b17383c8c8249b457838fec4792e6  tests/laws/m0/__pycache__/test_l0_descriptor.cpython-313-pytest-9.1.1.pyc
-a133de244adc1298e450dfc2118130e4e738571133c349bfaeb47fb218540c6d  tests/laws/m0/__pycache__/test_l0_encoding.cpython-313-pytest-9.1.1.pyc
-3b25b3dc2d38a7ea81865b9e40f7c01efbc6eb77234a64f9549c83e1e1ac745f  tests/laws/m0/__pycache__/test_l0_evidence.cpython-313-pytest-9.1.1.pyc
-7ba21748d880e6bbce5f30c9f90b8eb850cb26409ad5fb83dd9a45deef6c7230  tests/laws/m0/__pycache__/test_l0_store.cpython-313-pytest-9.1.1.pyc
 15cd250e0353cf1b3774c38609929a678400ff049638b86c0631db35966f6b59  tests/laws/m0/test_l0_descriptor.py
 8c78beda1b9c0fe206ac648e805a4f34bfffde1660122e829cf77563512007ee  tests/laws/m0/test_l0_encoding.py
 99d4251d87fe8458aba3b13108df7d1c1a771fbcecd1b170b855a3c3dbcc521f  tests/laws/m0/test_l0_evidence.py
