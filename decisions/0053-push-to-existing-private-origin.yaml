@@ -1,0 +1,43 @@
+id: D0053
+title: "Push to an already-configured private origin is Tier A; adding remotes or changing visibility is Tier C"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths, public-surface]
+decision: >-
+  Refines D0048's in_repo_mechanics clause before it is applied. `covers` gains "pushing
+  to a private origin already configured in this repo"; `excludes` replaces the blanket
+  "push to a remote included" with "adding a git remote, or changing the visibility of an
+  existing one" and "pushing to any remote other than a private origin already configured
+  here". The Tier-C door external-bytes is unchanged and still owns both excluded acts.
+rationale: >-
+  D0048's first draft excluded pushing wholesale on the reasoning that `git push` is one
+  letter from `git merge` in effort and a Tier-C door in consequence. That is too blunt in
+  the same direction D0048 itself files as a defect: pushing to an already-configured
+  private origin is a backup, and gating backups on an owner signature spends attention to
+  prevent nothing — an over-asking bug pointing the other way. The act that is actually a
+  door is changing who can see the bytes: adding a remote creates the external surface,
+  changing visibility widens it. Effort is not the right axis; audience is. Note the state
+  of the world, so this is not later read as authorising more than it does: the repo has NO
+  remote at all today, so the permission is currently vacuous and the first push this
+  project ever makes necessarily requires the Tier-C act of adding one.
+reversibility: >-
+  Cheap in the repo (edit two YAML lists, re-sign policy). Not cheap in the world if got
+  wrong in the permissive direction: bytes that have left cannot be recalled, which is why
+  the excluded half stays an affirmative-signature door rather than a silence-consent one.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-24-policy-in-repo-mechanics.md
+    detail: >-
+      DOCUMENTARY (D0052 grading): the refined covers/excludes lists are drafted in this
+      proposal under "Pushing: a sharper cut than the first draft made". policy.yaml is
+      owner-signed, so the builder cannot apply it. Upgrades to
+      `config: governance/policy.yaml#in_repo_mechanics.covers` once applied.
+  - type: config
+    target: governance/policy.yaml#external_surface.publishing
+    detail: >-
+      ENFORCED half: the excluded acts remain governed by the already-signed
+      external_surface block (publishing forbidden, cross_repo_prs forbidden,
+      network_writes captured-oracles-only). This decision narrows what counts as
+      mechanics; it takes nothing out of that block's scope.
+links: ["D0024", "D0048"]

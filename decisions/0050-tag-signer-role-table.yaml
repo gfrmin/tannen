@@ -1,0 +1,54 @@
+id: D0050
+title: "Tag signer roles: generalise the close-tag rule to a signer-role table; three holes confirmed"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  D0049's `*-close` special case is replaced, before it is ever applied, by a signer-role
+  table in scripts/custodian.sh: tag class -> authorised principal (brief-freeze ->
+  owner; *-laws-freeze -> builder; *-close, amendment-*, receipt-* -> owner), with
+  UNKNOWN tag classes refused by default. The trust root is additionally pinned by
+  tag-object hash (brief-freeze = c219e63819beb4052b326e47b9cbd5d208779cda). Drafted at
+  docs/proposals/2026-08-24-custodian-signer-role-table.md; custodian.sh is trust-root,
+  so the owner applies it. The superseded draft
+  (2026-08-24-custodian-close-tag-signer.md) is kept unchanged with a banner, because
+  D0049 binds to that path.
+rationale: >-
+  "Nothing checks which principal signed which kind of tag" is a class, and D0049 patched
+  one instance of it. Three experiments in a throwaway clone, all confirmed, all exit 0
+  with "custody floor intact": (1) a builder-signed m0-close passes; (2) a builder-signed
+  amendment-2026-09-01 passes; (3) deleting brief-freeze and re-issuing it BUILDER-signed
+  passes. (3) is the severe one — brief-freeze is the trust root: the owner's founding
+  signature, the verbatim home of the blessed delegation text, and bless_epoch for the
+  delegation-precedes-signature rule. Nothing pinned its tag-object hash. Ordering is
+  part of the finding: replace the trust root AFTER other builder tags exist and the
+  custodian does fail, but only because bless_epoch moves forward and the older tags
+  suddenly predate it — an accident, not a defence. Replace it first and nothing trips.
+  This compounds with D0051's finding that DELEGATIONS.md was unfrozen: a builder could
+  rewrite the delegation and re-bless it end to end, every guard green. Refusing unknown
+  tag classes is the part that makes this a class fix rather than a longer list of
+  instances — otherwise the next hole is a tag kind the table never heard of.
+reversibility: >-
+  Cheap to revert (delete a case statement and a hash pin) and cheap to extend (one line
+  per new tag class, and the default-refuse makes forgetting loud rather than silent).
+  Not cheap is what it prevents: a re-issued trust root cannot be detected after the fact
+  from inside the repo, because every check that would notice is defined relative to it.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-24-custodian-signer-role-table.md
+    detail: >-
+      DOCUMENTARY (D0052 grading): the drafted patch, the three reproductions, the
+      fixture designs and the sitting's order of operations. scripts/custodian.sh is
+      author-key territory so the builder cannot apply it; this binding proves the
+      remedy exists, not that it is in force. Upgrades to a manifest binding on
+      scripts/custodian.sh when the owner applies the patch (D0045).
+  - type: manifest
+    target: scripts/custodian.sh
+    detail: >-
+      The file the patch targets is frozen, so the applied patch cannot later be
+      softened without a manifest change. Note the acknowledged limit, spelled out in
+      the proposal: MANIFEST.sha256 is not itself signed, so a builder editing a frozen
+      file and its row together satisfies sha256sum -c. The pin raises cost; it does not
+      make the act impossible.
+links: ["D0036", "D0045", "D0049", "D0051", "D0052"]

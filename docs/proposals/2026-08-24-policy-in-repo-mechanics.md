@@ -49,9 +49,33 @@ in_repo_mechanics:
     - creating, moving or deleting any git tag (custody; DELEGATIONS.md, D0049)
     - any edit to a frozen path, to allowed_signers, to tests/poison/, or to a signed
       file (governance/policy.yaml itself included)
-    - any byte leaving the repo boundary — push to a remote included
+    - adding a git remote, or changing the visibility of an existing one
       (Tier-C door external-bytes)
+    - pushing to any remote other than a private origin already configured here
 ```
+
+## Pushing: a sharper cut than the first draft made
+
+The first draft of this clause excluded pushing wholesale, on the reasoning that
+`git push` is one letter from `git merge` in effort and a Tier-C door in consequence.
+That was too blunt in the direction this whole record is about. Pushing to an **already
+configured private origin** is a backup, and gating backups on an owner signature is an
+over-asking bug of exactly the kind D0048 files — it spends attention to prevent nothing.
+What is actually a door is **changing who can see the bytes**: adding a remote that did
+not exist, or flipping an existing one's visibility. The first creates the external
+surface; the second widens it. Neither is git mechanics, and both stay Tier C.
+
+So the clause distinguishes them, and the `covers` list gains:
+
+```yaml
+    - pushing to a private origin already configured in this repo
+```
+
+**State of the world today:** this repo has **no remote at all** (`git remote -v` is
+empty; it lives at `/home/g/git/tannen` with worktrees under `~/git/worktrees/tannen/`).
+So the permission above is forward-looking and currently vacuous, and the *first* push
+this project ever makes necessarily requires adding a remote first — which is the
+Tier-C act. Recorded so the clause is not later read as authorising that first step.
 
 ## Why `excludes` is load-bearing
 
@@ -67,6 +91,7 @@ it in good faith at 2am.
 1. `bash scripts/custodian.sh --check-only` → "policy.yaml signature verifies (owner@tannen)"
    (fails until re-signed; that failure is the proof the signature is load-bearing).
 2. `uv run python scripts/check_manifest.py` → still OK (policy envelopes unchanged).
-3. Upgrade D0048's binding from the `file` binding on this proposal to
+3. `git remote -v` is still empty, or every listed remote is private.
+4. Upgrade D0048's binding from the `file` binding on this proposal to
    `config: governance/policy.yaml#in_repo_mechanics.tier`, which resolves only once
    this patch is applied (decision D0045: bindings are the present-tense attachment).

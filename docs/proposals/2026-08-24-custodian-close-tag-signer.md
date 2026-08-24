@@ -1,3 +1,10 @@
+> **SUPERSEDED (2026-08-24) by `2026-08-24-custodian-signer-role-table.md`.**
+> This draft patched one instance — `*-close` — of a class the custodian misses entirely:
+> it never checks which principal signed which kind of tag. Empirical testing showed a
+> builder-signed `amendment-*` tag, and a builder re-issue of `brief-freeze` itself, also
+> pass today. Kept unchanged because decision D0049 binds to this path; the generalised
+> patch is the one to apply.
+
 # Proposal: custodian requires milestone close tags to be owner-signed (owner-applied; Tier-C door 5)
 
 **Status:** queued for the M0→M1 boundary sitting (decision D0049).

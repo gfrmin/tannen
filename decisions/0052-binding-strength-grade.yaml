@@ -1,0 +1,43 @@
+id: D0052
+title: "Binding strength (enforced vs documentary) becomes a schema field, not prose"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  Bindings gain an optional `strength` field, enum [enforced, documentary], absent read
+  as enforced. `enforced` means the target mechanically prevents or detects a violation
+  (a frozen path, a passing test, a consumed config key, a guard); `documentary` means
+  the target records the intent — typically a drafted patch awaiting owner application —
+  and detects nothing. check_decisions reports the split and the digest shows it. Drafted
+  at docs/proposals/2026-08-24-binding-strength-grade.md; the decision-record schema is a
+  frozen path, so the owner applies it.
+rationale: >-
+  The distinction was invented ad hoc while writing D0048, whose binding is a `file`
+  binding on a proposal document: the check that runs is "the file exists", which proves
+  the remedy was drafted and detects no violation of anything. D0051's manifest binding on
+  DELEGATIONS.md, by contrast, makes violation fail three separate checks. Both currently
+  count identically toward "2 unenforced (with reasons)", and the difference lived only as
+  prose inside a `detail` field — which informs a reader who opens that one record and
+  cannot be counted, projected, or ratcheted. This matters most right now: the boundary
+  sitting's entire purpose is to convert a batch of documentary bindings into enforced
+  ones, and no number currently measures whether that happened. A governance system whose
+  own enforcement surface it cannot measure is exactly the failure it exists to prevent
+  elsewhere.
+reversibility: >-
+  Additive and optional; absent means enforced, so every existing record keeps its
+  current meaning and nothing is invalidated. Reverting means dropping the field from the
+  schema and the two report lines.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-24-binding-strength-grade.md
+    detail: >-
+      DOCUMENTARY by its own definition, which is the honest reading: the schema is
+      frozen, so this record proposes a grading it cannot yet apply to itself. Carries
+      the sequencing hazard in full — a digest generated before the field exists
+      establishes a documentary=0 baseline, and the first honestly-marked documentary
+      binding after it would read as a ratchet breach, punishing accurate self-reporting.
+      The stated order is: land the field, mark bindings honestly, generate ONE digest
+      with true numbers, and only then ratchet the metric. Upgrades to a manifest binding
+      on governance/schemas/decision-record.schema.json once applied.
+links: ["D0020", "D0044", "D0045", "D0048"]

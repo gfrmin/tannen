@@ -1,0 +1,43 @@
+id: D0051
+title: "DELEGATIONS.md is manifested; authority-bearing tags quote its hash alongside its text"
+tier: A
+date: "2026-08-24"
+risk_flags: [governance-paths]
+decision: >-
+  DELEGATIONS.md is added to MANIFEST.sha256 (row inserted after CLAUDE.md, hash
+  daf86b74308017a11b121315d9dd39012ea18a52d586f789a4e50c8d06992811). It is therefore a
+  frozen path: the pre-commit frozen-paths hook, sha256sum -c and check_manifest all
+  reject an edit, and amending the delegation now requires re-freezing — the friction an
+  amendment should carry. Going forward, every authority-bearing tag (brief-freeze,
+  *-close, amendment-*) quotes the file's sha256 alongside its text in the tag message.
+  Adding DELEGATIONS.md to the custodian's check-2 custody-set list is drafted for the
+  owner in docs/proposals/2026-08-24-custodian-signer-role-table.md.
+rationale: >-
+  DELEGATIONS.md is the document D0049 rests on, and it was in neither MANIFEST.sha256
+  nor the custodian's custody set (which covered custodian.sh, allowed_signers, ci.yml
+  and tests/poison/** only). Its authority came entirely from being quoted verbatim in
+  the owner-signed brief-freeze tag message — and no guard joined the file to the tag.
+  Appending "and milestone close tags" to delegation 1 would have left every check green.
+  Two fixes were available: freeze the file, or have the custodian re-derive the blessed
+  text from the tag message and diff it. The second checks the better invariant, but the
+  tag message is the file with markdown headings stripped, so it needs a normaliser, and
+  a normaliser is somewhere for a bug to hide. Freezing is the smaller floor and was
+  taken. Hash-quoting closes the residue: text-quoting was a founding-moment convenience,
+  while content addressing is the discipline this entire project runs on (BRIEF P-refs,
+  the store, descriptors, evidence). A tag that names the hash it blesses can be checked
+  by machine; a tag that quotes prose can only be read.
+reversibility: >-
+  Trivial to reverse (delete the manifest row), and doing so would be visible in a diff
+  the owner sees. The hash-quoting convention costs one line per authority-bearing tag
+  and binds nothing already minted — brief-freeze quotes text only, and stays as it is.
+status: accepted
+bindings:
+  - type: manifest
+    target: DELEGATIONS.md
+    detail: >-
+      ENFORCED (D0052 grading): the file is now listed in MANIFEST.sha256, so any edit
+      fails sha256sum -c, fails scripts/check_manifest.py, and is rejected by the
+      pre-commit frozen-paths hook before it can be committed. This is the binding that
+      makes "DELEGATIONS.md must never be edited" a fact rather than a note in a
+      session's memory.
+links: ["D0016", "D0036", "D0049", "D0050"]
