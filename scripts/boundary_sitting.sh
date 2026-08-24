@@ -329,7 +329,6 @@ src = p.read_text()
 anchor = "required_tags:\n"
 assert src.count(anchor) == 1
 end = src.index(anchor) + len(anchor)
-block_end = src.index("\n\n", end) if "\n\n" in src[end:] else len(src)
 p.write_text(src[:end] + f"  - {milestone}-close\n" + src[end:])
 PY
         regen_manifest_row governance/tag-roles.yaml
