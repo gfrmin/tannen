@@ -5,6 +5,10 @@ owner-signed policy file, or the trust root. `scripts/boundary_sitting.sh` appli
 the order below; `docs/SITTING.md` is the prose checklist behind it. Nothing here is live
 until the owner applies it — the repo is green with all of it sitting unapplied.
 
+**Read `CONFERRAL.md` first** — it is the deciding document: what is being asked,
+what declining costs, what stays open afterwards, and what a reviewer should try to
+break. The table below is the applying document.
+
 | File | Applies to | Why the owner |
 |---|---|---|
 | `custodian.sh` | `scripts/custodian.sh` | Trust root, author-key territory. Offered as a whole-file diff rather than prose patches: this is the guard of the guards, and a reviewer should see every line they are vouching for. Adds the custody-set hash pass, the tag-signer invocation, required (not optional) owner signatures, and a poison line per new fixture. |
