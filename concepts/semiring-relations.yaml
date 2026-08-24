@@ -12,22 +12,32 @@ notes: >-
   The one owned row. Grade P at Session 0 because the normative home is still prose
   (BRIEF §4–§6); as milestones land, its data-shaped exports (descriptors, evidence
   records, the governor wire) become Grade-S artifacts published FROM here with schemas
-  and frozen vectors, and its behavioural content becomes the L1–L6 law suites. The
-  commit pin is null: this repo has no commits at record-creation time; re-pin at the
-  owner-signed brief-freeze tag (docs/OPENING.md).
+  and frozen vectors, and its behavioural content becomes the L1–L6 law suites. At M0 the
+  first instalment of both landed: the evidence-record schema with its frozen vectors,
+  and the L0 law suite named under conformance.tests. The Session-0 null commit pin is
+  now resolved to the owner-signed brief-freeze commit.
 sources:
   - repo: this repo (tannen)
     document: BRIEF.md
     section: "§4 core calculus, §5 correct-by-default catalogue, §6 laws L1–L6"
-    commit: null
-    commit_note: repo unborn at Session 0; re-pin to the brief-freeze tag at the opening sitting
+    commit: bac005e84a601c4db814380e6e3bc802c25cd775
+    commit_note: >-
+      The commit sealed by the owner-signed `brief-freeze` tag (opening sitting,
+      2026-08-24). BRIEF.md is byte-identical here and at that commit, and is frozen in
+      MANIFEST.sha256, so the pin and the snapshot cannot drift apart silently.
     lines: 88-120
     snapshot:
       path: concepts/snapshots/semiring-relations/tannen-BRIEF-s4-s6.md
       sha256: 2afb09b3cdaeed84f552faee9d08c4946e258c9f93f6a6a292457a6312e2a6ce
 conformance:
-  tests: []
+  tests:
+    - tests/laws/m0/test_l0_encoding.py
+    - tests/laws/m0/test_l0_store.py
+    - tests/laws/m0/test_l0_descriptor.py
+    - tests/laws/m0/test_l0_evidence.py
   review_marker: >-
     Owned, not adopted: normative text lives in BRIEF §4–§6 (frozen via MANIFEST.sha256)
     and carries [owns]; any restatement elsewhere in the constellation is the owner's
-    Tier-C act, not tannen's. Executable form arrives with the M0–M3 law freezes.
+    Tier-C act, not tannen's. Executable form arrives with the M0–M3 law freezes: the M0
+    instalment (L0.1–L0.10, frozen at m0-laws-freeze) is listed above and green, with
+    recorded evidence per law; the algebra's own laws L1–L6 follow at M1–M3.

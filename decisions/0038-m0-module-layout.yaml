@@ -1,0 +1,34 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0038
+title: M0 module layout; the ref grammar gets exactly one home
+tier: A
+date: "2026-08-24"
+decision: >-
+  The M0 code is laid out as docs/specs/m0.md §1 requires, with one addition. Pure
+  kernel: tannen.kernel.refs (the ref grammar), tannen.kernel.encoding (canonical
+  JSON), tannen.kernel.descriptor (descriptor identity). Effectful shell:
+  tannen.store (the local-fs store, a module not a package — M0 has one store),
+  tannen.laws (discovery, evidence, the pytest plugin, the report) and tannen.cli.
+  The addition is tannen.kernel.refs: `sha256:<64 lowercase hex>` is minted and
+  validated in exactly one place, and encoding, descriptor and store all call it.
+  Consequently the store, the descriptor module and every emitted ref refuse a
+  malformed ref by name rather than each carrying its own regex.
+rationale: >-
+  The pinned ref grammar is an adopted concept (concepts/provenance-ref-grammar.yaml);
+  three copies of one grammar is three chances to drift, which is the exact failure
+  BRIEF §2 exists to prevent. Module layout is named Tier A in BRIEF §9.
+reversibility: >-
+  Pure refactor: the public names the frozen laws import (tannen.kernel.encoding,
+  tannen.kernel.descriptor, tannen.store) are unchanged by any future rearrangement
+  behind them.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_kernel_surface.py::test_one_home_for_the_grammar"
+    detail: every ref the system emits is minted by tannen.kernel.refs
+  - type: config
+    target: "pyproject.toml#tool.importlinter.contracts"
+    detail: the kernel-no-io contract keeps the split honest — tannen.store may import pathlib, tannen.kernel may not
+links:
+  - "docs/specs/m0.md §1"
+  - "concepts/provenance-ref-grammar.yaml"

@@ -1,0 +1,42 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0045
+title: Bindings may be added to an existing record; the decision itself stays immutable
+tier: A
+date: "2026-08-24"
+decision: >-
+  Reading of BRIEF §9's "append-only event records", pinned here because M0 forced the
+  question. A record's decision, rationale, reversibility, tier, date and status are
+  immutable — a change of mind is a NEW record, and a defect in a frozen artifact is a
+  new file plus a defect record, never an edit. Its `bindings` are not: they are the
+  record's attachment to the artifact that enforces it, and attaching one when that
+  artifact finally exists records history rather than rewriting it. An
+  `unenforced_reason` is replaced by the binding it predicted, and its substance moves
+  into the binding's `detail` so nothing is lost. Applied at M0: D0001, D0003 and D0004
+  gained the bindings their own unenforced_reason promised, and D0031's law bindings
+  hardened from `manifest` to `pytest` node bindings exactly as D0031 said they would
+  "when M0 turns them from skips to runs".
+rationale: >-
+  The ratchet (§9.1) requires the unenforced count to trend DOWN. If records were
+  immutable in every field, that count could only ever rise or hold — the ratchet would
+  be unsatisfiable by construction, and every record's own unenforced_reason (which
+  names the future artifact it will bind to) would be a promise nothing could keep. The
+  distinction that makes both work is decision-versus-enforcement: what was decided is
+  history, what enforces it is present tense.
+reversibility: >-
+  Interpretive. If the owner reads §9 more strictly, the alternative is a superseding
+  record per binding change; nothing already written would have to be undone.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/check_decisions.py
+    detail: >-
+      binding_violation's pytest branch is what makes a hardened binding mean anything:
+      a node that does not collect, or is skipped, fails the check — so a binding cannot
+      be hardened in name only
+  - type: pytest
+    target: "tests/laws/m0/test_l0_descriptor.py"
+    detail: an example of the hardened form — a law node that must collect and pass, not merely exist
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9, §9.1"
+  - "decisions/0031-m0-encoding-pins.yaml"

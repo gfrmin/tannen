@@ -646,6 +646,9 @@ wheels = [
 name = "tannen"
 version = "0.0.0"
 source = { editable = "." }
+dependencies = [
+    { name = "jsonschema" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -659,6 +662,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "jsonschema", specifier = ">=4.26,<5" }]
 
 [package.metadata.requires-dev]
 dev = [

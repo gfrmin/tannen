@@ -29,6 +29,13 @@ reversibility: >-
   edited (CLAUDE.md).
 status: accepted
 bindings:
+  # Hardened at M0 (Session B) from manifest-only to manifest + pytest, exactly as this
+  # record's rationale said it would be "when M0 turns them from skips to runs": the
+  # manifest rows prove the laws are frozen, the pytest node proves they run and pass.
+  # A skipped node fails check_decisions, so the hardened form cannot be hollow (D0045).
+  - type: pytest
+    target: tests/laws/m0/test_l0_encoding.py
+    detail: the pins are assertions in this suite, and the suite now runs green with no skips
   - type: manifest
     target: tests/laws/m0/test_l0_encoding.py
   - type: manifest

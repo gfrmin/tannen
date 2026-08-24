@@ -1,11 +1,17 @@
-# tannen — Session 0: governance machinery only. No kernel code exists yet by design
-# (see CLAUDE.md "The build protocol" and decision records under decisions/).
+# tannen — M0: canonical encoding, content addressing, the write-once store, descriptor
+# identity, and the law/evidence runner behind `tannen laws report` (docs/specs/m0.md).
 [project]
 name = "tannen"
 version = "0.0.0"
-description = "A kernel for pure, content-addressed, provenance-native data pipelines (governance bootstrap)"
+description = "A kernel for pure, content-addressed, provenance-native data pipelines"
 requires-python = ">=3.12"
-dependencies = []
+# jsonschema is a runtime dependency because the laws runner CONSUMES the frozen
+# evidence-record schema rather than restating its shape in Python (BRIEF §2: a second
+# normative home for one shape is drift). Decision D0040.
+dependencies = ["jsonschema>=4.26,<5"]
+
+[project.scripts]
+tannen = "tannen.cli:main"
 
 [dependency-groups]
 dev = [
@@ -58,6 +64,21 @@ forbidden_modules = [
     "httpx",
     "sqlite3",
     "duckdb",
+]
+
+[[tool.importlinter.contracts]]
+name = "kernel has no clock and no other nondeterminism (BRIEF P1, P7, §5.7)"
+id = "kernel-no-clock"
+type = "forbidden"
+source_modules = ["tannen.kernel"]
+forbidden_modules = [
+    "time",
+    "datetime",
+    "calendar",
+    "zoneinfo",
+    "random",
+    "secrets",
+    "uuid",
 ]
 
 [[tool.importlinter.contracts]]

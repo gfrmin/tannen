@@ -1,0 +1,36 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0044
+title: The ratchet hardens from digest flag to check_decisions failure (D0020 discharged)
+tier: A
+date: "2026-08-24"
+decision: >-
+  check_decisions now fails when the unenforced-decision count or the Grade-P/S-pending
+  residue rises above the baseline. The baseline is the metrics line of the most recent
+  digest STRICTLY OLDER than today, so regenerating today's digest cannot launder a
+  rise: it must first appear in a digest, flagged under "Requires owner", before it
+  becomes the number the next session is measured against. With no earlier digest there
+  is no baseline, and the check says so rather than passing silently. The metric
+  definition moved into scripts/_gov.py so the generator that reports the numbers and
+  the guard that enforces them read one definition.
+rationale: >-
+  D0020 pinned exactly this: "pre-M0 the breach is a flag, not a CI failure (bootstrap
+  legitimately adds unenforced records); it hardens to a check_decisions failure at the
+  M0 boundary". M0 is closing. Implementing a recorded provisional decision on its
+  stated schedule is Tier A even though the decision it implements is Tier B.
+reversibility: >-
+  One function; softening it back to a warning is a two-line change, and would be
+  visible in the same file.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_governance_ratchet.py
+    detail: >-
+      a rise fails, holding steady and falling pass, and today's own digest is not a
+      valid baseline; also asserts the guard is actually called by check_decisions
+  - type: file
+    target: scripts/check_decisions.py
+    detail: check_ratchet, called from main
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.1 point 4"
+  - "decisions/0020-exception-only-digest.yaml — this executes it; D0020's decision stands unchanged"

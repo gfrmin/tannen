@@ -118,8 +118,11 @@ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
         .get("tool", {}).get("importlinter", {}).get("contracts", [])
     covered = {m for c in contracts for m in c.get("forbidden_modules", [])}
     forbidden = tier_c.get("forbidden_imports", {})
-    for kind in ("io_modules", "cross_repo"):
-        for mod in forbidden.get(kind, []):
+    # Every list, not an enumerated few: a new forbidden_imports list added here must
+    # be covered by a contract too, or the human-readable source would quietly outrun
+    # the machine-enforced one (D0016).
+    for kind, modules in forbidden.items():
+        for mod in modules or []:
             if mod not in covered:
                 fail.add(
                     f"tier-c.yaml forbidden_imports.{kind} lists {mod!r} but no "

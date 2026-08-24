@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import random
-import re
 import sys
 from pathlib import Path
 
@@ -30,11 +29,11 @@ from _gov import (
     effective_status,
     input_hash,
     load_yaml,
+    previous_metrics,
+    ratchet_metrics,
     receipt_state,
     REPO_ROOT,
 )
-
-METRICS_RE = re.compile(r"<!-- metrics: unenforced=(\d+) residue=(\d+) -->")
 
 
 def header(digest_hash: str) -> str:
@@ -126,16 +125,39 @@ def gen_decisions(root: Path, today: dt.date) -> str:
     return "\n".join(lines) + "\n"
 
 
-def previous_metrics(root: Path, today: dt.date) -> tuple[str, int, int] | None:
-    digests = sorted(
-        p for p in (root / "digest").glob("*.md")
-        if p.stem < today.isoformat()
+def laws_section(root: Path) -> list[str]:
+    """The evidence stream as a query, not a sentence someone remembered to update.
+
+    Falls back to a plain statement when the package is not importable (a governance-only
+    checkout): the digest reports what it can see, and says when it cannot see."""
+    try:
+        from tannen.laws.report import FRESH, build_report
+    except ImportError:
+        return ["- `tannen` is not importable from this tree, so no evidence could be read."]
+    report = build_report(root, None)
+    if not report["laws"]:
+        return [
+            "- No laws are frozen yet. `tannen laws report` joins `make verify` when the "
+            "first law set is frozen (decision D0012); graduated autonomy (BRIEF §9.2) has "
+            "no evidence stream to widen on until then."
+        ]
+    lines = []
+    for milestone in report["milestones"]:
+        laws = [law for law in report["laws"] if law["milestone"].lower() == milestone]
+        fresh = [law for law in laws if law["status"] == FRESH]
+        stale = [f"{law['law_id']} ({law['status']})" for law in laws if law["status"] != FRESH]
+        lines.append(
+            f"- **{milestone.upper()}**: {len(fresh)}/{len(laws)} law(s) carry fresh passing "
+            f"evidence for the current descriptors"
+            + (f" — outstanding: {', '.join(stale)}" if stale else ".")
+        )
+    lines.append(
+        "- `uv run tannen laws report` runs inside `make verify`, after pytest emits the "
+        "records it judges (decision D0012, discharged at M0)."
     )
-    for path in reversed(digests):
-        m = METRICS_RE.search(path.read_text(encoding="utf-8"))
-        if m:
-            return path.stem, int(m.group(1)), int(m.group(2))
-    return None
+    for problem in report["problems"]:
+        lines.append(f"- **CORRUPT EVIDENCE** — {problem}")
+    return lines
 
 
 def gen_digest(root: Path, today: dt.date) -> str:
@@ -206,15 +228,15 @@ def gen_digest(root: Path, today: dt.date) -> str:
             owner_items.append(f"**{rec['id']}** {rec['title']}: {rec['decision'].strip().splitlines()[0]}")
 
     unenforced = [r for r in records if not r["bindings"]]
-    residue = [c for c in concepts if c["grade"] in ("P", "S-pending")]
+    unenforced_count, residue_count = ratchet_metrics(records, concepts)
     prev = previous_metrics(root, today)
     breaches: list[str] = []
     if prev:
         prev_date, prev_unenforced, prev_residue = prev
-        if len(unenforced) > prev_unenforced:
-            breaches.append(f"unenforced count rose {prev_unenforced} → {len(unenforced)} since {prev_date}")
-        if len(residue) > prev_residue:
-            breaches.append(f"Grade-P/S-pending residue rose {prev_residue} → {len(residue)} since {prev_date}")
+        if unenforced_count > prev_unenforced:
+            breaches.append(f"unenforced count rose {prev_unenforced} → {unenforced_count} since {prev_date}")
+        if residue_count > prev_residue:
+            breaches.append(f"Grade-P/S-pending residue rose {prev_residue} → {residue_count} since {prev_date}")
     for breach in breaches:
         owner_items.append(f"**RATCHET BREACH** — {breach} (BRIEF §9.1: must trend down).")
 
@@ -260,21 +282,16 @@ def gen_digest(root: Path, today: dt.date) -> str:
     else:
         lines.append("- Queue empty.")
 
+    lines += ["", "## Laws & evidence", ""] + laws_section(root)
     lines += [
-        "",
-        "## Laws & evidence",
-        "",
-        "- No laws are frozen yet (pre-M0). `tannen laws report` joins `make verify` when "
-        "the M0 law set is frozen (decision D0012). Graduated autonomy (BRIEF §9.2) has "
-        "no evidence stream to widen on until then.",
         "",
         "## Ratchet metrics (must trend down, BRIEF §9.1)",
         "",
-        f"- Unenforced decisions: **{len(unenforced)}**"
+        f"- Unenforced decisions: **{unenforced_count}**"
         + (f" (previous digest {prev[0]}: {prev[1]})" if prev else " (no previous digest)"),
-        f"- Grade-P / S-pending residue: **{len(residue)}**"
+        f"- Grade-P / S-pending residue: **{residue_count}**"
         + (f" (previous digest {prev[0]}: {prev[2]})" if prev else " (no previous digest)"),
-        f"<!-- metrics: unenforced={len(unenforced)} residue={len(residue)} -->",
+        f"<!-- metrics: unenforced={unenforced_count} residue={residue_count} -->",
     ]
 
     counts: dict[str, int] = {}

@@ -1,0 +1,33 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0043
+title: "\"No hidden clock\" becomes an import contract, not a habit"
+tier: A
+date: "2026-08-24"
+decision: >-
+  A third import-linter contract, kernel-no-clock, forbids tannen.kernel from importing
+  time, datetime, calendar, zoneinfo, random, secrets or uuid. governance/tier-c.yaml
+  gains the matching forbidden_imports.nondeterminism_modules list and a guard_enforced
+  entry kernel-clock, and scripts/check_manifest.py now checks EVERY list under
+  forbidden_imports for contract coverage instead of the two it was written with, so
+  adding a list can never quietly outrun the machine-enforced side.
+rationale: >-
+  BRIEF P7 and §5.7 say now() does not exist in the kernel namespace and the Clock
+  oracle is the only source of time. Until M0 that was prose with nothing to violate;
+  with kernel code it needs a guard, and a guard is what makes replay determinism "not
+  a discipline but a fact" (§5.7). This tightens the existing guard_enforced kernel-io
+  rule — it opens no door and amends nothing in BRIEF §3 or §10, so it is Tier A, not a
+  constitution amendment.
+reversibility: >-
+  One contract block and one YAML list; removing them is trivial and would be visible
+  in the same two files.
+status: accepted
+bindings:
+  - type: config
+    target: "pyproject.toml#tool.importlinter.contracts"
+    detail: the kernel-no-clock contract, run by lint-imports in CI and pre-commit
+  - type: config
+    target: "governance/tier-c.yaml#forbidden_imports.nondeterminism_modules"
+    detail: the human-readable list check_manifest requires a contract to cover
+links:
+  - "BRIEF.md P1, P7, §5.7"
+  - "decisions/0016-manifest-scope.yaml"

@@ -16,9 +16,13 @@ reversibility: >-
   Reordering un-started milestones is a records-only change; reordering after a law
   freeze would orphan frozen suites and is effectively Tier B at minimum.
 status: accepted
-bindings: []
-unenforced_reason: >-
-  pre-M0: binds to docs/specs/<milestone>.md as each spec lands (specs cite this order;
-  the one-in-flight rule is session discipline enforced by CLAUDE.md review).
+bindings:
+  - type: manifest
+    target: docs/specs/m0.md
+    detail: >-
+      The first milestone spec landed and is frozen: it scopes itself to BRIEF §4's first
+      three bullets and defers Rel, the algebra, deltas, provenance and oracles to M1+,
+      which is this order stated as a frozen artifact rather than as intention. Later
+      specs bind here as they land.
 links:
   - "BRIEF.md §8, §9"

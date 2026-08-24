@@ -1,0 +1,30 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0046
+title: Store integrity is verify-on-read; object files stay writable
+tier: A
+date: "2026-08-24"
+decision: >-
+  The store does not make its object files read-only. Its guarantee is that get_bytes
+  re-hashes what it reads and raises IntegrityError when the bytes no longer match the
+  ref they are filed under. Writes are atomic (temp file plus os.replace) and a re-put
+  of existing content touches nothing at all. Layout is objects/<first two hex>/<rest>,
+  holding exactly the bytes put — so sha256sum on the file reproduces the address.
+rationale: >-
+  Filesystem permissions would be a second, weaker mechanism: weaker because they stop
+  only the process that respects them, and because any copy, restore or archive
+  silently drops them. Verify-on-read catches tampering whatever caused it. Law L0.5
+  also requires it: its tamper test writes to the object file directly, so read-only
+  objects would fail the frozen suite — the law and the reasoning agree.
+reversibility: >-
+  Adding a chmod later would break law L0.5 as frozen, so this is settled for M0; the
+  layout itself is explicitly implementation freedom under docs/specs/m0.md §3.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_kernel_surface.py::test_integrity_is_enforced_on_read_not_by_permissions"
+    detail: object files are writable, and tampering is caught on read regardless
+  - type: pytest
+    target: "tests/laws/m0/test_l0_store.py"
+    detail: the frozen laws L0.5–L0.7 this implements
+links:
+  - "docs/specs/m0.md §3"

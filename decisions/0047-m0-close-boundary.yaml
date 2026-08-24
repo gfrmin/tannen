@@ -1,0 +1,37 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0047
+title: "M0 close is a milestone boundary: the sitting, and any close tag, are the owner's"
+tier: C
+date: "2026-08-24"
+decision: >-
+  M0 is complete and no `m0-close` tag was created. DELEGATIONS.md delegates the builder
+  key to "law-freeze tags and implementation commits" — a closing tag is neither, and the
+  standing rule "delegation precedes signature" forbids inventing the authority to mint
+  one. Queued for the owner at the next boundary sitting, non-blocking (BRIEF §9.2): (1)
+  whether the M0→M1 boundary should carry an owner-signed `m0-close` tag, or the
+  delegation should be extended to cover close tags; (2) the boundary sitting itself,
+  with its red-team pass, whose findings become poison fixtures (§9.1); (3) if wanted, a
+  poison fixture for the newly hardened ratchet sub-check (tests/poison/ is author-key
+  territory, so a builder cannot add one — tests/test_governance_ratchet.py covers it
+  meanwhile). Nothing here blocks M1 planning: the attention receipt of 2026-08-24 is
+  fresh, since no boundary tag has been created after it.
+rationale: >-
+  BRIEF §9.2 door 5 (trust-root changes) and the DELEGATIONS.md ordering rule. The
+  builder's correct move when authority is absent is to queue and continue, not to
+  stretch the delegation it does have. Recorded rather than mentioned so it appears in
+  the digest's owner queue as a query over the records, not as prose someone remembered
+  to write.
+reversibility: >-
+  Nothing has been signed, so nothing has to be unwound; the owner can tag the M0 close
+  commit at any later sitting.
+status: blocked-on-owner
+bindings:
+  - type: file
+    target: DELEGATIONS.md
+    detail: >-
+      the delegation list that does not cover close tags — and which is quoted verbatim
+      in the owner-signed brief-freeze tag message, so it is not the builder's to edit
+risk_flags: [governance-paths]
+links:
+  - "BRIEF.md §9.1 cadence, §9.2 doors"
+  - "DELEGATIONS.md"

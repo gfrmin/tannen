@@ -16,9 +16,15 @@ reversibility: >-
   Migration to CBOR (or anything else) re-keys every content address in the store;
   gated on benchmarks post-M5, never on taste.
 status: accepted
-bindings: []
-unenforced_reason: >-
-  pre-M0: binds to the canonical-encoding golden/property suite when the M0 law set is
-  frozen (goldens across interpreters; float rejection per D0003).
+bindings:
+  - type: pytest
+    target: tests/laws/m0/test_l0_encoding.py
+    detail: >-
+      The M0 encoding law suite the Session-0 record promised this would bind to:
+      L0.1 determinism, L0.2 goldens, L0.3 the door, L0.4 round-trip, L0.8 a fresh
+      interpreter with a randomised hash seed reproducing every golden byte-identically.
+  - type: manifest
+    target: tests/laws/m0/golden-vectors.json
+    detail: the frozen golden corpus; a behaviour change without a descriptor bump fails on it
 links:
   - "BRIEF.md §4, §9"

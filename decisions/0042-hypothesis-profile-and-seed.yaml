@@ -1,0 +1,38 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0042
+title: Laws run derandomised by default; the generation token is recorded honestly
+tier: A
+date: "2026-08-24"
+decision: >-
+  The repo-root conftest registers and loads a Hypothesis profile `tannen-laws` with
+  derandomize=True and deadline=None. Evidence records name the token that actually
+  governed generation: "hypothesis-derandomize" under the default profile,
+  "hypothesis-seed:<n>" when `--hypothesis-seed=<n>` was given, null for laws with no
+  property tests, and "hypothesis-random-unrecorded" in the remaining case rather than
+  a comfortable lie. `make laws-sweep` runs the law suite under a random seed for
+  counterexample hunting. Only Hypothesis's public option and public settings object
+  are consulted — never a private attribute whose silent removal would turn a recorded
+  seed into a false claim.
+rationale: >-
+  The evidence-record schema says the seed is recorded "so every verdict is
+  replayable". Derandomising makes a verdict reproducible from the record alone, which
+  is what an evidence stream is for; a fixed profile does narrow exploration, so the
+  seeded sweep exists as the counterweight and records the seed it found a
+  counterexample under. deadline=None because a law that times out on a slow
+  filesystem is flaky, not false, and there is no performance work before M5 (§10).
+reversibility: >-
+  One profile in conftest.py; switching the default to random costs nothing but the
+  reproducibility of past records, which stay valid for the seed they name.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_an_explicit_seed_is_recorded_as_itself"
+    detail: an explicit --hypothesis-seed is recorded as itself, not as the profile default
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_a_property_law_records_the_generation_token"
+    detail: property laws record a token, example-only laws record null
+  - type: file
+    target: conftest.py
+    detail: the profile is registered and loaded here, for every run
+links:
+  - "governance/schemas/evidence-record.schema.json"

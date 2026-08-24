@@ -15,10 +15,20 @@ reversibility: >-
   Admitting NULLs or bare floats later would change key identity for affected
   pipelines; effectively irreversible without a full re-key, which is the point.
 status: accepted
-bindings: []
-unenforced_reason: >-
-  pre-M0: binds to the M0 canonical-encoding property tests (bare float in key
-  rejected; Lossy the only admission) and the kernel-namespace check for now().
+bindings:
+  - type: pytest
+    target: "tests/laws/m0/test_l0_encoding.py::test_l0_3_door_refuses_by_name"
+    detail: >-
+      Bare floats, NaN/Inf, bytes, tuples, non-str keys and the reserved tag key are all
+      refused by name at the encoder. No float is encodable at M0 at all; Lossy(f, grid)
+      is the declared door and arrives with the Rel layer at M1.
+  - type: config
+    target: "pyproject.toml#tool.importlinter.contracts"
+    detail: >-
+      The kernel-no-clock contract (added at M0, D0042) is the mechanical form of "now()
+      does not exist in the kernel namespace": tannen.kernel may not import time,
+      datetime, calendar, zoneinfo, random, secrets or uuid, so a hidden clock cannot be
+      reached from the pure core at all.
 links:
   - "BRIEF.md P7, §5.7, §5.8, §9"
   - "concepts/exactness-and-the-door.yaml"

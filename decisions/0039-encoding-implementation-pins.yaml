@@ -1,0 +1,38 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0039
+title: Encoding pins the frozen laws left open (decimal minimal form, decode leniency, cycles)
+tier: A
+date: "2026-08-24"
+decision: >-
+  Three choices the M0 law suite does not force, pinned here. (1) A decimal's
+  exponent-free minimal form is computed from its digit tuple, never via
+  Decimal.normalize(): normalize rounds to the active decimal context precision (28 by
+  default), so a value with more significant digits would come back SHORTER —
+  silently, and only for the long values where it matters. Hypothesis generates such
+  values readily; measured 232 of 3000 draws from st.decimals() change under
+  normalize(). (2) decode_canonical does NOT NFC-normalise: canonicalisation is
+  encode's job alone, so decode may return a value that encode then refuses (two keys
+  distinct in the input that collide under NFC). The encoder is the only gate, and it
+  refuses rather than merging. (3) A cyclic list or map is refused by name with its
+  path, not left to overflow the stack.
+rationale: >-
+  BRIEF §4: where the reference semantics are silent, pin by test and record the pin.
+  (1) is exactness at the encoding layer — the property the whole content-addressing
+  scheme rests on [cites: exactness-and-the-door]. (2) follows D0031's "decode lenient
+  outside the canonical image" to its conclusion and states the asymmetry out loud.
+  (3) is the door discipline: refuse by name, never crash.
+reversibility: >-
+  (1) is not reversible in effect — changing it would re-key every stored decimal —
+  but it is the correct-by-construction choice, not a preference. (2) and (3) are
+  local changes behind the same public API.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_kernel_surface.py::test_decimals_beyond_context_precision_survive_exactly"
+    detail: a 35-significant-digit decimal round-trips exactly; normalize() would have rounded it
+  - type: pytest
+    target: "tests/laws/m0/test_l0_encoding.py::test_l0_4_decimal_spellings_converge"
+    detail: the frozen law that numeric equality implies identical encoding
+links:
+  - "docs/specs/m0.md §2"
+  - "decisions/0031-m0-encoding-pins.yaml"

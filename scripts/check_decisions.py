@@ -11,6 +11,10 @@ load-bearing; CI fails if a binding's target is missing or skipped. This check:
     the schema requires one, so a bare unbound record fails);
   - computes Tier-B veto clocks (expiry transitions effective status mechanically;
     the record file is never edited);
+  - enforces the ratchet (BRIEF §9.1 point 4): neither the unenforced count nor the
+    Grade-P/S-pending residue may rise above the last digest's recorded metrics. Until
+    M0 this was a digest flag only; decision D0020 said it hardens to a failure here at
+    the M0 boundary, and it now has;
   - verifies the generated DECISIONS.md is fresh (input-hash header).
 
 Exits non-zero on any violation.
@@ -20,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import re
 import subprocess
 import sys
@@ -34,6 +39,8 @@ from _gov import (
     load_schema,
     load_yaml,
     parse_manifest,
+    previous_metrics,
+    ratchet_metrics,
     read_header_hash,
     receipt_state,
     resolve_dotted,
@@ -42,6 +49,12 @@ from _gov import (
 )
 
 FILENAME_RE = re.compile(r"^(\d{4})-[a-z0-9]+(-[a-z0-9]+)*$")
+
+#: A pytest binding may legitimately target a test that runs THIS script — that is how
+#: "the guard is actually wired in" gets asserted. Resolving bindings inside such a run
+#: would recurse for ever, so nested runs skip binding resolution and say so. The outer
+#: run is the one that enforces; nothing is checked less, it is just not checked twice.
+NESTED_ENV = "TANNEN_CHECK_DECISIONS_NESTED"
 
 
 def binding_violation(root: Path, kind: str, target: str) -> str | None:
@@ -69,19 +82,83 @@ def binding_violation(root: Path, kind: str, target: str) -> str | None:
             return f"config key {dotted!r} does not resolve in {rel}"
         return None
     if kind == "pytest":
-        run = subprocess.run(
-            ["uv", "run", "pytest", target, "-q", "--no-header", "-p", "no:cacheprovider"],
-            cwd=root, capture_output=True, text=True, check=False,
-        )
-        out = run.stdout + run.stderr
-        if "no tests ran" in out or run.returncode == 4:
-            return f"pytest node does not collect: {target}"
-        if re.search(r"\b[1-9]\d* skipped\b", out) and " passed" not in out:
-            return f"pytest node is skipped (a skipped binding is not enforcement): {target}"
-        if run.returncode != 0:
-            return f"pytest node fails: {target}"
-        return None
+        return pytest_violation(root, [target], target)
     return f"unknown binding type: {kind}"
+
+
+def run_pytest(root: Path, targets: list[str]) -> subprocess.CompletedProcess:
+    """One pytest invocation. `sys.executable` is the interpreter this script already
+    runs under (`uv run python scripts/check_decisions.py`), so this reuses the resolved
+    environment instead of paying `uv run`'s resolution cost per binding."""
+    return subprocess.run(
+        [sys.executable, "-m", "pytest", *targets, "-q", "--no-header", "-p", "no:cacheprovider"],
+        cwd=root, capture_output=True, text=True, check=False,
+        env={**os.environ, NESTED_ENV: "1"},
+    )
+
+
+def pytest_violation(root: Path, targets: list[str], label: str) -> str | None:
+    run = run_pytest(root, targets)
+    out = run.stdout + run.stderr
+    if "no tests ran" in out or run.returncode == 4:
+        return f"pytest node does not collect: {label}"
+    if re.search(r"\b[1-9]\d* skipped\b", out) and " passed" not in out:
+        return f"pytest node is skipped (a skipped binding is not enforcement): {label}"
+    if run.returncode != 0:
+        return f"pytest node fails: {label}"
+    return None
+
+
+def resolve_pytest_bindings(root: Path, targets: list[str]) -> dict[str, str | None]:
+    """Resolve every pytest binding, batching the healthy case.
+
+    All targets run in one invocation; only if that is not cleanly green does each
+    target run alone, so a real violation is still attributed to the exact binding that
+    caused it. The cost of the guard should not be a reason to stop binding decisions
+    to tests.
+    """
+    if not targets:
+        return {}
+    if os.environ.get(NESTED_ENV):
+        print(f"  pytest bindings: {len(targets)} not re-resolved (nested run; the outer run enforces)")
+        return {target: None for target in targets}
+    batch = run_pytest(root, targets)
+    combined = batch.stdout + batch.stderr
+    if batch.returncode == 0 and not re.search(r"\b[1-9]\d* skipped\b", combined):
+        return {target: None for target in targets}
+    return {target: pytest_violation(root, [target], target) for target in targets}
+
+
+def check_ratchet(root: Path, today: dt.date, records: list[dict], fail: Failures) -> None:
+    """The ratchet: visible debt may hold or fall, never rise (BRIEF §9.1, D0020).
+
+    The baseline is the last digest strictly older than today, so a rise must appear in
+    a digest — flagged, under "Requires owner" — before it can become the number the
+    next session is measured against. With no earlier digest there is no baseline and
+    nothing to enforce; that is stated, not silently skipped.
+    """
+    concept_paths = sorted((root / "concepts").glob("*.yaml"))
+    concepts = [load_yaml(p) for p in concept_paths]
+    unenforced, residue = ratchet_metrics(records, concepts)
+    baseline = previous_metrics(root, today)
+    if baseline is None:
+        print(f"  ratchet: unenforced={unenforced} residue={residue} (no earlier digest to ratchet against)")
+        return
+    prev_date, prev_unenforced, prev_residue = baseline
+    for name, now, before in (
+        ("unenforced count", unenforced, prev_unenforced),
+        ("Grade-P/S-pending residue", residue, prev_residue),
+    ):
+        if now > before:
+            fail.add(
+                f"RATCHET BREACH — {name} rose {before} → {now} since the {prev_date} digest; "
+                "BRIEF §9.1 requires it to trend down. Bind the new record to the artifact "
+                "that enforces it, or record why the debt is unavoidable (D0020)."
+            )
+    print(
+        f"  ratchet: unenforced={unenforced} (was {prev_unenforced}), "
+        f"residue={residue} (was {prev_residue}), baseline digest {prev_date}"
+    )
 
 
 def main() -> int:
@@ -104,6 +181,8 @@ def main() -> int:
     seen_ids: set[str] = set()
     unenforced: list[str] = []
     clocks: list[str] = []
+    valid_records: list[dict] = []
+    pytest_bindings: dict[str, list[str]] = {}
 
     for path in record_paths:
         rel = path.relative_to(root)
@@ -124,7 +203,12 @@ def main() -> int:
         if rid != f"D{m.group(1)}":
             fail.add(f"{rel}: id {rid} does not match filename sequence {m.group(1)}")
 
+        valid_records.append(record)
+
         for binding in record["bindings"]:
+            if binding["type"] == "pytest":
+                pytest_bindings.setdefault(binding["target"], []).append(str(rel))
+                continue
             problem = binding_violation(root, binding["type"], binding["target"])
             if problem:
                 fail.add(f"{rel}: binding does not resolve — {problem}")
@@ -144,6 +228,13 @@ def main() -> int:
                     "is stale — BLOCKED, not consented (BRIEF §9.1; blocks accumulate)"
                 )
 
+    for target, problem in resolve_pytest_bindings(root, sorted(pytest_bindings)).items():
+        if problem:
+            for rel in pytest_bindings[target]:
+                fail.add(f"{rel}: binding does not resolve — {problem}")
+
+    check_ratchet(root, args.today, valid_records, fail)
+
     projection = root / "DECISIONS.md"
     if record_paths:
         expected = input_hash(record_paths, root)
@@ -158,7 +249,8 @@ def main() -> int:
     for line in unenforced:
         print(f"  unenforced (visible debt): {line}")
     return fail.finish(
-        f"{len(record_paths)} records valid; {len(unenforced)} unenforced (with reasons); "
+        f"{len(record_paths)} records valid; {len(pytest_bindings)} pytest binding(s) green; "
+        f"{len(unenforced)} unenforced (with reasons); "
         f"{len(clocks)} Tier-B clock(s) computed; DECISIONS.md fresh"
     )
 

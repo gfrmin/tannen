@@ -1,0 +1,47 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0040
+title: What makes law evidence fresh; a partly-run law attests nothing
+tier: A
+date: "2026-08-24"
+decision: >-
+  BRIEF §5.11 requires `tannen laws report` to fail when current descriptors lack fresh
+  evidence. M0 gives "current descriptor" a definition: each law has a descriptor
+  descriptor_id(kind="law", name=<law id>, code_hash=<address of the law files defining
+  it>, params_hash=<address of the whole src/tannen tree>). Evidence is fresh for a law
+  iff the store holds a record whose descriptors contain that value; a passing record
+  is green, a failing one is red, and two records with the same descriptor and
+  different verdicts read as FLAKY rather than as the latest verdict winning. The
+  milestone's law set is discovered by parsing the frozen law files for test function
+  names (test_l0_<n>_...), never from a hand-kept list. A record is written only when
+  every test function the frozen file defines for that law actually ran: a filtered or
+  partly skipped run writes nothing and the report keeps saying the evidence is
+  missing.
+rationale: >-
+  Freshness has to be arithmetic, not judgement. Addressing the whole implementation
+  tree rather than a guessed dependency set is deliberately conservative: narrowing it
+  would let an edit elsewhere silently inherit an old verdict. Attesting only whole
+  laws makes silence the failure mode of a half-run law — a green record covering
+  tests that never executed would be worse than no record at all, and it is exactly
+  what a `-k` filter or an accidental skip would otherwise produce.
+reversibility: >-
+  The descriptor recipe is one function (tannen.laws.discovery.law_descriptor); changing
+  it invalidates existing evidence, which re-runs regenerate in seconds.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_descriptor_moves_when_the_implementation_moves"
+    detail: evidence cannot outlive the code it was made against
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_a_partly_run_law_attests_nothing"
+    detail: half a law run writes no record
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_discovery_matches_the_frozen_spec_table"
+    detail: the runner's law set is the frozen spec's law set, checked rather than assumed
+  - type: file
+    target: Makefile
+    detail: >-
+      verify runs pytest (which emits) before `tannen laws report` (which judges); the
+      order is the mechanism, so D0012's obligation is discharged as one line
+links:
+  - "BRIEF.md P6, §5.11, §6"
+  - "docs/specs/m0.md §5, §6"

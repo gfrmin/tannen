@@ -40,6 +40,8 @@ guard_enforced:
     guard: "SpendGuard default-deny over budget.yaml (arrives M4; ceilings zero until owner signature)"
   - id: kernel-io
     guard: "pyproject.toml import-linter contract kernel-no-io"
+  - id: kernel-clock
+    guard: "pyproject.toml import-linter contract kernel-no-clock (BRIEF P7; arrived M0 with the kernel)"
 
 non_goals:  # BRIEF §10 verbatim list; changing it is door constitution-amendments
   - "No orchestrator, scheduler, retries, cron."
@@ -80,6 +82,19 @@ forbidden_imports:
     - httpx
     - sqlite3
     - duckdb
+  # Sources of nondeterminism the kernel may never import (BRIEF P1 pure core, P7
+  # "no hidden clock": now() does not exist in the kernel namespace, and the Clock
+  # oracle is the only source of time). Enforced by the kernel-no-clock contract;
+  # added at M0 (decision D0042) — this tightens the existing kernel-io rule rather
+  # than opening a new door.
+  nondeterminism_modules:
+    - time
+    - datetime
+    - calendar
+    - zoneinfo
+    - random
+    - secrets
+    - uuid
   # Module names of the constellation repos; forbidden everywhere in tannen
   # (BRIEF §1 standing rule; guard_enforced cross-repo-imports).
   cross_repo:
