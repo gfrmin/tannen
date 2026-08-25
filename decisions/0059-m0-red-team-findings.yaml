@@ -49,4 +49,21 @@ bindings:
       each needs. Three bite today (lint-imports-kernel, check-decisions-ratchet,
       check-decisions-nested-hatch) and are a `git mv` plus a manifest row from being
       installed; three need their guard patch first; one needs the owner's key to build.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_guard_fails_its_poison"
+    strength: enforced
+    detail: >-
+      All seven drafted fixtures were installed at the M0 boundary sitting on 2026-08-25
+      (step 5) and are exercised here as well as by scripts/custodian.sh — ten poison runs
+      through this one node, each asserting its guard fails for the finding's own marker.
+      The custodian is the floor; this is the same matrix from plain `uv run pytest`, which
+      is what CI and a builder run far more often. A finding whose guard is later softened
+      turns this red.
+  - type: manifest
+    target: tests/poison/README.md
+    strength: enforced
+    detail: >-
+      The corpus index: fixture, guard, intended violation and marker, one row per finding
+      that became a fixture. tests/poison/ is a sealed directory, so the row cannot be
+      dropped without check_manifest's seal check reporting it.
 links: ["D0021", "D0047", "D0056", "D0057", "D0058"]

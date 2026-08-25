@@ -41,4 +41,13 @@ bindings:
       The stated order is: land the field, mark bindings honestly, generate ONE digest
       with true numbers, and only then ratchet the metric. Upgrades to a manifest binding
       on governance/schemas/decision-record.schema.json once applied.
+  - type: manifest
+    target: governance/schemas/decision-record.schema.json
+    strength: enforced
+    detail: >-
+      The upgrade named above, applied at the M0 boundary sitting on 2026-08-25 (step 4).
+      The `strength` field is now in the frozen schema, so a record can no longer describe
+      a documentary binding as though it enforced something, and the sequencing hazard the
+      documentary binding warned about has passed: the field exists, bindings are marked
+      honestly, and the ratchet counts from a digest with true numbers.
 links: ["D0020", "D0044", "D0045", "D0048"]

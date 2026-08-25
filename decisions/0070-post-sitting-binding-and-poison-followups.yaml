@@ -1,0 +1,77 @@
+id: D0070
+title: "The M0 sitting's follow-ups: the poison matrix reaches pytest, and four bindings become enforced"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  The two builder follow-ups the M0 boundary sitting named, done. (1) The poison matrix in
+  tests/test_governance_scripts.py grows from four fixtures to ten, plus the three kernel
+  import contracts run one assertion each, so `uv run pytest` now exercises every fixture
+  scripts/custodian.sh does and names each one exactly as the custodian names it. The
+  custodian remains the floor; this is the same matrix reachable from the command CI and a
+  builder actually run, and it is invoked the way the floor invokes it — the venv
+  interpreter at a literal path, isolated, contracts read from governance/importlinter.toml
+  rather than pyproject.toml, and TANNEN_CHECK_DECISIONS_NESTED unset for every poison run,
+  because an inherited value would switch off the binding resolution a fixture is meant to
+  trip and the guard would pass its poison while reporting green (RT-08). (2) Four records
+  whose bindings the sitting made resolvable are upgraded to the enforced form each of them
+  had named in advance: D0048 to `config: governance/policy.yaml#in_repo_mechanics.tier`,
+  D0052 to a manifest binding on the decision-record schema now carrying the `strength`
+  field, D0050 to a manifest binding on governance/tag-roles.yaml, and D0059 to the poison
+  matrix node plus the corpus index. 126 enforced bindings become 131; the sixteen
+  documentary ones are unchanged, because each names a proposal document and a proposal
+  document is exactly what documentary means.
+  .
+  A constraint found while doing it, and recorded because the next builder will meet it:
+  a binding upgrade to a SIGNED Tier-C record cannot be done between sittings. The owner's
+  signature covers the record's whole bytes, so any edit breaks it, and check_decisions
+  reads a signed-but-unverifying Tier-C record exactly as it reads an unsigned one —
+  accepted without authority, a red gate with no builder-side fix. Five records are in that
+  state after this sitting (D0036, D0047, D0049, D0060, D0063), and the upgrades three of
+  them want are drafted rather than applied, to land at the M1 sitting in the same pass
+  that re-signs them. docs/SITTING.md now says so where the follow-up list is.
+rationale: >-
+  Worth recording rather than folding into the sitting's own commit because the second half
+  is a sequencing rule and sequencing rules are what this driver keeps getting wrong
+  (D0065, D0069). The pattern is the same one D0065 named: an artifact that both PRODUCES an
+  input to the custody floor and DEPENDS on the floor's verdict has an order, and doing the
+  two halves in the wrong order leaves a state that re-running cannot repair. Here the
+  wrong order is quiet rather than loud — the gate simply goes red and stays red until a
+  human with a key is next in the room, which for a boundary-sitting cadence is up to a
+  milestone away.
+  .
+  On the poison half, the honest statement of what it buys: nothing the custodian did not
+  already check. The custodian runs in `make verify` and would catch a weakened guard on its
+  own. What changes is the distance between weakening a guard and finding out — `uv run
+  pytest` is what a builder runs while working, and a failure named `check_decisions_tier_c`
+  arrives with the fixture's own marker in the assertion message rather than as one line in
+  a custodian sweep at the end.
+reversibility: >-
+  Test additions and four binding edits; revert in minutes, and nothing signed depends on
+  either. The binding upgrades are the mutable half of a decision record by construction
+  (D0045), and every record touched is unsigned, which is the whole point of the constraint
+  above.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_guard_fails_its_poison"
+    strength: enforced
+    detail: >-
+      Ten poison runs, one per fixture, each asserting its guard exits non-zero for the
+      finding's own marker. Green here means no guard in the matrix has been softened.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_lint_imports_kernel_fails_its_poison"
+    strength: enforced
+    detail: >-
+      The three kernel import contracts — no os, no datetime, no cross-repo pkm import —
+      each proven still broken by the shadowing fixture, with the contracts read from
+      governance/importlinter.toml at an absolute path.
+  - type: file
+    target: docs/SITTING.md
+    strength: documentary
+    detail: >-
+      Carries the signed-record constraint in the Afterwards section, where a builder
+      reading their follow-up list will meet it before acting on it. Documentary because no
+      guard can distinguish a binding upgrade applied at the wrong moment from one applied
+      at the right one — it can only report the red gate that follows.
+links: ["D0045", "D0048", "D0050", "D0052", "D0059", "D0064", "D0065", "D0069"]

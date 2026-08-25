@@ -61,4 +61,13 @@ bindings:
       the proposal: MANIFEST.sha256 is not itself signed, so a builder editing a frozen
       file and its row together satisfies sha256sum -c. The pin raises cost; it does not
       make the act impossible.
+  - type: manifest
+    target: governance/tag-roles.yaml
+    strength: enforced
+    detail: >-
+      The table itself, installed with the custodian patch at the M0 boundary sitting on
+      2026-08-25 (step 6). The manifest binding on scripts/custodian.sh pins the code that
+      reads it; this pins what it reads. Both matter: a signer-role check is only as strong
+      as the roles it is handed, and a table that could be edited freely would let a tag
+      class be re-assigned without touching a single guard.
 links: ["D0036", "D0045", "D0049", "D0051", "D0052"]

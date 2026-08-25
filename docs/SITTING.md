@@ -136,3 +136,13 @@ Upgrade the bindings the sitting made enforceable (D0045: the decision is immuta
 binding is its present-tense attachment), add the new fixtures to
 `tests/test_governance_scripts.py`, regenerate the projections, and open the next
 milestone's Session A in a fresh session.
+
+**One of those upgrades cannot be done afterwards.** An owner signature covers a decision
+record's whole bytes, so editing a binding on a **signed Tier-C record** breaks its
+signature, and `check_decisions` reads a signed-but-unverifying Tier-C record exactly as it
+reads an unsigned one — accepted without authority, which is a red gate. There is no
+builder fix; only your key clears it. So a binding upgrade to a signed record is *drafted*
+between sittings and *applied* at the next one, in the same pass that re-signs it. Upgrades
+to unsigned records (every Tier-A and Tier-B record, and a Tier-C record still queued)
+carry no such constraint and are done immediately. Ask before applying one to a signed
+record; the cost of getting this wrong is a red gate that waits for a sitting (D0070).

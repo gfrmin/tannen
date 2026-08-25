@@ -47,4 +47,13 @@ bindings:
       the patch lands (decision D0045: the decision is immutable, the binding is the
       present-tense attachment). No guard can mechanically catch "the agent asked
       anyway"; the enforceable part is that policy answers the question next time.
+  - type: config
+    target: governance/policy.yaml#in_repo_mechanics.tier
+    strength: enforced
+    detail: >-
+      The upgrade the documentary binding above named in advance, applied at the M0
+      boundary sitting on 2026-08-25 (step 3) and resolving from that moment. The clause
+      is now in the owner-signed policy the custodian verifies, so the question this
+      record was written about — may a builder merge a green milestone branch without
+      asking — has an answer a guard can be pointed at rather than a proposal.
 links: ["D0024", "D0045", "D0049"]
