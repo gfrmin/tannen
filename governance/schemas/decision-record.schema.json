@@ -46,6 +46,10 @@
             "description": "file: target path must exist. config: 'path#dotted.key' must resolve in a TOML/YAML file. pytest: node id must collect and not be skipped. manifest: target path must be listed in MANIFEST.sha256."
           },
           "target": { "type": "string", "minLength": 1 },
+          "strength": {
+            "enum": ["enforced", "documentary"],
+            "description": "enforced: the target mechanically prevents or detects violation of this decision (a frozen path, a passing test, a consumed config key, a guard). documentary: the target records the intent — a drafted patch awaiting owner application, a prose rule no guard states — and detects nothing. Absent is read as 'enforced', so records written before this field existed keep their meaning; new records state it."
+          },
           "detail": { "type": "string", "description": "What about the target enforces the decision." }
         }
       }

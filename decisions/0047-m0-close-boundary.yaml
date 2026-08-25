@@ -24,7 +24,7 @@ rationale: >-
 reversibility: >-
   Nothing has been signed, so nothing has to be unwound; the owner can tag the M0 close
   commit at any later sitting.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: file
     target: DELEGATIONS.md

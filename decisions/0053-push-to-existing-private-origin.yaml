@@ -28,6 +28,7 @@ status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-08-24-policy-in-repo-mechanics.md
+    strength: documentary
     detail: >-
       DOCUMENTARY (D0052 grading): the refined covers/excludes lists are drafted in this
       proposal under "Pushing: a sharper cut than the first draft made". policy.yaml is

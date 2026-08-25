@@ -55,6 +55,7 @@ bindings:
       matching nothing is caught, and an unlisted file is correctly ignored.
   - type: file
     target: docs/SITTING.md
+    strength: documentary
     detail: >-
       The reasoning above, written where the next sitting will read it, so "just sign the
       manifest" is not re-proposed every boundary. Documentary by construction: a doc

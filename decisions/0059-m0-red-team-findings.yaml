@@ -36,12 +36,14 @@ status: accepted
 bindings:
   - type: file
     target: docs/redteam/2026-08-24-m0-boundary.md
+    strength: documentary
     detail: >-
       The findings with their reproductions, severities, accident-reachability and
       closures. DOCUMENTARY for the open findings; the closed ones carry their own
       enforced bindings under D0056, D0057 and D0058.
   - type: file
     target: docs/redteam/fixture-candidates/README.md
+    strength: documentary
     detail: >-
       Seven drafted fixtures with guard, violation, marker, exact command and the patch
       each needs. Three bite today (lint-imports-kernel, check-decisions-ratchet,

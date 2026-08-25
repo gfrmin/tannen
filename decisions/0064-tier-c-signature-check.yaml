@@ -51,12 +51,12 @@ bindings:
       open an owner door (the -I argument); a signature from another namespace does not
       carry over (the -n argument); editing a record after signing breaks it; a
       blocked-on-owner record needs no signature; Tier A and B are untouched.
-  - type: file
-    target: docs/redteam/fixture-candidates/check-decisions-unsigned-tier-c/decisions/0001-poison-tier-c-accepted.yaml
+  - type: manifest
+    target: tests/poison/check-decisions-unsigned-tier-c/decisions/0001-poison-tier-c-accepted.yaml
     detail: >-
-      The poison fixture that proves the guard still bites. tests/poison/ is author-key
-      territory (BRIEF §9.1), so it stays a candidate until the owner installs it at step
-      5 of the sitting; the custodian replacement already carries its poison line and
-      marker. Verified 2026-08-25: the guard exits 1 against this root with the marker
-      present.
+      ENFORCED. The poison fixture that proves the guard still bites, installed by the
+      owner at step 5 of the M0 boundary sitting (tests/poison/ is author-key territory,
+      BRIEF §9.1) and sealed: every file under the seal carries a manifest row, so the
+      fixture cannot be quietly removed to make the custodian's poison line vacuous. The
+      custodian runs it as check_decisions_tier_c and requires the marker.
 links: ["D0036", "D0045", "D0049", "D0056", "D0060", "D0063"]

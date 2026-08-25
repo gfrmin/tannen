@@ -35,10 +35,11 @@ reversibility: >-
   reversible is the counterfactual: close tags minted by the builder cannot be
   un-minted from the record, and every receipt clock they anchored stays anchored to a
   self-issued attestation.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: file
     target: DELEGATIONS.md
+    strength: documentary
     detail: >-
       The blessed delegation text, quoted verbatim in the owner-signed brief-freeze tag
       message. It enumerates "law-freeze tags and implementation commits"; close tags
@@ -49,6 +50,7 @@ bindings:
       it. Freezing it is the companion patch in the same proposal.
   - type: file
     target: docs/proposals/2026-08-24-custodian-close-tag-signer.md
+    strength: documentary
     detail: >-
       The drafted guard: custodian check 3 gains a `*-close` case requiring
       "signature for owner@tannen", plus the companion DELEGATIONS.md freeze. Upgrades

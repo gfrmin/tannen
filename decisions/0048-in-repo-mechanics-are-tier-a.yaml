@@ -37,6 +37,7 @@ status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-08-24-policy-in-repo-mechanics.md
+    strength: documentary
     detail: >-
       DOCUMENTARY STRENGTH, stated plainly: this binding proves the remedy is drafted,
       not that it is in force. governance/policy.yaml is owner-signed and the custodian

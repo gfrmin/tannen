@@ -94,10 +94,20 @@ def binding_violation(root: Path, kind: str, target: str) -> str | None:
         path = root / rel
         if not path.exists():
             return f"config file does not exist: {rel}"
-        if path.suffix == ".toml":
-            data = tomllib.loads(path.read_text(encoding="utf-8"))
-        else:
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        # A guard that raises where it could report is a guard that stops checking the
+        # records after this one: one mis-typed binding would take the whole run down and
+        # every later violation with it. Naming the file is also the useful answer, since a
+        # config binding on something that is not TOML or YAML is a binding of the wrong
+        # type — which is how this was found, on a `config` binding to .gitignore.
+        try:
+            if path.suffix == ".toml":
+                data = tomllib.loads(path.read_text(encoding="utf-8"))
+            else:
+                data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (tomllib.TOMLDecodeError, yaml.YAMLError):
+            return f"config file does not parse as {'TOML' if path.suffix == '.toml' else 'YAML'}: {rel}"
+        if not isinstance(data, dict):
+            return f"config file holds no mapping to resolve a key in: {rel}"
         try:
             resolve_dotted(data, dotted)
         except KeyError:

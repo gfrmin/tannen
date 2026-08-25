@@ -37,6 +37,7 @@ status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-08-24-custodian-signer-role-table.md
+    strength: documentary
     detail: >-
       DOCUMENTARY (D0052 grading): the drafted patch, the three reproductions, the
       fixture designs and the sitting's order of operations. scripts/custodian.sh is

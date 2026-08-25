@@ -14,3 +14,10 @@ evidence/
 
 # import-linter's graph cache (created by lint-imports in the working directory)
 .import_linter_cache/
+
+# `make verify` runs the law suite against a FRESHLY REMOVED evidence store so the report
+# can only see records that run produced (RT-05), and removes it again on the way out —
+# but only on the way out of a GREEN run. A red gate leaves it behind, and the boundary
+# sitting commits with `git add -A`, so an unignored .verify-evidence/ would ride a failed
+# verify into the repository. Found by scripts/rehearse_sitting.sh, 2026-08-25.
+.verify-evidence/

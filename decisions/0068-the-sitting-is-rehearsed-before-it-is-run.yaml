@@ -1,0 +1,81 @@
+id: D0068
+title: "The boundary-sitting driver is rehearsed end to end before it touches the owner's key"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  scripts/rehearse_sitting.sh executes scripts/boundary_sitting.sh from end to end with no
+  human present: a disposable clone of this repo, a throwaway ed25519 key appended to
+  allowed_signers as a second owner@tannen principal, every prompt answered from a file,
+  a non-interactive stand-in for $EDITOR that applies the drafted BRIEF blocks, and eleven
+  assertions about what a completed sitting must leave behind — the close tag signed and
+  verifying, the custody set signed, a fresh signed receipt, the custodian green with no
+  tolerances, `make verify` green, nothing uncommitted, and no Tier-C door left unsigned.
+  Three paths are rehearsed: `--from worktree` (HEAD plus uncommitted work — what the owner
+  is about to run, and the one that must be green), `--from head` (the sitting from a
+  pristine repo), and `--answers n` (the owner declines everything). Its only access to the
+  real repository is `git clone` and a read-only diff.
+  .
+  Three defects it found in its first four runs are fixed with it. (1) The prompt loops,
+  recorded separately as D0067. (2) `.verify-evidence/` — the scratch store `make verify`
+  builds to satisfy RT-05 — was untracked and unignored, and a red gate leaves it behind,
+  so the sitting's `git add -A` would have committed it; it is now in .gitignore. (3) A
+  decision binding that names a fixture-candidate path stops resolving the moment step 5
+  installs the fixture, and nothing surfaced that until step 9, five signatures later; step
+  5 now checks for exactly the two messages a file move produces and stops there, where
+  being wrong costs a builder retargeting a binding rather than an owner having signed over
+  a red gate. In the same pass the driver's four `uv run python` invocations became
+  `.venv/bin/python -I -P`, the spelling the Makefile already uses: a script that drives the
+  owner's key should not resolve its interpreter through pyproject.toml and uv.lock, which
+  are the builder's to edit (RT-02, conferral ruling 3, D0063).
+rationale: >-
+  The driver had been read closely several times and executed zero times. Everything that
+  went wrong with it was the same kind of thing — a code path that had never run — and none
+  of it was reachable by reading, because each defect was individually plausible on the
+  page: the step order looked right, the loops looked idiomatic, `"$EDITOR" file` looks
+  correct until $EDITOR contains a space. Reading finds wrong reasoning; only running finds
+  wrong mechanism.
+  .
+  What made this worth building rather than absorbing as three more patches is where the
+  cost lands. A boundary sitting happens once per milestone, interactively, on the single
+  occasion the owner's key is out from behind its passphrase, and BRIEF §9.2's whole
+  argument for the tier system is that owner attention is the scarce resource. Every defect
+  that reaches the sitting spends it twice: once on the failure and once on the re-run. The
+  repo already holds this principle for its own subject matter — laws are frozen before
+  implementation and every guard has a poison fixture proving it bites. A script that spends
+  the owner's attention and drives the owner's key had no such fixture. Now it does.
+  .
+  Stated as a limit, because a green rehearsal is easy to over-read: it proves MECHANISM,
+  never CUSTODY. The clone signs with a throwaway key, since the real one is
+  passphrase-protected and unattended signing is exactly what that passphrase exists to
+  prevent. Its signatures are structurally correct and attest to nothing, and the `--answers
+  y` path is the path where the owner agrees to everything — a rehearsal cannot rehearse
+  judgement.
+reversibility: >-
+  A new script that no other artifact depends on, plus one .gitignore line and one guard
+  call in the driver. Deleting it costs the assurance and nothing else. It is deliberately
+  NOT added to the custody set: it is a test harness, not a guard, its output is read live
+  by whoever runs it, and putting it under the owner signature would mean every improvement
+  to it needed a sitting — the cost the custody set exists to bound.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: enforced
+    detail: >-
+      The harness. Run `bash scripts/rehearse_sitting.sh` before any boundary sitting; a
+      non-zero exit names the check that failed and keeps the transcript.
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      The subject, carrying the step-5 binding gate and the literal-interpreter change.
+  - type: file
+    target: .gitignore
+    strength: documentary
+    detail: >-
+      Carries the .verify-evidence/ rule. A `file` binding, not a `config` one: .gitignore is
+      plain text with no keys to resolve, and the enforcement is git's own, not a guard's.
+      Writing it as `config` first is what surfaced the crash-instead-of-report defect in
+      check_decisions that this record also fixes.
+links: ["D0062", "D0063", "D0065", "D0066", "D0067"]

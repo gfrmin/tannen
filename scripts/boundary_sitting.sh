@@ -24,12 +24,38 @@ PROPOSALS="docs/proposals/2026-08-25-boundary-sitting"
 CANDIDATES="docs/redteam/fixture-candidates"
 KEYREF="$OWNER_KEY"          # what ssh-keygen -Y sign is pointed at (key file, or .pub
                              # when the private half is loaded into an agent)
+# The venv interpreter at a literal path, in isolated mode — the same spelling the Makefile
+# uses and for the same reason (RT-02, conferral ruling 3, D0063). `uv run` would resolve
+# through pyproject.toml and uv.lock, which are builder-controlled; a script that drives the
+# owner's key should not take its interpreter from the party it is checking on.
+PY="$PWD/.venv/bin/python"
+# How long the gate takes on the owner's machine, measured not guessed (2026-08-25). It is
+# printed before the run so silence has a stated duration; wrong by a minute is fine, absent
+# is not — an unbounded wait with no output is indistinguishable from a hang.
+VERIFY_ETA="a minute"
 
 say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
+# A step about to be quiet for more than a moment says so FIRST, and says it with this
+# helper rather than an ordinary note, so scripts/rehearse_sitting.sh can check the rule
+# mechanically: in a rehearsal transcript, every silence longer than 25 seconds must have
+# one of these lines directly above it. An owner watching a still terminal cannot tell
+# waiting from hung — at the M0 sitting they could not, and killed the driver twice at its
+# own first question (D0069). Stating the expected duration is the whole fix; the harness
+# exists to keep it stated as the driver grows.
+waiting() { printf '   [waiting] %s\n' "$*"; }
 die()  { printf '\nsitting: STOP — %s\n' "$*" >&2; exit 1; }
 confirm() { local a; read -rp "$1 [y/N] " a; [[ "${a:-}" == [yY]* ]]; }
 pause() { read -rp "   $1" _; }
+# EDITOR and PAGER hold command LINES, not command names: `emacsclient -nw -a 'emacs -nw'`
+# and `less -FRX` are both ordinary settings, and this driver runs in the owner's own shell
+# with the owner's own habits in it. Quoting the expansion asks the kernel for a program
+# whose filename contains those spaces — the `command not found` this printed on
+# 2026-08-25 — while merely unquoting it would word-split the owner's own quoting apart.
+# `eval` is what git does for the same reason (`eval "$editor" '"$@"'`); the filename stays
+# quoted through the eval, so a path with a space in it still arrives as one argument.
+edit() { eval "${EDITOR:-nano}" '"$@"'; }
+page() { eval "${PAGER:-less}" '"$@"'; }
 
 sign_owner() {   # <file> <namespace>   -> writes <file>.sig
     ssh-keygen -Y sign -f "$KEYREF" -n "$2" "$1" >/dev/null \
@@ -40,15 +66,41 @@ verify_owner() { # <file> <namespace>   -> 0 if a valid owner signature is alrea
     [ -f "$1.sig" ] && ssh-keygen -Y verify -f allowed_signers -I owner@tannen \
         -n "$2" -s "$1.sig" <"$1" >/dev/null 2>&1
 }
+# A FIRST sitting cannot start from a fully green gate, and pretending otherwise is how
+# the driver stopped on 2026-08-25 (D0065). The custodian requires governance/custody.sha256
+# and its owner signature; the set hashes scripts/custodian.sh, so it can only be
+# regenerated after the custodian is installed and only signed after that — both step 7.
+# Until then those two failures ARE the agenda, not a red gate. Everything else is a red
+# gate. This names the tolerated two and nothing more; once step 7 is done it matches
+# nothing and the checks below are ordinary ones.
+# Deliberately NOT tolerated: check_manifest's "custody drift" — that is the channel
+# that says a file the owner signed for has changed, and it must still stop the sitting
+# at step 0, where nothing has been touched yet and drift means someone edited a guard
+# outside this driver. The lines below are the custodian's redundant second channel for
+# the same fact, which step 7 answers by regenerating and re-signing.
+unexpected_failures() {   # <captured output> -> prints the failures step 7 will not fix
+    printf '%s\n' "$1" | grep ': FAIL' \
+        | grep -v 'custody set hashes do not verify' \
+        | grep -v 'custody\.sha256\.sig absent' \
+        | grep -v 'custody\.sha256\.sig does not verify' \
+        | grep -v 'custody floor violated'
+}
+
 regen_manifest_row() {   # author-key territory: caller confirms before calling
     grep -v "  $1\$" MANIFEST.sha256 > MANIFEST.tmp \
         && sha256sum "$1" >> MANIFEST.tmp && mv MANIFEST.tmp MANIFEST.sha256
 }
 add_manifest_rows() {    # every file under a directory (sealed dirs carry a row each)
-    local dir="$1"
-    while IFS= read -r f; do
+    local dir="$1" files=()
+    mapfile -t files < <(find "$dir" -type f | sort)   # never `while read … done < <(…)`; see below
+    for f in "${files[@]}"; do
+        # D0034: a manifest row must name a COMMITTED artifact. `git mv` tracks what was
+        # already in the repo, but the tag-signer bundle is generated here at the sitting
+        # (conferral ruling 6) and so is untracked — manifesting it without staging it
+        # leaves check_manifest red until the step-9 commit, which check_manifest gates.
+        git add -- "$f"
         grep -q "  $f\$" MANIFEST.sha256 || sha256sum "$f" >> MANIFEST.sha256
-    done < <(find "$dir" -type f | sort)
+    done
 }
 commit_with_hook_retry() {   # regen-projections may rewrite files on the first try
     git add -A && git commit -m "$1" && return 0
@@ -57,14 +109,34 @@ commit_with_hook_retry() {   # regen-projections may rewrite files on the first 
 
 # ---------------------------------------------------------------- 0. preconditions
 say "Boundary sitting — $MILESTONE. Precondition: a green gate and a read queue"
+[ -x "$PY" ] || die "no interpreter at $PY — run 'uv sync --frozen' first"
 [ -f "$OWNER_KEY" ] || die "no owner key at $OWNER_KEY (set TANNEN_OWNER_KEY)"
 grep -q '^owner@tannen ' allowed_signers || die "owner@tannen is not enrolled in allowed_signers"
 if confirm "Run 'make verify' now (recommended — nothing should be signed over a red gate)?"; then
-    make verify || die "verify is red — fixing it is builder work; sign nothing yet"
+    # Capturing output and DISPLAYING it are two different acts, and `$( )` only does the
+    # first. The gate takes the better part of a minute — 174 tests, ten law suites and a
+    # batched pytest run inside check_decisions — and this printed nothing at all until it
+    # was over, so the sitting read as hung at its own first question (owner, 2026-08-25;
+    # killed twice before it ever reached step 1). A driver that spends the owner's
+    # attention owes them a visible reason to keep waiting. tee does both jobs: the run
+    # streams to the terminal, and the log is what unexpected_failures reads afterwards.
+    # PIPESTATUS must be read on the very NEXT line — any command in between, an
+    # assignment included, replaces it.
+    waiting "the full gate: about $VERIFY_ETA. It streams below; nothing to do but watch."
+    verify_log=$(mktemp -t tannen-verify.XXXXXX)
+    make verify 2>&1 | tee "$verify_log"
+    verify_rc=${PIPESTATUS[0]}
+    verify_out=$(cat "$verify_log"); rm -f "$verify_log"
+    if [ "$verify_rc" -ne 0 ]; then
+        unexpected=$(unexpected_failures "$verify_out")
+        [ -z "$unexpected" ] || die "verify is red — fixing it is builder work; sign nothing yet:
+$unexpected"
+        note "green except the custody set, which is this sitting's step 7 — continuing"
+    fi
 fi
 if confirm "Show the digest's owner queue (what this sitting is for)?"; then
     latest_digest=$(ls -1 digest/*.md 2>/dev/null | tail -1)
-    [ -n "$latest_digest" ] && sed -n '/## Requires owner/,/^## /p' "$latest_digest" | "${PAGER:-less}"
+    [ -n "$latest_digest" ] && sed -n '/## Requires owner/,/^## /p' "$latest_digest" | page
 fi
 
 say "Optional — load the key into ssh-agent so you type the passphrase once"
@@ -80,9 +152,18 @@ fi
 export TANNEN_OWNER_KEY="$KEYREF"
 
 # ---------------------------------------------------------------- 1. Tier-C signatures
+# THE LIST IS READ INTO AN ARRAY FIRST, and every loop in this file that asks the owner a
+# question does the same. `while read rec; do … done < <(ls …)` redirects the WHOLE LOOP's
+# stdin to the file list, so a confirm() in the body takes its answer from the next
+# FILENAME rather than from the keyboard — and takes it silently, because bash prints a
+# `read -p` prompt only when stdin is a terminal. The loop then skips every other record
+# and reports "left unsigned" for a question nobody was asked. That is exactly what step 1
+# did at the M0 sitting on 2026-08-25, in the two loops that decide whether Tier-C records
+# get signed — which is to say, in the sitting's entire purpose (D0067).
 sign_tier_c_records() {
-    local signed=0 rec id tier status
-    while IFS= read -r rec; do
+    local signed=0 rec id tier status recs=()
+    mapfile -t recs < <(ls -1 decisions/*.yaml | sort)
+    for rec in "${recs[@]}"; do
         tier=$(sed -n 's/^tier: *//p' "$rec" | head -1)
         status=$(sed -n 's/^status: *//p' "$rec" | head -1)
         id=$(sed -n 's/^id: *//p' "$rec" | head -1)
@@ -99,7 +180,7 @@ sign_tier_c_records() {
             note "left unsigned — the Tier-C guard will report it until it is signed or"
             note "its status is changed to rejected/blocked-on-owner"
         fi
-    done < <(ls -1 decisions/*.yaml | sort)
+    done
     note "$signed record(s) signed this pass"
 }
 say "Step 1 — Tier-C records already recorded accepted (a safety net; usually empty)"
@@ -135,7 +216,7 @@ say "Step 3 — policy.yaml: in-repo mechanics are Tier A (D0048, D0053)"
 if grep -q '^in_repo_mechanics:' governance/policy.yaml; then
     note "clause already present — skipped"
 elif confirm "Read the proposal first?"; then
-    "${PAGER:-less}" docs/proposals/2026-08-24-policy-in-repo-mechanics.md
+    page docs/proposals/2026-08-24-policy-in-repo-mechanics.md
 fi
 if ! grep -q '^in_repo_mechanics:' governance/policy.yaml; then
     cat "$PROPOSALS/policy-append.yaml" >> governance/policy.yaml
@@ -159,10 +240,10 @@ else
     note "the honest marking of this batch: a schema that allows the field while no record"
     note "uses it reports '0 documentary', which is a false number rather than no number."
     if confirm "Read the proposal?"; then
-        "${PAGER:-less}" docs/proposals/2026-08-24-binding-strength-grade.md
+        page docs/proposals/2026-08-24-binding-strength-grade.md
     fi
     if confirm "Apply $PROPOSALS/apply_binding_strength.py?"; then
-        uv run python "$PROPOSALS/apply_binding_strength.py" || die "applier failed"
+        "$PY" -I -P "$PROPOSALS/apply_binding_strength.py" || die "applier failed"
         git --no-pager diff --stat governance/schemas decisions
         if confirm "Diff is what the proposal describes — keep it?"; then
             regen_manifest_row governance/schemas/decision-record.schema.json
@@ -182,16 +263,25 @@ else
     note "distinction between a signature as presence and a signature as authorisation."
     note "Both were conferral rulings; neither is stated by any artifact today."
     if confirm "Read the drafted amendment?"; then
-        "${PAGER:-less}" "$PROPOSALS/brief-9.1-amendment.md"
+        page "$PROPOSALS/brief-9.1-amendment.md"
     fi
     note "BRIEF.md is owner text and frozen — apply the two blocks in your editor."
     if confirm "Open BRIEF.md now?"; then
-        "${EDITOR:-nano}" BRIEF.md
-        git --no-pager diff BRIEF.md
-        if confirm "Keep this edit?"; then
-            regen_manifest_row BRIEF.md
+        edit BRIEF.md || note "editor exited non-zero — the diff below is the ground truth"
+        # An empty diff is not a decision to put to the owner. Offering "keep it?" over
+        # nothing invites a y that rewrites a manifest row for an unchanged file and reads
+        # afterwards as though the amendment landed. The step is idempotent, so saying
+        # plainly that nothing happened is the honest outcome.
+        if git diff --quiet -- BRIEF.md; then
+            note "BRIEF.md unchanged — the amendment has NOT landed. Apply the two blocks in"
+            note "any editor ($PROPOSALS/brief-9.1-amendment.md) and re-run; this step returns."
         else
-            git checkout -- BRIEF.md
+            git --no-pager diff BRIEF.md
+            if confirm "Keep this edit?"; then
+                regen_manifest_row BRIEF.md
+            else
+                git checkout -- BRIEF.md
+            fi
         fi
     fi
 fi
@@ -201,7 +291,7 @@ else
     note "ci.yml is frozen, so the builder cannot add the fetch-depth the new guards need:"
     note "a shallow checkout arrives without tags, which the custody floor refuses (RT-15),"
     note "and without the history the receipt chain walks."
-    diff -u .github/workflows/ci.yml "$PROPOSALS/ci.yml" | "${PAGER:-less}"
+    diff -u .github/workflows/ci.yml "$PROPOSALS/ci.yml" | page
     if confirm "Install this ci.yml?"; then
         cp "$PROPOSALS/ci.yml" .github/workflows/ci.yml
         regen_manifest_row .github/workflows/ci.yml
@@ -246,6 +336,25 @@ if ! grep -q 'lint-imports-kernel' tests/poison/README.md; then
     fi
 fi
 
+# Installing a fixture MOVES files, and a decision record whose binding names the candidate
+# path stops resolving the instant it does. Nothing surfaces that until a guard runs, and
+# the next guard run is step 9 — five signatures later. D0065's lesson points forward as
+# well as back: put the check where being wrong is cheap.
+# ONE question, asked as narrowly as it can be put: did moving those files leave a binding
+# pointing at a path that is no longer there? Everything wider re-invents the false stop
+# D0065 was about, one step earlier. A stale DECISIONS.md is the NORMAL state here (step 4
+# edits records; step 9 regenerates), and a pytest-node binding cannot be green mid-sitting
+# either — step 4b edits BRIEF.md, which is in the custody set, so check_manifest reports
+# custody drift until step 7 re-signs. Both are the sitting working, not the sitting broken.
+# A `git mv` produces exactly two messages, and these are they.
+waiting "checking the decision bindings still resolve — up to a minute; it runs pytest"
+broken=$("$PY" -I -P scripts/check_decisions.py 2>&1 \
+    | grep -E 'binding does not resolve — (target does not exist|not listed in MANIFEST)' || true)
+[ -z "$broken" ] || die "a decision binding stopped resolving when the fixtures moved:
+$broken
+  Retarget it to the installed tests/poison/ path — builder work, no signature involved.
+  Nothing has been signed; the fixtures stay installed and step 5 will skip them next run."
+
 # ---------------------------------------------------------------- 6. the custodian
 say "Step 6 — the custodian itself (trust root; yours alone to apply)"
 if diff -q scripts/custodian.sh "$PROPOSALS/custodian.sh" >/dev/null; then
@@ -254,13 +363,30 @@ else
     note "Read the whole diff. This file is the guard of the guards; the poison corpus"
     note "keeps it honest, and every line you accept here is a line you are vouching for."
     pause "Enter for the diff (q quits the pager)..."
-    diff -u scripts/custodian.sh "$PROPOSALS/custodian.sh" | "${PAGER:-less}"
+    diff -u scripts/custodian.sh "$PROPOSALS/custodian.sh" | page
     if confirm "Install this custodian?"; then
         cp "$PROPOSALS/custodian.sh" scripts/custodian.sh
         regen_manifest_row scripts/custodian.sh
-        note "running it — every guard must FAIL its poison, for its own marker"
-        bash scripts/custodian.sh --check-only \
-            || die "custodian RED after the patch — do not go further; this is the point of running it here"
+        note "running it — every guard must FAIL its poison, for its own marker."
+        note ""
+        note "TWO failures are EXPECTED here and neither is a defect. This custodian"
+        note "checks governance/custody.sha256 and its signature; you have just changed a"
+        note "file the custody set covers (this one), and the signature is taken in step"
+        note "7. Neither can come sooner — the set hashes THIS file, so regenerating or"
+        note "signing before installing would attest to the custodian you are replacing."
+        note "So the run below must be green EXCEPT for the stale custody hashes and the"
+        note "absent custody signature. Step 7 fixes both and re-runs this as a gate that"
+        note "tolerates neither; anything else failing here stops the sitting now."
+        waiting "running the newly installed custodian — a few seconds"
+        custodian_out=$(bash scripts/custodian.sh --check-only 2>&1); custodian_rc=$?
+        printf '%s\n' "$custodian_out"
+        if [ "$custodian_rc" -ne 0 ]; then
+            unexpected=$(unexpected_failures "$custodian_out")
+            [ -z "$unexpected" ] || die "custodian RED after the patch, for something step 7 will not fix:
+$unexpected
+  do not go further; this is the point of running it here"
+            note "only the custody set is outstanding, as expected — every other check green"
+        fi
     else
         note "declined — the close-tag rule and the custody-set check stay unenforced"
     fi
@@ -296,19 +422,25 @@ PY
         git --no-pager diff governance/tier-c.yaml
     fi
 fi
-uv run python scripts/gen_custody.py || die "custody generation failed"
+"$PY" -I -P scripts/gen_custody.py || die "custody generation failed"
 if confirm "Review the custody set before signing it?"; then
-    "${PAGER:-less}" governance/custody.sha256
+    page governance/custody.sha256
 fi
 verify_owner governance/custody.sha256 tannen-custody \
     || sign_owner governance/custody.sha256 tannen-custody
+
+note "the custodian again, now that the signature it requires exists — THIS is the run"
+note "that validates step 6's patch, and nothing after it should be attempted if it is red"
+bash scripts/custodian.sh --check-only \
+    || die "custodian RED with the custody set signed — hand back to the builder; sign nothing further"
 
 # ---------------------------------------------------------------- 8. resolve the queue
 say "Step 8 — the records this sitting resolves"
 note "Every Tier-C record still recorded blocked-on-owner is a question this sitting was"
 note "convened to answer. Accepting one is the affirmative act; leaving it blocked is"
 note "also an answer, and it queues to the next sitting without stopping any work."
-while IFS= read -r rec; do
+queue=(); mapfile -t queue < <(ls -1 decisions/*.yaml | sort)   # array first: see sign_tier_c_records
+for rec in "${queue[@]}"; do
     [ "$(sed -n 's/^tier: *//p' "$rec" | head -1)" = "C" ] || continue
     grep -q '^status: blocked-on-owner$' "$rec" || continue
     printf '\n'
@@ -330,12 +462,13 @@ while IFS= read -r rec; do
     else
         note "left blocked — it will appear in the next digest's owner queue"
     fi
-done < <(ls -1 decisions/*.yaml | sort)
+done
 sign_tier_c_records
 
 # ---------------------------------------------------------------- 9. gate + receipt
 say "Step 9 — regenerate, verify, and take the attention receipt"
-uv run python scripts/gen_projections.py || die "projection generation failed"
+"$PY" -I -P scripts/gen_projections.py || die "projection generation failed"
+waiting "the full gate again, now over everything this sitting changed: about $VERIFY_ETA"
 make verify || die "verify red — stop here and hand back to the builder; sign no tag over a red gate"
 note "full custodian run — writes and signs receipts/$(date +%F).md"
 bash scripts/custodian.sh || die "custodian red — no receipt was signed"
@@ -367,7 +500,7 @@ else
         echo
         cat DELEGATIONS.md
     } > "$msg"
-    "${PAGER:-less}" "$msg"
+    page "$msg"
     if confirm "Sign $MILESTONE-close with this message?"; then
         git -c gpg.format=ssh -c user.signingkey="$KEYREF" \
             tag -s "$MILESTONE-close" -F "$msg" || die "tag signing failed"
@@ -394,11 +527,12 @@ p.write_text(src[:end] + f"  - {milestone}-close\n" + src[end:])
 PY
         regen_manifest_row governance/tag-roles.yaml
         git --no-pager diff governance/tag-roles.yaml
-        uv run python scripts/gen_custody.py
+        "$PY" -I -P scripts/gen_custody.py
         rm -f governance/custody.sha256.sig
         sign_owner governance/custody.sha256 tannen-custody
     fi
 fi
+waiting "the last full gate, with the close tag in the required set: about $VERIFY_ETA"
 make verify || die "verify red at the close — hand back to the builder"
 if [ -n "$(git status --porcelain)" ]; then
     commit_with_hook_retry "$MILESTONE close: required tags and custody set re-signed"

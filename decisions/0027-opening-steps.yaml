@@ -21,6 +21,7 @@ status: accepted
 bindings:
   - type: file
     target: docs/OPENING.md
+    strength: documentary
 risk_flags: [governance-paths]
 links:
   - "BRIEF.md §9.1, §9.2"

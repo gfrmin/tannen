@@ -1,0 +1,62 @@
+id: D0065
+title: "The boundary-sitting driver gated three steps on a later step's output"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  scripts/boundary_sitting.sh is corrected in three places, all found by the owner running
+  it. (1) Step 6 installed the new custodian and immediately required it to be green, but
+  that custodian checks governance/custody.sha256 and its owner signature, and both are
+  step 7's work — the custody set hashes scripts/custodian.sh itself, so neither
+  regenerating nor signing can precede the install. (1b) Step 0's precondition `make
+  verify` fails for the same reason on a first sitting, so the driver would refuse to
+  start on the second run for the very condition it was convened to fix. Both now use one
+  helper, unexpected_failures, that tolerates the custodian's custody-set complaints by
+  name and dies on anything else; step 7 signs and then re-runs the custodian as a gate
+  that tolerates none of them. check_manifest's "custody drift" is deliberately NOT
+  tolerated anywhere — that is the channel saying a file the owner signed for changed, and
+  at step 0 it means someone edited a guard outside this driver. (2) add_manifest_rows
+  wrote a manifest row for every file
+  under an installed fixture, including the tag-signer bundle generated at the sitting
+  (conferral ruling 6), which `git mv` had never tracked — so check_manifest failed with
+  "manifest rows must be committed artifacts" (D0034) at step 9, whose own gate is
+  check_manifest. It now stages each file it manifests. The bundle is staged and D0064's
+  binding, which pointed at the fixture's pre-installation path under
+  docs/redteam/fixture-candidates/, is retargeted to its sealed path and upgraded from a
+  file binding to a manifest one.
+rationale: >-
+  Worth a record rather than a quiet fix, because both are the same mistake and it is the
+  mistake this driver's own header warns about: ORDER IS LOAD-BEARING. Each step was
+  correct in isolation and each ran a check at the moment it could not yet pass, because
+  the artifact it checked was produced by a later step. A driver that gates a step
+  on the output of a later step cannot be re-run into a green state — the failure is
+  permanent, not transient, which is exactly how it presented. The general shape to watch
+  for in any later sitting script: a step that both PRODUCES an input to the custody floor
+  and ENFORCES the floor is two steps, and the enforcement belongs after the last producer.
+  Neither defect was reachable by testing the parts. The custodian patch was verified in
+  isolation, the fixtures were verified in isolation, and the driver is idempotent by
+  design — but idempotence restores a state, it does not reorder one, so re-running could
+  never have found this. Only running it end to end did, which is the argument for a
+  scripted sitting over a checklist: a checklist's steps fail silently in the operator's
+  head, and this one failed loudly in the right place, having changed nothing it could not
+  re-do.
+reversibility: >-
+  Both are edits to one builder-owned script plus one binding retarget; revert in minutes.
+  Nothing signed depends on them, and the sitting they unblock is itself resumable.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      The corrected driver. It is in the custody set (governance/tier-c.yaml custody.set),
+      so from the moment the owner signs governance/custody.sha256 at step 7 these edits
+      are covered by that signature and a later change to them reddens the gate.
+  - type: manifest
+    target: tests/poison/custodian-tag-signer/repo.bundle
+    strength: enforced
+    detail: >-
+      The generated bundle whose absence from the index caused defect (2). A manifest row
+      now names a tracked file, and tests/poison/ is sealed, so the row cannot be dropped
+      without check_manifest's seal check reporting it.
+links: ["D0034", "D0062", "D0063", "D0064"]

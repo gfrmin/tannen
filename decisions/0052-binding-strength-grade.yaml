@@ -31,6 +31,7 @@ status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-08-24-binding-strength-grade.md
+    strength: documentary
     detail: >-
       DOCUMENTARY by its own definition, which is the honest reading: the schema is
       frozen, so this record proposes a grading it cannot yet apply to itself. Carries

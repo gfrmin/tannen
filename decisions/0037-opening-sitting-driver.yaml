@@ -39,4 +39,5 @@ bindings:
     target: scripts/opening_sitting.sh
   - type: file
     target: docs/OPENING.md
+    strength: documentary
     detail: '"Driver:" paragraph pointing the sitting at the script'

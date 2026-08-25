@@ -54,7 +54,7 @@ reversibility: >-
   standing costs are deliberate: guard changes now batch to sittings (custody set),
   Tier-C binding upgrades need a re-signature, and `git commit --amend` or a rebase across
   a receipt boundary turns the gate red — which is the receipt chain doing its job.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: config
     target: governance/tier-c.yaml#custody.set
@@ -91,6 +91,7 @@ bindings:
       proves the wrong thing works.
   - type: file
     target: docs/proposals/2026-08-25-boundary-sitting/brief-9.1-amendment.md
+    strength: documentary
     detail: >-
       DOCUMENTARY (ruling 5): BRIEF.md is frozen owner text, so the builder drafts the two
       bullets and the owner applies them. Upgrades to a manifest binding on BRIEF.md once

@@ -144,6 +144,9 @@ required_signatures:
   - path: governance/policy.yaml
     namespace: tannen-policy
     signer: owner@tannen
+  - path: governance/custody.sha256
+    namespace: tannen-custody
+    signer: owner@tannen
   # MANIFEST.sha256 belongs here too — nothing signs the manifest, so the seal above is
   # only as strong as the builder's honesty (RT-01, RT-14). Adding it requires the owner
   # to sign the manifest first, so it is queued for the boundary sitting rather than

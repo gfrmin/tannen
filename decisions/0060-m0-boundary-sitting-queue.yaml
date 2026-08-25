@@ -41,10 +41,11 @@ reversibility: >-
   Nothing here is irreversible except the m0-close signature, which is a one-way door by
   construction (BRIEF §9.2). Every applied patch can be reverted; the fixtures can be
   removed; the manifest signature can be re-issued over a later state.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: file
     target: docs/redteam/fixture-candidates/README.md
+    strength: documentary
     detail: >-
       The seven fixtures with guard, violation, marker, exact command and required patch.
       DOCUMENTARY by nature — a queue cannot enforce itself; its enforcement is that

@@ -1,0 +1,56 @@
+id: D0067
+title: "Two sitting loops read the owner's answer from the list they were iterating"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  Three loops in scripts/boundary_sitting.sh were written `while IFS= read -r rec; do …
+  done < <(ls -1 decisions/*.yaml | sort)`. That redirection applies to the whole compound
+  command, so every `read` in the body — including the one inside confirm() — takes its
+  input from the file list rather than from the keyboard. Two of the three contain the
+  confirm that decides whether a Tier-C record is signed: sign_tier_c_records (step 1, and
+  again at the end of step 8) and step 8's own queue loop. All three are replaced by
+  `mapfile -t` into an array followed by a plain `for`, which leaves stdin alone;
+  add_manifest_rows is converted with them although it asks nothing today, because the
+  difference between the two spellings is invisible until the day someone adds a prompt.
+rationale: >-
+  This failed silently in both directions at once, which is why three sittings and two
+  careful readings went past it. Bash displays a `read -p` prompt ONLY when stdin is a
+  terminal, so no question appeared on screen; the answer it read was the next filename,
+  which is not `[yY]*`, so every record was declined; and the body's read also consumed
+  list entries, so alternate records were never considered at all. The driver then printed
+  "left blocked — it will appear in the next digest's owner queue", which is precisely what
+  a deliberate refusal looks like. The owner's own step-1 transcript from earlier today
+  shows D0063 displayed and "0 record(s) signed this pass" immediately after, with no
+  prompt in between, and it read as normal — step 1 is documented as a safety net that is
+  usually empty.
+  .
+  The consequence was not cosmetic. Step 8 is the step this sitting exists for: six Tier-C
+  doors queued as blocked-on-owner, each needing the affirmative signature BRIEF §9.2
+  requires. The loop would have accepted none of them, skipped half of them without
+  display, and reported the result as the owner's choice. A governance layer whose central
+  act can no-op while reporting consent is worse than one that has no such act, because
+  the projection afterwards is indistinguishable from the honest outcome.
+  .
+  The general rule, worth more than the fix: a loop that asks the operator a question may
+  never take its iteration input on stdin. Read the list first, then iterate.
+reversibility: >-
+  A local rewrite of three loops in one builder-owned script; the behaviour is verified by
+  scripts/rehearse_sitting.sh on every run, which counts the prompts the driver actually
+  asks.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      The corrected loops. In the custody set, so from step 7's signature onward a change
+      to these bytes reddens the gate.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: enforced
+    detail: >-
+      What found it, and what keeps it found: the rehearsal answers every prompt from a
+      file and asserts that the sitting ends with no Tier-C door left unsigned. Under the
+      defect that check fails, because nothing gets signed.
+links: ["D0062", "D0064", "D0065", "D0066", "D0068"]

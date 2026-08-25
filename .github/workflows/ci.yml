@@ -1,6 +1,12 @@
-# CI mirrors the local gate exactly: `make verify` runs the three governance checks,
-# pytest, and import-linter (kernel no-IO / no-cross-repo contracts, declared at
-# Session 0 and trivially satisfied until M0).
+# CI mirrors the local gate exactly: `make verify` runs the governance checks, pytest,
+# import-linter and the custodian. Since the M0 boundary the gate also verifies the
+# signer-role table, the receipt chain and the owner-signed custody set, and NONE of
+# those can be checked out of a shallow clone — which is why fetch-depth matters below.
+#
+# This file has never actually run: the repo has no remote (D0061 rationale, and the
+# reason `make verify` on one machine is currently the whole enforcement surface).
+# Adding a remote is a Tier-C door in its own right (external-bytes); when it opens, the
+# justification is the receipt chain's need for an unrewritable witness, not backup.
 name: ci
 on:
   push:
@@ -11,6 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history AND tags, both load-bearing:
+          #   * the tag set is part of the custody floor — a checkout arriving without
+          #     tags is indistinguishable from one where they were deleted, and both are
+          #     refused (RT-15, D0058);
+          #   * the receipt chain asserts ancestry between the HEADs recorded in
+          #     owner-signed receipts, which a shallow clone cannot answer (D0063).
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen
       - run: make verify

@@ -1,0 +1,44 @@
+id: D0066
+title: "The sitting driver treated EDITOR and PAGER as command names"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  scripts/boundary_sitting.sh invoked the owner's editor and pager as `"${EDITOR:-nano}"
+  BRIEF.md` — one quoted word — so an EDITOR holding a command LINE rather than a bare
+  program name failed with `command not found`. The owner's is `emacsclient -nw -a 'emacs
+  -nw'`, which is an ordinary setting, as is a PAGER of `less -FRX`; there were eight such
+  pager call sites and one editor call site. Both now go through one helper each, `edit`
+  and `page`, which use `eval "$EDITOR" '"$@"'` — the same construction git uses, and for
+  the same reason. Dropping the quotes instead would word-split the value, but would also
+  split the owner's own quoting apart, so `-a 'emacs -nw'` would arrive as two arguments.
+  Separately, step 4b put "Keep this edit?" to the owner after the editor failed to run,
+  over an empty diff; it now checks `git diff --quiet` first and says plainly that the
+  amendment has not landed, naming the draft to apply and noting the step returns on the
+  next run.
+rationale: >-
+  This driver is not a CI job. It runs interactively, in the owner's own shell, on the one
+  occasion when the owner's key is present — so the environment it reads is a real input
+  from a real person, not a controlled one, and every assumption it makes about that
+  environment is a way for the sitting to stop. The right default for anything read from
+  the environment here is that it is a command line, not a command name. The second half
+  matters more than the quoting: a failed editor left the driver asking the owner to keep
+  a change that did not exist, where a `y` would have rewritten a manifest row for an
+  unchanged file and left the sitting reading, afterwards, as though the BRIEF amendment
+  had landed. A prompt whose only honest answer is "nothing happened" should not be a
+  prompt. Like D0065 this was found by running the thing end to end and could not have
+  been found otherwise, since the builder's environment is precisely the one where the
+  bare-word spelling works.
+reversibility: >-
+  Two helper functions and their call sites in one builder-owned script. Nothing signed
+  depends on the spelling, and the step it unblocks changes no state until the owner
+  confirms a diff.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      The corrected driver, in the custody set (governance/tier-c.yaml custody.set), so
+      from step 7's signature onward a later change to these bytes reddens the gate.
+links: ["D0060", "D0065"]

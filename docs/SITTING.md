@@ -114,6 +114,21 @@ history and tags.
   anything that needs the owner must be filed Tier C or it is invisible there.
 - The red-team report for the closing milestone written, and its fixtures drafted under
   `docs/redteam/fixture-candidates/`.
+- **`bash scripts/rehearse_sitting.sh` green** (D0068). It runs the whole driver against a
+  disposable clone with a throwaway key, answering every prompt from a file, and asserts
+  what a finished sitting leaves behind: the close tag signed and verifying, the custody
+  set signed, a fresh signed receipt, the custodian green with no tolerances, `make verify`
+  green, nothing uncommitted, no Tier-C door left unsigned — and that no step went quiet for
+  more than 25 seconds without first saying how long it would be (D0069). It takes a couple of minutes
+  and it is the difference between finding a defect here and finding it with your key on
+  the table — the first three attempts at the M0 sitting each stopped on one that this
+  would have caught (D0065, D0066, D0067, D0069).
+
+  Run it after ANY edit to the driver, and read a green result for what it is: proof of
+  mechanism, not of custody. It signs with a throwaway key, because the real key is
+  passphrase-protected and unattended signing is what that passphrase prevents; and it
+  answers `y` to everything, so it rehearses the path where you agree. Nothing rehearses
+  judgement.
 
 ## Afterwards (builder work, not yours)
 

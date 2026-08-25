@@ -5,12 +5,24 @@
 # trust-root-changes).
 #
 # Verifies, in order:
-#   1. frozen-path hashes (MANIFEST.sha256);
+#   1. frozen-path hashes (MANIFEST.sha256) AND the owner-signed custody set
+#      (governance/custody.sha256 — the bytes the owner vouched for, D0061);
 #   2. the custody set and the CI config are themselves manifested;
-#   3. every git tag verifies against allowed_signers;
-#   4. the policy signature (governance/policy.yaml.sig), once it exists;
+#   3. every git tag verifies against allowed_signers, no builder tag predates its
+#      delegation, and the right PRINCIPAL signed the right CLASS of tag (D0050);
+#   4. the owner signatures that are required, not optional: policy.yaml and
+#      custody.sha256. Absent is a downgrade once an owner key is enrolled (RT-04);
 #   5. GUARD LIVENESS BY POISON: every guard must FAIL against its fixture under
 #      tests/poison/, for the intended reason. A guard that passes poison is weakened.
+#
+# THE FLOOR MAY DEPEND ONLY ON TOOLS THE OS PROVIDES AND PATHS NAMED LITERALLY
+# (conferral ruling 3, decision D0063). Checks 1-4 use sha256sum, ssh-keygen, git and
+# grep — nothing this repo installs. Where a Python guard is unavoidable it is the venv
+# interpreter at a literal path in isolated mode (-I ignores PYTHONPATH, PYTHONHOME and
+# user site-packages; -P stops any directory being prepended to sys.path), never `uv run`
+# and never a console entry point, because both resolve through metadata the builder
+# writes. The custody set covers a guard's code; this covers its resolution, and
+# resolution is enforcement. What remains outside both: site-packages itself.
 #
 # Modes:
 #   custodian.sh --check-only   verify only (builder machine, CI). No receipt.
@@ -22,6 +34,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 FAIL=0
+PY="$PWD/.venv/bin/python"
+[ -x "$PY" ] || { printf 'custodian: FAIL — no interpreter at %s\n' "$PY" >&2; exit 1; }
+LINT=(-I -c 'import sys; from importlinter.cli import lint_imports_command; sys.exit(lint_imports_command())')
 say() { printf 'custodian: %s\n' "$*"; }
 bad() { printf 'custodian: FAIL — %s\n' "$*" >&2; FAIL=1; }
 
@@ -32,9 +47,23 @@ else
     say "frozen-path hashes verify"
 fi
 
+# 1b. The custody set: the bytes the OWNER signed for, checked without trusting any
+#     Python guard — every guard in scripts/ is itself inside this set (D0061, RT-14).
+if [ -f governance/custody.sha256 ]; then
+    if ! sha256sum --quiet -c governance/custody.sha256 >/dev/null 2>&1; then
+        bad "custody set hashes do not verify — a file the owner signed for has changed"
+    else
+        say "custody set hashes verify ($(wc -l <governance/custody.sha256) path(s))"
+    fi
+else
+    bad "governance/custody.sha256 is missing — the enumeration the manifest is not"
+fi
+
 # 2. Custody set + CI config are manifested.
 manifested_ok=1
 for path in scripts/custodian.sh allowed_signers .github/workflows/ci.yml \
+    DELEGATIONS.md governance/tier-c.yaml governance/tag-roles.yaml \
+    scripts/check_tag_signers.py \
     $(find tests/poison -type f | sort); do
     if ! grep -q "  ${path}\$" MANIFEST.sha256; then
         bad "not manifested: $path"
@@ -70,16 +99,66 @@ for tag in $(git tag -l 2>/dev/null); do
     fi
 done
 
-# 4. Policy signature (owner signs at the opening sitting; verified once present).
-if [ -f governance/policy.yaml.sig ]; then
-    if ssh-keygen -Y verify -f allowed_signers -I owner@tannen -n tannen-policy \
-        -s governance/policy.yaml.sig <governance/policy.yaml >/dev/null 2>&1; then
-        say "policy.yaml signature verifies (owner@tannen)"
+# 3b. The right principal signed the right class of tag, the trust root is the object
+#     it is pinned to, and the required tags exist at all (D0050/D0054; RT-15).
+"$PY" -I -P scripts/check_tag_signers.py || bad "tag signer roles violated"
+
+# 4. Owner signatures that are REQUIRED once an owner key is enrolled. Verified-if-present
+#    was the pre-opening state; after the sitting, an absent signature is a downgrade a
+#    single `rm` could perform in silence (RT-04).
+owner_enrolled=0
+grep -qE '^owner@tannen[[:space:]]' allowed_signers && owner_enrolled=1
+require_sig() {   # <file> <namespace>
+    local file="$1" ns="$2"
+    if [ -f "$file.sig" ]; then
+        if ssh-keygen -Y verify -f allowed_signers -I owner@tannen -n "$ns" \
+            -s "$file.sig" <"$file" >/dev/null 2>&1; then
+            say "$file signature verifies (owner@tannen)"
+        else
+            bad "$file.sig does not verify against owner@tannen"
+        fi
+    elif [ "$owner_enrolled" -eq 1 ]; then
+        bad "$file.sig absent but owner@tannen is enrolled — a signature was deleted (RT-04)"
     else
-        bad "governance/policy.yaml.sig does not verify against owner@tannen"
+        say "$file unsigned (expected before the opening sitting)"
     fi
-else
-    say "policy.yaml unsigned (expected before the opening sitting)"
+}
+require_sig governance/policy.yaml   tannen-policy
+require_sig governance/custody.sha256 tannen-custody
+
+# 4b. THE RECEIPT CHAIN (conferral ruling 4, D0063). Every check in this file runs on a
+#     working tree the builder controls; none of them constrains what happened before a
+#     commit existed. The receipts are the one artifact the builder cannot forge, so they
+#     are made into a witness: each receipt records the HEAD it was taken at, and each
+#     HEAD must be an ancestor of the next. Rewriting history between two owner-signed
+#     attestations then stops being invisible. This is also the justification for a remote
+#     when one is eventually added (Tier C): an unrewritable witness, not a backup.
+prev_head=""; prev_name=""
+for receipt in $(ls -1 receipts/*.md 2>/dev/null | sort); do
+    if [ ! -f "$receipt.sig" ]; then
+        [ "$owner_enrolled" -eq 1 ] && bad "unsigned attention receipt: $receipt"
+        continue
+    fi
+    ssh-keygen -Y verify -f allowed_signers -I owner@tannen -n tannen-receipt \
+        -s "$receipt.sig" <"$receipt" >/dev/null 2>&1 \
+        || bad "receipt signature does not verify: $receipt"
+    head=$(sed -n 's/^- HEAD: \([0-9a-f]\{7,40\}\)$/\1/p' "$receipt" | head -1)
+    [ -n "$head" ] || continue
+    if ! git cat-file -e "${head}^{commit}" 2>/dev/null; then
+        bad "receipt $receipt records HEAD $head, which is no longer a commit here"
+        continue
+    fi
+    if [ -n "$prev_head" ] && ! git merge-base --is-ancestor "$prev_head" "$head" 2>/dev/null; then
+        bad "receipt chain broken: $prev_name recorded $prev_head, not an ancestor of $head"
+    fi
+    prev_head="$head"; prev_name="$receipt"
+done
+if [ -n "$prev_head" ]; then
+    if git merge-base --is-ancestor "$prev_head" HEAD 2>/dev/null; then
+        say "receipt chain verifies to HEAD"
+    else
+        bad "receipt chain broken at the tip: $prev_name recorded $prev_head, not an ancestor of HEAD"
+    fi
 fi
 
 # 5. Guard liveness by poison: each guard must fail its fixture, for the right reason.
@@ -96,14 +175,47 @@ poison() {
     fi
 }
 poison check_manifest "frozen path modified" \
-    uv run python scripts/check_manifest.py --root tests/poison/check-manifest
+    "$PY" -I -P scripts/check_manifest.py --root tests/poison/check-manifest
 poison check_concepts "snapshot content drifted" \
-    uv run python scripts/check_concepts.py --root tests/poison/check-concepts
+    "$PY" -I -P scripts/check_concepts.py --root tests/poison/check-concepts
 poison check_decisions "binding does not resolve" \
-    uv run python scripts/check_decisions.py --root tests/poison/check-decisions
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions
+# The shadowing fixtures used to arrive via PYTHONPATH, which -I now ignores — and which
+# was the same inherited-environment channel RT-08 exploited. `env -C` puts the poison
+# tree on sys.path as the working directory instead: no variable, one literal path.
 poison lint-imports "BROKEN" \
-    env PYTHONPATH=tests/poison/lint-imports uv run lint-imports \
-    --config tests/poison/lint-imports/pyproject.toml
+    env -C tests/poison/lint-imports "$PY" "${LINT[@]}" --no-cache --config pyproject.toml
+
+# The fixtures added at the M0 boundary sitting. The four above prove their guard runs;
+# these prove it still has the specific tooth the red team had to file off (RT-01..RT-15).
+# Each guard is invoked with the hatch cleared, because an inherited environment variable
+# is not authenticable and a poison run must not be silenceable by one (RT-08).
+for marker in "tannen.kernel is not allowed to import os" \
+              "tannen.kernel is not allowed to import datetime" \
+              "tannen is not allowed to import pkm"; do
+    poison lint-imports-kernel "$marker" \
+        env -C tests/poison/lint-imports-kernel "$PY" "${LINT[@]}" --no-cache \
+        --config "$PWD/governance/importlinter.toml"
+done
+poison check_decisions_ratchet "RATCHET BREACH" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED \
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-ratchet
+poison check_decisions_pytest "binding does not resolve" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED \
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-nested-hatch
+poison check_decisions_tier_c "Tier-C record accepted without an owner signature" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED \
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-unsigned-tier-c
+poison check_manifest_sealed "unmanifested file in sealed path" \
+    "$PY" -I -P scripts/check_manifest.py --root tests/poison/check-manifest-sealed
+poison check_manifest_signature "missing owner signature" \
+    "$PY" -I -P scripts/check_manifest.py --root tests/poison/check-manifest-unsigned-policy
+poison check_tag_signers_principal "tag signed by the wrong principal" \
+    "$PY" -I -P scripts/check_tag_signers.py \
+    --root tests/poison/custodian-tag-signer --repo tests/poison/custodian-tag-signer/repo.bundle
+poison check_tag_signers_required "required tag missing" \
+    "$PY" -I -P scripts/check_tag_signers.py \
+    --root tests/poison/custodian-tag-signer --repo tests/poison/custodian-tag-signer/repo.bundle
 
 if [ "$FAIL" -ne 0 ]; then
     bad "custody floor violated"
@@ -115,13 +227,20 @@ say "custody floor intact"
 if [ "${1:-}" != "--check-only" ]; then
     date_str=$(date +%F)
     receipt="receipts/${date_str}.md"
+    prev=$(ls -1 receipts/*.md 2>/dev/null | sort | tail -1)
     {
         echo "# Attention receipt — ${date_str}"
         echo
         echo "- HEAD: $(git rev-parse HEAD 2>/dev/null || echo '(unborn)')"
+        if [ -n "$prev" ] && [ "$prev" != "$receipt" ]; then
+            echo "- previous receipt: $(basename "$prev" .md) at ${prev_head:-(none recorded)}"
+        fi
         echo "- custodian: all checks green"
         echo "- consequence: Tier-B silence-as-consent is valid from this date until"
         echo "  the next milestone boundary + 7 days (BRIEF §9.1)."
+        echo "- chain: the HEAD above extends the previous receipt's HEAD. Each receipt is"
+        echo "  an owner-signed witness that the history up to that point was not rewritten"
+        echo "  afterwards (D0063 ruling 4); scripts/check_receipts.py verifies the chain."
     } >"$receipt"
     ssh-keygen -Y sign -f "${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}" \
         -n tannen-receipt "$receipt"
