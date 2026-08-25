@@ -1,0 +1,65 @@
+id: D0071
+title: "The receipt clock cannot start on the day the receipt is taken, so it has never started"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  scripts/_gov.py::receipt_state selects the boundaries that follow a receipt with
+  `d > rdate`, comparing a tagger DATE against the receipt's filename date. A boundary
+  sitting takes the receipt and mints the close tag minutes apart — docs/SITTING.md
+  requires that order, and gives starting the consent clock as the reason — so the two are
+  always the same day and the strict inequality excludes every close tag this project will
+  ever mint. Verified against this repository on 2026-08-25 with the receipt and `m0-close`
+  both dated that day: receipt_state reports FRESH thirty days later. The consequence is
+  the one BRIEF §9.1 exists to prevent — Tier-B silence-as-consent never suspends, because
+  the condition that suspends it is unreachable.
+  .
+  The correction is `d >= rdate`, drafted with its test and its reproduction at
+  docs/proposals/2026-08-25-receipt-clock-same-day-boundary.md. It is NOT applied here:
+  scripts/_gov.py is in the custody set, so a builder edit would redden the gate until a
+  sitting re-signs governance/custody.sha256 — the cost D0061 accepted deliberately, and
+  correctly, for exactly this class of file. It lands at the M1 boundary sitting in the
+  step that installs guard patches. Applying it costs nothing at the time of writing: the
+  2026-08-25 receipt would be fresh until 2026-09-01, and all three open Tier-B veto clocks
+  close 2026-08-31, inside that window.
+rationale: >-
+  Filed rather than fixed, and filed loudly, because of what kind of failure it is. Every
+  guard in this repo reports on something; this one reported "fresh (no milestone boundary
+  since)" while a boundary tag from four hours earlier sat in refs/tags. Nothing was red.
+  The projection said FRESH, the digest said FRESH, and the sentence the driver prints at
+  the end of a sitting — "the receipt clock is now RUNNING" — was simply false. A check
+  that answers confidently and wrongly is worse than one that fails, and the surrounding
+  machinery is built to trust this answer: it gates Tier-B silence-as-consent, and the
+  amendment of 2026-08-24 makes silence-consent valid only under a fresh receipt.
+  .
+  The find also says something about where to look. This was not reachable from the
+  guard's own tests — day granularity is invisible unless two events land on one day, and
+  in a repository whose events are days apart that only happens at a sitting, which is the
+  one procedure no test runs. It surfaced from reading a passing line of output against the
+  document that says what it should mean. The general lesson worth carrying: when a guard
+  reports a state, check the reported state against the artifact it describes at least
+  once, by hand, rather than trusting that green means what the docstring says.
+reversibility: >-
+  Nothing is changed by this record; it draws a patch and queues it. The patch itself is
+  one comparison operator and reverts in seconds, though only at a sitting in either
+  direction, since the file is in the custody set.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-25-receipt-clock-same-day-boundary.md
+    strength: documentary
+    detail: >-
+      DOCUMENTARY, and it is the honest grade: the patch is drafted, reproduced and tested
+      on paper, and in force nowhere. It carries the diff, the test to land beside it, the
+      reproduction command with its output, and the statement of what applying it does to
+      the records currently under a veto clock. Upgrades to a manifest binding on
+      scripts/_gov.py when the owner applies it (D0045).
+  - type: config
+    target: governance/tier-c.yaml#custody.set
+    strength: enforced
+    detail: >-
+      Why the builder may not simply fix it: scripts/_gov.py is enumerated in the custody
+      set, so its bytes are covered by the owner's signature over governance/custody.sha256
+      and an edit reddens the gate until a sitting re-signs. This binding is the mechanism
+      that makes the queueing necessary rather than cautious.
+links: ["D0045", "D0061", "D0063", "D0070"]
