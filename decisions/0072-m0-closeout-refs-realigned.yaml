@@ -1,0 +1,55 @@
+id: D0072
+title: "M0 close-out: master and the m1 worktree fast-forwarded onto the sitting"
+tier: A
+date: "2026-08-25"
+decision: >-
+  Three refs pointed at three different histories after the M0 boundary sitting, and all
+  three now point at the same commit. `master` was five commits behind branch `m0` and did
+  not have the sitting at all — not the custody set, not the Tier-C signatures, not the
+  follow-ups. The `m1` branch, with a worktree already checked out at
+  ~/git/worktrees/tannen/m1, sat at 4bb9b2f, three commits older still. Both were moved
+  forward with `git merge --ff-only m0`, and the m1 worktree was given a virtualenv it had
+  never had.
+  .
+  Fast-forward, specifically, and not a rebase or a delete-and-recreate: `git merge-base
+  --is-ancestor m1 m0` is true, so the m1 branch is wholly contained in m0 and no commit is
+  rewritten or dropped. That distinction is load-bearing rather than stylistic. Receipts
+  record the HEAD they were taken at and each must remain an ancestor of the next and of
+  current HEAD (D0063 ruling 4), so a rebase across a receipt boundary reddens the gate;
+  a fast-forward cannot, because it invents no new commits for an old receipt to fail to
+  reach. Both receipt HEADs (bac005e, e6a9c8f) are ancestors of the new tip.
+  .
+  Performed without asking, per governance/policy.yaml in_repo_mechanics: "merging a
+  milestone branch into master once its gate is green" and "branching, rebasing,
+  fast-forwarding and resetting refs that carry no signature" are both named in `covers`.
+  No tag was created or moved — tag mechanics are in `excludes` and belong to the
+  delegation, not to this relaxation.
+rationale: >-
+  Recorded rather than done silently because of what the divergence meant while it lasted.
+  A fresh session opening M1 in the pre-existing m1 worktree would have found a tree whose
+  guards predate the sitting: no custody set, no Tier-C signature check, no required-tags
+  rule. `make verify` would have been green there, because those trees were green when they
+  were made — a green gate over the wrong custody floor, which is exactly the failure the
+  floor exists to prevent and the one it cannot self-report. The stale worktree was not a
+  tidiness problem; it was a second, weaker enforcement surface sitting on disk with the
+  same name as the real one.
+  .
+  The general shape, worth carrying: this repo's enforcement is entirely local (no remote,
+  no CI has ever run), so "the gate is green" is a claim about one working tree, not about
+  the project. Three worktrees mean three answers to the same question. Aligning them is
+  the cheapest way to keep that claim single-valued.
+reversibility: >-
+  Both moves are ref updates with no history rewrite, recoverable by `git reset --hard` to
+  the prior SHAs (master e6a9c8f, m1 4bb9b2f) which remain reachable through the reflog.
+  Nothing signed depends on where either ref points: the signatures are over tag objects,
+  files and their detached .sig companions, none of which a branch pointer can affect.
+status: accepted
+bindings:
+  - type: config
+    target: "governance/policy.yaml#in_repo_mechanics.tier"
+    strength: enforced
+    detail: >-
+      The clause that makes this a Tier-A act rather than a question. If it ever stops
+      saying A, this record's authority goes with it, and check_decisions resolves the key
+      on every run.
+links: ["D0048", "D0053", "D0063", "D0070", "D0071"]
