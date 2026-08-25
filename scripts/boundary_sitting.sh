@@ -102,7 +102,13 @@ sign_tier_c_records() {
     done < <(ls -1 decisions/*.yaml | sort)
     note "$signed record(s) signed this pass"
 }
-say "Step 1 — sign the Tier-C records (a one-way door decided by silence is not a door)"
+say "Step 1 — Tier-C records already recorded accepted (a safety net; usually empty)"
+note "Since D0064 the guard refuses a Tier-C record that says accepted without a"
+note "signature, so a committed repo cannot hold one. Anything found here reached"
+note "accepted in the WORKING TREE — worth looking at before signing it. The records"
+note "this sitting is convened to resolve are queued as blocked-on-owner and come up at"
+note "step 8, where accepting and signing are one act."
+note ""
 note "Signing pins the record's bindings too, so a later binding upgrade (D0045) needs a"
 note "re-signature. At Tier-C volume — five doors, owner-touched by definition — that is"
 note "the cheap side of the trade."
@@ -307,9 +313,20 @@ while IFS= read -r rec; do
     grep -q '^status: blocked-on-owner$' "$rec" || continue
     printf '\n'
     sed -n '1,/^rationale:/p' "$rec" | head -40
-    if confirm "Mark $(sed -n 's/^id: *//p' "$rec" | head -1) accepted (resolved by this sitting)?"; then
+    rec_id=$(sed -n 's/^id: *//p' "$rec" | head -1)
+    # Accepting and signing are ONE act, and it rolls back. Since D0064 a Tier-C record
+    # that says accepted without a signature reddens the gate, so flipping the status
+    # first and prompting for the key second would leave a declined signature — or a
+    # mistyped passphrase — with the repo in a state no guard permits.
+    if confirm "Accept and SIGN $rec_id (resolved by this sitting)?"; then
         sed -i 's/^status: blocked-on-owner$/status: accepted/' "$rec"
         rm -f "$rec.sig"
+        if ssh-keygen -Y sign -f "$KEYREF" -n tannen-decision "$rec" >/dev/null; then
+            note "accepted and signed: $rec.sig (namespace tannen-decision)"
+        else
+            sed -i 's/^status: accepted$/status: blocked-on-owner/' "$rec"
+            note "signature failed — $rec_id left blocked; nothing changed"
+        fi
     else
         note "left blocked — it will appear in the next digest's owner queue"
     fi

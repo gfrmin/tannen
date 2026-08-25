@@ -23,7 +23,7 @@ reversibility: >-
   One-way as a custody guarantee once applied and relied upon (weakening the
   custodian is itself a trust-root change); the patch text is trivially revisable
   until the owner applies it.
-status: accepted
+status: blocked-on-owner
 bindings:
   - type: file
     target: docs/proposals/2026-08-24-custodian-tag-ordering.md

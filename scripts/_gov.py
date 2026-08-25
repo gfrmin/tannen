@@ -228,6 +228,31 @@ def boundary_tag_dates(root: Path) -> list[dt.date]:
     return sorted(dates)
 
 
+def verify_owner_signature(root: Path, target: Path, namespace: str,
+                           signer: str = "owner@tannen") -> bool:
+    """True iff `<target>.sig` is a valid signature over the whole bytes of `target`.
+
+    The two arguments easy to omit are exactly the two that make the call vacuous:
+    without `-I` any principal enrolled in allowed_signers passes, and without `-n` a
+    signature taken for one purpose verifies for another. Both are required here, so a
+    caller cannot drop one by accident.
+
+    Absent and invalid are deliberately the same answer, for callers that only need the
+    verdict; check_manifest and check_receipts keep their own longer form because they
+    distinguish the two cases in what they report. Treating "absent" as the softer
+    failure of the two is RT-04 — a signature that is optional is not a signature.
+    """
+    sig = target.with_name(target.name + ".sig")
+    signers = root / "allowed_signers"
+    if not sig.exists() or not signers.exists():
+        return False
+    return subprocess.run(
+        ["ssh-keygen", "-Y", "verify", "-f", str(signers), "-I", signer,
+         "-n", namespace, "-s", str(sig)],
+        input=target.read_bytes(), capture_output=True,
+    ).returncode == 0
+
+
 def owner_key_enrolled(root: Path) -> bool:
     """True iff allowed_signers carries a non-comment owner@tannen key line."""
     signers = root / "allowed_signers"

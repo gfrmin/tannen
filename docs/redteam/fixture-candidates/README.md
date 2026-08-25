@@ -20,7 +20,7 @@ Findings are `RT-nn` from `docs/redteam/2026-08-24-m0-boundary.md`.
 | `check-decisions-nested-hatch/` | `scripts/check_decisions.py` (pytest bindings) | RT-08 | **yes** (pins the pytest-binding tooth; the hatch itself needs a call-site fix, not a fixture) |
 | `check-manifest-sealed/` | `scripts/check_manifest.py` (sealed-paths check) | RT-01, RT-03, RT-13 | **yes** (patch landed, D0056) |
 | `check-manifest-unsigned-policy/` | `scripts/check_manifest.py` (required-signature check) | RT-04 | **yes** (patch landed, D0056) |
-| `check-decisions-unsigned-tier-c/` | `scripts/check_decisions.py` (Tier-C signature check) | RT-06 | needs patch — lands mid-sitting, after the records are signed |
+| `check-decisions-unsigned-tier-c/` | `scripts/check_decisions.py` (Tier-C signature check) | RT-06 | **yes** — the guard landed 2026-08-25 (D0064); a `git mv` plus one manifest row |
 | `custodian-tag-signer/` | `scripts/check_tag_signers.py` | D0049's open ask **and** RT-15 | **yes** — one bundle, two teeth (renamed from `custodian-tag-signer/`, 2026-08-25) |
 
 ---
@@ -333,7 +333,7 @@ fi
 
 ---
 
-## `check-decisions-unsigned-tier-c/` — **needs patch** — a Tier-C door walked through by assertion
+## `check-decisions-unsigned-tier-c/` — a Tier-C door walked through by assertion
 
 **Guard:** `scripts/check_decisions.py` (new Tier-C signature check).
 
@@ -355,11 +355,16 @@ only when their effective status is `blocked-on-owner` — so a Tier-C record th
 uv run python scripts/check_decisions.py --root tests/poison/check-decisions-unsigned-tier-c
 ```
 
-**Verified** (2026-08-24): today this command exits 1 for the *wrong* reason (missing
-`DECISIONS.md`) and the marker is absent — the fixture reproduces the hole. Install it
-with the patch.
+**Verified** (2026-08-24): before the patch this command exited 1 for the *wrong* reason
+(missing `DECISIONS.md`) and the marker was absent — the fixture reproduced the hole.
 
-**Patch — `scripts/check_decisions.py`, inside the per-record loop:**
+**Verified** (2026-08-25, after D0064 landed the guard): exit 1 with the marker present,
+alongside the pre-existing `DECISIONS.md` failure. Ready to install as a `git mv`.
+
+**Patch — LANDED 2026-08-25 (D0064).** Shipped shape differs from the draft below in
+two ways: the verification call moved to `_gov.verify_owner_signature`, which requires
+`-I` and `-n` so no call site can drop the arguments that would make it vacuous; and the
+exempt statuses are a named constant, `TIER_C_UNSIGNED_OK`. The draft, for the record:
 
 ```python
         # Tier C is affirmative signature only (BRIEF §9.2). A record cannot grant
@@ -379,9 +384,12 @@ with the patch.
                 )
 ```
 
-**Companion digest patch — `scripts/gen_projections.py`:** surface *every* Tier-C
-record in the owner queue, not only `blocked-on-owner` ones, and add `tier == "C"` to
-the always-shown set alongside `risk_flags`:
+**Companion digest patch — `scripts/gen_projections.py`: LANDED with it.** Surfacing
+*every* Tier-C record in the owner queue, not only `blocked-on-owner` ones — the queue
+was defined by absence, so the unsigned claim was the one case it never showed. Shipped
+with two additions: each line states whether the record is `owner-signed` or `UNSIGNED`,
+and the decision `.sig` files joined the digest's input hash, or a signature appearing or
+vanishing would change what the digest says while leaving it "fresh". Draft:
 
 ```python
     for rec in records:

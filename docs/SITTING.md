@@ -43,6 +43,19 @@ install its poison, watch the poison fail, *then* sign the tag the rule is about
 | `receipts/<date>.md` | `tannen-receipt` | Presence. Tier-B silence-as-consent is valid only under a fresh receipt (BRIEF §9.1). |
 | `<milestone>-close` | git tag | The boundary itself. The builder signs the `*-laws-freeze` tags that *start* the consent clock, so the close that anchors presence stays the owner's (D0049). |
 
+Since D0064 the first row is enforced, which changes how a Tier-C record reads between
+sittings. `blocked-on-owner` is its resting state — not a flag that something went wrong,
+but the honest description of a door nobody has walked through yet — and the guard refuses
+any Tier-C record claiming otherwise without a signature beside it. So accepting and
+signing are one act (step 8 does them together and rolls back if the signature does not
+happen), and a record you decline stays queued to the next sitting without reddening
+anything. Nothing about leaving one queued blocks other work; that is §9.2's non-blocking
+rule, and it is why the queue can be read at leisure.
+
+Signatures cover a record's whole bytes, so a later binding upgrade (D0045) invalidates
+one and it is re-signed at the next sitting. That cost was accepted deliberately: on a
+one-way door, re-attesting after the enforcement changes is content, not ceremony.
+
 ## The custody set, and why `MANIFEST.sha256` is not signed
 
 The obvious move — sign the manifest — is wrong, and worth stating so it is not

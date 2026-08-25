@@ -9,6 +9,8 @@ load-bearing; CI fails if a binding's target is missing or skipped. This check:
     collects and is not skipped / path listed in MANIFEST.sha256);
   - flags unbound records as `unenforced` (acceptable only with a stated reason —
     the schema requires one, so a bare unbound record fails);
+  - requires an owner signature on every Tier-C record that claims its door (BRIEF
+    §9.2: affirmative signature only, never silence — RT-06);
   - computes Tier-B veto clocks (expiry transitions effective status mechanically;
     the record file is never edited);
   - enforces the ratchet (BRIEF §9.1 point 4): neither the unenforced count nor the
@@ -53,10 +55,17 @@ from _gov import (  # noqa: E402
     receipt_state,
     resolve_dotted,
     schema_errors,
+    verify_owner_signature,
     REPO_ROOT,
 )
 
 FILENAME_RE = re.compile(r"^(\d{4})-[a-z0-9]+(-[a-z0-9]+)*$")
+
+#: Tier-C statuses that need no owner signature, because the record is not claiming the
+#: door: it is queued, refused, or replaced. Every other status — `accepted`, and a
+#: `provisional` that would consent by silence — asserts that a one-way door was walked
+#: through, and BRIEF §9.2 says only the owner's key can assert that.
+TIER_C_UNSIGNED_OK = ("blocked-on-owner", "rejected", "superseded")
 
 #: A pytest binding may legitimately target a test that runs THIS script — that is how
 #: "the guard is actually wired in" gets asserted. Resolving bindings inside such a run
@@ -196,6 +205,8 @@ def main() -> int:
     seen_ids: set[str] = set()
     unenforced: list[str] = []
     clocks: list[str] = []
+    tier_c_signed: list[str] = []
+    tier_c_queued: list[str] = []
     valid_records: list[dict] = []
     pytest_bindings: dict[str, list[str]] = {}
 
@@ -229,6 +240,26 @@ def main() -> int:
                 fail.add(f"{rel}: binding does not resolve — {problem}")
         if not record["bindings"]:
             unenforced.append(f"{rid} ({record['title']}): {record['unenforced_reason']}")
+
+        if record["tier"] == "C":
+            # RT-06. Nothing used to stop a record granting itself a one-way door by
+            # writing `accepted` in its own status field, and the digest surfaced Tier-C
+            # records only while they said `blocked-on-owner` — so such a record was
+            # invisible in every projection the owner reads. The signature is over the
+            # record's whole bytes (D0063 ruling 2), which is why a later binding change
+            # costs a re-signature: what was vouched for is the file, not a summary of it.
+            if record["status"] in TIER_C_UNSIGNED_OK:
+                tier_c_queued.append(rid)                # queued, refused or replaced
+            elif verify_owner_signature(root, path, "tannen-decision"):
+                tier_c_signed.append(rid)
+            else:
+                fail.add(
+                    f"{rel}: Tier-C record accepted without an owner signature — "
+                    f"{path.name}.sig is missing or does not verify as owner@tannen "
+                    "under namespace tannen-decision. BRIEF §9.2: affirmative signature "
+                    "only, never silence. Record it `blocked-on-owner` until the next "
+                    "boundary sitting; nothing about that blocks other work."
+                )
 
         if record["tier"] == "B" and record["status"] == "provisional":
             veto_by = dt.date.fromisoformat(record["veto_by"])
@@ -265,6 +296,9 @@ def main() -> int:
         print(f"  veto clock: {line}")
     for line in unenforced:
         print(f"  unenforced (visible debt): {line}")
+    if tier_c_queued:
+        print(f"  Tier-C doors queued to the next boundary sitting (non-blocking): "
+              f"{', '.join(tier_c_queued)}")
     enforced_n, documentary_n = binding_strengths(valid_records)
     pytest_verdict = (
         f"{len(pytest_bindings)} pytest binding(s) NOT CHECKED (nested run)"
@@ -274,7 +308,9 @@ def main() -> int:
         f"{len(record_paths)} records valid; {pytest_verdict}; "
         f"{len(unenforced)} unenforced (with reasons); "
         f"{enforced_n} enforced / {documentary_n} documentary binding(s); "
-        f"{len(clocks)} Tier-B clock(s) computed; DECISIONS.md fresh"
+        f"{len(clocks)} Tier-B clock(s) computed; "
+        f"{len(tier_c_signed)} Tier-C door(s) owner-signed, {len(tier_c_queued)} queued; "
+        "DECISIONS.md fresh"
     )
 
 

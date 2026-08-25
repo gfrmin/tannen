@@ -35,7 +35,7 @@ reversibility: >-
   reversible is the counterfactual: close tags minted by the builder cannot be
   un-minted from the record, and every receipt clock they anchored stays anchored to a
   self-issued attestation.
-status: accepted
+status: blocked-on-owner
 bindings:
   - type: file
     target: DELEGATIONS.md

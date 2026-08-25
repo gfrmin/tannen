@@ -54,7 +54,7 @@ reversibility: >-
   standing costs are deliberate: guard changes now batch to sittings (custody set),
   Tier-C binding upgrades need a re-signature, and `git commit --amend` or a rebase across
   a receipt boundary turns the gate red — which is the receipt chain doing its job.
-status: accepted
+status: blocked-on-owner
 bindings:
   - type: config
     target: governance/tier-c.yaml#custody.set
@@ -68,6 +68,13 @@ bindings:
       ENFORCED (ruling 3): the contracts are frozen and in the custody set, so narrowing
       source_modules or adding ignore_imports is no longer a normal builder edit. The
       contract-SHAPE check in check_manifest reads this file and fails on either.
+  - type: pytest
+    target: tests/test_tier_c_signatures.py
+    detail: >-
+      ENFORCED (ruling 2): per-record whole-byte signatures are what check_decisions now
+      requires of every Tier-C record claiming its door, and what these tests hold it to —
+      including the re-signature cost the ruling accepted, which is asserted rather than
+      merely described (D0064).
   - type: pytest
     target: tests/test_receipt_chain.py
     detail: >-

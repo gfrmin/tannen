@@ -35,6 +35,7 @@ from _gov import (  # noqa: E402
     GEN_MARKER,
     binding_strengths,
     effective_status,
+    verify_owner_signature,
     input_hash,
     load_yaml,
     previous_metrics,
@@ -90,6 +91,18 @@ def gen_concepts(root: Path) -> str:
         lines += ["", "## S-pending"]
         lines += [f"- **{r['id']}**: {r['conformance']['pending_reason']}" for r in pend]
     return "\n".join(lines) + "\n"
+
+
+def gist(text: str, limit: int = 220) -> str:
+    """A one-line opening for the digest, which is read at a sitting and is meant to be
+    exception-only. DECISIONS.md carries every record in full; repeating a folded
+    paragraph here buries the exceptions in the thing that was supposed to surface them.
+    Truncation is on a word boundary and always visible, so nothing reads as complete
+    when it is not."""
+    line = " ".join(text.strip().split())
+    if len(line) <= limit:
+        return line
+    return line[:limit].rsplit(" ", 1)[0] + " […]"
 
 
 def load_decisions(root: Path) -> tuple[list[Path], list[dict]]:
@@ -181,6 +194,10 @@ def gen_digest(root: Path, today: dt.date) -> str:
             root / "governance" / "policy.yaml",
         ) if p.exists()
     ]
+    # Tier-C signatures are digest CONTENT (below), so they are digest INPUT: without
+    # them a signature appearing or being deleted changes what this file says while
+    # leaving its input-hash — and therefore the freshness check — undisturbed.
+    extra_inputs += sorted((root / "decisions").glob("*.yaml.sig"))
     if (root / "receipts").is_dir():
         extra_inputs += sorted((root / "receipts").glob("*.md*"))
     inputs = decision_paths + concept_paths + extra_inputs
@@ -231,9 +248,24 @@ def gen_digest(root: Path, today: dt.date) -> str:
                 "blocked, not consented; blocks accumulate and work pauses at the next "
                 f"milestone boundary (BRIEF §9.1): {', '.join(r['id'] for r in blocked_b)}."
             )
+    # EVERY Tier-C record, not only the ones still recorded `blocked-on-owner` (RT-06).
+    # A record that says `accepted` is claiming a one-way door, and whether that claim
+    # carries the owner's key is the single most useful thing this section can say; a
+    # queue defined by absence made the unsigned claim the one case it never showed.
+    # The population stays small by construction — there are five doors (§9.2).
+    # <seq> in the filename equals <seq> in the id — check_decisions enforces it, so the
+    # mapping needs no second parse of every record.
+    by_id = {f"D{q.stem[:4]}": q for q in decision_paths}
     for rec in records:
-        if rec["tier"] == "C" and effective_status(rec, today, receipts_fresh) == "blocked-on-owner":
-            owner_items.append(f"**{rec['id']}** {rec['title']}: {rec['decision'].strip().splitlines()[0]}")
+        if rec["tier"] != "C":
+            continue
+        path = by_id.get(rec["id"])
+        signed = path is not None and verify_owner_signature(root, path, "tannen-decision")
+        owner_items.append(
+            f"**{rec['id']}** [{effective_status(rec, today, receipts_fresh)}; "
+            f"{'owner-signed' if signed else 'UNSIGNED'}] {rec['title']}: "
+            f"{gist(rec['decision'])}"
+        )
 
     unenforced = [r for r in records if not r["bindings"]]
     unenforced_count, residue_count = ratchet_metrics(records, concepts)

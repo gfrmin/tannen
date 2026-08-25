@@ -1,0 +1,62 @@
+id: D0064
+title: "Tier-C records must carry the owner's signature, and three of ours did not"
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  RT-06 closes. scripts/check_decisions.py now fails when a `tier: C` record records any
+  status other than blocked-on-owner / rejected / superseded without a valid
+  `<record>.yaml.sig` verifying as owner@tannen under namespace tannen-decision; the
+  verification primitive is _gov.verify_owner_signature, which requires both -I and -n so
+  no caller can drop the two arguments that would make it vacuous. Companion change in
+  scripts/gen_projections.py: the digest's owner queue lists EVERY Tier-C record with its
+  effective status and whether it is signed, instead of only those recorded
+  blocked-on-owner, and the decision `.sig` files join the digest's input hash so a
+  signature appearing or vanishing cannot change what the digest says while leaving it
+  "fresh". Three existing records — D0036, D0049 and D0063 — recorded `status: accepted`
+  with no signature beside them, and are set to `blocked-on-owner`, which is what they
+  actually are. The boundary sitting's step 8 is where they become accepted, by signature.
+rationale: >-
+  RT-06 is the finding that BRIEF §9.2's "affirmative signature only, never silence" was
+  enforced by nothing: a record could grant itself a one-way door by writing `accepted` in
+  its own status field, and because the digest's owner queue was defined by ABSENCE — it
+  showed Tier-C records only while they still said blocked-on-owner — the one case that
+  needed surfacing was the one case it never showed. Fixing the guard without fixing the
+  query would have left the second half open, so both land together. On the three records:
+  their substance was decided by the owner in conversation, and the missing thing is the
+  form, which is the entire point of the finding. A builder cannot supply the form, so the
+  choice is between a file that asserts consent it cannot evidence and a file that says it
+  is waiting. Downgrading a status is safe in the direction a builder may move — it
+  withdraws a claim rather than granting authority — and the reverse move needs the key,
+  which is exactly the asymmetry the tier exists to create. This is deliberately NOT a
+  grandfather clause: the conferral rejected exempting existing records by date or by id,
+  because an exemption list is a second door with no signature on it, and because the
+  three records are the guard's first real test rather than an awkward exception to it.
+  The ordering hazard is real and was met head-on: the guard cannot land before the
+  signatures exist without reddening the gate and blocking the builder's own commit, and
+  the signatures cannot be taken meaningfully before the guard exists — the driver's step
+  2 pauses for exactly this handoff. Making the records honest breaks the deadlock without
+  weakening either end.
+reversibility: >-
+  Delete the check and the test; a one-file revert. The standing cost is that a Tier-C
+  binding upgrade now needs a re-signature, since the signature covers whole bytes
+  (D0063 ruling 2), and that Tier-C records reach `accepted` only at a sitting.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_tier_c_signatures.py
+    detail: >-
+      ENFORCED. Seven hermetic tests with ephemeral owner and builder keys: a signed
+      record passes; an unsigned one cannot accept itself; a builder signature does not
+      open an owner door (the -I argument); a signature from another namespace does not
+      carry over (the -n argument); editing a record after signing breaks it; a
+      blocked-on-owner record needs no signature; Tier A and B are untouched.
+  - type: file
+    target: docs/redteam/fixture-candidates/check-decisions-unsigned-tier-c/decisions/0001-poison-tier-c-accepted.yaml
+    detail: >-
+      The poison fixture that proves the guard still bites. tests/poison/ is author-key
+      territory (BRIEF §9.1), so it stays a candidate until the owner installs it at step
+      5 of the sitting; the custodian replacement already carries its poison line and
+      marker. Verified 2026-08-25: the guard exits 1 against this root with the marker
+      present.
+links: ["D0036", "D0045", "D0049", "D0056", "D0060", "D0063"]
