@@ -1,0 +1,40 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0075
+title: The rel/1 canonical form, and what "zero annotations absent" means under a product
+tier: A
+date: "2026-08-25"
+risk_flags: [ref-grammar]
+decision: >-
+  A Rel's canonical value is
+  {"tannen": "rel/1", "schema": [sorted column names], "semiring": <name>,
+  "rows": [[row, semiring.encode(annotation)], ...]} with rows sorted by the canonical
+  bytes of each row, and its identity is the content address of that value. Row identity
+  IS the row's canonical encoding, so Decimal("1.50")/Decimal("1.5") and NFD/NFC spellings
+  merge and their annotations add. A row whose annotation is the semiring's zero is dropped
+  at construction. "Zero" means the semiring's zero and nothing else: under ℤ × Why the
+  annotation (0, {{r}}) is NOT zero and its row is RETAINED, while having no bag image
+  because its multiplicity is 0 * 1 = 0. annotations_reason is not part of the canonical
+  form. Thirteen (canonical bytes, address) pairs are frozen in golden-rels.json, computed
+  by Session A against the M0 encoder.
+rationale: >-
+  This is the encoding M1's kill criterion is about, so it is pinned by hash rather than by
+  prose. The (0, {{r}}) case is the one the handoff plan never mentions and the one a naive
+  "drop empty rows" rule gets wrong: privileging the ℤ component would make Rel non-generic
+  in its semiring, which is the single thing BRIEF P4 exists to provide. Dropping by the
+  product zero instead makes the awkward case fall out of `product` being componentwise
+  rather than being special-cased. The golden addresses were computed with the shipped M0
+  encoder against short canonical strings that can be checked by eye.
+reversibility: >-
+  One-way in practice: the address of every Rel, every derivation and every stored output
+  depends on this shape, and the store has no delete. A change is a new tag ("rel/2") plus
+  a descriptor bump, never an edit.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/golden-rels.json
+    detail: The frozen oracle for the shape — thirteen addresses, including the zero-drop, the decimal and NFC merges, and the retained (0, {{r}}) row.
+  - type: manifest
+    target: tests/laws/m1/test_l1_rel.py
+    detail: L1.4 builds each vector and asserts its canonical bytes and address.
+links:
+  - docs/specs/m1.md §3, §3.1

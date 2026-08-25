@@ -1,0 +1,35 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0085
+title: Lossy quantises over exact rationals to the nearest grid multiple, ties to even
+tier: A
+date: "2026-08-25"
+decision: >-
+  Lossy(grid) maps a finite float to the nearest INTEGER MULTIPLE of grid, ties to the even
+  multiple, returning that multiple as an exact Decimal. The arithmetic is over exact
+  rationals, never through a rounded intermediate. grid must be a finite positive Decimal —
+  an int or str grid is refused, not coerced. NaN, ±Infinity and non-floats are refused by
+  name. A Lossy is not itself an encodable value; Lossy.to_value() is {"grid": <Decimal>}
+  so a transform's params_hash prices the grid.
+rationale: >-
+  Two plausible wrong answers, both ruled out. (1) Routing the float through repr first
+  would send 1.005 to 1.02, but the float IS 1.00499..., so repr is a second hidden lossy
+  step inside the one construct whose entire job is to make loss explicit; exact-rational
+  rounding sends it to 1.00. (2) Decimal.quantize rounds to an EXPONENT, so it cannot
+  express a grid of 0.25 at all — and dividing in the ambient decimal context would let the
+  28-digit default precision silently round the quotient, the same trap
+  tannen.kernel.encoding already met with Decimal.normalize. docs/specs/m0.md §2 promised
+  this door would arrive with the Rel layer; this is it.
+reversibility: >-
+  Changing the rounding rule changes values that have been hashed into Rels. Descriptor
+  bump, never an edit.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_lossy.py
+    detail: >-
+      L1.6 pins worked examples verified before the freeze (1.005 -> 1.00, 2.675 -> 2.67,
+      1.125 on a 0.25 grid -> 1.00), asserts the result is an exact multiple and the
+      nearest one over Fractions, and asserts a Lossy is not canonically encodable.
+links:
+  - BRIEF.md §5.8, P7
+  - docs/specs/m0.md §2 (the promise this keeps)

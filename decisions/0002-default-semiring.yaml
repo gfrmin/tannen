@@ -14,9 +14,16 @@ reversibility: >-
   A different default changes what un-annotated pipelines compute; existing explicit
   annotations are unaffected. One-line default change plus regenerated goldens.
 status: accepted
-bindings: []
-unenforced_reason: >-
-  pre-M0: binds to the M1 Rel constructor-default property test (a pipeline built with
-  no annotation argument carries ℤ × Why).
+bindings:
+  # Added at the M1 laws freeze (D0045: bindings may be added; the decision itself stays
+  # immutable). The unenforced_reason this replaces read "pre-M0: binds to the M1 Rel
+  # constructor-default property test" — which is the artifact below, now frozen.
+  - type: manifest
+    target: tests/laws/m1/test_l1_rel.py
+    strength: enforced
+    detail: >-
+      L1.5 asserts a Rel built with no annotation argument carries Z*Why, that any other
+      explicit choice without annotations_reason raises, and that the reason is absent from
+      the canonical bytes. Session B upgrades this to a pytest binding when the law is green.
 links:
   - "BRIEF.md §5.5, §9, P4"

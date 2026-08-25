@@ -1,0 +1,41 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0087
+title: The DBSP paper and the Lean formalisation pinned by edition, version and commit
+tier: A
+date: "2026-08-25"
+decision: >-
+  docs/specs/m1.md §0.1 pins the reference semantics BRIEF §4 and §11 name but never
+  identified. NORMATIVE: DBSP, PVLDB vol 16 no 7, pp 1601-1614 (2023), DOI
+  10.14778/3587136.3587137 — normative because "VLDB 2023" is what the frozen constitution
+  names. Archival preprint: arXiv:2203.16684v1, 30 Mar 2022 (arXiv holds exactly one
+  version of this paper, so v1 is fully determinate). EXPLICITLY out of scope by name: the
+  2025 VLDB Journal version, DOI 10.1007/s00778-025-00922-y. Lean formalisation:
+  github.com/tchajed/database-stream-processing-theory, branch main, commit fb6ff4416108
+  (2023-08-22). Also pinned: Green-Karvounarakis-Tannen PODS 2007 and Build Systems à la
+  Carte (ICFP 2018). NO concept record is created for any of them.
+rationale: >-
+  There are three different DBSP texts and nothing in-repo said which one the laws were
+  written against, so "ambiguity resolved by the Lean formalisation" had no referent. No
+  concept record, and that is forced rather than chosen: BRIEF §2's registry covers the
+  CONSTELLATION, and these are third-party prior art with no repo of frozen artifacts to
+  adopt by reference. The Lean repository additionally carries no licence (GitHub reports
+  NOASSERTION), so vendoring it would be a licensing act — Tier C. The operative
+  consequence is that the spec must not write [cites: ...] for any of them, since
+  scripts/check_concepts.py fails a citation that does not resolve to a registered concept;
+  they are plain prose citations, and where they are silent BRIEF §4's pinning-property-test
+  rule governs instead.
+reversibility: >-
+  Re-pinning to a later edition is a decision record plus a spec supersession, and would
+  need the laws re-read against the new text. Nothing hashes these.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m1.md
+    detail: §0.1 carries the pins and the precedence; the frozen path holds them byte-exact.
+  - type: pytest
+    target: tests/test_conformance.py
+    detail: >-
+      The concept-registry conformance suite — the guard that would fail if these were
+      smuggled in as [cites:] markers instead of prose citations.
+links:
+  - BRIEF.md §4, §11

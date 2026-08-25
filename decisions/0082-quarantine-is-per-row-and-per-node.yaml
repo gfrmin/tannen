@@ -1,0 +1,33 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0082
+title: Quarantine is per-row for row-wise operators, per-node otherwise; BaseException escapes
+tier: A
+date: "2026-08-25"
+decision: >-
+  Outcome = Ok(rel, quarantined, operators) | Quarantine(reason, detail, provenance,
+  operators). An Exception raised by a predicate, a map function or an aggregate's value_of
+  quarantines THAT ROW and leaves the rest processed; `quarantined` is a Rel over the same
+  semiring with schema ("detail", "operator", "reason", "row"), each row annotated one. A
+  failure not attributable to a row gives Quarantine, and a Quarantine input propagates,
+  naming its upstream. A transform that raises on EVERY row still yields Ok with an empty
+  rel — empty is a declared, distinguishable outcome (BRIEF P3), not a failure. Only
+  Exception is wrapped: BaseException crosses the node boundary untouched.
+rationale: >-
+  BRIEF P3 says a node yields Ok | Quarantine while §8's decode layer is described as
+  "total map/filter, quarantine-producing" — which only works if a bad row can be
+  quarantined without failing the node. Both readings are satisfied by carrying the
+  quarantined rows on the Ok. The BaseException carve-out is not a detail: wrapping
+  KeyboardInterrupt or SystemExit would make a process unkillable inside a transform, and
+  those are control-flow signals rather than data errors. Distinguishing "empty" from
+  "failed" is what makes the lazy path — just raise — the correct path.
+reversibility: >-
+  The quarantine schema is a Rel schema like any other; widening it is a descriptor bump.
+  The Exception/BaseException split is a one-line change either way.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_quarantine.py
+    detail: L1.11 pins per-row quarantine, empty-is-not-quarantine, the BaseException escape, propagation, and that quarantined rows union through the pure operators.
+links:
+  - BRIEF.md P3, §5.4
+  - docs/specs/m1.md §5

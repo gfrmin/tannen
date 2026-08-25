@@ -41,25 +41,35 @@ def _isolated_from_the_ambient_evidence_store(monkeypatch: pytest.MonkeyPatch) -
     """
     monkeypatch.delenv("TANNEN_EVIDENCE_ROOT", raising=False)
 
-def spec_law_table() -> dict[str, str]:
-    """The law table of the frozen spec §5, as {law id: file}."""
-    rows = re.findall(r"^\|\s*(L0\.\d+)\s*\|.*\|\s*`([^`]+)`\s*\|\s*$", SPEC.read_text(encoding="utf-8"), re.M)
+def spec_law_table(milestone: str = "m0") -> dict[str, str]:
+    """The law table of a frozen milestone spec, as {law id: file}.
+
+    Tolerates a trailing column: M0's table is (law, statement, file) and M1's adds a
+    "discharges" column, so the file cell is matched as the third one rather than the last.
+    """
+    spec = REPO_ROOT / "docs" / "specs" / f"{milestone}.md"
+    rows = re.findall(
+        r"^\|\s*(L\d+\.\d+)\s*\|[^|]*\|\s*`([^`|]+)`\s*\|",
+        spec.read_text(encoding="utf-8"),
+        re.M,
+    )
     return {law: file for law, file in rows}
 
 
-def test_discovery_matches_the_frozen_spec_table() -> None:
+@pytest.mark.parametrize("milestone", ["m0", "m1"])
+def test_discovery_matches_the_frozen_spec_table(milestone: str) -> None:
     """The runner's law set is the spec's law set — checked, not assumed.
 
     Discovery reads the frozen test files; the spec table is prose in a frozen document.
     If they ever disagree, one of them is wrong and the report would silently attest the
     wrong set, so the disagreement is a test failure instead.
     """
-    table = spec_law_table()
-    assert table, "could not parse the law table out of docs/specs/m0.md §5"
-    discovered = discovery.discover_laws(REPO_ROOT, "m0")
+    table = spec_law_table(milestone)
+    assert table, f"could not parse the law table out of docs/specs/{milestone}.md"
+    discovered = discovery.discover_laws(REPO_ROOT, milestone)
     assert sorted(discovered, key=discovery.law_sort_key) == sorted(table, key=discovery.law_sort_key)
     for law, filename in table.items():
-        assert sorted(discovered[law]) == [f"tests/laws/m0/{filename}"]
+        assert sorted(discovered[law]) == [f"tests/laws/{milestone}/{filename}"]
 
 
 def test_law_ids_sort_numerically() -> None:
@@ -69,8 +79,9 @@ def test_law_ids_sort_numerically() -> None:
 
 
 def test_milestone_labels() -> None:
-    assert discovery.milestones(REPO_ROOT) == ["m0"]
+    assert discovery.milestones(REPO_ROOT) == ["m0", "m1"]
     assert discovery.milestone_label("m0") == "M0"
+    assert discovery.milestone_label("m1") == "M1"
     assert discovery.milestone_label("m5b") == "M5b"
     with pytest.raises(ValueError):
         discovery.milestone_label("laws")
@@ -172,8 +183,15 @@ def report_for(root: Path) -> dict:
     return report.build_report(root, None)
 
 
-def test_report_is_stale_without_evidence(tree: Path) -> None:
-    evidence_tree(tree)
+def test_report_is_stale_when_a_live_milestone_has_no_matching_record(tree: Path) -> None:
+    # A milestone that has produced SOME evidence is live, so a law without a record for
+    # the current descriptor is stale and fails. (With no evidence at all the milestone is
+    # pending instead — see the frozen-but-not-yet-implemented tests below.)
+    evidence = evidence_tree(tree)
+    evidence.put(build_record(
+        law_id="L0.1", milestone="M0", verdict="pass",
+        descriptors=["sha256:" + "9" * 64], seed=None,   # not the current descriptor
+    ))
     result = report_for(tree)
     assert result["ok"] is False
     assert [law["status"] for law in result["laws"]] == [report.STALE]
@@ -219,7 +237,7 @@ def test_disagreeing_verdicts_for_one_descriptor_read_as_flaky(tree: Path) -> No
 
 
 def test_the_report_over_the_real_repo_is_well_formed() -> None:
-    """Ten laws, no corrupt records.
+    """Every milestone's frozen law table, no corrupt records.
 
     Freshness itself is deliberately NOT asserted here: this run's own evidence is
     written at session finish, so a law can only be fresh from a previous run. The
@@ -228,10 +246,79 @@ def test_the_report_over_the_real_repo_is_well_formed() -> None:
     """
     result = report_for(REPO_ROOT)
     assert not result["problems"], result["problems"]
-    assert [law["law_id"] for law in result["laws"]] == sorted(
-        spec_law_table(), key=discovery.law_sort_key
+    expected = [
+        law
+        for milestone in discovery.milestones(REPO_ROOT)
+        for law in sorted(spec_law_table(milestone), key=discovery.law_sort_key)
+    ]
+    assert [law["law_id"] for law in result["laws"]] == expected
+    assert {law["milestone"] for law in result["laws"]} == {
+        discovery.milestone_label(m) for m in discovery.milestones(REPO_ROOT)
+    }
+
+
+# ------------------------------------------- frozen-but-not-yet-implemented (BRIEF §8)
+
+
+def test_a_milestone_with_no_evidence_at_all_is_pending_not_stale(tree: Path) -> None:
+    """The frozen-oracle protocol guarantees this state at every milestone boundary.
+
+    Before this rule, freezing a milestone's laws turned `make verify` red for the whole
+    of the next Session B — halting before lint-imports and the custodian, so the custody
+    floor went unchecked — and the report claimed the law file "moved since the last run"
+    about a law that had never had an implementation to move.
+    """
+    evidence_tree(tree)
+    result = report_for(tree)
+    assert [law["status"] for law in result["laws"]] == [report.PENDING]
+    assert result["pending_milestones"] == ["M0"]
+    assert result["ok"] is True
+    assert "FROZEN, NOT YET IMPLEMENTED" in report.render(result)
+
+
+def test_one_record_ends_pending_and_a_half_implemented_milestone_is_red(tree: Path) -> None:
+    """The load-bearing half: pending must not be a place to hide in.
+
+    A milestone is pending only while it has produced NO evidence whatsoever. The first
+    law that runs makes it live, and every other law in it is then STALE and fails — so
+    a half-finished milestone can never read green.
+    """
+    evidence_tree(tree)
+    second = tree / "tests" / "laws" / "m0" / "test_l0_second.py"
+    second.write_text("def test_l0_2_second_law() -> None:\n    assert True\n", encoding="utf-8")
+    assert set(discovery.discover_laws(tree, "m0")) == {"L0.1", "L0.2"}
+
+    assert report_for(tree)["ok"] is True  # both pending: nothing has run
+
+    evidence_tree(tree).put(build_record(
+        law_id="L0.1", milestone="M0", verdict="pass",
+        descriptors=[descriptor_of(tree)], seed=None,
+    ))
+
+    result = report_for(tree)
+    assert result["pending_milestones"] == []
+    statuses = {law["law_id"]: law["status"] for law in result["laws"]}
+    assert statuses == {"L0.1": report.FRESH, "L0.2": report.STALE}
+    assert result["ok"] is False, "a half-implemented milestone must not read green"
+
+
+def test_a_pending_milestone_does_not_mask_a_live_one(tree: Path) -> None:
+    """Pending is per-milestone, not global: M0 live and stale still fails while M1 waits."""
+    evidence_tree(tree)
+    (tree / "tests" / "laws" / "m1").mkdir(parents=True)
+    (tree / "tests" / "laws" / "m1" / "test_l1_1_demo.py").write_text(
+        "def test_l1_1_demo() -> None:\n    assert True\n", encoding="utf-8"
     )
-    assert all(law["milestone"] == "M0" for law in result["laws"])
+    evidence_tree(tree).put(build_record(
+        law_id="L0.1", milestone="M0", verdict="pass",
+        descriptors=["sha256:" + "9" * 64], seed=None,   # a descriptor that is not current
+    ))
+    result = report_for(tree)
+    assert result["pending_milestones"] == ["M1"]
+    statuses = {law["law_id"]: law["status"] for law in result["laws"]}
+    assert statuses["L0.1"] == report.STALE
+    assert statuses["L1.1"] == report.PENDING
+    assert result["ok"] is False
 
 
 # ------------------------------------------------------------------ emission
@@ -307,6 +394,10 @@ def test_cli_exit_codes(tree: Path, capsys: pytest.CaptureFixture) -> None:
     from tannen.cli import main
 
     evidence = evidence_tree(tree)
+    evidence.put(build_record(
+        law_id="L0.1", milestone="M0", verdict="pass",
+        descriptors=["sha256:" + "9" * 64], seed=None,   # live milestone, stale law
+    ))
     assert main(["laws", "report", "--root", str(tree)]) == 1
     assert "NO FRESH EVIDENCE" in capsys.readouterr().out
 
@@ -321,10 +412,14 @@ def test_cli_exit_codes(tree: Path, capsys: pytest.CaptureFixture) -> None:
 def test_cli_json_output(tree: Path, capsys: pytest.CaptureFixture) -> None:
     from tannen.cli import main
 
-    evidence_tree(tree)
+    evidence_tree(tree).put(build_record(
+        law_id="L0.1", milestone="M0", verdict="pass",
+        descriptors=["sha256:" + "9" * 64], seed=None,   # live milestone, stale law
+    ))
     main(["laws", "report", "--root", str(tree), "--json"])
     payload = json.loads(capsys.readouterr().out)
     assert payload["laws"][0]["law_id"] == "L0.1"
+    assert payload["pending_milestones"] == []
     assert payload["ok"] is False
 
 

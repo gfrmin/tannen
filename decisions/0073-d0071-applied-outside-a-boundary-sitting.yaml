@@ -1,0 +1,55 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0073
+title: D0071's receipt-clock fix is applied at the M1 laws freeze, not deferred to the sitting
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  D0071's one-character correction — scripts/_gov.py::receipt_state, `d > rdate` becomes
+  `d >= rdate` — together with its regression test in tests/test_governance_scripts.py, is
+  applied by the OWNER at the M1 laws freeze rather than waiting for the M1 boundary
+  sitting. The owner performs the four steps the patch requires (edit, scripts/gen_custody.py,
+  re-sign governance/custody.sha256 under namespace tannen-custody, make verify) as its own
+  commit; the builder performs none of them and touches no custody-set file. The M1 laws
+  freeze proceeds as a separate commit on top.
+rationale: >-
+  Deferring was the handoff plan's advice and it was wrong twice over. First, the defect is
+  live: the consent clock has never started, so Tier-B silence-as-consent has never been
+  capable of suspending, which is the single thing BRIEF §9.1 exists to guarantee. The
+  patch is drafted with its test and its reproduction, and by its own analysis costs
+  nothing today — the three open Tier-B clocks (D0006, D0014, D0020) all close 2026-08-31,
+  inside the window the fix opens. . Second, the plan's alternative was to route AROUND the
+  defect by dating the m1-laws-freeze tag a day later. That does not work and could not
+  have: boundary_tag_dates reads `%(creatordate:short)` and rdate comes from the receipt's
+  FILENAME, so both sides of the comparison are day-resolution and "later the same day"
+  does not exist. More importantly, once `>=` lands the clock starts from `m0-close` — which
+  is already dated 2026-08-25 — so the freeze tag's own date is irrelevant either way. The
+  workaround bought nothing the fix does not buy outright. . Applying it outside a boundary
+  sitting is the owner's call to make and was made explicitly. BRIEF §9.1's
+  "sittings at milestone boundaries only" bounds when the OWNER IS ASKED for attention, not
+  when the owner may act; and the M1 laws freeze is itself a milestone boundary
+  (BOUNDARY_TAG_RE matches `.+-laws-freeze`), so this is at one rather than between two.
+reversibility: >-
+  One character plus one test, in a custody-set file. Reverting is the same four steps in
+  reverse, including a re-signature. The visible effect is that the 2026-08-25 receipt
+  becomes fresh until 2026-09-01 instead of for ever.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-25-receipt-clock-same-day-boundary.md
+    strength: documentary
+    detail: >-
+      The drafted patch, its test and its reproduction. Documentary until the owner lands
+      it; the binding is then upgraded to a pytest binding on
+      test_same_day_boundary_starts_the_receipt_clock, which fails before the patch and
+      passes after (D0045 — bindings may be added; the decision stays immutable).
+  - type: config
+    target: governance/tier-c.yaml#custody.set
+    strength: enforced
+    detail: >-
+      Why the builder cannot do this: scripts/_gov.py is listed here, so a builder edit
+      would invalidate the owner's signature over governance/custody.sha256 and redden the
+      gate until a sitting re-signed it.
+links:
+  - decisions/0071-receipt-clock-cannot-start-same-day.yaml
+  - decisions/0061-custody-set-not-signed-manifest.yaml

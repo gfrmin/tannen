@@ -65,6 +65,30 @@ def metrics(tree: Path, records: list[dict]) -> tuple[int, int]:
     return ratchet_metrics(records, [load_yaml(p) for p in sorted((tree / "concepts").glob("*.yaml"))])
 
 
+def with_synthetic_debt(records: list[dict]) -> list[dict]:
+    """Records plus one unbound record, so a baseline strictly BELOW the current count exists.
+
+    A "rise" can only be staged against a baseline lower than the present value, so a test
+    that writes `unenforced - 1` silently stops testing anything the moment the live count
+    reaches zero — `METRICS_RE` matches `unenforced=(\\d+)`, so a digest saying `-1` is not
+    recognised as a digest at all, no baseline is found, and the guard passes for the wrong
+    reason. The live count was 2 when these tests were written and became 0 at the M1 laws
+    freeze, which is exactly when they went quiet. Own the debt here instead of borrowing it.
+    """
+    return records + [{
+        "id": "D9999",
+        "title": "synthetic unbound record (test fixture)",
+        "tier": "A",
+        "date": "2026-08-24",
+        "decision": "fixture",
+        "rationale": "fixture",
+        "reversibility": "fixture",
+        "status": "accepted",
+        "bindings": [],
+        "unenforced_reason": "a fixture, so that the rise case is expressible",
+    }]
+
+
 def test_no_earlier_digest_means_no_baseline(tree: Path, records: list[dict], capsys) -> None:
     assert not check(tree, records).messages
     assert "no earlier digest to ratchet against" in capsys.readouterr().out
@@ -86,6 +110,7 @@ def test_falling_debt_passes(tree: Path, records: list[dict]) -> None:
     ("residue", "Grade-P/S-pending residue"),
 ])
 def test_a_rise_fails_the_guard(tree: Path, records: list[dict], metric: str, phrase: str) -> None:
+    records = with_synthetic_debt(records)
     unenforced, residue = metrics(tree, records)
     write_digest(
         tree, "2026-08-30",
@@ -100,6 +125,7 @@ def test_a_rise_fails_the_guard(tree: Path, records: list[dict], metric: str, ph
 def test_the_baseline_ignores_a_digest_written_today(tree: Path, records: list[dict]) -> None:
     """Regenerating today's digest cannot launder a rise: the baseline is strictly
     older than today, so the rise must appear in a digest the owner sees first."""
+    records = with_synthetic_debt(records)
     unenforced, residue = metrics(tree, records)
     write_digest(tree, "2026-08-30", unenforced - 1, residue)
     write_digest(tree, TODAY.isoformat(), unenforced, residue)

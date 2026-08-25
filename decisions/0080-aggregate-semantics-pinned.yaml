@@ -1,0 +1,35 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0080
+title: aggregate — non-empty by, canonical-order fold, collapse(Σ) output annotation
+tier: A
+date: "2026-08-25"
+decision: >-
+  aggregate(rel, by, monoid, value_of, into) folds monoid over value_of(row) repeated
+  multiplicity(annotation) times, TAKEN OVER THE GROUP'S ROWS IN CANONICAL-ENCODING ORDER.
+  The output row is the group key plus {into: folded}; its annotation is
+  collapse(Σ of the group's annotations) — multiplicity one, support the union of the
+  group's supports. `by` may not be empty, `into` may not collide with `by`, the semiring
+  must be a BagSemiring and the monoid a Monoid; each violation is refused by name.
+rationale: >-
+  Three choices the reference semantics do not settle, so BRIEF §4 says pin them with a
+  property test. (1) Fixing the fold order means a NON-COMMUTATIVE monoid still gives a
+  deterministic answer, which is a better guarantee than requiring commutativity and hoping
+  — and canonical-encoding order is already the order Rel iterates in, so it costs nothing.
+  (2) The output annotation has to be multiplicity one for the SQL image to be right and
+  has to keep the support for provenance to survive; collapse(Σ) is the only thing that is
+  both, and it is why collapse exists. (3) An empty `by` is where SQL invents a NULL, so
+  refusing the shape is cheaper than mapping the divergence.
+reversibility: >-
+  Allowing an empty `by` later is additive, and would arrive with a decision about what the
+  empty-input case means. Changing the fold order or the output annotation would move
+  results, so it is a descriptor bump.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_ops.py
+    detail: L1.7 refuses the empty by and the into collision; L1.8 asserts aggregate equals the direct fold in canonical order with one output row per group.
+  - type: manifest
+    target: tests/laws/m1/test_l1_duckdb.py
+    detail: L1.16 runs four aggregate shapes against DuckDB's GROUP BY.
+links:
+  - docs/specs/m1.md §4.1

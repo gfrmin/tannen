@@ -1,0 +1,40 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0089
+title: Shared law helpers are frozen inside the seal, not parked outside it
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  tests/laws/m1/_fragment.py is frozen with the M1 laws and carries a MANIFEST.sha256 row
+  like every other file under the seal. It holds the L6 fragment's shape CATALOGUE (22
+  named shapes, each a plan plus the SQL it must agree with), the data generators, and the
+  plan interpreter. It imports NOTHING from tannen: the law module passes ops and the
+  monoids in. A fixed catalogue is used rather than a recursive expression generator.
+rationale: >-
+  tests/laws is a sealed directory (D0056), so Session B can add neither a conftest.py nor
+  a helper module there — which makes Session A's completeness a hard requirement rather
+  than a preference. The alternative, tests/support/ outside the seal, is worse rather than
+  merely different: _fragment.py holds the SQL renderer and the generators, which are the
+  ORACLE HALF of L1.16, and an oracle Session B can edit is not an oracle — weakening a
+  harness while the frozen law still passes is exactly RT-03's shape. Importing nothing
+  from tannen means it can never be the reason a pre-implementation run ERRORS instead of
+  SKIPPING, which is the stop condition Session A is judged by. The catalogue rather than a
+  generator is a deliberate risk trade: a generator bug in a frozen file can only be
+  superseded, never fixed, so composition depth is bought by making shapes composite and
+  the randomness is confined to the data, where being wrong costs nothing.
+reversibility: >-
+  A defect here is superseded, not edited (CLAUDE.md). Mitigated by size, by zero
+  dependencies, and by every shape having been executed against DuckDB before the freeze.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/_fragment.py
+    detail: The frozen helper itself; the seal is what makes freezing it meaningful.
+  - type: config
+    target: governance/tier-c.yaml#frozen_paths.sealed_dirs
+    detail: >-
+      The seal that forbids Session B adding anything beside the laws, enforced by
+      scripts/check_manifest.py::check_sealed_paths.
+links:
+  - decisions/0056-seals-not-whitelists.yaml
+  - docs/redteam/2026-08-24-m0-boundary.md (RT-03)

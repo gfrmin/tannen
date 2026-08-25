@@ -15,6 +15,12 @@ tannen = "tannen.cli:main"
 
 [dependency-groups]
 dev = [
+    # The L6 differential oracle (BRIEF §6, §9 pre-decided; decision D0005). Dev-only and
+    # exact: L6 compares tannen against THIS DuckDB, so an unpinned range would let an
+    # upgrade change the oracle underneath a frozen law and read as a tannen defect — the
+    # first thing M1's kill criterion would blame. The kernel may never import it
+    # (governance/importlinter.toml, contract kernel-no-io).
+    "duckdb==1.5.5",
     "hypothesis==6.165.10",
     "import-linter==2.13",
     "jsonschema==4.26.0",

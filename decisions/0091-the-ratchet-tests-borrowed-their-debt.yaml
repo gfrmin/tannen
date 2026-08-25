@@ -1,0 +1,40 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0091
+title: The ratchet tests borrowed their debt from the live repo and went quiet when it hit zero
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  tests/test_governance_ratchet.py's two "a rise fails the guard" cases now append a
+  synthetic unbound record of their own (with_synthetic_debt) instead of staging a baseline
+  at `live_unenforced - 1`.
+rationale: >-
+  Found by this session, not by design. The tests staged a ratchet BREACH by writing a
+  baseline digest one below the repo's current unenforced count. Binding D0002 and D0005 at
+  the M1 freeze took that count from 2 to 0, so the baseline became `unenforced=-1` — and
+  _gov.METRICS_RE matches `unenforced=(\d+)`, which does not match a negative number. The
+  digest was therefore not recognised as a digest at all, previous_metrics found no
+  baseline, check_ratchet printed "no earlier digest to ratchet against" and passed. The
+  tests failed loudly here only because they assert a breach IS reported; had they been
+  written the other way round they would have gone silently vacuous, and the guard they
+  exist to watch would have been unwatched from the moment the project first paid off its
+  debt. . The general lesson, which is the reason this is a record and not just a commit:
+  a test that derives its fixture from live repository state inherits that state's whole
+  range, including the values that make the fixture meaningless. Two of those existed here
+  (zero, and any value where `- 1` underflows the regex). Own the fixture.
+reversibility: >-
+  Test-only change, no frozen path, no custody-set file. Trivially reversible; reverting
+  would restore the fragility.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_governance_ratchet.py::test_a_rise_fails_the_guard
+    detail: >-
+      The case that broke. It now owns its debt, so it stages a real 0 -> 1 rise whatever
+      the live count happens to be.
+  - type: pytest
+    target: tests/test_governance_ratchet.py::test_the_baseline_ignores_a_digest_written_today
+    detail: Same fixture, same failure mode; the strictly-older-baseline rule is what it guards.
+links:
+  - decisions/0044-ratchet-hardened.yaml
+  - decisions/0020-exception-only-digest.yaml

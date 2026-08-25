@@ -1,0 +1,42 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0079
+title: The SQL-expressible fragment, its no-NULL mapping, and DuckDB pinned exactly
+tier: A
+date: "2026-08-25"
+decision: >-
+  L6's fragment is select, project, union, join, distinct, anti_join and aggregate over
+  sum-of-int and count. map_rows is excluded BY NAME: an arbitrary Python function has no
+  SQL image. The value domain is int in [-2^31, 2^31), short NFC text from a small
+  alphabet, and bool; Decimal, None and nested values are excluded, each because tannen is
+  WIDER there than SQL. The mapping: to_bag into NOT NULL columns, WHERE over a closed
+  predicate grammar, bag SELECT, UNION ALL, INNER JOIN ... USING, SELECT DISTINCT, NOT
+  EXISTS, and GROUP BY with a NON-EMPTY by. Results compare as multisets; SET threads TO 1.
+  Every graph runs under both Z_ONLY and the default ZxWhy and must give the same bag.
+  duckdb is pinned EXACTLY at 1.5.5 in pyproject.toml's dev group. This discharges D0005.
+rationale: >-
+  BRIEF §6 requires the no-NULL mapping explicit, and the exclusions are where the work is.
+  An empty GROUP BY is precisely where SQL invents a NULL (SELECT SUM(x) FROM t on an empty
+  table returns one NULL row where tannen returns none), so aggregate refuses an empty `by`
+  rather than mapping a divergence nobody wants. DuckDB's DECIMAL has a precision ceiling
+  tannen's has not, so admitting Decimal would test that ceiling. An unpinned duckdb range
+  would let an upgrade change the oracle underneath a frozen law — and M1's kill criterion
+  would blame the encoding first. The catalogue of 22 shapes was executed against DuckDB
+  before the freeze: 200 trials, both semirings, zero mismatches.
+reversibility: >-
+  Widening the fragment later is additive and cheap. The duckdb pin moves with a recorded
+  decision and a re-run; pyproject.toml is deliberately outside the custody set so this
+  never halts a milestone.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_duckdb.py
+    detail: L1.16 is the differential law; it imports duckdb directly rather than via importorskip, so an absent oracle is a loud error and never a silent skip.
+  - type: manifest
+    target: tests/laws/m1/_fragment.py
+    detail: The frozen oracle half — the shape catalogue, the generators and the SQL renderer.
+  - type: config
+    target: pyproject.toml#dependency-groups.dev
+    detail: The exact duckdb pin the differential law compares against.
+links:
+  - BRIEF.md §6 (L6), §9 (DuckDB pre-decided)
+  - decisions/0005-duckdb-differential-oracle.yaml

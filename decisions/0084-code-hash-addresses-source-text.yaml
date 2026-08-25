@@ -1,0 +1,34 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0084
+title: code_hash addresses the function's source text, comments included
+tier: A
+date: "2026-08-25"
+decision: >-
+  @transform computes code_hash as the ref of inspect.getsource(fn), dedented and
+  LF-normalised, DECORATOR LINES INCLUDED; params_hash as the content address of params;
+  and the label as derive_label(fn.__module__, fn.__name__, seq) where seq counts prior
+  registrations of that (module, name) pair. A lambda cannot be registered and the same
+  function cannot be registered twice. tannen.transform lives OUTSIDE tannen.kernel,
+  because reading a source file is IO.
+rationale: >-
+  Bytecode (co_code) is not stable across interpreter versions, so it cannot be the
+  identity. Source text is stable, human-checkable and greppable. Including comments means
+  a comment change mints a new descriptor and invalidates that transform's evidence, which
+  is the cost, and it is paid deliberately: "what would make this a different event belongs
+  in the hash", and a rule with an exception for comments is a rule someone has to
+  remember and someone else has to discover. Keeping the decorator lines in keeps the rule
+  to one sentence rather than two.
+reversibility: >-
+  Narrowing later (stripping comments, say) would move every transform descriptor and
+  invalidate all evidence built under the old rule. A descriptor bump, not an edit.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_transform.py
+    detail: >-
+      L1.12 asserts code_hash equals the ref of the decorated function's source written out
+      literally in the law file — verified byte-exact against inspect.getsource before the
+      freeze — plus the label function, the params hash, and the refusals.
+links:
+  - BRIEF.md §5.1, §5.2
+  - docs/specs/m1.md §8

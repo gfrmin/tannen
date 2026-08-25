@@ -1,0 +1,40 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0074
+title: M1 spec and its seventeen laws frozen; law ids are milestone-major
+tier: A
+date: "2026-08-25"
+decision: >-
+  docs/specs/m1.md and tests/laws/m1/ are frozen at m1-laws-freeze under the
+  frozen-oracle protocol (BRIEF §8): the spec, seventeen law files L1.1-L1.17, the
+  golden corpus golden-rels.json, and the shared oracle _fragment.py. Law ids are
+  MILESTONE-major — L1.n is M1's n-th law exactly as L0.n was M0's — which collides
+  visually with BRIEF §6's own L1 and L6, so the spec's law table carries a right-hand
+  column mapping each milestone law to the brief section or brief law it discharges.
+  L1.15 discharges BRIEF L1 (replay determinism) and L1.16 discharges BRIEF L6
+  (differential correctness), and those two are named as such in the table.
+rationale: >-
+  The alternative — numbering M1's laws to match BRIEF §6's L1-L6 — cannot work, because
+  a milestone freezes more laws than the brief names: §5's correct-by-default catalogue is
+  a review gate on any API surface merged, and M1 merges the operator API, so §5.1, 5.2,
+  5.4, 5.5, 5.6, 5.8 and 5.9 all come due here and each needs a law of its own. Keeping
+  M0's convention makes `discover_laws` and `law_sort_key` work unchanged and keeps the
+  evidence store's law_id namespace flat. The collision is a naming cost, paid once, and
+  the discharge column is where it is paid.
+reversibility: >-
+  Renumbering would move every law descriptor and invalidate all M1 evidence; the ids are
+  also embedded in evidence records, which are append-only. Effectively one-way once
+  Session B runs, which is why it is settled at the freeze.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m1.md
+    detail: >-
+      The frozen spec carries the law table; scripts/check_manifest.py holds it byte-exact,
+      and tests/test_laws_runner.py::test_discovery_matches_the_frozen_spec_table asserts
+      the discovered law set equals the table for every milestone.
+  - type: pytest
+    target: tests/test_laws_runner.py::test_discovery_matches_the_frozen_spec_table
+    detail: Spec table and discovered laws must agree, per milestone, or the gate fails.
+links:
+  - BRIEF.md §8 (frozen-oracle protocol)
+  - docs/specs/m0.md §5 (the M0 precedent this follows)

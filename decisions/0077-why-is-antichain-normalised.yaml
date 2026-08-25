@@ -1,0 +1,32 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0077
+title: Why is antichain-normalised at M1; minimality of OUTPUTS stays M2's L5
+tier: A
+date: "2026-08-25"
+decision: >-
+  The Why semiring's elements are antichains: after every operation, any support set that
+  is a strict superset of another in the same element is dropped. add is union, mul is
+  pairwise union, zero is the empty antichain, one is {∅}, atoms are refs in the pinned
+  grammar and anything else is refused by name. M2 keeps L5 — provenance soundness by
+  deletion test, and the minimality of the witnesses a RESULT carries.
+rationale: >-
+  Normalising the representation now rather than at M2 means M2's law is about behaviour
+  rather than about a re-encoding, and a re-encoding at M2 would move the address of every
+  Rel ever stored — in a store that has no delete. The quotient was verified to be a
+  commutative semiring before freezing: exhaustively over all pairs of the twenty antichain
+  elements on a three-atom alphabet, with sampled triples for associativity and
+  distributivity, zero failures. It also makes add idempotent and absorptive, which is what
+  makes collapse the identity on Why.
+reversibility: >-
+  Changing it moves every Rel address that carries provenance. New tag plus descriptor
+  bump, never an edit.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_semiring.py
+    detail: L1.1 asserts the semiring axioms over generated Why elements and that {{r0},{r0,r1}} minimises to {{r0}}.
+  - type: manifest
+    target: tests/laws/m1/golden-rels.json
+    detail: The why-antichain vector fixes the encoding of a minimised element by hash.
+links:
+  - docs/specs/m1.md §2

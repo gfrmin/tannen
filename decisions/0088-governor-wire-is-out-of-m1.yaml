@@ -1,0 +1,44 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0088
+title: The Grade-S governor wire schema is OUT of M1; M4 at the earliest
+tier: A
+date: "2026-08-25"
+risk_flags: [public-surface]
+decision: >-
+  M1 ships BRIEF §7's seam only as VerifyingTrace — §7's own "degenerate governor whose
+  prior is a dirty bit" — plus the staleness it computes. The Grade-S JSON Schema and its
+  frozen positive/negative vectors are NOT part of M1. Earliest landing: M4. To keep the
+  deferral cheap, Node and Built expose exactly the M1-available subset of §7's four
+  Request fields, so the schema lands as a projection of existing data rather than a new
+  shape.
+rationale: >-
+  A call was owed because nothing in-repo had made one: CLAUDE.md PERMITS the artifact
+  ("the seam and its Grade-S wire schema only"), BRIEF §8 does not schedule it, §8's
+  post-M5 list mentions only the governor IMPLEMENTATION, and the only scheduling language
+  anywhere is concepts/derive-decide-split.yaml's "at M-later". The reason for M4: §7's
+  Request is (graph summary, cost model, evidence records, demand), and two of the four
+  cannot be populated by anything at M1 — the cost model's oracle-spend term arrives with
+  SpendGuard at M4, and demand is an M5 notion. A Grade-S artifact is a schema PLUS a
+  frozen corpus that adopters conform against; vectors for fields nothing can produce would
+  teach a shape that has never been executed. §7 itself says the governor is premature
+  until demand logs exist. This is not a mechanism problem: the route is D0033's precedent
+  (schema under governance/schemas/, vectors under the sealed tests/laws/, one law, one
+  record, no new concept record, and NOT conformance/vectors/, which is reserved for
+  concept-cited corpora). It is also ratchet-neutral — residue counts Grade-P/S-pending
+  CONCEPTS, so shipping the wire moves nothing unless a concept record changes grade.
+reversibility: >-
+  Fully reversible: shipping it earlier is additive, and nothing built at M1 assumes its
+  absence beyond not having written it.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m1.md
+    detail: §8.1 states the call, its reasons and the route the artifact will take when it lands.
+  - type: config
+    target: governance/tier-c.yaml#guard_enforced
+    detail: >-
+      Implementing the governor remains guard-enforced-impossible; this record defers the
+      WIRE, and touches neither that rule nor BRIEF §10's non-goal.
+links:
+  - BRIEF.md §7, §8
+  - concepts/derive-decide-split.yaml ("at M-later")

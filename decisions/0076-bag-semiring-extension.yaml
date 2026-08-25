@@ -1,0 +1,37 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0076
+title: distinct, aggregate and the bag image need structure a commutative semiring lacks
+tier: A
+date: "2026-08-25"
+decision: >-
+  tannen.kernel.semiring ships the Semiring protocol (name, zero, one, add, mul, encode)
+  and a BagSemiring extension adding multiplicity(a) -> int and collapse(a) -> a.
+  select, project, map_rows, union, join and anti_join need only Semiring; distinct,
+  aggregate and Rel.to_bag need BagSemiring and refuse a semiring without it BY NAME at
+  the call. Z.multiplicity and Z.collapse RAISE for a negative argument: a negative
+  annotation has no bag or set image, and defining one is the delta executor's job at M3.
+  product is componentwise throughout, so
+  product(A, B).multiplicity((a, b)) = A.multiplicity(a) * B.multiplicity(b).
+rationale: >-
+  The handoff plan proposed "every operator written generically over the semiring
+  interface (which is less code than special-casing ℤ, not more)". That is not achievable
+  as stated. distinct needs "one row with the same support", aggregate needs that plus a
+  copy count, and the SQL bag image needs the copy count — none of which a commutative
+  semiring provides. Writing the signatures as if it did would claim a genericity the code
+  does not have, and the special case would live somewhere unnamed. Naming the structure
+  makes the split explicit, makes the refusal a door rather than a coercion, and makes
+  ℤ × Why fall out: (0, {{r}}) has multiplicity 0*1 = 0 and is absent from the bag image
+  while remaining a stored row, with no rule written for that case specifically.
+reversibility: >-
+  Widening BagSemiring later is additive. Removing it would require re-deriving how
+  distinct and aggregate are defined at all, so in practice it stands for the project.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_semiring.py
+    detail: L1.2 pins the collapse and multiplicity axioms, componentwise products, and the refusal of a negative ℤ.
+  - type: manifest
+    target: tests/laws/m1/test_l1_ops.py
+    detail: L1.7 constructs a semiring with the bag methods deliberately absent and asserts distinct, aggregate and to_bag refuse it while union still works.
+links:
+  - docs/specs/m1.md §2.1

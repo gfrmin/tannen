@@ -1,0 +1,44 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0090
+title: The laws report could not say "frozen, not yet implemented", so freezing reddened the gate
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  src/tannen/laws/report.py gains a PENDING status. A milestone is pending iff NO law in it
+  has any evidence record at all; pending laws do not fail the report, and the render names
+  them. One record for any law in the milestone makes it LIVE, after which every law in it
+  lacking fresh evidence is STALE and fails. `ok` accepts FRESH and PENDING only.
+rationale: >-
+  Freezing tests/laws/m1/ made `make verify` red immediately: `tannen laws report` reported
+  all seventeen M1 laws as STALE and exited 1, so make halted THERE — before lint-imports
+  and before scripts/custodian.sh. The freeze commit would have had no custody-floor
+  confirmation and the tag would have sealed a tree whose gate never reached its floor. The
+  report also said "the law file or the implementation moved since the last run" about laws
+  that never had an implementation to move. This is not an M1 peculiarity: the
+  frozen-oracle protocol (BRIEF §8) GUARANTEES a frozen-but-unimplemented milestone at
+  every boundary from here on, and the runner had no way to express the state. . The rule
+  is arithmetic with no builder-editable knob, and it cannot become a place to hide: the
+  only way to be pending is to have produced no evidence whatsoever for that milestone, and
+  the first law that runs ends it — so a half-implemented milestone is red, and a finished
+  one must be all-fresh. M0 never hit this because D0012 added the report to `make verify`
+  during M0's Session B, when m0 was the only milestone and already green.
+reversibility: >-
+  Removing PENDING restores the red gate; it is a small, self-contained change to the
+  report and its tests, neither of which is a frozen path or in the custody set.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_laws_runner.py::test_one_record_ends_pending_and_a_half_implemented_milestone_is_red
+    detail: >-
+      The load-bearing half — that pending is not a place to hide. Asserts a milestone with
+      one record and one law lacking evidence is red.
+  - type: pytest
+    target: tests/test_laws_runner.py::test_a_pending_milestone_does_not_mask_a_live_one
+    detail: "Pending is per-milestone: a stale M0 still fails while M1 waits."
+  - type: file
+    target: src/tannen/laws/report.py
+    detail: The report itself, whose module docstring states the rule and why it cannot hide a regression.
+links:
+  - BRIEF.md §8 (frozen-oracle protocol), §5.11
+  - decisions/0012-laws-report-joins-verify.yaml

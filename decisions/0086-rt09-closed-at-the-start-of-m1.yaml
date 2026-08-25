@@ -1,0 +1,37 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0086
+title: RT-09 closed at the start of M1 — the law descriptor addresses its own harness
+tier: A
+date: "2026-08-25"
+risk_flags: [governance-paths]
+decision: >-
+  tannen.laws.harness.harness_subject(root) widens the law descriptor's params_hash subject
+  to cover the root conftest.py, pyproject.toml, and EVERY file under src/tannen rather
+  than only *.py; implementation_subject delegates to it. Law L1.17 is frozen against the
+  new module name, so it is a visible skip until Session B lands it. Session B does this
+  FIRST, before any other M1 work.
+rationale: >-
+  The M0 red team found that what decides HOW HARD a law was tested sat outside the
+  descriptor: cutting the Hypothesis profile to one example, adding a data file the
+  implementation reads, or changing a dependency pin each left all ten M0 descriptors
+  byte-identical and every verdict reading "fresh". The red team scheduled the fix for the
+  START of M1 rather than the M0 boundary because landing it moves every descriptor by
+  design — all existing evidence is invalidated on the commit that lands it and re-earned
+  by the next run. Doing it first, before any M1 evidence exists, means nothing is
+  invalidated twice. The law names a NEW module deliberately: one naming the existing
+  implementation_subject would run and FAIL today rather than skip, and a red law is not a
+  frozen law.
+reversibility: >-
+  Narrowing the subject again would restore the hole; it is a one-function change either
+  way, and every descriptor moves in both directions.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_harness.py
+    detail: >-
+      L1.17 asserts each of RT-09's four reproduction cases moves the subject, that
+      __pycache__ does not, and that implementation_subject actually delegates — which is
+      what makes the widening load-bearing rather than decorative.
+links:
+  - docs/redteam/2026-08-24-m0-boundary.md (RT-09)
+  - decisions/0059-m0-red-team-findings.yaml

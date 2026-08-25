@@ -1,0 +1,30 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0078
+title: The ℤ × Why default, and opting down requires a recorded reason as an argument
+tier: A
+date: "2026-08-25"
+decision: >-
+  Rel(schema, rows, *, annotations=None, annotations_reason=None). annotations=None means
+  ZxWhy, so every pipeline gets deltas and support-set provenance without asking. ANY other
+  explicit choice — Z_ONLY included — requires annotations_reason, and constructing without
+  one raises RelError. Z_ONLY is an alias of Z so the opt-down is spelled exactly as BRIEF
+  §5.5 spells it. The reason is carried and propagated by operators but is NOT part of Rel
+  identity. This discharges D0002.
+rationale: >-
+  BRIEF §5.5 says the opt-down happens "with a recorded reason". A required argument is
+  what that sentence means when it is mechanical rather than aspirational, and it is
+  BRIEF P9's "violations require explicit, ugly opt-outs" applied to the one default the
+  brief pre-decided. Keeping the reason out of identity matters just as much: two Rels with
+  the same content are the same Rel whatever anyone wrote about the choice, or the content
+  address would depend on prose.
+reversibility: >-
+  Making the argument optional later is a one-line relaxation and would break nothing;
+  making it required later would break callers. Required now is the reversible direction.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_rel.py
+    detail: L1.5 asserts the default is Z*Why, that every non-default choice without a reason raises, and that the reason is absent from the canonical bytes.
+links:
+  - BRIEF.md §5.5
+  - decisions/0002-default-semiring.yaml

@@ -1,0 +1,32 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0081
+title: join refuses a non-key column clash; project sums (bag semantics)
+tier: A
+date: "2026-08-25"
+decision: >-
+  join(a, b, on) requires a non-empty `on` present in both schemas AND requires the
+  non-`on` columns of the two sides to be DISJOINT — a clash is refused by name, never
+  silently suffixed or renamed. The output schema is the sorted union with ONE copy of each
+  join column, matching INNER JOIN ... USING. project(rel, columns) SUMS the annotations of
+  rows that collapse together: it is the bag projection, not SELECT DISTINCT, and composing
+  it with distinct is how the other one is spelled.
+rationale: >-
+  Both are places a system usually guesses. Automatic suffixing (`x_left`, `x_right`) mints
+  column names no caller wrote, which then appear in content addresses and in the SQL image
+  — a silent default of exactly the kind the door discipline exists to refuse. Bag
+  projection is what the semiring rule already says (π sums over the fibre); calling it out
+  matters because SQL's SELECT is a bag projection while most people read "project" as
+  set-valued, and the difference is visible in every multiplicity L6 compares.
+reversibility: >-
+  Adding an explicit rename argument to join later is additive. Changing project to
+  deduplicate would change results and is a descriptor bump.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_ops.py
+    detail: L1.7 refuses the clash and the empty/one-sided key; L1.8 pins project composition and the golden project-sum vector pins the summing by hash.
+  - type: manifest
+    target: tests/laws/m1/golden-rels.json
+    detail: The join-z and project-sum vectors fix both by address.
+links:
+  - docs/specs/m1.md §4
