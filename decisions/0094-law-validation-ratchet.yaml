@@ -1,0 +1,57 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0094
+title: The freeze gate proves the laws do not run; a validation ratchet is scheduled for M2
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  docs/proposals/2026-08-26-law-validation-ratchet.md is adopted as the intended shape and
+  scheduled for M2, not M1. Three parts: (1) each algebraic law family gets a
+  `tests/laws/<milestone>/_model.py` — a self-contained transcription of the spec's
+  definitions, frozen inside the seal, importing nothing from tannen; (2) Session A's freeze
+  gate gains a second assertion, that every model-checked law PASSES against the model and
+  FAILS against a stated mutant; (3) every frozen law file declares `validated_by` or a
+  `validation_reason`, a new scripts/check_laws.py fails any that carries neither, and
+  `unvalidated` joins `unenforced` and `residue` as a ratchet metric that must trend down.
+rationale: >-
+  D0093 was an unsatisfiable law frozen into the manifest with every guard green. The reason
+  no guard caught it is structural rather than incidental: under the frozen-oracle protocol
+  every law is an importorskip at exactly the moment it becomes unrewritable, so
+  `uv run pytest tests/laws/m1` prints "12 skipped" whether the laws are correct,
+  contradictory or nonsense. Session A's completion check is a check that the laws do not
+  run. Nothing checks that they could ever pass. check_manifest verifies bytes; the laws
+  report has no evidence to judge in a pending milestone (D0090); check_decisions resolves
+  binding targets. Each guard is correct and none is a satisfiability check. . The repo had
+  already built both halves of the fix and not generalised either: _fragment.py is exactly
+  such a model, frozen beside the laws and importing nothing from tannen, and it covers the
+  one M1 family that did NOT break; and `unenforced_reason` is exactly the mechanism that
+  makes a missing binding visible and counted rather than silent. Laws have no equivalent
+  field, so an unvalidated law family is not merely unenforced but unrepresentable. Part (3)
+  is the load-bearing one and is what would have caught D0093 with no cleverness: the
+  Session A plan recorded three executed pre-freeze validations, covering L1.1, L1.16 and
+  the sibling-import probe; BagSemiring was introduced by that same plan's Call 2 and no
+  validation covered it. Forced to declare a validation_reason for L1.2, there is no honest
+  one to write — the family is pure algebra over finite domains and the easiest thing in the
+  milestone to model-check. . M2 rather than M1 because M1's seventeen laws are already
+  written and frozen; retrofitting models for all of them now would restart Session A, and
+  the machinery families (L1.11, L1.12, L1.13-L1.14, L1.15, L1.17) would each need a
+  reasoned exemption rather than a model. The rule does not make those families safe; it
+  makes their unsafety counted, which is the same bargain unenforced_reason strikes.
+reversibility: >-
+  Nothing is built yet. This record schedules work and pins the shape; M2 may find the
+  mutant requirement impractical for some family and narrow it, which would be a new record
+  rather than an edit to this one.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-26-law-validation-ratchet.md
+    strength: documentary
+    detail: >-
+      The full proposal, including the scope limits and the honest statement of what it does
+      not fix. Upgrades to a pytest binding on scripts/check_laws.py's tests when M2 builds it.
+links:
+  - decisions/0093-l1-2-multiplicity-axiom-was-unsatisfiable.yaml
+  - decisions/0089-law-helpers-frozen-inside-the-seal.yaml
+  - decisions/0090-laws-report-can-say-frozen-not-yet-implemented.yaml
+  - decisions/0044-ratchet-hardened.yaml
+  - BRIEF.md §8 (the frozen-oracle protocol)

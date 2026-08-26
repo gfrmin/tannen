@@ -1,0 +1,64 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0093
+title: A frozen L1.2 axiom was unsatisfiable, and was corrected in place before the freeze tag
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  tests/laws/m1/test_l1_semiring.py::test_l1_2_multiplicity_axioms asserted
+  `(S.multiplicity(a) > 0) == (a != S.zero)`. That assertion is replaced by the
+  multiplicative law `S.multiplicity(S.mul(a, b)) == S.multiplicity(a) * S.multiplicity(b)`,
+  which is what the original was reaching for and is strictly stronger. The file was edited
+  IN PLACE and its MANIFEST.sha256 row regenerated, under owner authorisation given at the
+  M1 laws freeze, BEFORE the m1-laws-freeze tag was minted.
+rationale: >-
+  The frozen assertion was unsatisfiable, not merely wrong. `multiplicity` is a
+  multiplicative map into the non-negative integers, so demanding "multiplicity is zero only
+  at the semiring zero" is demanding a semiring with NO ZERO DIVISORS — and Z*Why is a
+  product, which has them by construction. Both `(0, w)` (support, no surviving copies) and
+  `(n, empty)` (copies, no support) are non-zero with multiplicity zero, and their product
+  is the zero. So the assertion contradicted
+  test_l1_2_product_multiplicity_and_collapse_are_componentwise twelve lines below it in the
+  same file, which asserts `ZxWhy.multiplicity((0, w)) == 0` AND `(0, w) != ZxWhy.zero`. No
+  implementation can satisfy both, so M1 as frozen could never have gone green. Confirmed
+  against a ninety-line model of docs/specs/m1.md §2.1 built only from the spec's own
+  definitions: the frozen form fails on 12 of a 45-element product domain, the replacement
+  passes exhaustively over the same domain and over Z and Why. . The spec is NOT at fault
+  and was not changed: §2.1's axiom list is `collapse` idempotent, `collapse(zero) == zero`,
+  the weak additivity form, and `multiplicity >= 0`. It never states the axiom the law
+  asserted. The defect was confined to the law file, which had drifted from the spec it
+  encodes. . On editing a frozen path, which is normally Tier C and is excluded from
+  policy.yaml's in_repo_mechanics: the authorisation is bounded and does not generalise.
+  It rests on three facts that hold together only here — the m1-laws-freeze tag did not yet
+  exist, so nothing had sealed the law set; MANIFEST.sha256 is deliberately unsigned (D0061)
+  and check_manifest compares staged bytes against the working-tree manifest, so a
+  coordinated re-freeze is a permitted operation rather than a worked-around guard; and this
+  is still Session A, so the A/B separation the read-only rule protects was not crossed. For
+  Session B, and for any session after the tag, the supersession route of CLAUDE.md remains
+  the only route. The alternative considered and rejected was to tag as-is and supersede in
+  Session B: the old test would still run and still fail, so M1's "frozen suite green, zero
+  skips" completion criterion would itself have had to be amended to accommodate a law known
+  to be false.
+reversibility: >-
+  One assertion in one law file, plus its manifest row. Reverting restores an unsatisfiable
+  law and a milestone that cannot complete, so the change is reversible in mechanism and
+  not in sense. No custody-set file, no signed file, and no spec text was touched.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m1/test_l1_semiring.py
+    strength: enforced
+    detail: >-
+      The corrected law, frozen. The manifest row pins the bytes that carry the replacement
+      axiom, so a regression would have to re-freeze deliberately rather than drift.
+  - type: file
+    target: docs/proposals/2026-08-26-law-validation-ratchet.md
+    strength: documentary
+    detail: >-
+      The generalisation of this defect — why the freeze gate could not have caught it, and
+      what would. Scheduled for M2 by D0094.
+links:
+  - docs/specs/m1.md §2.1 (the BagSemiring extension and its axiom list)
+  - decisions/0061-owner-signs-a-custody-set.yaml
+  - decisions/0089-law-helpers-frozen-inside-the-seal.yaml
+  - decisions/0094-law-validation-ratchet.yaml

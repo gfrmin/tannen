@@ -151,9 +151,16 @@ def test_l1_2_collapse_axioms(S, data) -> None:
 @given(st.data())
 def test_l1_2_multiplicity_axioms(S, data) -> None:
     a = _non_negative(S, data.draw(elements_of(S.name)))
+    b = _non_negative(S, data.draw(elements_of(S.name)))
     assert S.multiplicity(S.zero) == 0
     assert S.multiplicity(a) >= 0
-    assert (S.multiplicity(a) > 0) == (a != S.zero)
+    # Multiplicative, and that is the strong form. The CONVERSE — `multiplicity(a) == 0`
+    # implying `a == zero` — was asserted here until D0093 and is false for every product
+    # semiring: `multiplicity` is a multiplicative map into ℤ, so demanding it is demanding
+    # a semiring with no zero divisors, and `Z*Why` is a product. Both `(0, w)` and `(n, ∅)`
+    # are non-zero with no bag image, and their product IS the zero. §2.1 states no such
+    # axiom; it says only `>= 0`, which the line above already pins.
+    assert S.multiplicity(S.mul(a, b)) == S.multiplicity(a) * S.multiplicity(b)
 
 
 def test_l1_2_negative_multiplicity_is_refused_by_name() -> None:
