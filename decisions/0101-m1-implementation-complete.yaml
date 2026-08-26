@@ -1,0 +1,43 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0101
+title: "M1 implementation complete: seventeen frozen laws green with zero skips, no frozen path touched"
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  Session B is complete under BRIEF §8's frozen-oracle protocol: `uv run pytest
+  tests/laws/m1` passes with zero skips, `uv run tannen laws report` shows fresh evidence
+  for L1.1–L1.17 against the widened subject of L1.17, `make verify` is green including
+  the kernel import contracts, and no file under MANIFEST.sha256 or the custody set was
+  edited. Eleven modules were written (docs/specs/m1.md §1's eight kernel modules and three
+  shell modules), in the order harness → semiring → algebra → outcome/rel/lossy → ops →
+  layers → derivation/transform → executor, each landing as its own commit with the law
+  file(s) it turned green named in the message. The sixteen M1 records that bound
+  `manifest:` at the freeze (D0002, D0005, D0075–D0086, D0093) now also bind `pytest:` to
+  their green law files (D0045); D0096–D0100 record the choices the laws left open.
+  Golden corpus: thirteen of thirteen addresses matched on the first run against the
+  operator-free vectors and the first run against the operator vectors — M1's kill
+  criterion (§10) was not triggered.
+rationale: >-
+  Recorded so the digest's laws section and the M1 boundary sitting have one record to
+  point at for "the milestone is done", and so that the honest state of the golden
+  corpus — the single check the spec calls the kill criterion — is written down rather
+  than inferred from a green suite.
+reversibility: >-
+  A statement of state; nothing to reverse. The tag that will attest it (m1-close) is the
+  owner's, at the sitting (D0049).
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/laws/m1/test_l1_replay.py
+    strength: enforced
+    detail: L1.15 exercises every module through the executor in a fresh interpreter; it is green only if all of them are.
+  - type: pytest
+    target: tests/laws/m1/test_l1_duckdb.py
+    strength: enforced
+    detail: L1.16, the differential law, and the kill criterion's home.
+  - type: manifest
+    target: docs/specs/m1.md
+    strength: enforced
+    detail: The spec whose §12 states the completion criterion this record claims.
+links: ["D0074", "D0086", "D0090", "D0093", "D0094", "D0096", "D0097", "D0098", "D0099", "D0100"]
