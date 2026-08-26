@@ -1,0 +1,34 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0099
+title: "The transform registry: seq counts registrations per (module, name), refusal keys on the function object, kind is checked before the descriptor is"
+tier: A
+date: "2026-08-26"
+decision: >-
+  Three semantics the decorator's spec sentence leaves open. (1) `seq` in the label is a
+  per-process count of prior registrations of the same (module, name) pair, whatever their
+  params or source: two nested functions named `compute` get seq 0 and 1 (L1.12). (2)
+  Double registration is refused by the function OBJECT already carrying `is_transform`,
+  not by descriptor equality: two distinct functions with identical source and different
+  params both register (their descriptors differ), and even identical descriptors on
+  distinct objects are two registrations, not a collision. (3) `kind` and `layer` are
+  validated in `transform(...)` itself, before `descriptor_id` is ever called, so an empty
+  kind is a TransformError rather than M0's DescriptorError — the law enumerates the
+  exceptions it accepts and DescriptorError is not among them. `code_hash` is the ref of
+  `textwrap.dedent(inspect.getsource(fn))` with LF newlines; a function whose source is
+  unavailable is refused.
+rationale: >-
+  (1) is the reading under which "counted from prior registrations" needs no state but a
+  counter; (2) is forced by L1.12 calling `_same_body` twice with different params and
+  again twice with the same params in a later test; (3) is forced by the REFUSALS tuple.
+  The seq counter is process-local by construction — labels are derived, and a fresh
+  interpreter derives them again from zero, which is what L1.15 relies on.
+reversibility: >-
+  Registry semantics, local to tannen/transform.py; changing (1) would move every label
+  and every descriptor.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/laws/m1/test_l1_transform.py
+    strength: enforced
+    detail: L1.12 — labels, code_hash bytes, refusals by name, the layer declaration.
+links: ["D0084", "D0083"]

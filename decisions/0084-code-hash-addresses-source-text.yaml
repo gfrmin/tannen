@@ -29,6 +29,12 @@ bindings:
       L1.12 asserts code_hash equals the ref of the decorated function's source written out
       literally in the law file — verified byte-exact against inspect.getsource before the
       freeze — plus the label function, the params hash, and the refusals.
+  - type: pytest
+    target: tests/laws/m1/test_l1_transform.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
 links:
   - BRIEF.md §5.1, §5.2
   - docs/specs/m1.md §8
