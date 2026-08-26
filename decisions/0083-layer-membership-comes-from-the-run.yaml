@@ -39,6 +39,12 @@ bindings:
     detail: >-
       Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
       law is frozen, this node proves it runs and passes.
+  - type: pytest
+    target: tests/laws/m1/test_l1_executor.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: L1.14 asserts Built.layer is
+      what actually ran and that a narrower declared layer is refused at build.
 links:
   - BRIEF.md P8, §5.9
   - docs/specs/m1.md §6

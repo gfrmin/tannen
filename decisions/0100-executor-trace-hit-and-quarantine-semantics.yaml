@@ -1,0 +1,36 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0100
+title: "A trace hit materialises nothing: Built.layer is None on a hit, a raising transform is a node-level Quarantine named by its exception"
+tier: A
+date: "2026-08-26"
+decision: >-
+  Three executor semantics the spec leaves open. (1) On a VerifyingTrace hit nothing ran,
+  so Built.layer is None and Built.operators is empty; the declared-layer check was
+  already enforced when the trace was recorded, since a Quarantine writes no trace and a
+  LayerError raises before recording. (2) A transform that raises an Exception is a
+  whole-node Quarantine whose reason is the exception's type name and whose provenance is
+  the node's input refs; BaseException crosses untouched. (3) A transform that returns a
+  bare Rel is wrapped as an Ok with no operators (its layer is then CAPTURE, honestly: no
+  operator of ours ran); any other return is a Quarantine("bad-return"). The trace store
+  is one file per derivation id, written atomically, holding the output ref.
+rationale: >-
+  (1) keeps Built truthful — a layer is "what ran", and on a hit the honest answer is that
+  nothing did; storing the layer in the trace was considered and rejected because the trace
+  is a two-column relation by spec and widening it is a schema the governor wire would
+  later have to carry. (2) and (3) follow BRIEF §5.4: the lazy path — just raise — is the
+  correct path, and the executor is where a raise that escaped every operator becomes a
+  report rather than a crash.
+reversibility: >-
+  Executor-local; (1) could be revisited when the governor wire (M4) decides what a served
+  build must report.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/laws/m1/test_l1_executor.py
+    strength: enforced
+    detail: L1.13/L1.14 — derivation identity, rebuilders agree, integrity failures raise, a quarantined node writes no trace, the built layer is what ran.
+  - type: pytest
+    target: tests/laws/m1/test_l1_replay.py
+    strength: enforced
+    detail: L1.15 — the whole executor is byte-deterministic across fresh interpreters with random hash seeds.
+links: ["D0083", "D0088", "D0082"]
