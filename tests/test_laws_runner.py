@@ -387,6 +387,49 @@ def test_evidence_emission_can_be_switched_off(tmp_path: Path) -> None:
     assert not (tmp_path / "ev").exists()
 
 
+def test_a_shadowed_oracle_module_is_refused(tmp_path: Path) -> None:
+    """RT-M1-01 (docs/redteam/2026-08-26-m1-boundary.md). `tests/laws/m1/test_l1_duckdb.py`
+    (frozen) loads its L1.16 oracle with a bare `import _fragment as F` — `tests/` has no
+    `__init__.py` anywhere, so the frozen, manifested `tests/laws/m1/_fragment.py` is a
+    plain top-level module, and Python caches imports by NAME. Anything that gets a
+    DIFFERENTLY-SOURCED module onto `sys.modules['_fragment']` before this file is
+    collected wins the race silently.
+
+    Built from a tmp plugin + a tmp decoy module on PYTHONPATH, loaded via `-p` before
+    collection starts, so the violating state is constructed by the test itself and never
+    by writing into the real tests/ tree (D0092's rule: a regression test must construct
+    the state that distinguishes fixed from broken, never observe live repository state).
+    """
+    shadow_dir = tmp_path / "shadow"
+    shadow_dir.mkdir()
+    (shadow_dir / "_fragment.py").write_text(
+        "REDTEAM_SHADOW_MARKER = True\n"
+        "CATALOGUE = ()\n"
+        "def evaluate(*a, **k):\n"
+        "    raise AssertionError('the decoy oracle ran, not the frozen one')\n",
+        encoding="utf-8",
+    )
+    (shadow_dir / "bootstrap_shadow.py").write_text(
+        "import _fragment  # noqa: F401 -- primes sys.modules before collection\n",
+        encoding="utf-8",
+    )
+    env = dict(os.environ, TANNEN_EVIDENCE_ROOT=str(tmp_path / "ev"),
+               PYTHONPATH=str(shadow_dir))
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "-p", "bootstrap_shadow",
+         "tests/laws/m1/test_l1_duckdb.py",
+         "-k", "test_l1_16_the_catalogue_covers_every_operator_of_the_fragment",
+         "-q", "-p", "no:cacheprovider"],
+        cwd=REPO_ROOT, capture_output=True, text=True, env=env, check=False,
+    )
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, (
+        f"a shadowed oracle module was served as if it were the frozen one:\n{out}"
+    )
+    assert "RT-M1-01" in out, out
+    assert "shadowed" in out, out
+
+
 # ------------------------------------------------------------------ the CLI
 
 

@@ -1,0 +1,62 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0102
+title: "RT-M1-01: detect (not fix) a shadowed L1.16 oracle module before it can run silently"
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  The M0→M1 boundary red team (docs/redteam/2026-08-26-m1-boundary.md, RT-M1-01)
+  confirmed that tests/laws/m1/test_l1_duckdb.py's bare `import _fragment as F` binds by
+  NAME through sys.modules, and tests/ carries no __init__.py anywhere, so a different
+  module also named _fragment — loaded first by anything pytest collects earlier, e.g. an
+  unmanifested tests/conftest.py — silently replaces the frozen, manifested oracle
+  (D0089) for the rest of the run, with check_manifest.py reporting OK throughout because
+  neither new file sits under a sealed directory.
+  .
+  src/tannen/laws/plugin.py's LawEvidencePlugin.pytest_collection_modifyitems now checks,
+  unconditionally and before the enabled/disabled branch (so it fires even under
+  TANNEN_NO_EVIDENCE — D0041 turns off the record, never the test), whether
+  sys.modules['_fragment'] exists and, if so, whether its __file__ resolves to
+  tests/laws/m1/_fragment.py. A mismatch calls pytest.exit(...) naming RT-M1-01 and
+  aborts the run rather than letting it report green against a substituted oracle.
+  tests/test_laws_runner.py::test_a_shadowed_oracle_module_is_refused constructs the
+  shadow itself — a tmp decoy module plus a tmp -p bootstrap plugin on PYTHONPATH, never
+  by writing into the real tests/ tree (D0092's rule: a regression test must construct
+  the violating state, never observe live repository state) — and asserts the run is
+  refused with RT-M1-01 named in the output.
+rationale: >-
+  This is defence in depth, explicitly not the fix. It closes exactly the reproduction
+  demonstrated (an _fragment shadow present at collection time for this one frozen
+  file's one bare import); it does not close the underlying naming hazard, which reaches
+  every present and future bare, unqualified import inside a sealed tests/laws/**
+  directory in a package tree that has no __init__.py files anywhere under tests/. The
+  real fix — a package-qualified import in test_l1_duckdb.py (e.g.
+  `from tests.laws.m1 import _fragment as F`), which needs __init__.py files under
+  tests/, tests/laws/, tests/laws/m1/, and possibly an import-mode change in
+  pyproject.toml's [tool.pytest.ini_options] — touches a frozen, manifested file
+  (m1-laws-freeze). CLAUDE.md is explicit that a frozen path is read-only outside a
+  supersession and that the record of a frozen law turning out to be wrong is not an
+  in-place edit: recorded here as queued for the owner at the next boundary sitting,
+  written up as a new, superseding law file when the owner acts, per BRIEF §8's
+  "if the frozen laws turn out to be wrong" clause.
+reversibility: >-
+  One unconditional check inside a non-frozen plugin module, plus one regression test
+  that builds its own tmp shadow. Reverting removes only the detection, not any behaviour
+  a law depends on; the frozen suite's pass/fail is unaffected either way when nothing is
+  actually shadowing _fragment (the check is a no-op on a clean sys.modules).
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_laws_runner.py::test_a_shadowed_oracle_module_is_refused
+    strength: enforced
+    detail: >-
+      Constructs a tmp decoy _fragment module plus a tmp -p bootstrap plugin, runs
+      test_l1_duckdb.py's L1.16 node as a subprocess against it, and asserts the run
+      exits non-zero with RT-M1-01 and "shadowed" in the output.
+  - type: file
+    target: docs/redteam/2026-08-26-m1-boundary.md
+    strength: documentary
+    detail: >-
+      RT-M1-01's full claim, reproduction transcript, and the explicit statement that
+      this closes detection, not the naming hazard itself.
+links: ["D0089", "D0092"]

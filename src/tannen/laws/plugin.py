@@ -13,6 +13,7 @@ record covering tests that never executed.
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,41 @@ __all__ = ["LawEvidencePlugin", "DISABLE_ENV"]
 
 DISABLE_ENV = "TANNEN_NO_EVIDENCE"
 _TRUE = {"1", "true", "yes", "on"}
+
+#: RT-M1-01 (2026-08-26 boundary red team). `tests/laws/m1/test_l1_duckdb.py` (frozen,
+#: manifested) loads its L1.16 oracle half with a bare `import _fragment as F` — `tests/`
+#: carries no `__init__.py` anywhere, so D0089's frozen `_fragment.py` is a plain
+#: top-level module, not a package member. Python caches imports by NAME in
+#: `sys.modules`, so anything that imports a different module also named `_fragment`
+#: FIRST wins: a new, unmanifested `tests/conftest.py` doing `import _fragment` from a
+#: directory pytest's "prepend" import mode puts ahead of `tests/laws/m1/` on
+#: `sys.path` gets cached first, and `test_l1_duckdb.py` silently receives THAT module
+#: instead of the frozen one. Confirmed live: a decoy `tests/_fragment.py` re-exporting
+#: the real module's names passed every test while `sys.modules['_fragment'].__file__`
+#: pointed outside `tests/laws/m1/` the whole run, and no guard in `make verify`
+#: noticed. This check is defence in depth, not a fix for the naming hazard itself —
+#: the real fix is a package-qualified import in the frozen law file, which only the
+#: owner may make (CLAUDE.md: frozen paths are read-only outside a supersession).
+_ORACLE_MODULE_NAME = "_fragment"
+_ORACLE_REL_PATH = Path("tests") / "laws" / "m1" / "_fragment.py"
+
+
+def _oracle_shadow_problem(root: Path) -> str | None:
+    """None if `_fragment` was never imported this run, or was imported from the frozen
+    file; else a message naming what shadowed it."""
+    module = sys.modules.get(_ORACLE_MODULE_NAME)
+    if module is None:
+        return None
+    expected = (root / _ORACLE_REL_PATH).resolve()
+    actual_file = getattr(module, "__file__", None)
+    actual = Path(actual_file).resolve() if actual_file else None
+    if actual == expected:
+        return None
+    return (
+        f"sys.modules[{_ORACLE_MODULE_NAME!r}] is {actual}, not the frozen {expected} "
+        "(RT-M1-01: the L1.16 differential oracle was shadowed by a different module of "
+        "the same name — docs/redteam/2026-08-26-m1-boundary.md)"
+    )
 
 
 @dataclass
@@ -53,6 +89,14 @@ class LawEvidencePlugin:
     # ------------------------------------------------------------------ hooks
 
     def pytest_collection_modifyitems(self, items: list[Any]) -> None:
+        # Checked unconditionally, even under TANNEN_NO_EVIDENCE: an evidence-disabled
+        # run still runs the frozen laws (D0041 turns off only the record, never the
+        # test), so a shadowed oracle would be just as undetected either way (RT-M1-01).
+        problem = _oracle_shadow_problem(self.root)
+        if problem is not None:
+            import pytest
+
+            pytest.exit(f"tannen evidence: {problem}", returncode=1)
         if not self.enabled:
             return
         for item in items:
