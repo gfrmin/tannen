@@ -163,3 +163,37 @@ def test_stale_projection_detected(tmp_path: Path) -> None:
     result = run([sys.executable, "scripts/check_concepts.py", "--root", str(root)])
     assert result.returncode != 0
     assert "stale" in (result.stdout + result.stderr)
+
+
+def test_same_day_boundary_starts_the_receipt_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A boundary minted the SAME DAY as the receipt must start the seven-day clock.
+
+    The sitting takes the receipt and mints the close tag minutes apart (docs/SITTING.md),
+    so if a same-day boundary does not count then no close tag ever does, and Tier-B
+    silence-as-consent never suspends (BRIEF §9.1, D0071).
+
+    The boundary set is substituted rather than read from refs/tags, and that substitution
+    IS the test. BOUNDARY_TAG_RE matches `.+-laws-freeze`, so this repo accumulates
+    boundaries dated after the latest receipt as a matter of routine; against the live tag
+    set the unpatched `>` reaches the same verdict by a different route, and the assertion
+    goes quiet without ever failing. Exactly one boundary, on the receipt's own day, is the
+    only arrangement that tells `>` and `>=` apart (D0092).
+    """
+    import datetime as dt
+    import sys
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import _gov
+
+    rdate = max(dt.date.fromisoformat(p.stem) for p in (REPO_ROOT / "receipts").glob("*.md"))
+    long_after = rdate + dt.timedelta(days=30)
+
+    monkeypatch.setattr(_gov, "boundary_tag_dates", lambda root: [rdate])
+    fresh, detail = _gov.receipt_state(REPO_ROOT, long_after)
+    assert not fresh, f"a same-day boundary did not start the clock: {detail}"
+
+    # The half the patch must NOT change: a boundary strictly BEFORE the receipt is one
+    # the receipt already answers for, so it does not start a clock against it.
+    monkeypatch.setattr(_gov, "boundary_tag_dates",
+                        lambda root: [rdate - dt.timedelta(days=1)])
+    fresh, detail = _gov.receipt_state(REPO_ROOT, long_after)
+    assert fresh, f"an earlier boundary wrongly started the clock: {detail}"

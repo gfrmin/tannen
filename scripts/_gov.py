@@ -292,7 +292,12 @@ def receipt_state(root: Path, today: dt.date) -> tuple[bool, str]:
     )
     if verify.returncode != 0:
         return False, f"receipt {latest.name} signature does not verify against owner@tannen"
-    later = [d for d in boundary_tag_dates(root) if d > rdate]
+    # A boundary minted the same day as the receipt counts (D0071). The sitting takes
+    # the receipt and mints the close tag minutes apart (docs/SITTING.md), so a strict
+    # `>` at day granularity excluded every close tag this project will ever make, and
+    # the clock that ordering exists to start could never start. A boundary dated
+    # BEFORE the receipt stays excluded: the receipt already answers for it.
+    later = [d for d in boundary_tag_dates(root) if d >= rdate]
     if not later:
         return True, f"receipt {latest.name} fresh (no milestone boundary since)"
     valid_until = later[0] + dt.timedelta(days=7)

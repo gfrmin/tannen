@@ -1,0 +1,70 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0092
+title: The receipt-clock regression test substitutes the boundary set instead of reading refs/tags
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  tests/test_governance_scripts.py::test_same_day_boundary_starts_the_receipt_clock
+  monkeypatches _gov.boundary_tag_dates to return exactly one boundary, dated on the
+  receipt's own day, and asserts the receipt is STALE thirty days later. A second half
+  substitutes a boundary one day EARLIER and asserts the receipt is fresh, pinning the
+  half of the comparison D0071's patch must not move. The live tag set is not consulted.
+  The version drafted in
+  docs/proposals/2026-08-25-receipt-clock-same-day-boundary.md, which called
+  receipt_state against the real refs/tags, is replaced rather than kept alongside.
+rationale: >-
+  The drafted test was sound on 2026-08-25 and vacuous by 2026-08-26, and nothing about the
+  repository would have announced the transition. It asserted `not fresh` thirty days past
+  today against whatever boundaries happened to be in refs/tags. On the day it was written
+  every boundary was dated on or before the receipt, so only the same-day case could
+  produce staleness and the assertion genuinely discriminated `>` from `>=`. But
+  BOUNDARY_TAG_RE matches `.+-laws-freeze`, so m1-laws-freeze — the tag this very session
+  mints, dated 2026-08-26 — is itself a boundary dated strictly after the 2026-08-25
+  receipt. Under the UNPATCHED `>` it is selected, the receipt goes stale on 2026-09-02,
+  and `not fresh` holds. The test would have passed against the defect it was written to
+  catch, and passed quietly, for the rest of the repository's life.
+  .
+  This is D0091's defect a second time, in a different guard, eight records later: a test
+  that borrows its precondition from mutable repository state stops testing the regression
+  as soon as that state moves, and reports success while doing it. D0091's ratchet tests
+  staged their breach against the live `unenforced` count and went silent when it reached
+  zero; this one staged its boundary against the live tag set and would have gone silent
+  when the next boundary tag was minted. The common shape is worth naming because it is
+  not carelessness and re-reading the test does not reveal it: in both cases the assertion
+  is correct, the arrangement is what rots, and the arrangement is invisible in the file.
+  The rule the two cases yield is that a regression test must CONSTRUCT the state that
+  distinguishes the fixed code from the broken code, never observe it.
+  .
+  Discrimination was verified rather than argued, on 2026-08-26, by loading the current
+  scripts/_gov.py and a `>=`-patched copy side by side against this repository's real
+  receipts: the same-day case gives (True, 'fresh (no milestone boundary since)') under
+  `>` and (False, 'stale: boundary 2026-08-25 + 7 days elapsed') under `>=`, while the
+  earlier-boundary case gives fresh under both. Pass-after and fail-before is the only
+  evidence that an assertion discriminates, and it is the same argument D0094 generalises
+  to the frozen law files.
+reversibility: >-
+  One test in a file that is neither frozen nor in the custody set. Reverting to the
+  drafted form restores a test that passes unconditionally, which is worse than having no
+  test, because the guard would then be listed as covered.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_governance_scripts.py::test_same_day_boundary_starts_the_receipt_clock
+    strength: enforced
+    detail: >-
+      The test itself, in its substituting form. Its docstring carries the reason the
+      substitution is the test rather than a convenience, so the next reader tempted to
+      simplify it back to the live tag set finds the argument in place.
+  - type: file
+    target: docs/proposals/2026-08-25-receipt-clock-same-day-boundary.md
+    strength: documentary
+    detail: >-
+      Carries both drafts, the verified discrimination transcript, and the section on why
+      the first had to be replaced. Documentary: it records the reasoning, and detects
+      nothing.
+links:
+  - decisions/0091-the-ratchet-tests-borrowed-their-debt.yaml
+  - decisions/0071-receipt-clock-cannot-start-same-day.yaml
+  - decisions/0073-d0071-applied-outside-a-boundary-sitting.yaml
+  - decisions/0094-law-validation-ratchet.yaml

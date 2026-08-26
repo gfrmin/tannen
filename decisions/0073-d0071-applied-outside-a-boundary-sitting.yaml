@@ -43,6 +43,16 @@ bindings:
       it; the binding is then upgraded to a pytest binding on
       test_same_day_boundary_starts_the_receipt_clock, which fails before the patch and
       passes after (D0045 — bindings may be added; the decision stays immutable).
+  - type: pytest
+    target: tests/test_governance_scripts.py::test_same_day_boundary_starts_the_receipt_clock
+    strength: enforced
+    detail: >-
+      The predicted upgrade, added 2026-08-26 after the owner performed the four steps.
+      The test is the evidence that the patch is in force: it constructs a lone same-day
+      boundary and asserts staleness, which holds only under `>=`. What this record
+      claimed about division of labour is separately visible in git — the patch, the
+      regenerated custody manifest and the re-signature are the owner's commit, and the
+      builder's commit touches no custody-set file.
   - type: config
     target: governance/tier-c.yaml#custody.set
     strength: enforced

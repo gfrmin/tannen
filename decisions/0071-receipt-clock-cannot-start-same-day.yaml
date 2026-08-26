@@ -54,6 +54,18 @@ bindings:
       reproduction command with its output, and the statement of what applying it does to
       the records currently under a veto clock. Upgrades to a manifest binding on
       scripts/_gov.py when the owner applies it (D0045).
+  - type: pytest
+    target: tests/test_governance_scripts.py::test_same_day_boundary_starts_the_receipt_clock
+    strength: enforced
+    detail: >-
+      Added 2026-08-26 under D0045, when the owner applied the patch. The upgrade this
+      record predicted was a MANIFEST binding on scripts/_gov.py; that prediction was
+      wrong on a point worth leaving visible rather than quietly correcting, since the
+      distinction is the whole subject of the record's second paragraph. scripts/_gov.py
+      is in the CUSTODY set, not MANIFEST.sha256 — those are different mechanisms with
+      different signers (D0061) — so a manifest binding would not resolve. The enforcing
+      artifact is the regression test, which fails under `>` and passes under `>=`
+      (verified both ways; D0092).
   - type: config
     target: governance/tier-c.yaml#custody.set
     strength: enforced
