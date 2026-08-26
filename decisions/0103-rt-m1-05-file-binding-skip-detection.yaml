@@ -1,0 +1,84 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0103
+title: "RT-M1-05: a skip hidden inside a whole-file pytest binding — fix drafted and verified, not committed"
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  The M0→M1 boundary red team (docs/redteam/2026-08-26-m1-boundary.md, RT-M1-05)
+  confirmed that scripts/check_decisions.py's `pytest_violation` called a run "skipped"
+  — a binding failure — only when NOTHING in that run passed
+  (`re.search(r"\b[1-9]\d* skipped\b", out) and " passed" not in out`). Most pytest
+  bindings in decisions/*.yaml target a whole FILE, not one node (D0083, D0093, D0100,
+  D0101 among 20+ others). A single `pytest.mark.skip`, a runtime `pytest.skip()`, or a
+  failing `importorskip` inside one function of an otherwise-passing bound file never
+  tripped that condition: the run exits 0 and the binding was reported enforced.
+  .
+  A fix was written, applied to the working tree, and verified directly against both a
+  constructed poison tree and the real repository: `pytest_violation` runs with `-rs`
+  (pytest's per-skip "SKIPPED [n] file:line: reason" summary line) and flags any skip
+  whose reason does not start with an allow-listed prefix
+  (`ALLOWED_SKIP_REASON_PREFIXES = ("S-pending: ",)`), even when other tests in the same
+  run passed. The allow-list exists because this repo already has one designed skip of
+  this exact shape — tests/test_conformance.py's `pytest.skip(f"S-pending: {...}")` for a
+  concept grade with no published vectors yet (D0009), bound at file granularity by
+  D0087 — which must not regress into a guard failure. A regression test,
+  `test_a_skip_hidden_inside_a_passing_file_binding_is_caught`, was drafted for
+  `tests/test_governance_scripts.py`, constructing the exact poison scenario inside a
+  `tmp_path` tree per D0092's rule.
+  .
+  THE FIX IS NOT COMMITTED. `scripts/check_decisions.py` is a member of the custody set
+  (governance/tier-c.yaml's custody.set), so its bytes changing makes
+  governance/custody.sha256 stop matching — expected, and correctly reported by
+  check_manifest.py as custody drift. What was not anticipated until landing was
+  attempted: D0063 (Tier C, ruling 3) binds tests/test_governance_scripts.py at file
+  granularity, and that file's test_check_passes_on_real_tree[check_manifest.py] then
+  goes red for the duration of the drift — which makes D0063's own binding unresolved,
+  which is exactly what .pre-commit-config.yaml's check-decisions hook checks on every
+  commit. The fix cannot be landed as an ordinary builder commit; the one precedent of a
+  builder session touching a custody-set file (e6a9c8f, RT-06) landed with
+  governance/custody.sha256 re-signed in the SAME commit — owner action, not available to
+  a builder-only session (CLAUDE.md: "only the owner edits" the custody set).
+  .
+  The patch (scripts/check_decisions.py + tests/test_governance_scripts.py) is saved at
+  docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch,
+  verified to apply cleanly against a clean clone of this milestone's HEAD. It is queued
+  for the owner to apply at the M1 boundary sitting, in the same motion as the custody
+  re-signature.
+rationale: >-
+  Bindings are the mechanism CLAUDE.md and BRIEF §9 both describe as what makes a
+  decision load-bearing. A whole-file binding is the common case in this repo, not an
+  edge case, and the guard could not previously distinguish "the file's one substantive
+  test genuinely ran and passed" from "the file's one substantive test was silently
+  skipped while an unrelated sibling test passed." Nothing in the repository currently
+  has an unexplained skip, but nothing was stopping one from landing that way either.
+  Recording this as its own record, separate from committing the code, because the
+  landing obstacle is itself a governance-relevant finding: a custody-set fix cannot be
+  self-certified by the session that writes it, and a decision record is how that fact
+  survives past this session even though no commit carries the code yet.
+reversibility: >-
+  The patch is a regex, an allow-list constant, and one self-contained regression test;
+  reverting it after landing restores the pre-fix behaviour, and nothing else would
+  depend on the stricter check. Until landed, there is nothing in the tracked tree to
+  reverse — this record and the patch file are the only artifacts.
+status: accepted
+bindings:
+  - type: file
+    target: docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch
+    strength: documentary
+    detail: >-
+      The verified patch, ready for the owner to apply at the M1 boundary sitting.
+      Verified to apply cleanly against a clean clone of this milestone's current HEAD.
+  - type: file
+    target: docs/redteam/fixture-candidates/check-decisions-file-skip/decisions/0001-poison-file-skip.yaml
+    strength: documentary
+    detail: >-
+      A fixture-candidate pinning the same tooth by hand
+      (docs/redteam/fixture-candidates/README.md), not installable under tests/poison/
+      until the patch itself lands (installing it first would leave the custodian
+      permanently red against the shipped guard).
+  - type: file
+    target: docs/redteam/2026-08-26-m1-boundary.md
+    strength: documentary
+    detail: RT-M1-05's full claim, reproduction, and the addendum explaining why it could not be committed this session.
+links: ["D0009", "D0087", "D0092", "D0061", "D0063"]

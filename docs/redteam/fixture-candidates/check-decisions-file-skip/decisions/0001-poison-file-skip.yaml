@@ -1,0 +1,19 @@
+# Poison fixture candidate: a pytest binding that names a whole FILE, where one test
+# function in that file is skipped and another passes. Before RT-M1-05's fix,
+# check_decisions.py's pytest_violation only called a run "skipped" when NOTHING in it
+# passed, so this read as fully enforced. Most of this repo's real pytest bindings are
+# file-level (docs/redteam/2026-08-26-m1-boundary.md, RT-M1-05), so this fixture's shape
+# is the common case, not an edge case.
+id: D0001
+title: "Poison — a skipped test hidden inside an otherwise-passing file binding"
+tier: A
+date: "2020-01-02"
+decision: >-
+  Bind this record to a whole test FILE. One test function in it is skipped with no
+  allow-listed reason; another passes.
+rationale: RT-M1-05 (docs/redteam/2026-08-26-m1-boundary.md) — guard-liveness corpus.
+reversibility: n/a (fixture)
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_mixed.py

@@ -11,7 +11,9 @@ table. Fixtures marked **needs patch** additionally require the guard change quo
 below them; installing those before the patch would leave the custodian permanently
 red, which is the opposite of what a poison fixture is for.
 
-Findings are `RT-nn` from `docs/redteam/2026-08-24-m0-boundary.md`.
+Findings are `RT-nn` from `docs/redteam/2026-08-24-m0-boundary.md` (the M0→M1 pass) or
+`RT-M1-nn` from `docs/redteam/2026-08-26-m1-boundary.md` (the M1 boundary pass, added
+below the original table without renumbering the M0 rows).
 
 | Candidate | Guard poisoned | Closes | Bites today? |
 |---|---|---|---|
@@ -22,6 +24,8 @@ Findings are `RT-nn` from `docs/redteam/2026-08-24-m0-boundary.md`.
 | `check-manifest-unsigned-policy/` | `scripts/check_manifest.py` (required-signature check) | RT-04 | **yes** (patch landed, D0056) |
 | `check-decisions-unsigned-tier-c/` | `scripts/check_decisions.py` (Tier-C signature check) | RT-06 | **yes** — the guard landed 2026-08-25 (D0064); a `git mv` plus one manifest row |
 | `custodian-tag-signer/` | `scripts/check_tag_signers.py` | D0049's open ask **and** RT-15 | **yes** — one bundle, two teeth (renamed from `custodian-tag-signer/`, 2026-08-25) |
+| `check-decisions-file-skip/` | `scripts/check_decisions.py` (pytest bindings) | RT-M1-05 | **yes against the drafted fix** (`ALLOWED_SKIP_REASON_PREFIXES`) — drafted and verified this session, **not committed**: `scripts/check_decisions.py` is a custody-set member (`governance/tier-c.yaml`), so landing it reddens `check_manifest.py`'s custody check, which cascades into D0063's own file-level binding on `tests/test_governance_scripts.py` and blocks pre-commit's `check-decisions` hook on every commit thereafter. The patch is queued for the owner to apply together with the custody re-signature at the M1 boundary sitting; this pins the tooth against the drafted, not-yet-live guard |
+| `oracle-shadow/` | `src/tannen/laws/plugin.py`'s collection-time oracle check | RT-M1-01 | **yes** — the check already landed this session (`_oracle_shadow_problem`); this pins the tooth. Does not close the underlying naming hazard (queued) |
 
 ---
 
@@ -522,3 +526,94 @@ def implementation_subject(root: Path) -> str:
 
 Note the `rglob("*")` change: it also brings non-`.py` files under `src/tannen` into
 the subject, which today are invisible to it.
+
+---
+
+## `check-decisions-file-skip/` — a skip hidden inside an otherwise-passing file binding
+
+**Guard:** `scripts/check_decisions.py` (`pytest_violation`).
+
+**Intended violation:** a record bound to a whole test FILE holding one passing test
+and one `pytest.mark.skip`-ed test whose reason is not on the allow-list. This is the
+common shape of a real binding in this repo — most pytest bindings in `decisions/*.yaml`
+name a file, not a single node (`docs/redteam/2026-08-26-m1-boundary.md`, RT-M1-05).
+
+**Why it is needed:** `check-decisions-nested-hatch/` proves the guard notices a binding
+that does not collect at all; nothing in the corpus proves it notices a binding that
+*partly* runs while its file, as a whole, exits 0. Before RT-M1-05's fix this fixture's
+`check_decisions.py` run was **fully green**.
+
+**Marker:** `unexplained skip`
+
+**Command that must exit non-zero (against the drafted, not-yet-committed fix):**
+
+```sh
+uv run python scripts/check_decisions.py --root docs/redteam/fixture-candidates/check-decisions-file-skip
+```
+
+**Not installable yet.** Installing this fixture under `tests/poison/` before the fix
+lands would leave the custodian permanently red against the *shipped* guard, exactly the
+condition the fixture-marking convention above ("needs patch") exists to prevent. This
+row stays a draft until the owner applies the patch at the boundary sitting.
+
+**Verified** (2026-08-26, against the drafted fix applied locally, then reverted —
+`scripts/check_decisions.py` itself was not committed with the fix; see the M1 boundary
+report's RT-M1-05 section for why):
+
+```
+check_decisions: FAIL (1 violation(s))
+  - decisions/0001-poison-file-skip.yaml: binding does not resolve — pytest node has an
+    unexplained skip inside an otherwise-passing run (RT-M1-05: a whole-file binding with
+    a mix of passed and skipped tests reads as fully enforced) — tests/test_mixed.py: the
+    enforcement this binding claims never actually runs
+```
+
+**Verified against the pre-fix guard** (reverting `pytest_violation` to the M0 form):
+exit 0, `check_decisions: OK — 1 records valid; 1 pytest binding(s) green; …`.
+
+**Known limit:** the fix's allow-list (`ALLOWED_SKIP_REASON_PREFIXES = ("S-pending: ",)`)
+is intentionally narrow — it exists so `tests/test_conformance.py`'s designed
+S-pending skip (D0009) does not regress into a false positive. A future designed skip
+with a different reason prefix needs its own allow-list entry; this fixture does not
+by itself prevent the allow-list from being widened carelessly (that is an ordinary code
+review question, not a guard-liveness one).
+
+---
+
+## `oracle-shadow/` — the L1.16 oracle module answers to a name, not an identity
+
+**Guard:** `src/tannen/laws/plugin.py`'s `LawEvidencePlugin.pytest_collection_modifyitems`
+(the `_oracle_shadow_problem` check added this session).
+
+**Intended violation:** a decoy `_fragment.py`, faithfully re-exporting the real frozen
+oracle's names, primed into `sys.modules['_fragment']` by a `-p`-loaded bootstrap plugin
+BEFORE `tests/laws/m1/test_l1_duckdb.py` is collected — so the frozen file's bare
+`import _fragment as F` receives the decoy instead of `tests/laws/m1/_fragment.py`
+(`docs/redteam/2026-08-26-m1-boundary.md`, RT-M1-01). Run against the **real** frozen
+law file, the same way `lint-imports-kernel/` runs against the real import contracts,
+so it goes silent exactly when the check is neutered.
+
+**Why it is needed:** this is the one M1 finding that reaches BRIEF §6's kill criterion
+directly, and without touching a single frozen or manifested byte. No fixture in the
+corpus exercises `sys.modules` name-collision at all.
+
+**Marker:** `RT-M1-01`
+
+**Command that must exit non-zero** (run from the repo root):
+
+```sh
+env PYTHONPATH=docs/redteam/fixture-candidates/oracle-shadow \
+    uv run pytest -p bootstrap_shadow tests/laws/m1/test_l1_duckdb.py \
+    -k test_l1_16_the_catalogue_covers_every_operator_of_the_fragment -q
+```
+
+**Verified** (2026-08-26): with the check in place, the run aborts via `pytest.exit`
+naming `RT-M1-01` and the actual (shadow) vs. expected (frozen) paths; with the check
+commented out, the same command exits 0, `1 passed`, silently.
+
+**Known limit — this fixture proves the DEFENCE, not a closure of the underlying
+hazard.** The bare `import _fragment as F` in the frozen `test_l1_duckdb.py` is still
+collision-prone; this check only catches the one shadow shape reachable through that
+exact name. A package-qualified import in the frozen file (superseding, per CLAUDE.md,
+since the file is frozen) is the actual fix and needs the owner's key — see RT-M1-01 in
+the M1 boundary report for the specific rewrite proposed.

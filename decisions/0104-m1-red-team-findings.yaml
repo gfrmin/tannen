@@ -1,0 +1,96 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0104
+title: "M0→M1 boundary red team: six confirmed findings, one closed, one drafted-not-landed, four queued"
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  BRIEF §9.1 point 5 and D0059 mandate a red team at each milestone boundary, run in a
+  fresh context that did not write the milestone's implementation. This session ran
+  that pass against `~/git/worktrees/tannen/m1` at caeb458 ("M1 Session B complete").
+  Six probes were specified going in (the standing mandate plus five M1-specific
+  hypotheses); the floor was six, the pass did not stop there. Full record:
+  docs/redteam/2026-08-26-m1-boundary.md.
+  .
+  Six findings confirmed (RT-M1-01 through RT-M1-06; RT-M1-06 is a status audit of the
+  M0 pass's still-open items, not a new exploit):
+  .
+  - RT-M1-01 (critical): the L1.16 differential oracle, tests/laws/m1/_fragment.py, is
+    imported by bare name (`import _fragment as F`) with no __init__.py anywhere under
+    tests/, so a different module of the same name loaded earlier in collection
+    silently replaces it, undetected by check_manifest.py. Closed in this session,
+    partially — defence in depth, not the naming hazard itself (landed: commit
+    9eae97d). See D0102.
+  - RT-M1-02 (medium, one item; rest refuted): .venv/ site-packages content — the
+    actual code that runs @given strategies or executes the L1.16 differential SQL —
+    sits entirely outside harness_subject; a hand-patched installed package with its
+    pinned version string left untouched is indistinguishable from the real one in
+    every artifact the report or digest reads. Not closed this session. Queued.
+  - RT-M1-03 (high): RT-05's original evidence-forgery primitive (M0) still works
+    against the bare `tannen laws report` command and the default evidence/ store —
+    M0's closure reached only `make verify`'s freshly-scoped store, not the command
+    CLAUDE.md itself names as the Session-B completion criterion. Not closed this
+    session, deliberately (both defensible fixes are owner-shaped design calls). Queued.
+  - RT-M1-04 (medium-high): TraceStore's write-once guarantee is enforced only by its
+    own record() method; the trace directory itself has no integrity binding, so a
+    hand-rewritten trace file is served by VerifyingTrace as a legitimate hit for the
+    WRONG derivation — a genuine trust-boundary gap neither docs/specs/m1.md §8 nor the
+    frozen L1.14 law promises to close. Not closed this session (design decision, not a
+    bug fix; src/tannen/executor.py was outside the pre-approved editable set). Queued
+    for an M2–M4 discussion.
+  - RT-M1-05 (high): a single skipped test inside a whole-FILE pytest binding read as
+    fully enforced — check_decisions.py's `pytest_violation` called a run "skipped" only
+    when nothing in it passed, and most bindings in decisions/*.yaml are file-level.
+    The fix was drafted and verified this session but is NOT committed:
+    scripts/check_decisions.py is a custody-set member, and landing the fix there
+    cascades — via D0063's own file-level binding on tests/test_governance_scripts.py —
+    into blocking the pre-commit check-decisions hook on every subsequent commit. Not a
+    thing a builder-only session can resolve (the one precedent, e6a9c8f, re-signed
+    custody in the same commit — owner action). The verified patch is saved at
+    docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch,
+    queued for the owner to apply at the sitting alongside the re-signature. See D0103.
+  - RT-M1-06 (informational): status audit against D0093–D0101. Nothing found closed
+    silently; every status matches its own record or docs/proposals/2026-08-25-boundary-sitting/CONFERRAL.md.
+    D0061, D0095, RT-07 (digest input-hash), RT-10/11/12 remain open exactly as filed.
+    One item worth flagging for the digest: D0095 (m1-laws-freeze missing from
+    required_tags) was filed in the minute after the tag itself was minted this
+    session — the M1 boundary sitting should add both m1-laws-freeze and (once minted)
+    m1-close to required_tags in the same motion, per D0095's own recommendation.
+  .
+  Two fixture-candidate drafts were written pinning the two targeted teeth
+  (docs/redteam/fixture-candidates/oracle-shadow/, check-decisions-file-skip/),
+  documented in docs/redteam/fixture-candidates/README.md alongside the existing M0
+  corpus. Neither is installed under tests/poison/ yet; check-decisions-file-skip/
+  cannot be installed until RT-M1-05's patch itself lands (installing the fixture first
+  would leave the custodian permanently red against the still-unpatched guard).
+rationale: >-
+  Recorded as the one record the M1 boundary sitting can point at for "the red team
+  ran, here is what it found, here is what closed and what didn't." D0102 and D0103
+  carry their own findings' rationale in full; this record exists so the digest's
+  exception-only view has a single governance-paths-flagged entry for the whole pass
+  rather than requiring the sitting to reconstruct scope from three separate records
+  plus the boundary report. RT-M1-05's own landing attempt is itself part of what this
+  pass found — a custody-set fix cannot be self-certified within one builder session —
+  and is recorded here rather than smoothed over, per the same norm RT-04's M0 closure
+  set ("this is the alarm, not a bug").
+reversibility: >-
+  A statement of what was found and what was done about it; nothing to reverse on its
+  own. RT-M1-01's closure (D0102) is independently reversible as described in its own
+  record. RT-M1-05's closure (D0103) has nothing committed to reverse — only a saved
+  patch and this record. The four queued findings change nothing about the
+  repository's current behaviour — they are a to-do list, not an action.
+status: accepted
+bindings:
+  - type: file
+    target: docs/redteam/2026-08-26-m1-boundary.md
+    strength: documentary
+    detail: The full pass — every probe, reproduction transcript, severity rationale, and closure note this record summarises.
+  - type: file
+    target: docs/redteam/fixture-candidates/oracle-shadow/_fragment.py
+    strength: documentary
+    detail: Fixture-candidate draft pinning RT-M1-01's tooth; not yet installed under tests/poison/.
+  - type: file
+    target: docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch
+    strength: documentary
+    detail: RT-M1-05's verified, not-yet-landed patch — see D0103.
+links: ["D0059", "D0060", "D0095", "D0102", "D0103"]
