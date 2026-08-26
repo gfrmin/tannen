@@ -1,0 +1,74 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0095
+title: required_tags is an enumeration that must be extended at every boundary, and it already lags
+tier: C
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  Queued to the M1 boundary sitting, non-blocking (BRIEF §9.2). governance/tag-roles.yaml
+  `required_tags` lists m0-close, brief-freeze and m0-laws-freeze. m1-laws-freeze, minted
+  today, is not in it and cannot be added by the builder: the file is both a frozen path
+  (MANIFEST.sha256) and a custody-set member, so it is Tier C twice over — a trust-root
+  change under tier-c.yaml's own door. Two things are proposed, and the second matters
+  more than the first. (1) Add m1-laws-freeze. (2) Replace the enumeration with a rule
+  that derives the required set, so that the list cannot lag a milestone again — the
+  natural form is "every tag matched by BOUNDARY_TAG_RE that has ever been observed",
+  persisted where the custodian can read it, since a rule over tags that merely COULD
+  exist cannot distinguish a fresh clone from a stripped one, which is the distinction
+  RT-15 turns on.
+rationale: >-
+  RT-15 established that a tag nobody requires can be deleted with every guard staying
+  green: `git tag -d` erased the trust root, emptied the bless_epoch, and made the
+  attention receipt fresh for ever. required_tags was the fix. But the fix is a hand-kept
+  list in a file only the owner may edit, and the events that should extend it — minting a
+  boundary tag — are precisely the events the builder performs alone under delegation 1.
+  So the list is structurally guaranteed to lag by one milestone at minimum, and the lag is
+  invisible: check_tag_signers reports "OK — 4 tag(s); every signer matches its tag class"
+  whether or not the fourth is required to exist.
+  .
+  What is actually exposed today is narrower than RT-15's original case and should not be
+  overstated. Deleting m1-laws-freeze would not unseal the M1 laws — check_manifest
+  verifies bytes against MANIFEST.sha256 and is indifferent to tags — and it would not move
+  the receipt clock, because m0-close (2026-08-25) is the earliest boundary at or after the
+  2026-08-25 receipt and would still select. What is lost is the attestation itself: the
+  only signed evidence that seventeen laws were frozen BEFORE the implementation that
+  satisfies them, which is the single claim the frozen-oracle protocol exists to make. A
+  Session B that could delete that tag could implement first and freeze after, and no guard
+  in the repo would contradict it.
+  .
+  Filed rather than fixed, and filed now rather than at the sitting, because the finding
+  arrived in the minute after the tag was minted and the alternative was to carry it in a
+  session summary. This repo has already been bitten twice this week by a guard that was
+  green for the wrong reason (D0071, D0091) and once by a law nobody could satisfy (D0093);
+  the common thread is that each was found by reading a passing output against the document
+  saying what it should mean, and each would have been lost if the reader had not written
+  it down at once.
+reversibility: >-
+  Nothing is changed by this record; it queues a proposal. Adding one line to required_tags
+  is trivially reversible. Replacing the enumeration with a derived rule is not — it changes
+  what the custody floor considers mandatory, and a rule that over-derives would make every
+  shallow clone fail the custodian, which is why it is proposed for a sitting rather than
+  drafted here.
+status: blocked-on-owner
+bindings:
+  - type: config
+    target: governance/tag-roles.yaml#required_tags
+    strength: documentary
+    detail: >-
+      The list as it stands, three entries and one milestone behind. DOCUMENTARY and that
+      is the honest grade: the key exists and is consumed by check_tag_signers.py, but what
+      this record proposes is not in it, so nothing here is enforced yet. Upgrades to an
+      enforced binding when the owner applies either half at the sitting (D0045).
+  - type: manifest
+    target: governance/tag-roles.yaml
+    strength: enforced
+    detail: >-
+      Why the builder may not simply add the line: the file carries a MANIFEST.sha256 row
+      AND sits in the custody set, so an edit both breaks a frozen path and invalidates the
+      owner's signature over governance/custody.sha256. This binding is the mechanism that
+      makes queueing necessary rather than cautious.
+links:
+  - decisions/0058-tags-are-required-not-optional.yaml
+  - decisions/0050-tag-signer-role-table.yaml
+  - decisions/0061-owner-signs-a-custody-set.yaml
+  - decisions/0071-receipt-clock-cannot-start-same-day.yaml
