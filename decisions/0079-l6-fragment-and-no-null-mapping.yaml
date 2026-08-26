@@ -37,6 +37,12 @@ bindings:
   - type: config
     target: pyproject.toml#dependency-groups.dev
     detail: The exact duckdb pin the differential law compares against.
+  - type: pytest
+    target: tests/laws/m1/test_l1_duckdb.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
 links:
   - BRIEF.md §6 (L6), §9 (DuckDB pre-decided)
   - decisions/0005-duckdb-differential-oracle.yaml

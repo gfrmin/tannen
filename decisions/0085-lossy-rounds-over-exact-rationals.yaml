@@ -30,6 +30,12 @@ bindings:
       L1.6 pins worked examples verified before the freeze (1.005 -> 1.00, 2.675 -> 2.67,
       1.125 on a 0.25 grid -> 1.00), asserts the result is an exact multiple and the
       nearest one over Fractions, and asserts a Lossy is not canonically encodable.
+  - type: pytest
+    target: tests/laws/m1/test_l1_lossy.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
 links:
   - BRIEF.md §5.8, P7
   - docs/specs/m0.md §2 (the promise this keeps)

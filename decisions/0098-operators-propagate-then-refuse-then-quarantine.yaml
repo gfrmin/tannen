@@ -1,0 +1,41 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0098
+title: "Operators propagate a Quarantine first, refuse ill-typed calls eagerly, and quarantine per row after that"
+tier: A
+date: "2026-08-26"
+decision: >-
+  Every operator follows one order: a Quarantine input propagates before any type rule
+  runs (a Quarantine has no schema to check); type-rule violations raise OperatorError at
+  the call, never as a returned Quarantine; user code (predicate, f, value_of, the
+  monoid's fold) is called inside `except Exception` and a failure quarantines THAT row —
+  BaseException is never caught. Two consequences the spec leaves to the implementation:
+  a map_rows row of the wrong shape, or one with no canonical form, quarantines rather than
+  raising; and a fold that fails quarantines every row of its group, since the group is the
+  unit the fold consumed. Quarantined rows are a Rel over the SOURCE's semiring annotated
+  `one`, carrying the offending row as a nested value, and pass through every later
+  operator by union. The operators set on an Outcome is the union of its inputs' sets and
+  the operator's own name — data on the value, read by the layer check.
+rationale: >-
+  The three orders are fixed by three laws read together: test_l1_quarantine.py:127-132
+  applies project and union to a Quarantine with no schema; test_l1_ops.py:108-117 wraps a
+  bare call — no unwrap — in pytest.raises(OperatorError); and L1.11's BaseException
+  cases must escape. Any other order fails one of them. The fold rule is the "lazy path is
+  the correct path" of BRIEF §5.4 applied to the one user callable the laws do not exercise.
+reversibility: >-
+  Each rule is local to ops.py; changing one is a new record and, where a law pins it,
+  impossible without supersession.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/laws/m1/test_l1_quarantine.py
+    strength: enforced
+    detail: L1.11 — per-row quarantine, empty is Ok, BaseException escapes, propagation, carry-through.
+  - type: pytest
+    target: tests/laws/m1/test_l1_ops.py
+    strength: enforced
+    detail: L1.7 — every ill-typed call raises at the call; L1.8/L1.9 — the semiring rules.
+  - type: pytest
+    target: tests/laws/m1/test_l1_duckdb.py
+    strength: enforced
+    detail: L1.16 — the bag image of every operator in the fragment agrees with DuckDB under both semirings.
+links: ["D0080", "D0081", "D0082", "D0079"]

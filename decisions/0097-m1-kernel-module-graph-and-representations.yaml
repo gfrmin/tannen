@@ -1,0 +1,45 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0097
+title: "M1 kernel module graph: where OperatorError lives, and what a Why or a product element is in memory"
+tier: A
+date: "2026-08-26"
+decision: >-
+  Four representation and layout choices the laws leave open, pinned by the implementation
+  and recorded so the next reader does not re-derive them. (1) OperatorError is defined in
+  tannen.kernel.outcome and re-exported by tannen.kernel.ops: Rel.to_bag must raise
+  ops.OperatorError on a semiring without bag structure and ops imports rel, so the class
+  sits below both. outcome imports nothing from the kernel at run time. (2) A Why element
+  is a frozenset of frozensets of refs, antichain-normalised on every construction and
+  operation; its canonical image is a list of sorted lists, sorted by the canonical bytes
+  of each inner list, so no set order reaches the bytes. (3) A product element is a
+  2-tuple in memory and a 2-list in the canonical form: the M0 encoder refuses tuples and
+  the golden corpus was computed with lists. (4) Rel stores its rows keyed by canonical
+  bytes, in canonical order, as the DECODED canonical dict; iteration yields copies;
+  package-internal Rel._build and Rel._items let operators construct from already-merged
+  rows without re-validating, and the public constructor is the only place the
+  annotations_reason rule is applied. Semiring equality is by name; only Rel.from_value
+  consults SEMIRINGS, so a duck-typed semiring is accepted at construction and refused only
+  where it would have to be guessed at.
+rationale: >-
+  Each is the smallest structure that satisfies every law at once, and each has a plausible
+  alternative that fails one: a tuple encoding fails the golden corpus; a set-ordered Why
+  encoding fails L1.15; a registry check at the constructor fails L1.7's duck-typed
+  NoBag semiring; OperatorError in ops makes rel import ops and ops import rel.
+reversibility: >-
+  Internal layout, reversible module by module; the canonical form (rel/1) is not, and
+  none of this changes it.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/laws/m1/test_l1_semiring.py
+    strength: enforced
+    detail: L1.1/L1.2 over the frozenset and tuple representations, including the encodings.
+  - type: pytest
+    target: tests/laws/m1/test_l1_rel.py
+    strength: enforced
+    detail: L1.4/L1.5 — the golden corpus, from_value's registry refusal, canonical row identity.
+  - type: pytest
+    target: tests/laws/m1/test_l1_ops.py
+    strength: enforced
+    detail: L1.7's NoBag semiring passes the constructor and is refused at the bag operators.
+links: ["D0075", "D0076", "D0077", "D0078", "D0081", "D0093"]

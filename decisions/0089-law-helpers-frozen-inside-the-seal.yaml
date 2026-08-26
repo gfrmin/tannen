@@ -35,6 +35,13 @@ bindings:
     detail: >-
       The seal that forbids Session B adding anything beside the laws, enforced by
       scripts/check_manifest.py::check_sealed_paths.
+  - type: pytest
+    target: tests/laws/m1/test_l1_duckdb.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes. test_l1_duckdb.py is the one
+      executor of _fragment.py.
 links:
   - decisions/0056-seals-not-whitelists.yaml
   - docs/redteam/2026-08-24-m0-boundary.md (RT-03)

@@ -25,6 +25,12 @@ bindings:
   - type: manifest
     target: tests/laws/m1/test_l1_rel.py
     detail: L1.5 asserts the default is Z*Why, that every non-default choice without a reason raises, and that the reason is absent from the canonical bytes.
+  - type: pytest
+    target: tests/laws/m1/test_l1_rel.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
 links:
   - BRIEF.md §5.5
   - decisions/0002-default-semiring.yaml

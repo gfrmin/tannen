@@ -51,6 +51,12 @@ bindings:
     detail: >-
       The corrected law, frozen. The manifest row pins the bytes that carry the replacement
       axiom, so a regression would have to re-freeze deliberately rather than drift.
+  - type: pytest
+    target: tests/laws/m1/test_l1_semiring.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the corrected axiom now
+      passes.
   - type: file
     target: docs/proposals/2026-08-26-law-validation-ratchet.md
     strength: documentary

@@ -33,5 +33,17 @@ bindings:
   - type: manifest
     target: tests/laws/m1/test_l1_ops.py
     detail: L1.7 constructs a semiring with the bag methods deliberately absent and asserts distinct, aggregate and to_bag refuse it while union still works.
+  - type: pytest
+    target: tests/laws/m1/test_l1_semiring.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
+  - type: pytest
+    target: tests/laws/m1/test_l1_ops.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
 links:
   - docs/specs/m1.md §2.1

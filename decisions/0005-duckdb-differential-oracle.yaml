@@ -37,5 +37,11 @@ bindings:
     target: pyproject.toml#dependency-groups.dev
     strength: enforced
     detail: duckdb pinned exactly (D0079), so an upgrade cannot change the oracle under a frozen law.
+  - type: pytest
+    target: tests/laws/m1/test_l1_duckdb.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
 links:
   - "BRIEF.md §6 (L6), §9, §11"
