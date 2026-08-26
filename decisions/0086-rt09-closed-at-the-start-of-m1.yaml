@@ -32,6 +32,12 @@ bindings:
       L1.17 asserts each of RT-09's four reproduction cases moves the subject, that
       __pycache__ does not, and that implementation_subject actually delegates — which is
       what makes the widening load-bearing rather than decorative.
+  - type: pytest
+    target: tests/laws/m1/test_l1_harness.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1 Session B (D0045) when the law went green: the manifest row proves the
+      law is frozen, this node proves it runs and passes.
 links:
   - docs/redteam/2026-08-24-m0-boundary.md (RT-09)
   - decisions/0059-m0-red-team-findings.yaml

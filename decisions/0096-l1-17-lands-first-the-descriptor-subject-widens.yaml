@@ -1,0 +1,40 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0096
+title: "L1.17 lands first: the law descriptor's subject widens to the whole harness"
+tier: A
+date: "2026-08-26"
+risk_flags: [governance-paths]
+decision: >-
+  Session B's first commit is tannen.laws.harness.harness_subject, and
+  discovery.implementation_subject now delegates to it. The subject covers every file under
+  src/tannen (not only *.py), the root conftest.py, pyproject.toml, and — wider than L1.17
+  requires — every conftest.py under tests/, because a tests/conftest.py is not a sealed
+  path and can change a law run (a Hypothesis setting, a monkeypatched module) exactly as the
+  root one can. __pycache__ is excluded. Every M0 descriptor moved on this commit and its
+  evidence was re-earned by the same pytest run; no M1 evidence existed to invalidate,
+  which is why this is the first commit and not a later one (D0086).
+rationale: >-
+  RT-09's finding was that what decided how hard a law was tested sat outside the thing the
+  verdict was recorded against. The fix is a wider subject, and the cost of a wider subject
+  is that more edits invalidate evidence — which is the correct direction: a verdict that
+  survives a change to the harness is a verdict about a harness that no longer exists.
+  Including tests/**/conftest.py goes one step past the law's own fixture on the same
+  argument; the fixture tree in test_l1_harness.py has no tests/ directory, so the law is
+  satisfied either way and the wider subject costs nothing there.
+reversibility: >-
+  Narrowing the subject back is one function edit, but doing so would break L1.17 and
+  reopen RT-09; the direction only widens.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/laws/m1/test_l1_harness.py
+    strength: enforced
+    detail: >-
+      L1.17: the subject is a ref, a pure function of the tree, moves for each named
+      harness input and for an added file, ignores __pycache__, and is what
+      discovery.implementation_subject and law_descriptor actually compute.
+  - type: file
+    target: src/tannen/laws/harness.py
+    strength: enforced
+    detail: The module the law names; an absent file is an absent subject.
+links: ["D0086", "D0059"]

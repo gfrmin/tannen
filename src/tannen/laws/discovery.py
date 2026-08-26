@@ -105,18 +105,15 @@ def discover_laws(root: Path, milestone: str) -> dict[str, dict[str, frozenset[s
 
 
 def implementation_subject(root: Path) -> str:
-    """Ref of the implementation the laws are run against (`params_hash`).
+    """Ref of the harness the laws are run against (`params_hash`).
 
-    Deliberately the whole of `src/tannen`: a law's verdict is evidence about the code
-    that was in the tree when it ran, and narrowing that to a guessed dependency set
-    would let an edit elsewhere silently inherit an old verdict.
+    Since M1 (law L1.17, RT-09) this is `tannen.laws.harness.harness_subject`: the whole of
+    `src/tannen` plus the files that decide how hard a law was tested. Narrowing it to a
+    guessed dependency set would let an edit elsewhere silently inherit an old verdict.
     """
-    sources = {
-        path.relative_to(root).as_posix(): ref_for_bytes(path.read_bytes())
-        for path in sorted((root / IMPLEMENTATION_DIR).rglob("*.py"))
-        if "__pycache__" not in path.parts
-    }
-    return content_address(sources)
+    from tannen.laws.harness import harness_subject  # local: harness is a leaf, discovery is not
+
+    return harness_subject(root)
 
 
 def law_descriptor(root: Path, law: str, module_paths: Iterable[str], subject: str | None = None) -> str:
