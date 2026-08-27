@@ -86,10 +86,6 @@ bindings:
     strength: documentary
     detail: The full pass — every probe, reproduction transcript, severity rationale, and closure note this record summarises.
   - type: file
-    target: docs/redteam/fixture-candidates/oracle-shadow/_fragment.py
-    strength: documentary
-    detail: Fixture-candidate draft pinning RT-M1-01's tooth; not yet installed under tests/poison/.
-  - type: file
     target: docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch
     strength: documentary
     detail: RT-M1-05's verified, not-yet-landed patch — see D0103.

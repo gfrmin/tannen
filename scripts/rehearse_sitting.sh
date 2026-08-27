@@ -125,6 +125,16 @@ say "Making the fixture's own edit consistent (allowed_signers is frozen and in 
 say "Syncing the clone's venv (the gate runs .venv/bin/python at a literal path)"
 ( cd "$CLONE" && uv sync --frozen --quiet )
 ( cd "$CLONE" && .venv/bin/python -I -P scripts/gen_custody.py >/dev/null )
+# gen_custody.py just rewrote custody.sha256's bytes (allowed_signers' own hash moved),
+# but the REAL repo's custody.sha256.sig — carried over untouched by the clone — is a
+# signature over the OLD bytes. Left as-is, check_manifest reports "signature does not
+# verify for governance/custody.sha256 against owner@tannen" at the driver's own step 0,
+# before it has done anything: not a defect in the driver under test, but the fixture
+# starting from a state check_manifest correctly calls invalid. Re-sign with the
+# throwaway key, the same key everything else in this rehearsal signs with, so the
+# fixture's own setup does not manufacture a failure indistinguishable from a real one.
+( cd "$CLONE" && rm -f governance/custody.sha256.sig
+  ssh-keygen -Y sign -f "$KEY" -n tannen-custody governance/custody.sha256 >/dev/null )
 # allowed_signers is an INPUT to the DECISIONS.md freshness hash as well as a custody-set
 # member, so enrolling the throwaway key restales the projection. A fixture that starts
 # inconsistent produces failures that belong to the fixture, and they are indistinguishable

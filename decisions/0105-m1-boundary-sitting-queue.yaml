@@ -1,0 +1,112 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0105
+title: "The M1 boundary sitting: what needs the owner's key, in the order it needs it"
+tier: C
+date: "2026-08-27"
+risk_flags: [governance-paths]
+decision: >-
+  Queued for the M1→M2 boundary sitting, in this order (the order is load-bearing, per
+  D0060's own precedent — a sitting's steps are not independently reorderable).
+  .
+  (0) Copy docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh over
+  scripts/boundary_sitting.sh before running it. This is expected custody drift, tolerated
+  by name in the copy's own unexpected_failures() (the same move step 6 makes for
+  scripts/custodian.sh, one step earlier in the milestone's own life). Then run it:
+  `bash scripts/boundary_sitting.sh m1`, or rehearse first with
+  `TANNEN_REHEARSE_DRIVER=docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh
+  bash scripts/rehearse_sitting.sh`.
+  .
+  (1) Step 5 installs the one M1 fixture ready today: oracle-shadow/ (RT-M1-01,
+  docs/redteam/2026-08-26-m1-boundary.md, D0102). check-decisions-file-skip/ (RT-M1-05,
+  D0103) is deliberately NOT installed at this pass — its guard fix
+  (docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch)
+  is not committed yet (see item 2 below); installing the fixture before the patch would
+  leave the custodian permanently red against the still-unpatched guard.
+  .
+  (2) Apply RT-M1-05's patch
+  (docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch,
+  touching scripts/check_decisions.py and tests/test_governance_scripts.py) and, in the
+  SAME pass, install the check-decisions-file-skip/ fixture and add its row to
+  tests/poison/README.md. Both must land together: scripts/check_decisions.py is a
+  custody-set member, so committing the patch alone (without the custody re-signature
+  that only this sitting's step 7 can give) would leave every subsequent commit blocked
+  by D0063's own file-level binding on tests/test_governance_scripts.py — this is why the
+  fix could not be committed by the builder session that drafted it (D0103's own record).
+  .
+  (3) Before step 9's gate-and-receipt: the two signed-record binding upgrades D0070 named
+  and left drafted (docs/proposals/2026-08-27-m1-boundary-sitting/signed-record-binding-upgrades.md).
+  D0063 needs BRIEF §9.1's amendment actually applied first (step 4b, unmodified — still
+  correct, evidently not reached at the M0→M1 sitting: `grep -c "Metric calibration"
+  BRIEF.md` returns 0 today) before its binding can upgrade to `manifest: BRIEF.md`. D0049
+  needs `manifest: scripts/custodian.sh` — the patch it describes already landed at the
+  M0→M1 sitting; only the binding and the re-signature are outstanding.
+  .
+  (4) Step 7 signs the custody set, covering everything steps 0-3 changed. Step 8 resolves
+  the Tier-C queue: D0061 (custody set, not a signed manifest) and D0095 (required_tags
+  lags). D0095 ITEM 1 (add m1-laws-freeze to required_tags) is mechanical and handled by
+  this driver's own step 11, alongside m1-close, per D0095's own recommendation not to
+  repeat the lag. D0095 ITEM 2 (replace the hand-kept enumeration with a rule that derives
+  the required set) is explicitly a DESIGN DECISION, not a patch this sitting applies —
+  D0095's own reversibility note says so ("a rule that over-derives would make every
+  shallow clone fail the custodian, which is why it is proposed for a sitting rather than
+  drafted here"). Accepting or declining item 2 at step 8 is a real choice with real
+  consequences either way, not a formality item 1's mechanical addition can absorb.
+  .
+  (5) Step 9: gate, receipt, digest, commit.
+  .
+  (6) LAST: step 10 signs m1-close; step 11 adds m1-laws-freeze AND m1-close to
+  governance/tag-roles.yaml required_tags in the same motion (D0095's own recommendation —
+  this driver's step 11 already does both, not just the close tag D0060-era boundaries
+  needed), then re-signs the custody set.
+  .
+  (7) One pre-emptive ruling worth the owner's attention while the key is out: RT-M1-01's
+  REAL fix (a package-qualified import in the frozen tests/laws/m1/test_l1_duckdb.py) is
+  CLAUDE.md's stated "frozen laws turn out to be wrong" case — not an in-place edit, but a
+  new, superseding law file, the old one marked superseded in the manifest notes. BRIEF §8
+  describes this for a milestone's OWN laws during its OWN Session B; it does not yet say
+  what supersedes a law found wrong AFTER the milestone closed, at a later boundary. This
+  sitting does not need to resolve that to close M1 — RT-M1-01's defence-in-depth check
+  (D0102) already holds against the one reproduction found — but the owner should decide
+  the supersession mechanism before the next law is found wrong the same way, rather than
+  improvising it under time pressure at that sitting.
+rationale: >-
+  D0104 (the red-team pass's own summary) and D0102/D0103 (the two individual findings)
+  each carry their own rationale; this record exists, as D0060 did for the M0→M1 sitting,
+  so the digest's "Requires owner" section has one query-over-records artifact naming the
+  actual sequence rather than requiring the sitting to reconstruct it from four separate
+  records plus two proposal directories. `status: blocked-on-owner`, unlike D0060's own
+  `accepted`: D0060 carries an owner signature from the actual M0→M1 sitting, and
+  check_decisions.py (RT-06, D0064) correctly refuses ANY Tier-C record recording
+  `accepted` without one — a builder session drafting this record has no owner key to
+  give it one. Caught live: an early draft of this record said `accepted`, following
+  D0060's status without checking that D0060's is backed by a real signature, and
+  check_decisions.py refused it exactly as designed the moment it was checked against a
+  clean tree (found while rehearsing this sitting, not by reading the record). The owner
+  accepts and signs this one at step 1 or step 8, the same way any other freshly-queued
+  Tier-C record does.
+reversibility: >-
+  Nothing here is irreversible except the m1-close signature (BRIEF §9.2, by
+  construction) and the custody re-signatures, which are themselves re-issuable over a
+  later state at the next sitting. Every applied patch, every fixture installation, and
+  every binding upgrade can be reverted individually.
+status: blocked-on-owner
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/README.md
+    strength: documentary
+    detail: >-
+      The owner's run sheet: what to read first, what the driver copy changes versus the
+      committed scripts/boundary_sitting.sh, and how to rehearse before running for real.
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      The driver copy itself — items 0, 1, 4 and 6 above are what it automates; items 2
+      and 3 are deliberately NOT automated (see the README for why) and are hand steps.
+  - type: manifest
+    target: tests/poison/README.md
+    detail: >-
+      ENFORCED, unchanged from D0060: the corpus README is frozen and records the
+      standing exception under which red-team findings become fixtures. Why item 1 and
+      the fixture half of item 2 cannot be self-served by the builder.
+links: ["D0059", "D0060", "D0061", "D0070", "D0095", "D0102", "D0103", "D0104"]
