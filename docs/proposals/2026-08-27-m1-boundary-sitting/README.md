@@ -47,22 +47,61 @@ the custody set, same as every other custody-set edit a sitting makes.
 | Step 6 compares against `$PROPOSALS_M1/custodian.sh`, not `$PROPOSALS/custodian.sh` | The M0 draft is already installed; comparing against it again would read "already applied" and never offer the one new poison line. This directory's `custodian.sh` is the live file plus that one line — the diff the owner reviews should show only the addition. |
 | `unexpected_failures()` gains one more tolerated pattern: `custody drift: scripts/boundary_sitting\.sh` | The precondition for running THIS copy at all (see "Before running anything") produces exactly this drift, before step 7 can resign it. Scoped by literal path, not by pattern, so it hides no other guard's drift. |
 | Step 11 adds `m1-laws-freeze` to `required_tags`, not only `$MILESTONE-close` | D0095: `m1-laws-freeze` was minted at M1 Session A's freeze and has been missing from `required_tags` ever since — a structural lag the builder cannot fix (the file is frozen and custody-set). Both tags land in one motion so the lag does not repeat at M1→M2. |
+| New **step 4c**, after step 4b: applies D0070's two drafted binding upgrades to D0049 and D0063, and re-signs both | D0105 item 3 — see below. Gated on step 4b (BRIEF.md must already say "Metric calibration") since D0063's upgrade depends on it. |
+| New **step 5b**, after step 5: applies RT-M1-05's patch and installs its fixture | D0105 item 2 — see below. |
 
-## What this sitting resolves that the driver does NOT automate
+## What this sitting resolves that the driver now automates (added 2026-08-27, second pass)
 
-Two items in D0105's queue are deliberately hand steps, not driver code, because
-automating them would mean writing bash that edits decision-record YAML and re-signs it
-programmatically — more moving parts than two small, well-understood edits are worth:
+Both of D0105's two hand-step items are now driver code (steps 4c and 5b) — same
+confirm-and-diff idiom as every other step, nothing landing without the owner reading
+the diff and typing `y`. What follows is what each does and why, kept for the reasoning
+a bash comment can't carry:
 
-- **Item 2**: land RT-M1-05's patch
+- **Item 2 (step 5b)**: land RT-M1-05's patch
   (`docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch`)
   and the `check-decisions-file-skip` fixture together, in the same commit the custody
   re-signature covers. See D0103 for why the builder session that wrote the patch could
-  not commit it alone.
-- **Item 3**: the two binding upgrades D0070 left drafted — see
+  not commit it alone. The fixture install moves only its `decisions/` and `tests/`
+  subdirectories into `tests/poison/` — the `.patch` file itself stays put, because D0103
+  and D0104 both carry a binding to it at that path (the same fragility that broke
+  D0104's binding to `oracle-shadow/_fragment.py` when step 5 moved that fixture whole).
+  Verified live (2026-08-27) before scripting it: the patch applies cleanly, the fixture
+  fails with the right marker (`unexplained skip`) once patched, and running it pollutes
+  `tests/poison/` with an unmanifested `__pycache__` unless the invocation sets
+  `PYTHONDONTWRITEBYTECODE=1` — `-B` on the outer interpreter does **not** suffice here,
+  unlike `oracle-shadow`'s poison line, because `check_decisions.py` runs pytest as a
+  *subprocess*, and `-B` only affects the process it is given to, not one spawned after.
+  `custodian.sh`'s new `check_decisions_file_skip` poison line uses the env var for
+  exactly this reason. **A second, independent hazard found rehearsing this (rehearsal
+  #8, after the `PYTHONDONTWRITEBYTECODE` fix already held):** the fixture's test file
+  was originally named `test_mixed.py`, which is the FIRST file in the entire
+  `tests/poison/` corpus to match pytest's default `test_*.py` discovery glob —
+  `pyproject.toml`'s `testpaths = ["tests"]` carries no exclusion for `tests/poison/`,
+  so once installed, the bare `pytest -q` inside `make verify` swept it into the main
+  suite too, both changing the project's pass/skip counts and writing an unmanifested
+  `__pycache__` from an invocation the poison line's own env var never touched. Every
+  earlier fixture avoided this by accident of naming, not by design. Fixed by renaming
+  the file to `mixed_cases.py` (an explicit pytest target still collects a file
+  regardless of its name — only no-args directory-walk discovery cares about the
+  pattern) rather than adding a repo-wide `--ignore=tests/poison`, which would have had
+  to be proven safe against every *existing* poison line's own `--root`-scoped pytest
+  subprocess calls (several of which run with `cwd` already inside `tests/poison/`) —
+  a wider, riskier change for the same fix.
+- **Item 3 (step 4c)**: the two binding upgrades D0070 left drafted — see
   `signed-record-binding-upgrades.md` in this directory for exactly what changed, what
   didn't, and the one discrepancy found (D0070 said three upgrades were pending; only two
-  were found live).
+  were found live). **A third thing was found while scripting this, not counted among
+  D0070's three**: `decisions/0049-close-tags-stay-owner-signed.yaml` has a real
+  corruption — a missing newline before its third binding (`- type: manifest, target:
+  DELEGATIONS.md`) folds that whole entry into the SECOND binding's `detail:` prose
+  instead of parsing as its own list item. Confirmed with a plain YAML parse
+  (`len(bindings)` came back 2, not 3) and confirmed nowhere else in `decisions/*.yaml`
+  carries the same defect. The signed `.sig` verifies against exactly this broken
+  content, so it predates this session and has stood, unnoticed, since whichever sitting
+  added that binding. Step 4c restores it (a one-line textual fix, verified against the
+  real files before this driver copy shipped) in the same edit that adds the new
+  `manifest:scripts/custodian.sh` binding, then re-signs. Worth the owner's eye at the
+  sitting: the diff step 4c shows is not just an addition.
 
 ## Verification after the sitting
 

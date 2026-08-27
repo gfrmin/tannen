@@ -1,9 +1,9 @@
 ## Added at the M1 boundary sitting (2026-08-27)
 
 One fixture, from the M1 red-team pass (`docs/redteam/2026-08-26-m1-boundary.md`,
-RT-M1-01). `check-decisions-file-skip/` (RT-M1-05) is deliberately not here — its guard
-fix is not committed yet (D0103); it joins this table at whichever future sitting
-actually applies that patch, not this one.
+RT-M1-01). `check-decisions-file-skip/` (RT-M1-05) is deliberately not in this table —
+its guard fix is not applied by the time step 5 runs (D0103); it's added by step 5b
+instead, in `poison-readme-row-file-skip.md`, right after that step lands the patch.
 
 | Fixture | Guard | Intended violation | Marker |
 |---|---|---|---|

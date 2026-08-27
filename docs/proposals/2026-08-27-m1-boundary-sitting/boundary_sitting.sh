@@ -338,6 +338,93 @@ else
     fi
 fi
 
+# ---------------------------------------------------------------- 4c. signed-record binding upgrades
+say "Step 4c — D0070's two drafted binding upgrades, on D0049 and D0063 (D0105 item 3)"
+note "A binding on a SIGNED Tier-C record cannot be edited between sittings (the"
+note "signature covers the record's whole bytes) — D0070 drafted these at the M0->M1"
+note "sitting and left them for the next one to apply and re-sign. D0063's needs step 4b"
+note "landed first (BRIEF.md must actually say 'Metric calibration' for its manifest"
+note "binding to mean anything); D0049's needs a corruption fix found while drafting"
+note "this: a missing newline swallowed its third binding into the second's prose,"
+note "silently dropping the documentary binding to the custodian-close-tag-signer"
+note "proposal (confirmed live 2026-08-27 — 'raw dashes: 2, parsed bindings: 2' where 3"
+note "were written; every OTHER decisions/*.yaml file was checked the same way and none"
+note "else has this defect). Restoring it and adding the new binding are one edit below."
+if ! grep -q 'Metric calibration' BRIEF.md; then
+    note "BRIEF.md does not yet carry step 4b's amendment — D0063's upgrade needs that"
+    note "first. Apply step 4b, then re-run this script; it resumes here."
+else
+    if grep -q 'target: scripts/custodian.sh' decisions/0049-*.yaml; then
+        note "D0049 already upgraded — skipped"
+    elif confirm "Fix D0049's swallowed binding and add manifest:scripts/custodian.sh?"; then
+        python3 - <<'PY'
+import glob, pathlib
+path = pathlib.Path(glob.glob("decisions/0049-*.yaml")[0])
+src = path.read_text()
+broken = ("once the owner applies it (D0045).  - type: manifest\n"
+          "    target: DELEGATIONS.md\n")
+assert src.count(broken) == 1, "expected corruption pattern not found — check by hand"
+fixed = ("once the owner applies it (D0045).\n"
+         "  - type: manifest\n"
+         "    target: DELEGATIONS.md\n")
+src = src.replace(broken, fixed)
+anchor = src.rstrip().rsplit("\n", 1)[-1] + "\n"   # the file's own last line (links: [...])
+assert anchor.startswith("links: ["), f"expected a links: line last, got {anchor!r}"
+addition = (
+    "  - type: manifest\n"
+    "    target: scripts/custodian.sh\n"
+    "    detail: >-\n"
+    "      ENFORCED, added at the M1 boundary sitting (2026-08-27): the second binding\n"
+    "      above described the drafted custodian patch as documentary, pending the\n"
+    "      owner applying it; the patch (the *-close signer case) landed at the M0->M1\n"
+    "      sitting and scripts/custodian.sh is in MANIFEST.sha256, so this upgrades the\n"
+    "      claim from documentary to enforced.\n"
+)
+src = src[: -len(anchor)] + addition + anchor
+path.write_text(src)
+PY
+        git --no-pager diff decisions/0049-*.yaml
+        if confirm "Keep this edit and re-sign D0049?"; then
+            rm -f decisions/0049-*.yaml.sig
+            sign_owner "$(ls decisions/0049-*.yaml)" tannen-decision
+        else
+            git checkout -- decisions/0049-*.yaml
+            note "reverted — D0049 keeps its corrupted binding and stale-looking signature"
+        fi
+    fi
+    if grep -q 'target: BRIEF.md' decisions/0063-*.yaml; then
+        note "D0063 already upgraded — skipped"
+    elif confirm "Add manifest:BRIEF.md to D0063?"; then
+        python3 - <<'PY'
+import glob, pathlib
+path = pathlib.Path(glob.glob("decisions/0063-*.yaml")[0])
+src = path.read_text()
+anchor = src.rstrip().rsplit("\n", 1)[-1] + "\n"
+assert anchor.startswith("links: ["), f"expected a links: line last, got {anchor!r}"
+addition = (
+    "  - type: manifest\n"
+    "    target: BRIEF.md\n"
+    "    detail: >-\n"
+    "      ENFORCED, added at the M1 boundary sitting (2026-08-27): ruling 5's\n"
+    "      amendment (the metric-calibration bullet and the signature-as-presence-vs-\n"
+    "      authorisation distinction) is applied to BRIEF.md at this sitting's step 4b,\n"
+    "      and BRIEF.md is in MANIFEST.sha256, so the prior documentary binding\n"
+    "      upgrades to enforced.\n"
+)
+src = src[: -len(anchor)] + addition + anchor
+path.write_text(src)
+PY
+        git --no-pager diff decisions/0063-*.yaml
+        if confirm "Keep this edit and re-sign D0063?"; then
+            rm -f decisions/0063-*.yaml.sig
+            sign_owner "$(ls decisions/0063-*.yaml)" tannen-decision
+        else
+            git checkout -- decisions/0063-*.yaml
+            note "reverted — D0063 keeps its documentary-only binding"
+        fi
+    fi
+fi
+
 # ---------------------------------------------------------------- 5. poison fixtures
 say "Step 5 — install the red-team poison fixtures (author-key territory)"
 note "Eight fixtures. Seven are the M0→M1 corpus, already installed by that sitting (this"
@@ -410,6 +497,52 @@ broken=$("$PY" -I -P scripts/check_decisions.py 2>&1 \
 $broken
   Retarget it to the installed tests/poison/ path — builder work, no signature involved.
   Nothing has been signed; the fixtures stay installed and step 5 will skip them next run."
+
+# ---------------------------------------------------------------- 5b. RT-M1-05
+say "Step 5b — land RT-M1-05: the guard patch and its fixture, together (D0103, D0105 item 2)"
+note "scripts/check_decisions.py is custody-set — D0063's own binding on"
+note "tests/test_governance_scripts.py runs it — so a builder session that patches it"
+note "alone would cascade into a red gate on every commit after, before this sitting's"
+note "step 7 could re-sign custody to absorb the drift (see D0103). The patch and the"
+note "fixture below land here, staged into the SAME commit step 9 makes."
+if grep -q 'RT-M1-05' scripts/check_decisions.py; then
+    note "patch already applied — skipped"
+else
+    if confirm "Read the patch first?"; then
+        page "$CANDIDATES/check-decisions-file-skip/rt-m1-05-check-decisions.patch"
+    fi
+    if confirm "Apply it (scripts/check_decisions.py, tests/test_governance_scripts.py)?"; then
+        git apply "$CANDIDATES/check-decisions-file-skip/rt-m1-05-check-decisions.patch" \
+            || die "patch did not apply cleanly — the tree has moved since it was drafted; land it by hand"
+        git --no-pager diff --stat scripts/check_decisions.py tests/test_governance_scripts.py
+    else
+        note "declined — the fixture below only installs once the patch is applied, so it"
+        note "is skipped too this pass"
+    fi
+fi
+if grep -q 'RT-M1-05' scripts/check_decisions.py && [ ! -d tests/poison/check-decisions-file-skip ]; then
+    if confirm "Install the check-decisions-file-skip fixture (RT-M1-05)?"; then
+        # Only decisions/ and tests/ move — the .patch file stays at its documented path:
+        # D0103 and D0104 both carry a binding to it there, and a git mv of the whole
+        # candidate directory would break both the same way an earlier binding to
+        # oracle-shadow's own candidate path broke when step 5 moved IT (D0104 dropped
+        # that one rather than repeat the fragility here).
+        mkdir -p tests/poison/check-decisions-file-skip
+        git mv "$CANDIDATES/check-decisions-file-skip/decisions" \
+               tests/poison/check-decisions-file-skip/decisions || die "git mv failed"
+        git mv "$CANDIDATES/check-decisions-file-skip/tests" \
+               tests/poison/check-decisions-file-skip/tests || die "git mv failed"
+        add_manifest_rows tests/poison/check-decisions-file-skip
+        note "installed with $(find tests/poison/check-decisions-file-skip -type f | wc -l) manifest row(s)"
+    fi
+fi
+if [ -d tests/poison/check-decisions-file-skip ] && ! grep -q 'check-decisions-file-skip' tests/poison/README.md; then
+    if confirm "Add check-decisions-file-skip (RT-M1-05) to tests/poison/README.md?"; then
+        cat "$PROPOSALS_M1/poison-readme-row-file-skip.md" >> tests/poison/README.md
+        regen_manifest_row tests/poison/README.md
+        git --no-pager diff tests/poison/README.md
+    fi
+fi
 
 # ---------------------------------------------------------------- 6. the custodian
 say "Step 6 — the custodian itself (trust root; yours alone to apply)"

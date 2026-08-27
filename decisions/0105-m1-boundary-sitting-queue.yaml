@@ -18,28 +18,54 @@ decision: >-
   .
   (1) Step 5 installs the one M1 fixture ready today: oracle-shadow/ (RT-M1-01,
   docs/redteam/2026-08-26-m1-boundary.md, D0102). check-decisions-file-skip/ (RT-M1-05,
-  D0103) is deliberately NOT installed at this pass — its guard fix
-  (docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch)
-  is not committed yet (see item 2 below); installing the fixture before the patch would
-  leave the custodian permanently red against the still-unpatched guard.
+  D0103) is NOT in step 5's list — it installs in step 5b instead (item 2), because it
+  cannot land before the patch that makes its poison meaningful, and step 5's own
+  fixtures all pre-date that patch.
   .
-  (2) Apply RT-M1-05's patch
+  (2) UPDATE (second pass, same session, after scripting this queue as far as it goes):
+  step 5b now applies RT-M1-05's patch
   (docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch,
-  touching scripts/check_decisions.py and tests/test_governance_scripts.py) and, in the
-  SAME pass, install the check-decisions-file-skip/ fixture and add its row to
-  tests/poison/README.md. Both must land together: scripts/check_decisions.py is a
-  custody-set member, so committing the patch alone (without the custody re-signature
-  that only this sitting's step 7 can give) would leave every subsequent commit blocked
-  by D0063's own file-level binding on tests/test_governance_scripts.py — this is why the
-  fix could not be committed by the builder session that drafted it (D0103's own record).
+  touching scripts/check_decisions.py and tests/test_governance_scripts.py) and installs
+  the check-decisions-file-skip/ fixture and its tests/poison/README.md row, in one
+  driver step — confirm-and-diff, same idiom as every other step, not a bash-free hand
+  edit. Both still land together: scripts/check_decisions.py is a custody-set member, so
+  the patch alone (without the custody re-signature only step 7 can give) would leave
+  every subsequent commit blocked by D0063's own file-level binding on
+  tests/test_governance_scripts.py — this is why the fix could not be committed by the
+  builder session that drafted it (D0103's own record), and why step 5b still stages
+  into step 9's commit rather than committing itself. Verified before scripting: the
+  patch applies clean, the fixture fails for the right marker
+  (`unexplained skip`) once patched, and the invocation needs
+  `PYTHONDONTWRITEBYTECODE=1` (not `-B` on the outer process — check_decisions.py runs
+  pytest as a subprocess, which `-B` does not reach but the env var does) to avoid
+  leaving an unmanifested `__pycache__` under tests/poison/. A second, independent
+  hazard surfaced rehearsing this after that fix already held (rehearsal #8): the
+  fixture's test file was named tests/test_mixed.py, the FIRST file in the whole
+  tests/poison/ corpus to match pytest's default test_*.py discovery glob —
+  pyproject.toml's testpaths=["tests"] has no exclusion for tests/poison/, so the bare
+  `pytest -q` inside `make verify` swept it into the main suite once installed. Renamed
+  to tests/mixed_cases.py (an explicit pytest target still collects regardless of
+  filename); a repo-wide --ignore was considered and rejected as riskier, since every
+  existing poison line's own pytest subprocess would need re-proving safe against it.
   .
-  (3) Before step 9's gate-and-receipt: the two signed-record binding upgrades D0070 named
-  and left drafted (docs/proposals/2026-08-27-m1-boundary-sitting/signed-record-binding-upgrades.md).
-  D0063 needs BRIEF §9.1's amendment actually applied first (step 4b, unmodified — still
-  correct, evidently not reached at the M0→M1 sitting: `grep -c "Metric calibration"
-  BRIEF.md` returns 0 today) before its binding can upgrade to `manifest: BRIEF.md`. D0049
-  needs `manifest: scripts/custodian.sh` — the patch it describes already landed at the
-  M0→M1 sitting; only the binding and the re-signature are outstanding.
+  (3) UPDATE (same pass): step 4c now applies the two signed-record binding upgrades
+  D0070 named and left drafted
+  (docs/proposals/2026-08-27-m1-boundary-sitting/signed-record-binding-upgrades.md),
+  gated on step 4b already landing (grep "Metric calibration" BRIEF.md), and re-signs
+  both records in the same step. **A THIRD thing was found while scripting this, not one
+  of D0070's counted three**: decisions/0049-close-tags-stay-owner-signed.yaml has a real
+  corruption, present since whichever sitting last edited it and still there under its
+  current valid-looking .sig — a missing newline folds its third binding (type: manifest,
+  target: DELEGATIONS.md) into the SECOND binding's `detail:` prose instead of parsing as
+  its own list entry. A plain YAML parse confirmed it (2 bindings on disk, 3 intended);
+  no other decisions/*.yaml file carries the same defect (checked all of them the same
+  way). The signature verifies against exactly this broken content — it is not a new
+  mistake, and it was invisible to every guard because the malformed text still parses
+  as valid YAML with a resolvable (if wrong) binding, and check_decisions.py has no way
+  to know a record's bindings list is shorter than its author intended. Step 4c fixes
+  the corruption and adds the new manifest:scripts/custodian.sh binding in the same edit,
+  so the diff the owner reviews there is not just an addition — say so at the sitting
+  rather than let it read as routine.
   .
   (4) Step 7 signs the custody set, covering everything steps 0-3 changed. Step 8 resolves
   the Tier-C queue: D0061 (custody set, not a signed manifest) and D0095 (required_tags
@@ -101,8 +127,9 @@ bindings:
     target: docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh
     strength: documentary
     detail: >-
-      The driver copy itself — items 0, 1, 4 and 6 above are what it automates; items 2
-      and 3 are deliberately NOT automated (see the README for why) and are hand steps.
+      The driver copy itself — every item above is now driver code (steps 4c and 5b were
+      added the same session, after the queue text above; see the README's second-pass
+      section for what changed and why), same confirm-and-diff idiom throughout.
   - type: manifest
     target: tests/poison/README.md
     detail: >-

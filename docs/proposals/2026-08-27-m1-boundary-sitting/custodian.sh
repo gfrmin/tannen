@@ -241,6 +241,20 @@ poison oracle-shadow "RT-M1-01" \
     "$PY" -B -m pytest -p bootstrap_shadow tests/laws/m1/test_l1_duckdb.py \
     -k test_l1_16_the_catalogue_covers_every_operator_of_the_fragment -q
 
+# A second M1 fixture: check-decisions-file-skip (RT-M1-05), lands together with the
+# guard patch it proves (this sitting's step 5b), never before it — see D0105 item 2.
+# check_decisions.py itself spawns pytest as a SUBPROCESS (run_pytest: `sys.executable -m
+# pytest ...`), so -B on THIS outer interpreter does not reach it: -B sets
+# sys.dont_write_bytecode on the process it is given to, and subprocess.run starts a new
+# one. PYTHONDONTWRITEBYTECODE=1 is an environment variable, which run_pytest's
+# `env={**os.environ, ...}` DOES forward to the child — confirmed live (2026-08-27): the
+# outer-process -B flag left __pycache__ behind under tests/poison/, unmanifested and
+# sealed the same way oracle-shadow's did; the env var closes it because it survives the
+# fork where the flag does not.
+poison check_decisions_file_skip "unexplained skip" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONDONTWRITEBYTECODE=1 \
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-file-skip
+
 if [ "$FAIL" -ne 0 ]; then
     bad "custody floor violated"
     exit 1

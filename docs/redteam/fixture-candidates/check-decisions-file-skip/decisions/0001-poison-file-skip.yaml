@@ -4,6 +4,17 @@
 # passed, so this read as fully enforced. Most of this repo's real pytest bindings are
 # file-level (docs/redteam/2026-08-26-m1-boundary.md, RT-M1-05), so this fixture's shape
 # is the common case, not an edge case.
+#
+# tests/mixed_cases.py is named to NOT match pytest's test_*.py / *_test.py discovery
+# glob, deliberately: pyproject.toml's `testpaths = ["tests"]` has no exclusion for
+# tests/poison/ (found while rehearsing this fixture's install — it is the first fixture
+# in the corpus with an actual collectible test file; every earlier one avoided the
+# collision by chance of naming, not by design). A file named test_mixed.py here would be
+# swept into the main `pytest -q` run once installed, changing the project's pass/skip
+# counts and leaving an unmanifested __pycache__ under a sealed directory. check_decisions.py
+# still finds and runs this file fine — it is given as an explicit pytest target, which
+# collects regardless of filename; only pytest's own no-args directory-walk discovery
+# cares about the naming pattern.
 id: D0001
 title: "Poison — a skipped test hidden inside an otherwise-passing file binding"
 tier: A
@@ -16,4 +27,4 @@ reversibility: n/a (fixture)
 status: accepted
 bindings:
   - type: pytest
-    target: tests/test_mixed.py
+    target: tests/mixed_cases.py

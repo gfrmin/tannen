@@ -45,6 +45,14 @@ decision: >-
   verified to apply cleanly against a clean clone of this milestone's HEAD. It is queued
   for the owner to apply at the M1 boundary sitting, in the same motion as the custody
   re-signature.
+  .
+  UPDATE (found rehearsing the M1 sitting driver's new step 5b, same session): a second
+  binding here, to the fixture-candidate's own decisions/0001-poison-file-skip.yaml, was
+  removed. Step 5b installs the patch and the fixture together, at which point that path
+  no longer exists — `git mv`d into tests/poison/check-decisions-file-skip/ — the same
+  fragility D0104's binding to oracle-shadow/_fragment.py hit and was dropped for. The
+  first binding below (the .patch file) is untouched by the install: step 5b moves only
+  the fixture-candidate's decisions/ and tests/ subdirectories, not the .patch itself.
 rationale: >-
   Bindings are the mechanism CLAUDE.md and BRIEF §9 both describe as what makes a
   decision load-bearing. A whole-file binding is the common case in this repo, not an
@@ -69,14 +77,6 @@ bindings:
     detail: >-
       The verified patch, ready for the owner to apply at the M1 boundary sitting.
       Verified to apply cleanly against a clean clone of this milestone's current HEAD.
-  - type: file
-    target: docs/redteam/fixture-candidates/check-decisions-file-skip/decisions/0001-poison-file-skip.yaml
-    strength: documentary
-    detail: >-
-      A fixture-candidate pinning the same tooth by hand
-      (docs/redteam/fixture-candidates/README.md), not installable under tests/poison/
-      until the patch itself lands (installing it first would leave the custodian
-      permanently red against the shipped guard).
   - type: file
     target: docs/redteam/2026-08-26-m1-boundary.md
     strength: documentary
