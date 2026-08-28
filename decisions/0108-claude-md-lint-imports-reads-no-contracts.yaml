@@ -1,0 +1,65 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0108
+title: "CLAUDE.md's verification block still spells lint-imports without --config, so the documented command reads no contracts at all and passes vacuously"
+tier: C
+date: "2026-08-28"
+risk_flags: ["governance-paths"]
+decision: >-
+  CLAUDE.md's "Verification (run before ending any implementation session)" block lists
+  `uv run lint-imports` as one of the five checks. Run exactly as written, from the
+  worktree root, it prints "Could not read any configuration." and reads NO contracts.
+  The import contracts moved out of pyproject.toml into governance/importlinter.toml as
+  the resolution half of RT-02 (conferral ruling 3, D0063) — deliberately, because
+  pyproject.toml is the one file the builder may freely edit and a guard's configuration
+  is part of the guard. Every real call site was updated to pass the config explicitly:
+  the Makefile `verify` target and scripts/custodian.sh both invoke import-linter with
+  `--config governance/importlinter.toml`. CLAUDE.md was not, and it is the file an agent
+  is told to follow at the start of every session.
+  .
+  The correct line is the one the Makefile already uses:
+  `uv run lint-imports --config governance/importlinter.toml`, or simply `make verify`.
+  With the config passed, the contracts do pass — 51 files, 133 dependencies, 3 contracts
+  kept, 0 broken — so this is a documentation defect, not a broken guard. Nothing was
+  ever unprotected in CI, which runs the Makefile.
+  .
+  WHY IT MATTERS ANYWAY: the failure is silent in the direction that hurts. import-linter
+  exits non-zero on "Could not read any configuration", so an agent chaining the five
+  checks under `set -e` sees a failure it cannot explain and may route around it; an agent
+  running them individually and eyeballing output sees no "BROKEN" line and may read that
+  as green. Either way the documented ritual does not check the thing it claims to check.
+  This was hit live on 2026-08-28 while verifying D0107.
+rationale: >-
+  Tier C, and queued rather than fixed, because CLAUDE.md is doubly out of bounds to the
+  builder: it carries a MANIFEST.sha256 row (frozen path) AND it is a member of the
+  custody set in governance/tier-c.yaml, alongside BRIEF.md, the Makefile and the CI
+  workflow. Editing it would require the owner's signature and would take the custody
+  gate red until re-signed. That is the intended property and is not worked around.
+  .
+  Recorded now rather than mentioned in passing because the defect is exactly the class
+  the repo already knows it has: an instruction asserting a wiring that is not there.
+  D0107 removed two instances inside the kernel (is_positive's docstring, and a test
+  comment carrying a load-bearing invariant). This is the same disease in the operating
+  manual, and the manual is the one document every fresh session is told to obey.
+  .
+  Not proposed as a Tier-B default addition to the BRIEF §5 catalogue: this is not a
+  correct-by-default API question, it is a stale command line in a frozen document. The
+  fix is one line and belongs to the owner at the next boundary sitting.
+reversibility: >-
+  A one-line edit to a frozen, custody-set document, and its MANIFEST.sha256 and
+  governance/custody.sha256 entries re-signed. No code, no behaviour, no data. Fully
+  reversible by the owner; not touchable by the builder at all.
+status: blocked-on-owner
+bindings:
+  - type: manifest
+    target: CLAUDE.md
+    strength: documentary
+    detail: >-
+      The frozen document carrying the stale command. Its "Verification" block is the
+      text to correct; the Makefile `verify` target already holds the correct spelling.
+  - type: file
+    target: governance/importlinter.toml
+    strength: documentary
+    detail: >-
+      Where the contracts actually live since D0063/RT-02, and the path the documented
+      command has to be given with --config before it reads anything.
+links: ["D0063", "D0107"]
