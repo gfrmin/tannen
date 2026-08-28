@@ -1,0 +1,73 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0109
+title: "Two follow-ups to D0107: anti_join's refusal of negative annotations expires at M3, and why_slot belongs to the semiring rather than to the operator that first needed it"
+tier: A
+date: "2026-08-28"
+risk_flags: []
+decision: >-
+  Two things review surfaced about D0107 that are true, small, and would be expensive to
+  rediscover. Both are recorded now, while the reasoning is fresh, rather than left for
+  the milestone that trips over them.
+  .
+  (1) THE NEGATIVES NARROWING HAS AN EXPIRY DATE, AND IT IS M3. D0107 changed anti_join's
+  presence test from `annotation != zero` to the bag image, `multiplicity(annotation) > 0`.
+  Under `Z` those differ on negatives: `!= zero` counted a row of `-1` as present, while
+  `Z.multiplicity(-1)` raises by the cone law, exactly as `to_bag` raises. D0107 recorded
+  the narrowing as deliberate and justified it by L1.9 — no M1 operator can produce a
+  negative annotation, so nothing reachable hits it. That justification is sound and it is
+  also DATED: deltas are precisely the thing that produces negative counts, and the delta
+  executor is M3. On the day M1's `Z` annotations start carrying retractions, anti_join
+  over a delta relation raises instead of answering.
+  .
+  Raising is the right behaviour today — it is honest, it matches `to_bag`, and inventing
+  a semantics for "absent from a relation that retracts this row" without the delta
+  executor's model would be guessing. But it is not an answer, and M3 must supply one
+  before it runs anti_join over a delta. The expiry is now stated at the site in ops.py,
+  not only here, so the person changing that code reads it.
+  .
+  (2) `why_slot` MOVED FROM ops.py TO semiring.py. D0107 introduced it as `ops._why_slot`
+  because anti_join was the first caller. Where a `Why` component sits inside a semiring
+  is a structural fact ABOUT THAT SEMIRING — it is derived entirely from `name`, `left`
+  and `right` and mentions no operator — so it belongs beside `is_bag_semiring`, which is
+  the same kind of fact. It is now public as `semiring.why_slot`. `ops._add_witness`
+  stays in ops.py: adding a witness for an absence is an operator's judgement about what
+  it just proved, not a property of the algebra. This also puts the helper where the
+  D0110 proposal would need it, which is how the misplacement was noticed.
+rationale: >-
+  Tier A on both counts: nothing frozen, nothing custody-set. `src/tannen/kernel/ops.py`
+  and `semiring.py` are ordinary unfrozen source, and (1) adds no behaviour at all — it is
+  a comment at the site plus this record. Recorded separately from D0107 rather than by
+  amending it, because D0107 is committed history and its reasoning was correct as
+  written; these are consequences discovered after it, and the repo's own rule is that the
+  record of what was learned when is part of the record.
+  .
+  (1) is filed as a record rather than a code TODO on purpose. A TODO is invisible to the
+  digest and to every query the governance layer can run; a record with a binding is not.
+  The failure it guards against is not "someone writes bad code at M3" but "M3 changes the
+  cone assumption in a distant file and nothing connects that change to this operator".
+  .
+  Deliberately NOT done: no attempt to define anti_join over negative annotations now.
+  That is the delta executor's model to fix, it needs the M3 semantics that do not exist
+  yet, and a guess made here would be frozen into an operator's behaviour before the
+  milestone that needs it can argue with it.
+reversibility: >-
+  (1) is a comment and a record; nothing to reverse. (2) is a moved function with one call
+  site updated, re-exported under a new public name in semiring.py's `__all__`; reverting
+  is a second move back. Neither changes any observable behaviour — the full suite is
+  unchanged by both.
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/kernel/semiring.py
+    strength: enforced
+    detail: >-
+      `why_slot` in its correct home, beside `is_bag_semiring`, exported in `__all__`, its
+      docstring naming both callers (anti_join's witness, and D0110 if the owner takes it).
+  - type: file
+    target: src/tannen/kernel/ops.py
+    strength: enforced
+    detail: >-
+      anti_join's presence comment carries the M3 expiry at the site — that the cone-law
+      refusal of negatives is safe only while L1.9 holds, and that deltas end that.
+      `_add_witness` remains here, using the moved `why_slot`.
+links: ["D0107", "D0093"]

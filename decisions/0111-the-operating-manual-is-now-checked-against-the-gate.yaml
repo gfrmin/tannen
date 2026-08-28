@@ -1,0 +1,81 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0111
+title: "Nothing verified that the commands CLAUDE.md tells every session to run are commands that work; the manual is now compared against make verify by a test"
+tier: A
+date: "2026-08-28"
+risk_flags: []
+decision: >-
+  tests/test_operating_manual.py compares the commands in CLAUDE.md's "Verification"
+  fenced block against the recipe of the Makefile's `verify` target — the gate CI actually
+  runs — and fails on any divergence that changes WHAT GETS CHECKED. Three properties:
+  every check the manual documents is one the gate runs; each is configured the way the
+  gate configures it; and both files were actually parsed (a detector that silently
+  matched nothing would be a fresh instance of the disease it exists to catch).
+  .
+  It compares by CHECK IDENTITY, not by text. The two files spell the same guard very
+  differently on purpose — the Makefile runs `.venv/bin/python -I -P scripts/x.py` because
+  the floor may depend only on OS tools and literally-named paths (D0063 ruling 3), while
+  the manual spells it `uv run python scripts/x.py`. Comparing raw lines would be noise.
+  What it compares is the guard being run and the `--config` it is given, which is the
+  dimension D0108 lives on.
+  .
+  D0108's divergence sits in a `KNOWN_DIVERGENCES` map with the record id as its value, so
+  the suite is green today while the defect is owner-blocked, and a SECOND entry cannot be
+  added quietly. When the owner fixes CLAUDE.md the test fails saying so in as many words
+  — "this failure is the good outcome, not a regression" — and the entry is deleted in the
+  same sitting.
+  .
+  The detector is watched failing, in both directions, against fixtures rather than
+  against the live repo: a manual naming a tool without its config is caught; a manual
+  that agrees produces nothing; a manual naming a guard the gate does not run is caught.
+  Without those, the comparison could be vacuously true and green — which is precisely how
+  D0108 survived.
+rationale: >-
+  Tier A: it adds one non-frozen test file and touches nothing else. Both files it reads
+  are custody-set and MANIFEST-frozen, but READING them changes no byte and needs no
+  signature — which is the whole point of doing it this way. The owner's one-line fix to
+  CLAUDE.md is D0108 and remains theirs; the CLASS of defect is not owner-shaped and did
+  not need to wait for a sitting.
+  .
+  The move is the one D0107 made for the homomorphism law, applied to governance instead
+  of the kernel: an instance found by review becomes a standing detector, so the next
+  instance is caught by machinery rather than by someone happening to run the documented
+  command and read the output. That matters more here than in the kernel, because a stale
+  instruction fails in the direction that reads as green — import-linter with no config
+  exits non-zero for a reason unrelated to any contract, and an agent chaining the checks
+  under `set -e` sees an unexplained failure it may route around, while one reading output
+  sees no BROKEN line and calls it done.
+  .
+  Deliberately NOT done: the test does not EXECUTE the documented commands. `make verify`
+  takes fifteen-odd minutes and contains this suite, so running it from inside itself is
+  not available, and executing a cherry-picked "fast subset" would reintroduce exactly the
+  scoping-by-convenience that let D0108 through. The comparison is what was actually
+  missing.
+  .
+  Also not done: no attempt to extend this to the other command lines scattered through
+  CLAUDE.md's prose. The verification block is the one every session is told to run before
+  ending, it is fenced and parseable, and a detector with a crisp boundary is worth more
+  than one that tries to read a whole document.
+reversibility: >-
+  One new non-frozen test file, deletable with no trace and no dependency in either
+  direction. It asserts over two files it does not own; if the manual or the Makefile is
+  restructured beyond what it parses, the parse assertions fail loudly rather than
+  degrading into a vacuous pass — which is the failure mode that matters and the one it is
+  built to refuse.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_operating_manual.py::test_documented_checks_are_configured_the_way_the_gate_configures_them
+    strength: enforced
+    detail: >-
+      The D0108 dimension itself: same guard, different `--config`, therefore a different
+      answer to what was checked. Carries the KNOWN_DIVERGENCES tolerance and the message
+      that fires when the owner's fix lands.
+  - type: pytest
+    target: tests/test_operating_manual.py::test_the_detector_catches_a_missing_config
+    strength: enforced
+    detail: >-
+      The detector watched failing, against fixtures — D0108's own shape reproduced, so a
+      future refactor cannot leave the comparison vacuously green. Sits alongside the
+      agrees-quietly and missing-from-the-gate cases.
+links: ["D0108", "D0063", "D0107"]

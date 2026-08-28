@@ -23,7 +23,7 @@ from tannen.kernel.algebra import Monoid
 from tannen.kernel.encoding import decode_canonical, encode_canonical
 from tannen.kernel.outcome import QUARANTINE_SCHEMA, Ok, OperatorError, Outcome, Quarantine
 from tannen.kernel.rel import Rel
-from tannen.kernel.semiring import Why, is_bag_semiring
+from tannen.kernel.semiring import Why, is_bag_semiring, why_slot
 
 __all__ = [
     "OPERATORS",
@@ -147,24 +147,10 @@ def _key_of(row: dict, keys: tuple[str, ...]) -> tuple[bytes, ...]:
     return tuple(encode_canonical(row[k]) for k in keys)
 
 
-def _why_slot(semiring: Any) -> str | None:
-    """Where a `Why` component lives in `semiring`, structurally, by name (§2): `"self"`,
-    `"left"`, `"right"`, or `None` if there isn't one. `ZxWhy` (`product(Z, Why)`) resolves
-    to `"right"`; a bare `Why` resolves to `"self"`; `Z` or `B` alone resolve to `None`.
-    Used to ENRICH an annotation with a witness, never to decide whether a row is there —
-    presence is the bag image, which is a separate question with a separate answer."""
-    if semiring.name == "Why":
-        return "self"
-    left = getattr(semiring, "left", None)
-    if left is not None and left.name == "Why":
-        return "left"
-    right = getattr(semiring, "right", None)
-    if right is not None and right.name == "Why":
-        return "right"
-    return None
-
-
 def _add_witness(semiring: Any, slot: str, annotation: Any, witness: Any) -> Any:
+    """Add `witness` into the `Why` component `slot` names. ENRICHES an annotation, never
+    decides whether a row is there — presence is the bag image, a separate question with a
+    separate answer (see `anti_join`)."""
     if slot == "self":
         return semiring.add(annotation, witness)
     if slot == "left":
@@ -332,11 +318,16 @@ def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
     # rule — anti_join needs only a `Semiring`, and L1.7 enumerates the bag-requiring
     # operators as distinct/aggregate/to_bag. Under `Z` a negative annotation has no bag
     # image and is refused by name here exactly as `to_bag` refuses it (the cone law).
+    # THAT LAST PART EXPIRES AT M3 (D0109). It is safe only while L1.9 holds — no M1
+    # operator can produce a negative — and deltas are precisely the thing that produces
+    # negative counts. The delta executor must decide what absence means against a
+    # retraction before it runs anti_join over one; today it would raise, which is honest
+    # but is not an answer.
     is_present = (
         (lambda a: S.multiplicity(a) > 0) if is_bag_semiring(S) else (lambda a: a != S.zero)
     )
     present = {_key_of(row, keys) for _, row, annotation in right._items() if is_present(annotation)}
-    slot = _why_slot(S)
+    slot = why_slot(S)
     witness = Why.of([right.content_address()]) if slot is not None and len(right) > 0 else None
     acc: Merged = {}
     for key, row, annotation in left._items():

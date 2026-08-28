@@ -33,6 +33,7 @@ __all__ = [
     "ZxWhy",
     "is_bag_semiring",
     "product",
+    "why_slot",
 ]
 
 
@@ -244,6 +245,26 @@ def is_bag_semiring(semiring: Any) -> bool:
     return callable(getattr(semiring, "multiplicity", None)) and callable(
         getattr(semiring, "collapse", None)
     )
+
+
+def why_slot(semiring: Any) -> str | None:
+    """Where a `Why` component lives in `semiring`, structurally, by name (§2): `"self"`,
+    `"left"`, `"right"`, or `None` if there isn't one. `ZxWhy` (`product(Z, Why)`) resolves
+    to `"right"`; a bare `Why` resolves to `"self"`; `Z` or `B` alone resolve to `None`.
+
+    A fact about the semiring, not about any operator — which is why it lives here and not
+    beside its first caller. Two things want it: enriching an annotation with a witness
+    (`ops.anti_join`), and asking whether an annotation claims copies of a row it has no
+    derivation for (D0109, if the owner takes it)."""
+    if semiring.name == "Why":
+        return "self"
+    left = getattr(semiring, "left", None)
+    if left is not None and left.name == "Why":
+        return "left"
+    right = getattr(semiring, "right", None)
+    if right is not None and right.name == "Why":
+        return "right"
+    return None
 
 
 def product(left: Any, right: Any) -> _Product:

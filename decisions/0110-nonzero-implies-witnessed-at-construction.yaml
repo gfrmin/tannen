@@ -1,0 +1,101 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0110
+title: "Enforce nonzero-implies-nonempty-Why in Rel construction, which dissolves the anti_join/π₁ disagreement instead of choosing a side — blocked because a frozen M1 law constructs the value it would refuse"
+tier: C
+date: "2026-08-28"
+risk_flags: ["governance-paths"]
+decision: >-
+  PROPOSED, for the owner: make `Rel` refuse an annotation that claims copies of a row it
+  has no derivation for — nonzero in the bag-count component, `Why.zero` in the `Why`
+  component — under any semiring carrying a `Why` (located structurally by
+  `semiring.why_slot`, D0109). `(n, 0_Why)` asserts "n copies of this row, and there is no
+  derivation of it", which is a contradiction in a provenance semiring, not a value. It is
+  refused at the door or it is not refused at all.
+  .
+  WHY THIS IS THE RIGHT SHAPE, AND NOT MERELY TIDIER. D0107 chose the bag image over the
+  projection `pi1: (n, w) -> n` for anti_join's presence test, on the grounds that `to_bag`
+  and `aggregate` already decide that way. Review then established something sharper: over
+  the REACHABLE annotations — non-empty `Why`, non-negative counts — the bag image IS
+  additive (`mult((z1+z2, w1 | w2)) == z1+z2`, and a union of non-empty supports is
+  non-empty), so on that subset it is a homomorphism, it agrees with `pi1` everywhere, and
+  the choice D0107 agonised over has NO OBSERVABLE CONSEQUENCE. The two maps part company
+  only on `(n, 0_Why)`. `test_the_bag_image_is_not_a_homomorphism` needs `(1, 0_Why)` to
+  make its point, which is to say it proves a fact about the declared semiring rather than
+  about anything the kernel can reach. So the honest resolution is not to pick a map: it is
+  to make the state where they differ unconstructible, at which point the question
+  dissolves and D0107's choice stops mattering.
+  .
+  WHAT IT WOULD DISSOLVE, CONCRETELY. `REACHABLE` and `ANY_ANNOTATION` in
+  tests/test_provenance_homomorphism.py collapse to one generator, and the RA+/non-RA+
+  split in that file stops being load-bearing. `to_bag` becomes total over retained rows —
+  today a retained row may have no bag image, which is why L1.4's own law has to say so.
+  Three pinned edge tests become one invariant enforced in one place.
+  .
+  AND WHY IT IS NOT MERELY THEORETICAL. D0107's closure argument
+  (`test_the_reachable_annotations_are_closed`,
+  `test_the_operators_never_manufacture_an_empty_why`) proves witnessed-in-witnessed-out.
+  NOTHING PROVES WITNESSED-IN. `Rel(...)` is public, and `Rel.from_value` decodes whatever
+  a stored `rel/1` value contains with no such check — `[n, []]` decodes straight to
+  `(n, 0_Why)`. M1 ships no ingest path (the executor's only source is
+  `Rel.from_value(store.get_value(ref))`; cli.py and store.py build no base relations), so
+  the door is open but nothing walks through it TODAY. The capture layer does, and it is
+  M2. Any ingest that promotes `Z` data to `ZxWhy`, or admits a source with no ref, seeds
+  `(n, 0_Why)` legitimately — and at that moment
+  `test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image` stops being an
+  oddity pinned in a test file and becomes live behaviour: anti_join manufacturing two bag
+  copies out of a row that had no bag image at all. That test is the alarm, not the
+  footnote. This should land BEFORE M2 builds capture on top of the current permissiveness.
+rationale: >-
+  Tier C, and stopped rather than done, for one specific reason that was checked before
+  filing rather than assumed: `tests/laws/m1/test_l1_rel.py` line 244, inside the frozen
+  law `test_l1_5_mixing_semirings_is_refused_by_name`, constructs
+  `Rel(("a",), [({"a": 1}, (2, Why.zero))])` directly. The annotation is incidental there —
+  it is filler for a Rel whose only job is to have the default semiring so that mixing it
+  with a `Z` Rel can be refused — but the file is FROZEN, so refusing that value turns a
+  frozen law red. A grep of tests/laws confirms it is the ONLY such construction in the
+  frozen corpus, which is why this is a one-line problem rather than a design conflict.
+  .
+  That makes it the owner's, not the builder's, and it is exactly the supersession question
+  D0103 already queued: a frozen law found wrong after its milestone closed can only be
+  superseded by a NEW file, and `test_discovery_matches_the_frozen_spec_table` pins the law
+  set to the frozen spec table, so a new law id cannot land without an owner-applied spec
+  change. This record is a concrete second instance of that mechanism being needed, and it
+  is a better one than D0103's example because the law here is not wrong — it is merely
+  incidental about a value that should not exist.
+  .
+  Not proposed as Tier B: it changes what a public constructor accepts, which is
+  external-surface, and it cannot be done at all without the owner clearing the frozen
+  law. Not queued as a code change with the check disabled by default, which was
+  considered and rejected: a guard that has to be switched on is one nobody switches on.
+reversibility: >-
+  One-way in the sense that matters: once construction refuses the value, any stored
+  `rel/1` carrying `[n, []]` becomes unreadable through `Rel.from_value`, so the store's
+  existing content is part of the decision. Today that content is only what this
+  repository's own tests wrote, and none of it carries an unwitnessed annotation — but
+  after M2's capture layer that stops being true, which is the argument for doing it now
+  rather than later. The code change itself is small and reversible; the compatibility
+  boundary is not.
+status: blocked-on-owner
+bindings:
+  - type: pytest
+    target: tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image
+    strength: enforced
+    detail: >-
+      The alarm. Pins the live consequence of admitting `(n, 0_Why)`: anti_join adds its
+      absence witness to a survivor, turning a row with NO bag image into one with n
+      copies. Green today because nothing reachable constructs the input; it is the test
+      that should be read the day an ingest path lands.
+  - type: manifest
+    target: tests/laws/m1/test_l1_rel.py
+    strength: documentary
+    detail: >-
+      The frozen law that blocks this, at line 244 — `(2, Why.zero)` as incidental filler
+      inside test_l1_5_mixing_semirings_is_refused_by_name. The only such construction in
+      the frozen corpus.
+  - type: file
+    target: src/tannen/kernel/rel.py
+    strength: documentary
+    detail: >-
+      Where the check would go: beside the existing zero-annotation drop, which is already
+      the place that decides what a retained row may be.
+links: ["D0107", "D0109", "D0103", "D0056"]
