@@ -23,7 +23,7 @@ from tannen.kernel.algebra import Monoid
 from tannen.kernel.encoding import decode_canonical, encode_canonical
 from tannen.kernel.outcome import QUARANTINE_SCHEMA, Ok, OperatorError, Outcome, Quarantine
 from tannen.kernel.rel import Rel
-from tannen.kernel.semiring import is_bag_semiring
+from tannen.kernel.semiring import Why, is_bag_semiring
 
 __all__ = [
     "OPERATORS",
@@ -145,6 +145,31 @@ def _same_semiring(name: str, left: Rel, right: Rel) -> None:
 
 def _key_of(row: dict, keys: tuple[str, ...]) -> tuple[bytes, ...]:
     return tuple(encode_canonical(row[k]) for k in keys)
+
+
+def _why_slot(semiring: Any) -> str | None:
+    """Where a `Why` component lives in `semiring`, structurally, by name (§2): `"self"`,
+    `"left"`, `"right"`, or `None` if there isn't one. `ZxWhy` (`product(Z, Why)`) resolves
+    to `"right"`; a bare `Why` resolves to `"self"`; `Z` or `B` alone resolve to `None`.
+    Used to ENRICH an annotation with a witness, never to decide whether a row is there —
+    presence is the bag image, which is a separate question with a separate answer."""
+    if semiring.name == "Why":
+        return "self"
+    left = getattr(semiring, "left", None)
+    if left is not None and left.name == "Why":
+        return "left"
+    right = getattr(semiring, "right", None)
+    if right is not None and right.name == "Why":
+        return "right"
+    return None
+
+
+def _add_witness(semiring: Any, slot: str, annotation: Any, witness: Any) -> Any:
+    if slot == "self":
+        return semiring.add(annotation, witness)
+    if slot == "left":
+        return (semiring.left.add(annotation[0], witness), annotation[1])
+    return (annotation[0], semiring.right.add(annotation[1], witness))
 
 
 def _callable(name: str, fn: Any, what: str) -> None:
@@ -270,6 +295,26 @@ def distinct(rel: Any) -> Outcome:
 
 
 def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
+    """Presence is decided by the BAG IMAGE of a right row's annotation, never by the raw
+    annotation — that was the bug. A right row of `(0, {{ref}})` (net count zero, still
+    witnessed, retained per §3) has no bag image and must NOT block a matching left row:
+    `Why` explains an answer, it never supplies one. The rule is symmetric, because L1.2
+    (as amended by D0093) is symmetric: `(n, ∅)` has no bag image either, and does not
+    block. That is a real disagreement with the projection `(n, w) -> n`, which IS a
+    semiring homomorphism; RG&T buys commutation with it for RA+ only, and anti_join is
+    outside RA+. This operator follows `to_bag` and `aggregate` rather than the projection,
+    so all three agree on what "really there" means. Neither `(0, w)` nor `(n, ∅)` is
+    reachable by composing operators over well-formed inputs — see
+    tests/test_provenance_homomorphism.py, which checks that rather than asserting it.
+
+    Every surviving row's `Why`, where there is one, gains a witness naming `right`'s own
+    content address — the claim being made ("this key was absent from R") is about the
+    right relation as a whole at this version, not about any row on it, so no row-level
+    ref can express it — UNLESS `right` is empty: against a genuinely empty relation there
+    was nothing to check, so nothing to cite, and anti_join is exactly the identity
+    (L1.8) — a witness added unconditionally would violate that, since a survivor's
+    annotation would then differ from its input's.
+    """
     taken = _take("anti_join", a, b)
     if isinstance(taken, Quarantine):
         return taken
@@ -278,13 +323,28 @@ def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
     _same_semiring("anti_join", left, right)
     _in_schema("anti_join", keys, left, "the left schema")
     _in_schema("anti_join", keys, right, "the right schema")
-    zero = right.annotations.zero
-    present = {_key_of(row, keys) for _, row, annotation in right._items() if annotation != zero}
-    acc: Merged = {
-        key: (row, annotation)
-        for key, row, annotation in left._items()
-        if _key_of(row, keys) not in present
-    }
+    S = left.annotations
+    # Presence is the BAG image — the same notion `to_bag` (§3.3) and `aggregate` already
+    # use — and NOT `annotation != zero`, which was the bug. L1.2 as amended by D0093 is
+    # explicit that BOTH `(0, w)` and `(n, ∅)` are non-zero annotations with no bag image,
+    # so the rule has to be symmetric: a row with no copies is not there, whichever
+    # component zeroed it. A semiring that declares no bag structure keeps the pre-bag
+    # rule — anti_join needs only a `Semiring`, and L1.7 enumerates the bag-requiring
+    # operators as distinct/aggregate/to_bag. Under `Z` a negative annotation has no bag
+    # image and is refused by name here exactly as `to_bag` refuses it (the cone law).
+    is_present = (
+        (lambda a: S.multiplicity(a) > 0) if is_bag_semiring(S) else (lambda a: a != S.zero)
+    )
+    present = {_key_of(row, keys) for _, row, annotation in right._items() if is_present(annotation)}
+    slot = _why_slot(S)
+    witness = Why.of([right.content_address()]) if slot is not None and len(right) > 0 else None
+    acc: Merged = {}
+    for key, row, annotation in left._items():
+        if _key_of(row, keys) in present:
+            continue
+        if witness is not None:
+            annotation = _add_witness(S, slot, annotation, witness)
+        acc[key] = (row, annotation)
     return _finish("anti_join", left, left.schema, acc, carried, [], operators)
 
 

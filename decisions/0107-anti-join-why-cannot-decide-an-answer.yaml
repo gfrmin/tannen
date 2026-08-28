@@ -1,0 +1,190 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0107
+title: "anti_join's presence test read the whole ZxWhy annotation, letting Why decide an answer it should only explain; fixed, and its survivors now cite the absence they attest to"
+tier: A
+date: "2026-08-28"
+risk_flags: []
+decision: >-
+  A review of the kernel (prompted by the M1 boundary-sitting review pass, not a red-team
+  doc under docs/redteam/) found that `anti_join` (src/tannen/kernel/ops.py) tested
+  presence as `annotation != right.annotations.zero` — the FULL product annotation against
+  the FULL product zero. Under `ZxWhy`, `rel.py`'s own docstring already states that a row
+  of `(0, {{ref}})` (net Z-count zero, still witnessed) is RETAINED, not dropped, because
+  it is not equal to `(0, frozenset())`. Such a row therefore counted as "present" and
+  blocked a matching left row from surviving `anti_join` — meaning a row's `Why` content
+  (whether it happened to carry a stale witness) could change which rows a query returns,
+  not merely explain why. Provenance is supposed to be inert (BRIEF P4): it explains the
+  answer, it never supplies one.
+  .
+  Two independent things were named and both are fixed together, because the second
+  cannot be tested without the first:
+  .
+  (1) THE BUG. `ops.py::anti_join` now tests presence via the BAG IMAGE —
+  `S.multiplicity(annotation) > 0` — rather than `annotation != zero`.
+  `semiring.py`'s now-dead `is_positive()` (docstring: "what anti_join tests") was never
+  actually called by `anti_join` — a second instance of the same disease as (2) below,
+  one level up: a comment asserting a wiring that was not there. Removed rather than
+  rewired, since nothing referenced it and the corrected presence test is not naturally
+  "positivity of one value" any more.
+  .
+  A FIRST DRAFT OF THIS RECORD JUSTIFIED THAT RULE AS "forget `Why`, then ask Z whether
+  this row is really there", and gated it behind a hard `BagSemiring` requirement. Review
+  showed both halves were wrong, and the corrected reading is the substance of this
+  record. `_BagProduct.multiplicity` is `Z.multiplicity(z) * Why.multiplicity(why)`, a
+  PRODUCT: it is zero when EITHER factor is zero, so the rule is symmetric, not a
+  projection. It does not "forget Why"; it asks both and multiplies. That symmetry is not
+  an accident and not a second bug — L1.2, as amended by D0093, states it outright: both
+  `(0, w)` and `(n, 0_Why)` are non-zero annotations with NO bag image. `to_bag` (§3.3)
+  and `aggregate` already read presence exactly this way, and L1.9 states `Why`'s
+  inertness over the bag image rather than over a projection. `anti_join` now agrees with
+  all three. The alternative put forward in review — decide presence on the Z component
+  alone, by locating the `Why` slot structurally and stripping it — was declined for a
+  specific reason: the projection `pi1: (n, w) -> n` IS a semiring homomorphism, but the
+  bag image is NOT (it is multiplicative, which L1.2 asserts, and not additive:
+  `multiplicity((1, 0_Why) + (0, w))` is 1 while each summand has multiplicity 0). The two
+  maps disagree precisely on an empty `Why`, and adopting `pi1` for `anti_join` alone
+  would have made it the ONLY operator whose notion of "really there" disagrees with
+  `to_bag` and `aggregate` — trading a one-sided rule for an inconsistent one.
+  .
+  THE `BagSemiring` GUARD WAS ALSO WRONG AND IS GONE. It narrowed `anti_join`'s domain
+  without saying so: L1.7's frozen law enumerates the operators needing bag structure as
+  exactly `distinct`, `aggregate` and `to_bag`, and asserts that operators needing only a
+  `Semiring` still work over one without it. No frozen assertion exercised `anti_join`
+  over the `NO_BAG` fixture, so nothing went red — the narrowing was simply invisible.
+  `anti_join` now uses the bag rule where the semiring offers one and falls back to
+  `annotation != zero` where it does not, so the domain is unchanged. The remaining, and
+  now deliberate, narrowing is on negatives: under `Z`, `multiplicity(-1)` raises by the
+  cone law, where `!= zero` counted the row as present. That matches `to_bag`, which
+  refuses a negative for the same reason; M1 has no operator that can produce one (L1.9).
+  To the question of whether anything was affected: all four shipped semirings (`Z`, `B`,
+  `Why`, `ZxWhy`) declare bag structure, so `B` qualifies and nothing in the tree ever
+  called `anti_join` over a non-bag annotation outside that frozen fixture.
+  .
+  (2) THE MISSING ANNOTATION. A survivor's claim ("this key was absent from the right
+  relation") is not a claim about any row on the right — no row-level ref can express it
+  — it is a claim about the right relation AS A WHOLE, at this version. `anti_join`'s
+  survivors now gain a witness naming `right.content_address()` (already a valid ref in
+  the pinned grammar, refs.py) alongside whatever `Why` they already carried, via a new
+  `_why_slot`/`_add_witness` pair in ops.py that locates the `Why` component of any
+  semiring structurally (bare `Why`, or a product with `Why` on either side) and is a
+  no-op for a semiring with no `Why` component (plain `Z` or `B` — nothing to enrich,
+  matching the finding's own framing that only `ZxWhy` was ever exposed to this).
+  .
+  ONE REFINEMENT TO (2), FOUND BY THE FROZEN SUITE, NOT BY THE NEW TEST: the witness is
+  added only when `right` is non-empty. `tests/laws/m1/test_l1_ops.py`'s frozen
+  `test_l1_8_anti_join_against_empty_is_the_identity` requires `anti_join(a, empty) == a`
+  EXACTLY — an unconditional witness broke it on the first full-suite run after this
+  change, because an empty right relation still has a content address, and adding it
+  changed a survivor's annotation on a call the frozen law requires to be the identity.
+  The fix reads as the right general rule anyway, not a special case bolted on to pass a
+  test: against a genuinely empty relation there is nothing that was actually checked, so
+  there is nothing honest to cite; the citation only makes sense once `right` has real
+  content to have consulted. Worth stating plainly: the new homomorphism test below did
+  NOT catch this — `forget_why` discards `Why` unconditionally, so it cannot see whether a
+  witness was correctly withheld, only whether presence was decided correctly. The two
+  tests check different things and neither substitutes for the other; only the frozen
+  law caught this one, which is itself a small argument for never touching frozen laws.
+  .
+  A general law was added to catch the whole class, not just this one instance:
+  tests/test_provenance_homomorphism.py states, via Hypothesis, that forgetting `Why`
+  commutes with the operators — `forget_why(op(r1, r2)) == op(forget_why(r1),
+  forget_why(r2))` — the property Green, Karvounarakis & Tannen give for free over
+  positive relational algebra (map/project/filter/union/join). `distinct`, `aggregate`
+  and `anti_join` sit outside RA+, so the law does not hold for them by construction and
+  has to be checked: `anti_join` failed it before this fix (reproduced against the pre-fix
+  code before touching it) and passes after; `distinct` and `aggregate` pass as
+  implemented, now verified rather than assumed.
+  .
+  THE SCOPE OF THAT LAW WAS ALSO CORRECTED IN REVIEW, and this is the more useful half of
+  the finding. The first draft generated every annotation with a non-empty `Why`, which
+  quietly excluded `(n, 0_Why)` — the one state where the operators outside RA+ disagree
+  with `pi1` — and defended the exclusion in a comment claiming such a row "never arises
+  from real operator composition". That claim was true, but it was a load-bearing
+  invariant asserted next to the code instead of checked by it: the same shape as
+  `is_positive`'s docstring, one level up. It is now split by which map actually applies.
+  The RA+ operators are drawn from the WHOLE product, empty `Why` included, because RG&T
+  covers them unconditionally — and they pass. The three outside RA+ are stated over the
+  reachable annotations, and the restriction is EARNED by two new property tests rather
+  than by a comment: `add` and `mul` both preserve a non-empty `Why` (so the reachable
+  set is closed), and the operators, run over witnessed inputs, never emit an unwitnessed
+  annotation. Two further tests pin the disagreement itself as specified behaviour
+  instead of leaving it in the gap between two generators: that the bag image is not
+  additive and therefore not a homomorphism at all, and that `(3, 0_Why)` has no bag
+  image, so it does not block a left row under `ZxWhy` while blocking under `Z`.
+  .
+  The invariant CANNOT be moved into `Rel` itself, which would have been the tidier fix:
+  the frozen L1.5 law `test_l1_5_mixing_semirings_is_refused_by_name` constructs
+  `Rel(("a",), [({"a": 1}, (2, Why.zero))])` directly, so refusing an unwitnessed
+  annotation at construction would break a frozen law. It is a reachability property, not
+  a representation constraint, and the tests now say exactly that.
+rationale: >-
+  Why this is Tier A and not queued to the sitting like D0102 was: nothing touched here is
+  a frozen path or a custody-set member. src/tannen/kernel/ops.py and semiring.py are
+  ordinary, unfrozen source (only tests/laws/m0 and tests/laws/m1 carry MANIFEST.sha256
+  rows for the law SPECIFICATIONS; the kernel implementation satisfying them does not).
+  The new test could not go under tests/laws/m1/ even if it were wanted there —
+  governance/tier-c.yaml's sealed_dirs lists tests/laws, and check_manifest.py's
+  check_sealed_paths refuses any unmanifested file placed inside it (D0056) — so it lives
+  at tests/test_provenance_homomorphism.py instead, the same non-frozen-coverage pattern
+  D0102 used for its own regression test.
+  .
+  This is a real semantics change, not a pure bug fix, and the cost is stated plainly
+  rather than left implicit: `Why` tokens are no longer homogeneous. Before this change,
+  every witness in a `Why` support set named something a row was directly derived from;
+  after it, an `anti_join` survivor's support set can also contain a token naming an
+  entire relation's content address — a coarser, relation-scoped claim living alongside
+  row-scoped ones. This is the price of expressing negation at all inside a support-set
+  provenance model (BRIEF P4 scopes `Why` to support-set semantics, not a full polynomial
+  "how much" provenance, so there was never a way to do this without some coarsening) —
+  cheaper than the alternative the reviewer named and rejected (a monus operation), which
+  `Why` has no natural definition for over sets of sets.
+  .
+  Deliberately not done: no attempt to give `aggregate` a semimodule-style coupling between
+  its value fold and its annotation fold. They remain two decoupled folds (`monoid.fold`
+  over plain values; `S.add`/`S.collapse` over annotations) — verified sufficient for
+  support-set ("why") provenance by the new homomorphism test, and BRIEF P4 never commits
+  `Why` to more than that. Recorded so a reader does not mistake the absence of a
+  semimodule for an oversight; it is a documented scope boundary, matching the reviewer's
+  own read of it once the code was in front of them.
+reversibility: >-
+  A ~20-line change to one operator, one function removed from semiring.py (nothing
+  referenced it, confirmed by search before removal), and one new non-frozen test file.
+  Reverting the operator change would restore the exact bug this record describes — this
+  is not a case where "revert" is free of consequence, it is a case where the consequence
+  is precisely what is now tested and named. The full suite (all frozen M1 laws plus every
+  non-frozen test) was run after the change and is green; nothing downstream depended on
+  the removed is_positive or on anti_join's previous presence-test behaviour.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_provenance_homomorphism.py::test_forget_why_commutes_with_anti_join
+    strength: enforced
+    detail: >-
+      The exact case: fails against the pre-fix presence test (a right row of
+      (0, {{ref}}) wrongly blocks a matching left row under ZxWhy but not under Z),
+      passes after. Run alongside the other five operators' homomorphism checks in the
+      same file so a future change to any operator gets the same standing detector.
+  - type: pytest
+    target: tests/test_provenance_homomorphism.py::test_an_empty_why_has_no_bag_image_so_it_cannot_block
+    strength: enforced
+    detail: >-
+      The contested case, pinned as specified behaviour rather than left in the gap
+      between two generators: (3, 0_Why) is non-zero and retained (L1.4) but has no bag
+      image (L1.2 as amended by D0093), so it does not block under ZxWhy while blocking
+      under Z. Alongside test_the_bag_image_is_not_a_homomorphism, which is why the
+      projection cannot be used as the yardstick here, and the two closure tests, which
+      are what earn restricting the non-RA+ laws to the reachable annotations.
+  - type: file
+    target: src/tannen/kernel/ops.py
+    strength: enforced
+    detail: >-
+      anti_join's corrected presence test (S.multiplicity(annotation) > 0, BagSemiring-
+      gated) and its survivor witness (_why_slot / _add_witness, naming right's own
+      content_address()).
+  - type: file
+    target: src/tannen/kernel/semiring.py
+    strength: documentary
+    detail: >-
+      is_positive() removed — its docstring named a wiring to anti_join that never
+      existed; confirmed unreferenced anywhere in the tree before removal.
+links: ["D0002", "D0056", "D0102"]

@@ -32,7 +32,6 @@ __all__ = [
     "Z_ONLY",
     "ZxWhy",
     "is_bag_semiring",
-    "is_positive",
     "product",
 ]
 
@@ -245,11 +244,6 @@ def is_bag_semiring(semiring: Any) -> bool:
     return callable(getattr(semiring, "multiplicity", None)) and callable(
         getattr(semiring, "collapse", None)
     )
-
-
-def is_positive(semiring: Any, a: Any) -> bool:
-    """`a != zero` — what `anti_join` tests; needs no BagSemiring (§2.1)."""
-    return a != semiring.zero
 
 
 def product(left: Any, right: Any) -> _Product:

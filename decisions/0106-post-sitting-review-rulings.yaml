@@ -1,0 +1,119 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0106
+title: A red-team-style review of D0105/README turned up one generalisable finding and three proposals for the owner, none applicable by the builder
+tier: C
+date: "2026-08-27"
+risk_flags: [governance-paths]
+decision: >-
+  An independent review of the M1 boundary-sitting materials (D0105, this proposal
+  directory's README, the D0049 corruption fix in step 4c) returned four rulings. The
+  first is already satisfied and needs no record; the other three are queued here,
+  unappliable by the builder for the same reason D0095 and D0105 item 7 were queued
+  rather than patched: every artifact they would touch is both a MANIFEST.sha256 frozen
+  path and a governance/tier-c.yaml custody-set member.
+  .
+  (0) "Proceed with D0105's order as written." Already true — nothing in this record
+  changes D0105, the driver, or any already-rehearsed step. Recorded only so a reader of
+  this file does not go looking for a diff that does not exist.
+  .
+  (1) Add a `bindings_count` field to the decision-record schema; have check_decisions.py
+  fail when a record's actual bindings list length disagrees with it. The generalisation
+  the reviewer draws from the D0049 finding: a guard verifies that a record is
+  well-formed, never that it says what its author meant — the same class as RT-10 (a
+  binding satisfied by a target that merely exists, not one that enforces anything). A
+  bindings_count is a cheap checksum over authorial intent for exactly the failure mode
+  D0049 exhibited (a folded YAML list, still valid, still resolving, silently short by
+  one). Proposed for whoever drafts M2's law/schema session: add the field as optional
+  first (so all 106 existing records stay valid without a mass edit), backfill counts
+  opportunistically, then tighten to required once backfilled.
+  .
+  (2) Rule on D0105 item 7 now, while D0105's own reasoning is fresh, rather than at
+  whatever later sitting next needs it: a law found wrong AFTER its milestone's Session B
+  closed is superseded FORWARD — a new law file under the CURRENT milestone's own
+  directory (never back-dated into the closed milestone's frozen set, never an in-place
+  edit), the old file retained and marked superseded in MANIFEST.sha256's notes, and a
+  decision record binding old and new together. This is BRIEF §8's existing within-a-
+  milestone rule ("write the corrected law as a new file... mark the old one superseded"),
+  stated for the case BRIEF §8 does not yet cover: a defect surfacing after the milestone
+  that owned the law has already closed. Closed milestones stay immutable history;
+  corrections are always forward, never backward into them.
+  .
+  (3) Add a ratchet metric: governance-mechanics line count (guards + drivers + fixtures)
+  as a fraction of kernel line count. The reviewer's caution, not a finding: this sitting's
+  own queue (a driver copying itself over a custody member as tolerated drift, a fixture
+  renamed to dodge pytest's discovery glob, `-B` insufficient where an env var was needed
+  across a subprocess boundary) is each individually justified and none of it is free —
+  and D0049 is what silent failure in that layer looks like when the load stops being
+  free. Sustained growth in this ratio is proposed as a defect signal for the ratchet to
+  flag, not a metric to celebrate falling. Filed as a proposal, not a ruling, because
+  unlike (1) and (2) the reviewer offered it as a suspicion to test, not a decided rule.
+  .
+  A fourth item — sequence M2's tree-anchoring fix on the expectation that it REMOVES
+  mechanism (several of the accretions above simplify away at once), and reconsider it if
+  it does not — is planning input for M2 Session A, not a decision this record can bind
+  to anything; carried in rationale only.
+rationale: >-
+  The review was run against the already-committed, already-rehearsed sitting materials
+  (tip 41f3288) and the D0049 corruption specifically — the same corruption step 4c's own
+  commit message already calls out as worth a generalisation rather than a one-line fix
+  (decisions/0105-m1-boundary-sitting-queue.yaml, item 3). It independently arrived at the
+  same emphasis: a checker validated the form of a signed record and could not see that
+  its author's intent (three bindings) and its bytes (two bindings, one folded into
+  prose) had come apart. That is worth naming as a general property of this governance
+  layer rather than letting it read as one YAML typo, which is why (1) exists.
+  .
+  None of (1)-(3) can be applied here for the reason every other forward-queued item in
+  this session was queued rather than patched: governance/schemas/decision-record.schema.json
+  is both a MANIFEST.sha256 row and a governance/tier-c.yaml custody-set member
+  (`governance/schemas/*.json`); scripts/check_decisions.py is a custody-set member too,
+  though not itself a MANIFEST.sha256 row. Editing either without an owner signature is
+  the exact hard rule CLAUDE.md states ("Never edit a frozen path", for the schema) and
+  the exact trust-root door tier-c.yaml names ("Changing
+  the Tier-C doors below is itself Tier C: owner signature only" — schema and checker
+  changes are narrower than a door change but sit inside the same custody set that
+  protects the doors). Session discipline also argues against reaching for it directly:
+  M1 Session B is closed (one milestone in flight, ever), so drafting schema/checker
+  changes now would be M2 Session A work done outside M2 Session A, adversarially
+  un-separated from the review that motivated it.
+  .
+  (2) is recorded as Tier C rather than Tier A/B despite being "just" a process rule,
+  because D0105 item 7 explicitly asked the OWNER to decide this, by name, rather than
+  have the builder improvise it — ratifying the reviewer's proposed wording on the
+  builder's own Tier-A authority would be exactly the improvisation-under-time-pressure
+  D0105 item 7 warned against, just moved earlier. The record exists so the owner can
+  affirm or amend the proposed wording with one signature rather than draft it cold.
+reversibility: >-
+  Nothing here changes any enforcing artifact; every one of (1)-(3) is a proposal record.
+  (1) and (3), once implemented, are schema/checker edits — ordinarily reversible, except
+  that (1) is deliberately proposed as optional-then-required in two steps so that making
+  it required cannot be casually undone once 106+ records depend on it being checked.
+  (2), once ratified, governs how future frozen-law defects are corrected; reversing it
+  later would not invalidate any correction already made under it (each stays a discrete,
+  separately-superseded file), only change the rule for corrections after the reversal.
+status: blocked-on-owner
+bindings:
+  - type: manifest
+    target: governance/schemas/decision-record.schema.json
+    strength: documentary
+    detail: >-
+      The schema as it stands today — DOCUMENTARY: item (1) proposes a bindings_count
+      field this schema does not yet have. Also ENFORCED against the builder in the
+      other direction: this file is a MANIFEST.sha256 row and a custody-set member
+      (governance/schemas/*.json), which is why item (1) cannot be drafted directly into
+      it here.
+  - type: file
+    target: scripts/check_decisions.py
+    strength: documentary
+    detail: >-
+      The checker as it stands today, including check_ratchet() (the unenforced/residue
+      metrics items (1) and (3) would extend) — DOCUMENTARY: this file is not itself a
+      MANIFEST.sha256 row (unlike the schema above), but it IS a governance/tier-c.yaml
+      custody-set member, so the same owner-re-signature requirement applies; `file`
+      rather than `manifest` here only reflects which guard actually names the path.
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/README.md
+    strength: documentary
+    detail: >-
+      Unchanged by this record. Bound so a reader lands on the actual sitting run sheet
+      D0105 already points at, rather than mistake this record for a competing one.
+links: ["D0049", "D0060", "D0070", "D0095", "D0102", "D0103", "D0104", "D0105"]
