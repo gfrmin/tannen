@@ -1,0 +1,215 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0112
+title: "Nothing measured whether this tree is safe to publish; tests/test_no_pii.py is now a standing structural guard, written here rather than borrowed from life-agent"
+tier: A
+date: "2026-08-29"
+risk_flags: []
+decision: >-
+  tests/test_no_pii.py scans every tracked file — which is exactly the set publishing
+  would publish — for four classes of disclosure, and fails on any that is not
+  explicitly declared: an email address whose domain is not allowlisted, an ABSOLUTE
+  home-directory path (`/home/<user>/…`, `/Users/<user>/…`), a credential shape (six
+  vendor prefixes plus the `BEGIN … PRIVATE KEY` armour), and a tracked file carrying a
+  NUL byte that is not declared binary.
+  .
+  PRIOR ART, CITED AND NOT VENDORED. The owner pointed at life-agent's
+  `.githooks/pii_check.py` — 676 lines, adversarially hardened over its own K3/r23/r27
+  rounds (its `docs/guards.md` row 13 records it being defeated and re-earned). It was
+  RUN against this repository for the audit below, which is an instrument use and leaves
+  no trace. It was NOT copied in: CLAUDE.md's hard rules forbid a dependency on another
+  constellation repo in either direction and BRIEF §9 makes a cross-repo code dependency
+  Tier C, so importing or vendoring it would have been a door, not a convenience. The
+  relationship is the one docs/specs/m1.md §0.1 already draws for DBSP and the Lean
+  formalisation: prior art is cited, never restated, never vendored, and explicitly NOT a
+  §2 concept — §2 covers the constellation's definitions, and this is repo hygiene.
+  .
+  THREE LESSONS TAKEN FROM IT, EACH BECAUSE IT WAS EARNED THE HARD WAY THERE.
+  (1) The bytes decide, first: NUL is checked on content before any extension rule, so a
+  declared suffix is permission to be binary rather than an assertion that a file is one
+  (its r27/C8).
+  (2) An unscannable file is a refusal, never a pass (its r23/F4) — but here a refusal is
+  a per-file FINDING rather than an abort. This is the one place this guard deliberately
+  differs, and the reason is a defect found live while running theirs: pointed at this
+  repo it exited 2 on `tests/poison/custodian-tag-signer/repo.bundle` and scanned NOTHING,
+  because the refusal raises before the scan loop. Two runs were read as clean before the
+  short-circuit was noticed. One poison fixture must never be able to suppress three
+  hundred files' results.
+  (3) A noisy guard gets disabled, and a disabled guard is what lets the leak through
+  (their own comment). Their general "path under a non-placeholder root" layer produced
+  59 findings on this tree and exactly ONE true positive, because its allowlist is theirs;
+  that layer is not reproduced. The precise half is: an absolute home path names a real
+  user on a real machine. The tilde forms this repo uses everywhere (`~/git/worktrees/…`,
+  `~/.ssh/tannen_builder`) are conventions, not disclosures, and are untouched.
+  .
+  WHAT THE AUDIT FOUND (their guard, --shapes-only, over 308 tracked files and all 538
+  blobs in 48 commits of history). No email address at all: the single flag was
+  `sk-ssh-ed25519@openssh.com` in a superseded `allowed_signers` blob, which is OpenSSH's
+  spelling of a key TYPE. No private key material. No Israeli ID, passport, mobile, HK
+  phone, HKID, honorific name, account or document-ref shape. Every commit is authored
+  `builder@tannen` — the identity is already pseudonymous. FOUR files disclose an
+  absolute `/home/<user>/…` path, in the tree and in history.
+  .
+  THOSE FOUR ARE DECLARED, NOT REDACTED, AND THE TREE DELIBERATELY MATCHES THE HISTORY.
+  Redacting four lines of prose would leave the repository looking cleaner than it is
+  while the original blobs stay one `git log -p` away, and the history cannot be rewritten
+  — every rewrite invalidates the signed tags and breaks the receipt chain. One of the
+  four is a decision record, whose text is immutable by D0045 in any case. So they sit in
+  `KNOWN_DISCLOSURES` with a reason each, a fifth fails the suite, and a companion test
+  fails if one is ever redacted so the count cannot quietly stop being true — the same
+  shape D0111 gave D0108's tolerance.
+  IT SCANS ITS OWN SOURCE, AND ITS FIRST BUG WAS EXACTLY THAT. The fixtures below are the
+  shapes the guard looks for, written as literals; while the file was still untracked
+  `git ls-files` never showed it to the scan, so the suite was green about a file it had
+  never read. It stayed green through a full local `make verify` (572 passed) because the
+  file was untracked there too. scripts/rehearse_sitting.sh found it: the sitting commits
+  with `git add -A`, so at step 9's POST-COMMIT gate the file was tracked, the guard
+  flagged its own email, home-path and private-key fixtures, and the driver aborted with
+  "verify red at the close". Two conclusions, both kept. The fix is to assemble the
+  fixture values at run time (`_j`) rather than to exempt this path — a scanner with a
+  blind spot over its own source is a hole with no review trail, which is life-agent's
+  own K3 D-d finding about its `PII-OK` marker. And the property is now pinned by
+  test_the_guard_scans_its_own_source, watched failing in both directions: with the file
+  untracked, and with a literal leaked back into it.
+  .
+  AND ITS SECOND BUG WAS WORSE THAN ITS FIRST, because that one at least failed loudly.
+  test_no_credential_shape_is_tracked filtered findings with
+  `{kind for _, kind in _CREDENTIAL_RES}` — the (kind, pattern) pairs unpacked BACKWARDS,
+  yielding a set of compiled patterns. `kind in kinds` compares a string against a
+  Pattern, so it was never true, the hit list was always empty, and THE GUARD'S HEADLINE
+  ASSERTION COULD NOT FAIL UNDER ANY INPUT. It was green through the whole first day while
+  this file carried an OpenSSH private-key header verbatim as a fixture. Nothing detected
+  it: the fixture tests exercise `scan()`, which was correct throughout, not the
+  aggregation in the assertion. It was found by asking why the rehearsal reported TWO
+  failures when three were due — that is, by reading a failure report for what it did not
+  say. D0091's lesson in a new place: a test whose subject is a filter needs the filter
+  exercised, not just the thing it filters.
+  .
+  The fix is structural rather than a corrected comprehension. Every kind `scan` can emit
+  is named once (`CREDENTIAL_KINDS`, `EMAIL_KIND`, `HOME_KIND`, `UNSCANNABLE_KIND`,
+  `ALL_KINDS`), `scan` emits those constants instead of string literals, and
+  test_the_kind_filters_partition_everything_the_scan_emits builds a repository violating
+  every kind at once and proves the four assertion tests' filters cover all of them,
+  disjointly, each selecting something. A pattern added without a sample, or a filter that
+  stops selecting, now fails there. Watched failing three ways: the original backwards
+  comprehension, a new pattern with no sample, and a pattern with no test.
+  .
+  A pleasing confirmation that it works: with the filter repaired, the guard immediately
+  flagged this record's sibling prose — the sentence in the test file DESCRIBING the bug
+  contained the key header it was describing. Reworded, not exempted.
+  .
+  AND ITS THIRD BUG WROTE TO THE REPOSITORY UNDER TEST. Every fixture spelled
+  `git -C <tmp_path> init` / `add -A`, which reads as "operate on tmp_path" and is not:
+  `-C` sets the directory git starts from, while GIT_DIR, GIT_INDEX_FILE and GIT_WORK_TREE
+  taken from the environment decide which repository it ends up in, and the environment
+  wins. A git hook exports them naming the repository being committed, and pre-commit runs
+  hooks. So on 2026-08-30, when the twelve staged files were committed and the
+  check-decisions hook ran these very tests, the fixtures staged their nine files into the
+  REAL index and staged all 309 real paths as deleted. The commit was refused — by the
+  hook, reporting the guard's own tests as failing — and `git reset` restored the index
+  with nothing lost, HEAD and the working tree untouched throughout.
+  .
+  Invisible from a plain shell, which is the point: the same suite had passed a full
+  `make verify` twice that day, because GIT_DIR is unset there. The defect existed only in
+  the environment where the guard is most load-bearing. Fixed with `_git`, one helper that
+  strips every GIT_* from the environment so `-C` is actually authoritative, and all ten
+  call sites routed through it. Pinned by
+  test_the_fixtures_cannot_touch_the_repository_under_test, which builds a victim
+  repository, exports the two variables a hook exports, runs the fixture path, and asserts
+  the victim's index is byte-identical.
+  .
+  ITS FOURTH BUG WAS IN THE TEST JUST DESCRIBED, and it is this record's best evidence for
+  D0116. That regression test PASSED with the fix removed — it could not fail. The
+  reproduction set GIT_WORK_TREE as well as GIT_DIR, which points `add -A` back at the
+  victim's own work tree so the fixture's file is never reached; a hook does not set
+  GIT_WORK_TREE. It was caught only because the fix was removed and the test watched, per
+  D0111. A guard written to close an instance of the class, itself an instance of the
+  class, caught by the one discipline that catches the class. The corrected version fails
+  with the signature of the real damage — index `real.txt` becoming `leak.txt`.
+  .
+rationale: >-
+  Tier A: one new non-frozen test file under tests/, touching nothing else. It reads the
+  tree and asserts; it changes no byte, needs no signature, and adds no dependency —
+  stdlib `re` and `subprocess` against `git ls-files`.
+  .
+  It is a test rather than a pre-commit hook on purpose. `.pre-commit-config.yaml` is a
+  custody-set member, so a hook there is the owner's to install; a test is builder
+  territory and already runs in `make verify` and in CI, which is the gate that matters.
+  If publication is approved (D0115) the owner may want it at commit time as well —
+  that is an addition to this, not a replacement.
+  .
+  EVERY PATTERN IS WATCHED FAILING, one fixture repository per shape, plus the two
+  cases that matter more than the patterns: that the forms this repo actually uses stay
+  quiet, and that an undeclared binary does NOT suppress the rest of the scan. Without
+  the first the guard gets switched off within a week; without the second this file would
+  reproduce the exact short-circuit it was written in response to. D0091's lesson applies
+  directly — a detector whose debt is borrowed from the live repo goes quiet when the
+  live repo is clean, so the fixtures carry their own violations.
+  .
+  DELIBERATELY NOT DONE, and this is the limit that matters: there is no private-name
+  layer. life-agent supplements its shapes with a denylist of names, employers and
+  domains loaded from outside its repo, precisely because a bare personal name has no
+  shape a regex can find; that file lives on a KB mount not present on this machine, so
+  the audit could not run it either. A green suite here is evidence about shapes and
+  credentials and nothing else. Publication still needs a human to read the tree, and
+  D0115 says so rather than resting on this file.
+  .
+  Also not done: no check on `concepts/snapshots/**`, which vendors 627 lines of four
+  other repositories. That is the real publication blocker and it is D0115's question,
+  not this one's — a test that fails on the tree's intended state would be a broken test,
+  not a guard.
+reversibility: >-
+  One new file, deletable with no trace and no dependency in either direction. Its two
+  tolerance maps are data with reasons attached, and both are asserted non-vacuous: the
+  declared binary is checked to still be binary, and the four known disclosures are
+  checked to still disclose. If the patterns ever need to loosen, the fixture tests fail
+  first and say which shape stopped being caught.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_no_pii.py::test_the_fixtures_cannot_touch_the_repository_under_test
+    strength: enforced
+    detail: >-
+      The third bug, and the only one of the four that WROTE to the repository: `git -C`
+      does not override GIT_DIR/GIT_INDEX_FILE from the environment, and under a git hook
+      that environment names the repository being committed. Reproduces the hook
+      environment against a victim repository and asserts its index is untouched. Its own
+      first draft could not fail; the corrected one fails with the signature of the real
+      damage.
+  - type: pytest
+    target: tests/test_no_pii.py::test_no_credential_shape_is_tracked
+    strength: enforced
+    detail: >-
+      The class that would matter most and cost most: a token or key block reaching a
+      published tree. Six vendor prefixes plus the private-key armour, each watched
+      failing against its own fixture.
+  - type: pytest
+    target: tests/test_no_pii.py::test_an_undeclared_binary_is_a_finding_not_a_skip
+    strength: enforced
+    detail: >-
+      The defect found in the borrowed guard, pinned here so this one cannot regrow it:
+      an unscannable file must be a per-file finding, never an abort that leaves the rest
+      of the tree unscanned and the run looking clean.
+  - type: pytest
+    target: tests/test_no_pii.py::test_the_kind_filters_partition_everything_the_scan_emits
+    strength: enforced
+    detail: >-
+      The regression test for the worst defect this file has had: a filter that could not
+      select anything, making the credential assertion undetectably vacuous. Proves every
+      kind the scanner emits is covered by exactly one assertion test, and that each
+      filter selects something.
+  - type: pytest
+    target: tests/test_no_pii.py::test_the_guard_scans_its_own_source
+    strength: enforced
+    detail: >-
+      The regression test for this file's own first bug: it must be TRACKED (or the scan
+      never sees it) and it must produce no findings about itself (or a fixture literal
+      has leaked into these bytes). Found by the sitting rehearsal's post-commit gate,
+      not by the local one.
+  - type: pytest
+    target: tests/test_no_pii.py::test_the_known_disclosures_are_still_there
+    strength: enforced
+    detail: >-
+      Keeps the tolerance list honest in the other direction — if one of the four home
+      paths is ever redacted, the entry must go, or a later reader trusts a count that is
+      no longer true.
+links: ["D0115", "D0111", "D0091", "D0045"]

@@ -1,0 +1,92 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0113
+title: "The M1 sitting could accept D0108 with nothing that applies it, and a hand fix would have killed the sitting at step 9; driver step 4d lands the fix and retires D0111's tolerance in one confirm"
+tier: A
+date: "2026-08-29"
+risk_flags: []
+decision: >-
+  docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh gains step 4d, after
+  4c and before 5. It applies D0108's one-line fix to CLAUDE.md — `uv run lint-imports`
+  becomes `uv run lint-imports --config governance/importlinter.toml`, the spelling the
+  Makefile already uses — AND deletes D0111's `KNOWN_DIVERGENCES` entry (with the
+  four-line comment that explains it) from tests/test_operating_manual.py, as ONE diff
+  behind ONE confirm, reverting both on decline.
+  .
+  THE TRAP, WHICH IS IN NO SINGLE ARTIFACT AND SO SURVIVED TWO PASSES OF REVIEW. D0108 is
+  queued `blocked-on-owner`. Step 8 finds it — it discovers the queue by QUERY over
+  decisions/*.yaml rather than from a list, which is the right design and is why D0106,
+  D0110 and this milestone's later records surface there too. But step 8 only flips a
+  `status:` field. Nothing in the driver applied the change, and CLAUDE.md is both
+  MANIFEST-frozen and a custody-set member, so no builder session could apply it either.
+  Accepting a record whose change never lands is precisely the `unenforced` debt this
+  repo counts.
+  .
+  THE SECOND HALF IS WORSE THAN THE FIRST. tests/test_operating_manual.py (D0111)
+  tolerates this one divergence by name and carries a test that FAILS DELIBERATELY the
+  moment the manual and the gate agree — "D0108 is FIXED ... Delete the entry from
+  KNOWN_DIVERGENCES ... This failure is the good outcome, not a regression." So the
+  owner fixing CLAUDE.md by hand at the keyboard turns step 9's `make verify || die` red
+  and stops the sitting after a fifteen-minute gate, with the key out, over a test that
+  is working exactly as designed. That is the failure class scripts/rehearse_sitting.sh
+  exists to prevent (D0065, D0066, D0069), and D0111's own record already said the entry
+  "gets deleted in the same sitting" — nothing made that true.
+  .
+  Scripted rather than left as an "open your editor" step (4b's idiom) for one reason
+  that decided it: a scripted edit is one the rehearsal can execute, so the accept path
+  is actually exercised end to end instead of being skipped by an unattended run.
+rationale: >-
+  Tier A. The driver COPY under docs/proposals/ is neither MANIFEST-frozen nor
+  custody-set; the committed scripts/boundary_sitting.sh is untouched, and step 0 of
+  D0105's queue already copies this directory's version over it. tests/test_operating_manual.py
+  is ordinary builder territory. Nothing here is signed and nothing frozen moves — the
+  owner still reads a diff and types y for every byte that lands in CLAUDE.md.
+  .
+  This is the same move D0105 items 2-3 made ("script the two remaining hand steps"): the
+  builder writes the step, the owner decides. The alternative — telling the owner in prose
+  to make two edits in the right order — is what D0069 and D0066 already cost this project
+  once each.
+  .
+  VERIFIED BEFORE SHIPPING, all four paths, against sandbox repositories rather than by
+  reading:
+  (1) ACCEPT — both files change, the D0111 suite is green afterwards (6 passed, 1 skipped;
+  the skip is the now-empty parametrize over KNOWN_DIVERGENCES, which is honest — there is
+  nothing to check), and `uv run lint-imports --config governance/importlinter.toml` run
+  verbatim as the manual will then spell it reports 3 contracts kept, 0 broken.
+  (2) IDEMPOTENCE — a second run reports "already passes the config" and changes nothing.
+  (3) DECLINE — `git diff` is empty; both files revert together, never one.
+  (4) DRIFT — a tolerance block that no longer matches aborts with "apply by hand" having
+  written NEITHER file, because both preconditions are checked before either write.
+  .
+  Deliberately NOT done: the step does not touch the empty-parametrize skip. A test with
+  no cases to run SHOULD skip, and suppressing it would be cosmetics over a true report.
+  Also not done: no attempt to make D0111 tolerant of both states — that would delete the
+  very signal (fail-when-fixed) that makes the tolerance safe to carry at all.
+reversibility: >-
+  An edit to a builder-owned proposal artifact plus a README row. Removing the step is
+  deleting a contiguous block; the driver has been re-rehearsed with it present, and the
+  rehearsal is repeatable against a disposable clone at any time. Nothing it does is
+  irreversible either: the sitting's own decline path reverts both files, and the edits
+  it applies are two lines of text.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      Step 4d itself, with the both-or-neither precondition check, the single confirm
+      over one diff of two files, the paired revert, and regen_manifest_row CLAUDE.md on
+      keep.
+  - type: pytest
+    target: tests/test_operating_manual.py::test_documented_checks_are_configured_the_way_the_gate_configures_them
+    strength: enforced
+    detail: >-
+      The test whose deliberate fail-when-fixed behaviour is the hazard this step exists
+      to schedule rather than trip over. Green today with the tolerance; green after the
+      sitting because step 4d retires the tolerance in the same edit.
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/README.md
+    strength: documentary
+    detail: >-
+      The owner's run sheet: the new table row, and the third-pass paragraph explaining
+      why a hand fix is worse than no fix here.
+links: ["D0105", "D0108", "D0111", "D0068"]

@@ -25,6 +25,56 @@ D0093 is what that hole produces: `test_l1_2_multiplicity_axioms` asserted
 directly contradicted another test twelve lines below it in the same file. Both were frozen
 into `MANIFEST.sha256` in the same commit. The gate was green throughout.
 
+## The hole has a second side, found later: a law that cannot fail
+
+**Added 2026-08-29 (D0114).** D0093 is a law that could never *pass*. Working on
+`anti_join` at the M1 close turned up its mirror image, and the pair is what makes the
+proposal below need both of its halves.
+
+`tests/laws/m1/test_l1_ops.py::test_l1_9_the_fragment_preserves_the_non_negative_cone`
+asserts that no operator in M1's surface can manufacture a negative annotation:
+
+```python
+for _, annotation in result:
+    assert Z.multiplicity(annotation) >= 0
+result.to_bag()  # raises SemiringError on a negative; reaching here is the assertion
+```
+
+That is a true and load-bearing claim — D0107's narrowing of `anti_join`'s presence test
+rests on it, and D0109 dates that reliance to M3. But it is not a claim this law
+*tests*. Its inputs come from `tests/laws/m1/_fragment.py`:
+
+```python
+st.tuples(row, st.integers(min_value=1, max_value=MAX_MULTIPLICITY))
+```
+
+Every drawn multiplicity is at least 1, and no operator in the fragment subtracts. There is
+no input, reachable by any draw Hypothesis can make, under which this assertion can be
+false. It is green for the same reason `assert True` is green.
+
+**Why it matters that this is the opposite failure.** A frozen model (§1 below) catches
+D0093 on its own: transcribe §2.1's axioms, run the frozen law against them, watch it fail.
+A model catches *nothing* here — a naive transcription of the operators is just as unable to
+produce a negative as the implementation is, so the law passes against the model, exactly as
+it passes against the package, and the gate stays green through both. **Only the mutant half
+of §2 discriminates**: a law that passes against a deliberately broken model is not testing
+what it claims, and a model whose `Z` is mutated to subtract on `anti_join` makes L1.9 fail
+the way a real cone violation would.
+
+So the two halves of §2 are not belt-and-braces. They catch disjoint defects, and the mutant
+half — the one most likely to be dropped as gold-plating when this is implemented — is the
+half with the only known instance in this repository that the model half cannot reach.
+
+**One consequence, recorded so it is not rediscovered.** D0107 narrowed `anti_join`'s
+presence test from `annotation != zero` to the bag image, which under `Z` refuses a negative
+by the cone law instead of counting it as present. D0107 justified the narrowing by L1.9 —
+nothing reachable can produce a negative — and D0109 dated that justification to M3, when
+the delta executor starts producing retractions. If L1.9 cannot fail, then the justification
+never rested on a *proved* property of the operator set; it rested on the fragment's
+generator never drawing one. That does not weaken D0107's fix, which stands on L1.2 as
+amended by D0093. It strengthens D0109's expiry: the thing M3 has to supply is an answer,
+not a re-reading of a law that was never asked the question.
+
 ## Why the existing guards could not catch it
 
 - `check_manifest.py` verifies frozen bytes are unchanged. Bytes, not meaning.
@@ -77,7 +127,10 @@ Today Session A's gate is *every law SKIPs against the package*. It becomes:
 | machinery law | SKIP | — | — |
 
 The mutant half is D0092's discipline generalised: a law that passes against a deliberately
-broken model is not testing what it claims. It is the same argument that made the
+broken model is not testing what it claims. **It is also the only half that catches L1.9**
+(see "a law that cannot fail", above): a model of an operator set with no subtraction cannot
+produce the negative L1.9 forbids, so the model half passes L1.9 as vacuously as the package
+does, and only a mutant that CAN subtract makes the law say anything. It is the same argument that made the
 receipt-clock regression test worth rewriting — pass-before/fail-after is the only evidence
 that an assertion discriminates. Both halves would have caught D0093 immediately: the
 corrected axiom passes against the model exhaustively over a 45-element product domain, and

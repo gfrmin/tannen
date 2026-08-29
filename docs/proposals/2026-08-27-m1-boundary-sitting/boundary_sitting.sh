@@ -425,6 +425,79 @@ PY
     fi
 fi
 
+# ---------------------------------------------------------------- 4d. the operating manual
+say "Step 4d — CLAUDE.md tells every session to run a command that checks nothing (D0108)"
+if grep -q 'lint-imports --config governance/importlinter.toml' CLAUDE.md; then
+    note "CLAUDE.md already passes the config — skipped"
+else
+    note "CLAUDE.md's Verification block says 'uv run lint-imports'. Run exactly as"
+    note "written it prints 'Could not read any configuration.' and reads NO contracts:"
+    note "they moved to governance/importlinter.toml as RT-02's resolution (D0063 ruling"
+    note "3). The Makefile and scripts/custodian.sh were both updated to pass --config;"
+    note "the manual was not, and it is the file an agent follows at the start of every"
+    note "session. CI was never unprotected — it runs the Makefile. The instruction is"
+    note "what is wrong, and it fails in the direction that reads as green."
+    note ""
+    note "TWO FILES MOVE TOGETHER, and that is the whole reason this is a step and not a"
+    note "one-line hand edit. tests/test_operating_manual.py (D0111) compares the manual"
+    note "against 'make verify' and tolerates exactly this divergence BY NAME. The moment"
+    note "CLAUDE.md is correct that test FAILS ON PURPOSE — 'D0108 is FIXED ... delete the"
+    note "entry from KNOWN_DIVERGENCES' — and step 9's gate would stop this sitting over"
+    note "it, after fifteen minutes, with your key out. So the fix and the retirement of"
+    note "its tolerance are one edit, confirmed once, reverted together."
+    if python3 - <<'PY'
+import pathlib, sys
+
+manual = pathlib.Path("CLAUDE.md")
+src = manual.read_text(encoding="utf-8")
+old = "uv run lint-imports               # kernel has no IO; no cross-repo imports\n"
+new = ("uv run lint-imports --config governance/importlinter.toml   "
+       "# kernel has no IO; no cross-repo imports\n")
+if src.count(old) != 1:
+    sys.exit("CLAUDE.md's lint-imports line is not the expected one — apply by hand")
+
+test = pathlib.Path("tests/test_operating_manual.py")
+tsrc = test.read_text(encoding="utf-8")
+# The COMMENT goes with the entry. A tolerance map whose entry is gone but whose comment
+# still explains why the entry is there is the same class of defect as the stale CLAUDE.md
+# line this step exists to fix — prose describing a state the code left behind.
+block = """#: The one divergence that exists today, and why it is still here. D0108 is Tier C: the fix
+#: is one line in CLAUDE.md, which is frozen AND custody-set, so only the owner may make it.
+#: When they do, this test fails with the message below and the entry gets deleted in the
+#: same sitting. A SECOND entry should never be added without a decision record saying why.
+KNOWN_DIVERGENCES = {
+    ("import-linter", None, "governance/importlinter.toml"): "D0108",
+}
+"""
+replacement = """#: Empty since the M1 boundary sitting, where D0108's one-line fix to CLAUDE.md landed and
+#: this entry was deleted in the same step (D0113). The map stays as the declared home for a
+#: tolerated divergence: a new entry needs a decision record saying why the manual and the
+#: gate are allowed to disagree, and the tests below keep one honest once it exists.
+KNOWN_DIVERGENCES: dict[tuple[str, str | None, str | None], str] = {}
+"""
+if tsrc.count(block) != 1:
+    sys.exit("KNOWN_DIVERGENCES is not the expected block — apply by hand")
+
+manual.write_text(src.replace(old, new), encoding="utf-8")
+test.write_text(tsrc.replace(block, replacement), encoding="utf-8")
+PY
+    then
+        git --no-pager diff CLAUDE.md tests/test_operating_manual.py
+        if confirm "Keep BOTH edits?"; then
+            regen_manifest_row CLAUDE.md
+            note "D0108 is applied. Step 8 will offer to accept and sign the record; this"
+            note "step is what makes accepting it there true rather than aspirational."
+        else
+            git checkout -- CLAUDE.md tests/test_operating_manual.py
+            note "reverted — both files. CLAUDE.md keeps the line that checks nothing, and"
+            note "D0111 keeps tolerating it; leave D0108 blocked at step 8 to match."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+        note "Leave D0108 blocked at step 8 and hand it back to a builder session."
+    fi
+fi
+
 # ---------------------------------------------------------------- 5. poison fixtures
 say "Step 5 — install the red-team poison fixtures (author-key territory)"
 note "Eight fixtures. Seven are the M0→M1 corpus, already installed by that sitting (this"

@@ -1,0 +1,93 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0116
+title: "Eight instances of one class — an artifact whose value is a failure, that cannot fail — proposed as BRIEF §5 entry 12, with `enforced` redefined to mean watched-failing"
+tier: A
+date: "2026-08-29"
+risk_flags: []
+decision: >-
+  docs/proposals/2026-08-29-a-check-that-cannot-fail.md drafts a twelfth entry for BRIEF
+  §5's correct-by-default catalogue, for the owner to apply: a check that cannot fail is
+  not a check; the failure is produced AT THE LAYER THAT MAKES THE CLAIM; a check's input
+  set is part of the check; and `strength: enforced` therefore means watched-failing
+  rather than collects-and-passes.
+  .
+  THE CLASS, WHICH IS NOT A HAZARD BUT THIS REPOSITORY'S DOMINANT DEFECT. Eight instances,
+  each found by a different accident and none by any mechanism: D0093 (a frozen law that
+  could never pass); D0114 (L1.9 — a frozen law that cannot fail, because the fragment's
+  generator draws `min_value=1` and no operator subtracts); D0091 (ratchet tests that
+  borrowed their debt from the live repo and went silent at zero); RT-10 (a binding
+  resolves by pointing at anything that exists); D0106 item 1 / D0049 (a missing newline
+  folded a binding into a sibling's prose — still valid YAML, still resolving); D0108 (a
+  documented command reading zero contracts; "passes vacuously" is in its own title); and
+  the two found writing D0112's guard today — its input set excluded itself, and its
+  headline assertion filtered with a backwards tuple unpack so it matched no kind and
+  could not fail under any input.
+  .
+  SIX OF THE EIGHT ARE IN ARTIFACTS WRITTEN TO CLOSE AN EARLIER INSTANCE OF THE SAME
+  CLASS. That is the finding. The shape is constant — absence of a signal read as presence
+  of the property; nothing fired, therefore fine, when nothing COULD fire — and it survives
+  being written down. D0111 states the discipline ("watched failing, in both directions,
+  against fixtures rather than against the live repo") and was written the day before
+  D0112 violated it. D0114 states it about laws on the same morning D0112 instantiated it
+  about guards. Prose is not the mechanism; the poison corpus and D0092's
+  pass-before/fail-after rewrite are, and they hold wherever they exist.
+  .
+  WHY §5 AND NOT A DECISION RECORD. §5's job is to make violations unwritable rather than
+  detectable, and every entry has the form "the lazy path is the correct path". Here the
+  lazy path — write an assertion, see green, stop — is INDISTINGUISHABLE from success,
+  which is precisely the property §5 exists to remove. A rule kept only in a decision
+  record is a rule the next session may not read, which is D0063's own argument for the
+  §9.1 amendment.
+  .
+  THE MECHANISM IS PROPOSED, NOT APPLIED: `bindings[]` gains an optional
+  `watched_failing` (a pytest node id or fixture path demonstrating the bound artifact
+  failing), resolved exactly as the binding itself is; required for `enforced` once
+  backfilled; `unwatched` joins `unenforced` and `residue` as a ratchet metric, subject to
+  §9.1's metric-calibration rule. Optional-first is D0106 item 1's own staging for
+  `bindings_count`. Its limit is stated in the proposal rather than left to be discovered:
+  `watched_failing` can point at anything that resolves — RT-10 one level up — so it
+  converts silence into a claim rather than proving the watch is real, the same bargain
+  `unenforced_reason` strikes and the same one the repo's evidence says works.
+rationale: >-
+  Tier A: one new proposal document plus this record. Nothing frozen moves, nothing
+  custody-set is edited, no schema changes and no guard changes. BRIEF §5 is not a Tier-C
+  door — the doors are §3 principles and §10 non-goals — so this is an owner-applied
+  amendment queued to a sitting the way the §9.1 amendment was (D0063, applied at step 4b),
+  not a door request that blocks anything.
+  .
+  DELIBERATELY NOT SCRIPTED INTO THE M1 SITTING, unlike D0113's step 4d. That step applies
+  a one-line fix whose content is settled and whose failure mode is mechanical. This one
+  changes what an existing schema field MEANS across 273 bindings and adds a ratcheted
+  metric; it is a design decision with real consequences either way, which is exactly what
+  D0105 item 4 says about D0095 item 2 and exactly the reason that one was left for the
+  owner to accept or decline rather than absorbed into a driver step. Adding it to the
+  sitting's confirm-and-diff sequence would present a decision as a formality.
+  .
+  Also not done: no attempt to backfill `watched_failing` across the existing records.
+  Backfilling before the field exists would mean asserting, 273 times, a property nobody
+  has checked — a fresh instance of the class this record is about, produced by the record
+  about it.
+reversibility: >-
+  A proposal document and a record; both deletable, neither load-bearing. If the owner
+  declines the §5 entry, the table of eight instances still stands as the honest inventory
+  of where this repository's verification layer has been vacuous, which is worth keeping
+  whatever is done about it.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-29-a-check-that-cannot-fail.md
+    strength: documentary
+    detail: >-
+      The drafted §5 entry, the eight-instance table, the staged mechanism, and its stated
+      limit. Documentary by construction: it proposes a rule the owner has not yet applied,
+      and claiming otherwise would be this record's own subject matter.
+  - type: pytest
+    target: tests/test_no_pii.py::test_the_kind_filters_partition_everything_the_scan_emits
+    strength: enforced
+    detail: >-
+      The one place the proposed rule is already implemented rather than proposed: a test
+      that builds a repository violating every kind the scanner emits and proves each
+      assertion's filter selects something, disjointly, covering the whole vocabulary.
+      Watched failing three ways (the original backwards comprehension, a pattern with no
+      sample, a pattern with no test), which is the standard the proposal asks for.
+links: ["D0093", "D0114", "D0091", "D0112", "D0106", "D0108", "D0094"]

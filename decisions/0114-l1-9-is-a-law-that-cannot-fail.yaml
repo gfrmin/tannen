@@ -1,0 +1,88 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0114
+title: "L1.9's cone half cannot fail under any input the fragment can draw — the mirror image of D0093, and the instance that makes the ratchet proposal's mutant half load-bearing"
+tier: A
+date: "2026-08-29"
+risk_flags: []
+decision: >-
+  docs/proposals/2026-08-26-law-validation-ratchet.md gains a section recording a second
+  instance of the hole it exists to close, found at the M1 boundary rather than at the
+  freeze, and pointing in the opposite direction from the first.
+  .
+  THE FINDING. tests/laws/m1/test_l1_ops.py::test_l1_9_the_fragment_preserves_the_non_negative_cone
+  asserts `Z.multiplicity(annotation) >= 0` over every row of an evaluated plan and then
+  calls `to_bag()`, which raises on a negative. Its inputs come from
+  tests/laws/m1/_fragment.py's `table_rows`, which draws multiplicities with
+  `st.integers(min_value=1, ...)`, and no operator in M1's surface subtracts. There is no
+  draw Hypothesis can make under which the assertion is false. The claim is true and
+  load-bearing; the law does not test it.
+  .
+  WHY IT IS RECORDED IN THAT PROPOSAL RATHER THAN FILED ALONE. D0093 was a law that could
+  never PASS; this is a law that cannot FAIL. The proposal's §2 has two halves — run the
+  frozen law against a frozen model, and require it to fail against a stated mutant — and
+  the halves catch disjoint defects. A model catches D0093 unaided. A model catches
+  NOTHING here: a naive transcription of an operator set with no subtraction is exactly as
+  unable to produce a negative as the implementation, so L1.9 passes against the model as
+  vacuously as against the package. Only the mutant half discriminates. That matters
+  because the mutant half is the one that reads as gold-plating and gets dropped first,
+  and this is the only known instance in this repository that the model half cannot reach.
+  .
+  THE FROZEN LAW IS NOT TOUCHED. L1.9 is inside the m1 seal and is not wrong — it states a
+  true property. It is under-tested, which is a different defect with a different remedy,
+  and the remedy is the ratchet at M2 (D0094), not an edit. CLAUDE.md's supersession route
+  (a NEW file, the old one marked superseded) is for a law found WRONG, and applying it
+  here would spend the frozen-oracle protocol's one heavy mechanism on a law whose text is
+  correct.
+  .
+  ONE CONSEQUENCE, recorded so it is not rediscovered at M3. D0107 narrowed anti_join's
+  presence test to the bag image, which under `Z` refuses a negative by the cone law
+  rather than counting it present, and justified the narrowing by L1.9. D0109 dated that
+  justification to M3, when deltas start producing retractions. If L1.9 cannot fail, the
+  justification never rested on a proved property of the operator set — it rested on the
+  fragment's generator never drawing one. This does not weaken D0107's fix, which stands
+  on L1.2 as amended by D0093. It strengthens D0109's expiry: M3 owes an answer, not a
+  re-reading of a law that was never asked the question.
+rationale: >-
+  Tier A: an edit to a proposal document that is neither MANIFEST-frozen nor custody-set,
+  plus this record. No law file, no source file and no governance artifact moves. The
+  proposal is already scheduled for M2 by D0094, so this lands where the work will be
+  read rather than in a separate document that has to be found.
+  .
+  Recorded now rather than at M2, while the reasoning is fresh, for the same reason D0109
+  gave: the failure mode is not "someone implements the ratchet badly" but "the ratchet is
+  implemented with only the half that has a worked example, because by then nobody
+  remembers there were two kinds of hole".
+  .
+  Deliberately NOT done: no attempt to widen `_fragment.table_rows` to draw zero or
+  negative multiplicities. It is frozen, and it is also right — the fragment models the
+  SQL-expressible fragment for the DuckDB differential (L1.16), where a negative
+  multiplicity has no meaning. The defect is that L1.9 borrows that generator to make a
+  claim the generator cannot test, and the fix belongs in the validation layer, not in the
+  data.
+  .
+  Also not done: no audit of the other sixteen M1 laws for the same shape. That is exactly
+  what the ratchet's `unvalidated` metric is for — a one-off sweep by hand would produce a
+  number nobody has to keep true, which is the failure D0044 already ratcheted away for
+  decision bindings.
+reversibility: >-
+  A section in a non-binding proposal, plus this record. Nothing depends on it and nothing
+  is prevented by it; if M2 rejects the ratchet outright, the section documents a known
+  property of L1.9 that a reader of the law would otherwise have to derive from the
+  generator.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-26-law-validation-ratchet.md
+    strength: documentary
+    detail: >-
+      The section "The hole has a second side, found later: a law that cannot fail", and
+      the cross-reference added to §2's mutant paragraph so the table and the instance
+      point at each other.
+  - type: manifest
+    target: tests/laws/m1/test_l1_ops.py
+    strength: documentary
+    detail: >-
+      The frozen law this is about, named so the record resolves to it. Documentary by
+      necessity: nothing mechanically detects a law that cannot fail today — that is the
+      whole proposal.
+links: ["D0094", "D0093", "D0107", "D0109", "D0044"]

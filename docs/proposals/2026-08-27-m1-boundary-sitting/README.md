@@ -49,6 +49,7 @@ the custody set, same as every other custody-set edit a sitting makes.
 | Step 11 adds `m1-laws-freeze` to `required_tags`, not only `$MILESTONE-close` | D0095: `m1-laws-freeze` was minted at M1 Session A's freeze and has been missing from `required_tags` ever since — a structural lag the builder cannot fix (the file is frozen and custody-set). Both tags land in one motion so the lag does not repeat at M1→M2. |
 | New **step 4c**, after step 4b: applies D0070's two drafted binding upgrades to D0049 and D0063, and re-signs both | D0105 item 3 — see below. Gated on step 4b (BRIEF.md must already say "Metric calibration") since D0063's upgrade depends on it. |
 | New **step 5b**, after step 5: applies RT-M1-05's patch and installs its fixture | D0105 item 2 — see below. |
+| New **step 4d**, after step 4c: applies D0108's one-line fix to CLAUDE.md AND deletes D0111's tolerance for it, in one confirm | D0113 — see below. Added 2026-08-29, after D0108 and D0111 were filed. Without it the sitting can accept D0108 at step 8 with nothing that applies it, and a hand fix makes step 9's gate die. |
 
 ## What this sitting resolves that the driver now automates (added 2026-08-27, second pass)
 
@@ -102,6 +103,36 @@ a bash comment can't carry:
   real files before this driver copy shipped) in the same edit that adds the new
   `manifest:scripts/custodian.sh` binding, then re-signs. Worth the owner's eye at the
   sitting: the diff step 4c shows is not just an addition.
+
+- **Step 4d (added 2026-08-29, third pass)**: the trap this closes is not in any single
+  artifact, which is why it survived two passes of review. `D0108` — CLAUDE.md's
+  Verification block telling every session to run `uv run lint-imports`, which without
+  `--config governance/importlinter.toml` reads NO contracts and exits non-zero for an
+  unrelated reason — is queued `blocked-on-owner`. Step 8 finds it, because step 8
+  discovers the queue by *query* over `decisions/*.yaml` rather than from a list, and it
+  will offer to accept and sign it. But step 8 only flips a `status:` field. **Nothing in
+  the driver applied the fix**, and CLAUDE.md is both MANIFEST-frozen and custody-set, so
+  no builder session could apply it either. Accepting a record whose change never lands
+  is exactly the `unenforced` debt this repo counts.
+  .
+  The second half is worse than the first. `tests/test_operating_manual.py` (D0111)
+  compares the manual against `make verify` and tolerates this one divergence by name,
+  with a test that **fails deliberately** the moment the two agree — *"D0108 is FIXED …
+  Delete the entry from KNOWN_DIVERGENCES … This failure is the good outcome, not a
+  regression."* So a hand fix to CLAUDE.md at the keyboard turns step 9's
+  `make verify || die` red and stops the sitting after a fifteen-minute gate, with the
+  key out — the failure class `scripts/rehearse_sitting.sh` exists to prevent (D0065,
+  D0066, D0069). D0111's own record already said the entry "gets deleted in the same
+  sitting"; nothing made that happen. Step 4d is what makes it happen: both edits, one
+  diff, one `confirm`, and `git checkout --` over **both** on decline. It also retires
+  the four-line comment above the map, which otherwise keeps explaining why an entry
+  that is gone is still there.
+  .
+  Rehearsed as a unit before shipping: the accept path applies both files and leaves the
+  D0111 suite green (6 passed, 1 skipped — the now-empty parametrize); a re-run reports
+  "already passes the config" and does nothing; the decline path reverts to an empty
+  diff; and a drifted tolerance block aborts with "apply by hand" having written
+  **neither** file, because both preconditions are checked before either write.
 
 ## Verification after the sitting
 

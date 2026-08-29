@@ -1,0 +1,139 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0115
+title: "Publish tannen and develop in public — requested by the owner, queued as Tier-C door external-bytes; the tree is PII-clean but vendors 594 lines of four private sibling repositories"
+tier: C
+date: "2026-08-29"
+risk_flags: ["public-surface", "governance-paths"]
+decision: >-
+  REQUESTED BY THE OWNER 2026-08-29, queued for the M1->M2 boundary sitting, non-blocking
+  (BRIEF §9.2): publish this repository to GitHub and develop in the open.
+  .
+  It is queued rather than done because it is a door, not a preference.
+  governance/tier-c.yaml names `external-bytes` — "Bytes leaving the repo boundary:
+  publishing, PRs to any other constellation repo, network writes outside captured
+  oracles"; governance/policy.yaml sets `external_surface.publishing: forbidden` and its
+  `in_repo_mechanics.excludes` names "adding a git remote, or changing the visibility of
+  an existing one" by hand. There is no remote configured at all, so D0053's
+  private-origin allowance does not apply either. A door needs an affirmative signature
+  and can never be carried by silence.
+  .
+  FOUR THINGS THE SIGNATURE WOULD HAVE TO COVER, because none of them is separable:
+  (1) the door itself — `gh repo create`, `git remote add origin`, push, with the default
+  branch ending up `master`;
+  (2) governance/policy.yaml's `publishing: forbidden` becoming an explicit scope — that
+  file is custody-set AND in `required_signatures`, so only the owner edits and re-signs it;
+  (3) a LICENSE at the root. There is none. policy.yaml's `licence_defaults` says code MIT,
+  docs CC-BY-SA-4.0, and its own comment says a licence default is not a publication
+  decision. Published without one, the repository is all-rights-reserved, which makes
+  "develop in public" a viewing gallery rather than an invitation;
+  (4) a ruling on concepts/snapshots/**, below, which is the only one of the four with
+  real design work behind it.
+  .
+  THE BLOCKER IS NOT PII. concepts/snapshots/** holds 13 files, 627 lines. Twelve of them,
+  594
+  lines, are verbatim excerpts of FOUR other repositories, every one of them private:
+  gfrmin/pkm (204 lines), gfrmin/proplang (177), gfrmin/life-agent (107) and — the sharp
+  one, at 58 — concepts/snapshots/provenance-ref-grammar/renavon-adr-002.md, 58
+  lines of renavondata/renavon-monorepo's ADR-002, carrying internal source paths, PR
+  numbers, a corpus size, a cost estimate, an unreleased-model reference and a candid list
+  of that stack's known defects. Publishing tannen publishes all of it.
+  .
+  This cannot be fixed by deletion. The snapshots exist because scripts/check_concepts.py
+  verifies that each cited section resolves to bytes, and CLAUDE.md makes paraphrasing an
+  owned definition a CI failure by design — the citation discipline is the point of BRIEF
+  §2. Three candidate mechanisms, none chosen here: (a) keep the snapshots but exclude
+  them from the published tree, and let check_concepts.py degrade to hash-pinned citation
+  when a snapshot is absent, so a public clone verifies the PIN and an authorised clone
+  verifies the BYTES; (b) keep verbatim snapshots only for repositories that are
+  themselves public, hash-pin the rest; (c) publish the siblings first, so every citation
+  resolves publicly. And one question that may not be the owner's alone to answer:
+  renavondata/renavon-monorepo is a commercial repository, and an excerpt of it is not
+  obviously ours to publish.
+  .
+  WHAT THE PII AUDIT FOUND. Run with life-agent's own structural guard
+  (.githooks/pii_check.py, --shapes-only) over 308 tracked files and all 538 blobs in 48
+  commits of history, and re-run with this repo's own guard (D0112). No email address: the
+  single flag was `sk-ssh-ed25519@openssh.com` in a superseded allowed_signers blob, which
+  is OpenSSH's spelling of a key type. No private key material — allowed_signers carries
+  two ed25519 PUBLIC halves, which publishing improves rather than harms, since it lets
+  anyone verify the signed tags and receipts. No Israeli ID, passport, mobile, HK phone,
+  HKID, honorific-name, account or document-ref shape. No credential token of any vendor
+  shape. Every commit is authored `builder@tannen` or `t <builder@tannen>` — the identity
+  is already pseudonymous. budget.yaml and policy.yaml envelopes are all zero. `.gitignore`
+  has always kept evidence/, .venv/ and .reference/ (the sibling clones) out.
+  .
+  FOUR files disclose an absolute `/home/<user>/...` path, in the tree and in history:
+  decisions/0048, two applied proposals from 2026-08-24, and the M0 red-team report. They
+  are declared rather than redacted (D0112 argues why: the history cannot be rewritten
+  without invalidating every signed tag and breaking the receipt chain, so redacting the
+  tree would only make the repository look cleaner than it is). One letter of username, in
+  four places, permanently. The owner should accept that knowingly, not discover it.
+  .
+  TWO LIMITS ON THAT AUDIT, STATED RATHER THAN BURIED. There is no private-name layer:
+  life-agent's guard supplements shapes with a denylist of names, employers and domains
+  loaded from a KB mount that is not present on this machine, precisely because a bare
+  personal name has no shape a regex can find. Neither their guard nor D0112's can catch
+  one. And the first two runs of their guard returned exit 2 having scanned NOTHING — a
+  NUL-carrying poison fixture makes it refuse before the scan loop — which was read as
+  clean until the short-circuit was noticed. Both facts are why publication still needs a
+  human to read the tree, and why this record does not claim the audit settles it.
+  .
+  ONE OPERATIONAL CONSEQUENCE WORTH EXPECTING. A public repository invites shallow clones,
+  zip exports and `git push` without --tags, and RT-15 is exactly that shape: a working
+  copy arriving without tags makes the custody floor fail and the receipt clock fresh
+  forever. The guards already refuse it (required_tags, owner_key_enrolled). What changes
+  is that the failure stops being exotic and starts arriving as issue reports.
+rationale: >-
+  Tier C and stopped, not done. The builder half is finished and is what this record
+  carries: the audit, and a standing guard so the answer stays true after today (D0112).
+  The owner half is a signature and four decisions. Per BRIEF §9.2's non-blocking rule the
+  request does not halt anything — it queues to the sitting, where step 8 will find it by
+  query along with D0061, D0095, D0105, D0106, D0108 and D0110.
+  .
+  `status: blocked-on-owner`, not `accepted`: check_decisions.py (RT-06, D0064) refuses any
+  Tier-C record recording `accepted` without an owner signature, and a builder session has
+  no owner key. The owner accepts and signs it at step 1 or step 8, like any other queued
+  door.
+  .
+  The owner asked for this in conversation, and that is the input to a door, not the
+  passage of one. BRIEF §9.2 is explicit that the five doors take an affirmative signature
+  and never silence; the difference between a spoken yes and a signed one is the whole
+  reason the custody floor exists, and a builder session treating the first as the second
+  would be the most expensive kind of shortcut this repo can take.
+  .
+  Deliberately NOT done, and each was considered: no repository created, no remote added,
+  no policy.yaml edit, no LICENSE written, no snapshot deleted or moved. Writing the
+  LICENSE "ready to commit" was tempting and is refused — a licence file sitting in the
+  tree is a licence grant to anyone who clones the tree, which is the act, not preparation
+  for it.
+reversibility: >-
+  Publication is one-way in the only sense that matters. Bytes that leave are gone: a
+  public repository is cloned, cached, mirrored and indexed within hours, and deleting it
+  afterwards removes the URL, not the copies. That is true of the four home paths, of the
+  594 lines of sibling-repository content, and of every future commit made under a public
+  default. Every OTHER item here is reversible — a remote can be removed, a licence
+  changed going forward, policy.yaml re-signed — which is precisely why the snapshot
+  question must be settled BEFORE the first push rather than after.
+status: blocked-on-owner
+bindings:
+  - type: config
+    target: governance/policy.yaml#external_surface.publishing
+    strength: enforced
+    detail: >-
+      The clause that forbids this today, and the one the owner's signature would have to
+      change. Named as a config binding so the record resolves to the key a guard reads,
+      not to prose about it.
+  - type: pytest
+    target: tests/test_no_pii.py::test_no_credential_shape_is_tracked
+    strength: enforced
+    detail: >-
+      The builder half of this request, standing rather than one-off (D0112): the audit
+      answered a question about 2026-08-29, and this keeps answering it on every commit.
+  - type: file
+    target: concepts/snapshots/provenance-ref-grammar/renavon-adr-002.md
+    strength: documentary
+    detail: >-
+      The actual blocker, at the path that holds it: 58 verbatim lines of a private
+      commercial monorepo's ADR, vendored under BRIEF §2's citation discipline and
+      published by any push of this tree.
+links: ["D0053", "D0112", "D0010", "D0024", "D0105"]
