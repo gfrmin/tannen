@@ -1,0 +1,125 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0118
+title: "865 of L1.16's 2200 example-draws compare an empty result to an empty result — the same 865 on every run; three independent causes, no single knob reaches them, and a floor assertion is the wrong instrument for a number that is already exact"
+tier: A
+date: "2026-08-30"
+risk_flags: []
+decision: >-
+  RECORDED, and written into docs/proposals/2026-08-26-law-validation-ratchet.md as the
+  rule M2's law generators are built to. Nothing in M1 changes — tests/laws/m1/_fragment.py
+  is frozen and sealed.
+  .
+  THE FINDING, IN THE NUMBERS THE GATE ITSELF PRODUCES. `_fragment.py:83` draws each table
+  with `st.lists(..., max_size=MAX_ROWS)` and no `min_size`. conftest.py registers
+  `derandomize=True`, so `make verify` draws the SAME examples on every run and every
+  machine: L1.16 evaluates 2200 example-draws across its 22 shapes, and 865 of them compare
+  an empty result to an empty result. Per shape, the EFFECTIVE examples run from 29 of 100
+  (`select-text`) to 88 of 100 (`union`, `union-then-distinct`) — a threefold spread,
+  reported as one identical `pass`, and recorded nowhere. On an empty draw
+  `test_l1_16_the_fragment_agrees_with_duckdb` compares `[] == []`, which holds for any
+  implementation of anything, and `test_l1_16_no_null_ever_appears_on_either_side` executes
+  zero assertions. `tests/test_provenance_homomorphism.py:66` has the same shape, and it
+  carries `test_the_operators_never_manufacture_an_empty_why` — the closure proof D0107
+  cites and D0110 leans on.
+  .
+  THREE INDEPENDENT CAUSES, MEASURED SEPARATELY, AND NO SINGLE KNOB REACHES THEM.
+  Attributed under a randomised sweep counting only the tables a shape's own plan reads:
+  (i) THE ROW-LIST LENGTH — every single-source shape attributes 100% of its empty draws to
+  an empty source, and `min_size=1` alone moves the mean empty rate 35.2% -> 17.3% with nine
+  of 22 shapes reaching exactly 0.0%; (ii) KEY OVERLAP — joins attribute 50-77% to an empty
+  source and the rest to misses, and drawing b/c/d's keys from a's own takes every
+  join-shaped plan to 0.0%; (iii) PREDICATE SELECTIVITY — `select-text` sits at ~65% under
+  every variant of the other two, because its predicate is `t = 'a'` over a six-letter
+  alphabet with at most six rows, so nothing matches with probability (5/6)^n.
+  .
+  TWO OF THE THREE OBVIOUS CURES WERE MEASURED AND DO NOT WORK, WHICH IS THE USEFUL PART.
+  Narrowing the key domain — the good idea on its face, and the one this repo already uses
+  in test_provenance_homomorphism.py's `key_range=(-2, 2)` — moves the mean from 35.2% to
+  34.7%. It was measured rather than assumed, and it is nearly a no-op because the
+  fragment's keys are ALREADY narrow: `_value("k")` is
+  `st.one_of(st.integers(-4, 4), st.sampled_from([0, INT_MIN, INT_MAX]))`. It also moves
+  shapes in both directions — `join` 61.5% -> 54.0%, but `anti-join-then-project` 26.0% ->
+  38.0%. And coupling the keys, which does fix the joins outright (every join-shaped plan to
+  0.0%), takes `anti-join` from 13.8% to 41.0% and `anti-join-then-project` from 26.2% to
+  53.8%: THERE IS NO KEY POLICY SIMULTANEOUSLY RIGHT FOR A JOIN AND AN ANTI-JOIN. That is
+  the finding that generalises past this fragment.
+  .
+  A FLOOR ASSERTION ON THE NON-DEGENERATE RATE IS REFUSED, AND THE FIRST ARGUMENT AGAINST
+  IT WAS WRONG. "A floor on a random process fails intermittently" does NOT apply to the
+  default gate: `derandomize=True` makes 865/2200 an exact, reproducible integer, and a
+  floor would be perfectly stable under `make verify`. That objection is withdrawn. Three
+  better ones survive. (1) It is a threshold on a quantity that is already exact and simply
+  unrecorded — asserting a bound on a number nobody writes down is a worse instrument than
+  writing it down, which is D0117. (2) It IS intermittent on the one run that exists to go
+  beyond the fixed corpus: under `make laws-sweep` (`--hypothesis-seed=N`) the rate is a
+  genuine random variable, and seven runs of 400 draws put the per-shape spread between best
+  and worst in the low-to-high teens, reaching 20.2pp on `join-then-project`. A floor tuned
+  on the derandomized corpus would be red on some sweeps and green on others with no code
+  having changed. (3) It treats the symptom: it detects a badly shaped distribution instead
+  of producing a well-shaped one, and a single bound cannot say which of the three causes
+  moved.
+  .
+  THE RULE, WHICH IS WHAT THE THREE MEASUREMENTS ARGUE FOR. Draw the degenerate case as a
+  NAMED case rather than as a side effect of the size distribution — `st.one_of(st.just([]),
+  st.lists(..., min_size=1, max_size=MAX_ROWS))` — and let each shape declare the case it
+  exists to exercise: a join wants overlapping keys, an anti-join wants PARTIAL overlap, a
+  filter wants a literal drawn from the column it filters. Then each generator reports its
+  own shape through hypothesis `event()`, so a run reports a distribution somebody
+  deliberately shaped instead of one somebody is policing. No threshold anywhere.
+rationale: >-
+  Tier A. It edits two proposal documents and adds this record; nothing frozen, nothing
+  custody-set, no signature, no behaviour change. `_fragment.py` is frozen, sealed and
+  inside `tests/laws`, so M1 keeps the numbers as measured — that is D0103's supersession
+  question for the third time (D0110 was the second) and it is not opened here.
+  .
+  Filed BEHIND D0117 deliberately. The three findings this began as — L1.16's generator,
+  the homomorphism file's generator, and a Grade-S vector corpus loaded with no
+  non-emptiness guard — are one fact seen three times, and the fact is that the pipeline
+  has nowhere to record how much a run examined. Fix all three generators and the fourth
+  instance is still invisible. This record is the generator half; D0117 is the half that
+  makes the next one findable, and it is the one that should be ruled on first.
+  .
+  ONE THING WORTH RECORDING ABOUT THE MEASUREMENT ITSELF, because it is the same disease.
+  The first attribution pass asked "was any of the four tables empty" for every shape,
+  including single-table shapes that never read three of them. It therefore reported
+  100% source-empty attribution for `project-one` by construction — an instrument whose
+  answer did not depend on its input, which is D0116's species III inside the tool built to
+  measure species I. Corrected to count only the tables a shape's own plan reads, and both
+  passes are kept in the scratch record. The first pass's per-shape rates also differed
+  from the second's by up to sixteen points, which is what prompted measuring the run-to-run
+  spread at all — the mistake produced the better finding.
+  .
+  Deliberately NOT done: no edit to any generator anywhere, including the unfrozen
+  tests/test_provenance_homomorphism.py. Changing that file's draws today would alter what
+  a currently-green law examines, with no field in any evidence record to say it changed
+  and no before/after number preserved anywhere. It waits for D0117 or for M2, whichever
+  the owner reaches first.
+reversibility: >-
+  Two paragraphs of proposal prose and one record. Nothing executes, nothing is bound to a
+  gate, no test changes, and the rule it states binds M2's Session A rather than anything
+  in flight. Deleting it costs the measurements, which are reproducible from the scratch
+  probes in about ten minutes.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-26-law-validation-ratchet.md
+    strength: documentary
+    detail: >-
+      Where the rule and all four measured conditions are written up, as a third side of
+      the same hole D0093 and D0114 are the two absolute ends of. Documentary and not
+      enforced on purpose: it is a rule for writing M2's generators, and no guard states it
+      until M2 does.
+  - type: file
+    target: docs/proposals/2026-08-29-a-check-that-cannot-fail.md
+    strength: documentary
+    detail: >-
+      The sweep this came out of, reframed in the same pass: the species taxonomy, the
+      negative control as the mechanism, and the static sweep demoted to a supplement for
+      checks that have no fix to remove.
+  - type: manifest
+    target: tests/laws/m1/_fragment.py
+    strength: documentary
+    detail: >-
+      The generator the measurements are of, and the reason none of them is applied: frozen
+      at m1-laws-freeze, inside the sealed tests/laws directory. M1's numbers stand.
+links: ["D0117", "D0114", "D0116", "D0094", "D0093", "D0107", "D0110", "D0103"]

@@ -63,6 +63,44 @@ rationale: >-
   owner to accept or decline rather than absorbed into a driver step. Adding it to the
   sitting's confirm-and-diff sequence would present a decision as a formality.
   .
+  AMENDED 2026-08-30 AFTER REVIEW — THE PROPOSAL WAS REFRAMED, AND THE REFRAMING IS THE
+  SUBSTANCE. The document as first written led with the mechanism that is easiest to
+  automate: a static sweep for the one shape of this class that is decidable by inspection
+  (a computed collection with no non-emptiness guard). Review made the sorting argument
+  that had not been made, and it is unflattering to that mechanism. The class is at least
+  FOUR species: I, the assertion never executes because its input is empty — decidable;
+  II, the input is non-empty but excludes the case the assertion is about; III, the
+  assertion executes and cannot fail because the predicate is not the property; IV, control
+  flow never reaches the check at all. Only species I can be swept.
+  .
+  And species I is the one that has cost this repository the least. Of D0112's four
+  defects — in the guard written BECAUSE of this class — a species-I detector would have
+  caught NONE. ① is the instructive case: the sweep WOULD have listed its loop over
+  `tracked_files()` as unguarded, so it would have pointed at the right file — but the
+  guard it asks for is proof of non-emptiness, that collection held 309 files, `assert
+  len(names) > 100` satisfies the demand, and the test stays exactly as vacuous because the
+  file under test was not among the 309. Satisfying the detector would not have fixed the
+  defect. The fix that did work is a MEMBERSHIP assertion — `assert "tests/test_no_pii.py"
+  in tracked_files()` — and no static rule could have named that file, because which case a
+  check exists for is not a syntactic property. ② had a populated collection and an
+  executing assertion comparing a `str` to a compiled `Pattern`, ③ was not an assertion
+  problem at all, and ④ was an over-specified reproduction. What caught ②, ③ and ④ was the same thirty seconds each time: remove the
+  fix, run the check, require red.
+  .
+  (On the count: this record's title and body say eight, which is what was known when they
+  were written. The bound proposal's table carries nine — D0112 ④ was found the same night,
+  after this record's prose. The title is left as written rather than corrected, per the
+  same rule D0109 states: the record of what was known when is part of the record, and a
+  record silently updated to look prescient is worth less than one that shows its date.)
+  .
+  So the proposal now leads with the negative control as THE mechanism — it is
+  species-independent, because it does not ask what the check looks at, it asks whether the
+  check's answer depends on what it claims to check — with `watched_failing` as its
+  formalisation, and the static sweep second, scoped to the case that earns it: a check
+  with no fix to remove, such as a law frozen before its implementation exists or a guard
+  whose subject is a vendored corpus. Nothing about the §5 entry itself changed; it already
+  said "watched failing" and "the input set is part of the check".
+  .
   Also not done: no attempt to backfill `watched_failing` across the existing records.
   Backfilling before the field exists would mean asserting, 273 times, a property nobody
   has checked — a fresh instance of the class this record is about, produced by the record
@@ -90,4 +128,4 @@ bindings:
       assertion's filter selects something, disjointly, covering the whole vocabulary.
       Watched failing three ways (the original backwards comprehension, a pattern with no
       sample, a pattern with no test), which is the standard the proposal asks for.
-links: ["D0093", "D0114", "D0091", "D0112", "D0106", "D0108", "D0094"]
+links: ["D0093", "D0114", "D0091", "D0112", "D0106", "D0108", "D0094", "D0117", "D0118"]

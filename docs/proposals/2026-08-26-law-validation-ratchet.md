@@ -75,6 +75,157 @@ generator never drawing one. That does not weaken D0107's fix, which stands on L
 amended by D0093. It strengthens D0109's expiry: the thing M3 has to supply is an answer,
 not a re-reading of a law that was never asked the question.
 
+## A third side, measured: the generator decides how much a law tests, and nothing records it
+
+**Added 2026-08-30 (D0118).** D0093 is a law that could never pass; L1.9 is one that could
+never fail. Both are absolutes. Measuring L1.16 — the one law family that already has an
+independent oracle, and therefore the one that should look best — turned up the graded
+version of the same thing, and it is worse than an absolute because there is no line to
+cross.
+
+`tests/laws/m1/_fragment.py:83` draws each table's contents with
+`st.lists(..., max_size=MAX_ROWS)` and **no `min_size`**. An empty relation is a legitimate
+and interesting input, so that is not a defect on its face. What it produces is:
+
+**Under the gate's own settings — `conftest.py` registers `derandomize=True`, so `make
+verify` draws the same examples on every run and every machine — L1.16 evaluates 2200
+example-draws across its 22 shapes, and 865 of them compare an empty result to an empty
+result.** These are exact integers, not estimates, and they reproduce:
+
+| shape | effective examples (of 100) | | shape | effective examples (of 100) |
+|---|---|---|---|---|
+| `select-text` | **29** | | `anti-join`, `anti-join-then-project` | 63 |
+| `join`, `join-then-project`, `join-then-distinct`, `aggregate-of-join` | **34** | | `select-or-not` | 68 |
+| `join-text` | 42 | | `project-two`, `aggregate-two-keys` | 73 |
+| `select-and` | 45 | | `project-one`, `distinct`, `project-then-distinct`, `aggregate-sum`, `aggregate-count`, `aggregate-of-distinct` | 74 |
+| `select-gt` | 49 | | `union-of-selects` | 74 |
+| | | | `union`, `union-then-distinct` | **88** |
+
+On an empty draw, `test_l1_16_the_fragment_agrees_with_duckdb` compares `[] == []` — true
+for any implementation of anything — and `test_l1_16_no_null_ever_appears_on_either_side`
+executes zero assertions. So `select-text` and `union-then-distinct` differ threefold in
+what they actually examine, both report `pass`, and **the number above appears in no
+artifact this repository produces**. This is also where §2's mutant half is weakest: a
+mutant that misbehaves only on non-empty input has 29 draws in which to be caught on
+`select-text`, not 100.
+
+`tests/test_provenance_homomorphism.py:66` has the same shape —
+`pairs = st.lists(..., max_size=4)`, no `min_size` — and it matters more than its line
+count suggests, because `test_the_operators_never_manufacture_an_empty_why` is the closure
+proof D0107 cites for witnessed-in-witnessed-out and D0110 cites as half the reason the
+`(n, 0_Why)` door is safe today. On an empty draw it asserts nothing.
+
+### Where the empty draws come from — three causes, measured separately
+
+Attributed under a randomised sweep (400 draws per shape, counting only the tables a
+shape's own plan reads), the empty draws divide into three independent causes, and the
+division is what rules out every single-knob fix:
+
+| cause | evidence | reaches |
+|---|---|---|
+| **the row-list length** — `st.lists(max_size=6)` puts real mass on `[]`, four tables are drawn independently, and empty is absorbing | every single-source shape attributes **100%** of its empty draws to an empty source; setting `min_size=1` alone takes the mean empty rate from 35.2% to **17.3%**, with nine of 22 shapes reaching exactly **0.0%** | all shapes |
+| **key overlap** — random keys on both sides of a join often miss | joins attribute 50–77% of empties to an empty source and the rest to misses; drawing `b`/`c`/`d`'s keys from `a`'s own takes every join-shaped plan to **0.0%** | joins, anti-joins |
+| **predicate selectivity** — `t = 'a'` over a six-letter alphabet and ≤6 rows misses with probability `(5/6)^n` | `select-text` stays at ~65% under *every* variant of the other two | filters |
+
+### Three cures, measured. Two do not work, and the third only works per shape.
+
+**Narrowing the key domain does essentially nothing here.** It is the good idea on its face
+— `tests/test_provenance_homomorphism.py` already draws `key_range=(-2, 2)` for exactly
+this reason, so the repo knows the trick — and applied to the fragment it moves the mean
+from **35.2% to 34.7%**. It moves individual shapes in both directions: `join` 61.5% →
+54.0%, but `anti-join-then-project` 26.0% → **38.0%**, because more matching keys means an
+anti-join drops more rows. It does not bite because the fragment's keys are *already*
+narrow — `_value("k")` is `st.one_of(st.integers(-4, 4), st.sampled_from([0, INT_MIN,
+INT_MAX]))`, so about half of key draws already come from a nine-value domain. Key width
+was never the cause.
+
+**`min_size=1` is the largest single move and still the wrong fix.** It deletes the empty
+relation, which is a real case and one of the few that separates a correct implementation
+from a lazy one.
+
+**Coupling the keys is right for joins and actively wrong for anti-joins.** On top of
+`min_size=1` it takes the mean to **11.0%** and every join-shaped plan to **0.0%** — while
+taking `anti-join` from 13.8% to **41.0%** and `anti-join-then-project` from 26.2% to
+**53.8%**, for the obvious reason: if every right-hand key is present on the left, an
+anti-join deletes everything. **There is no key policy that is simultaneously right for a
+join and an anti-join**, which is the finding that generalises past this fragment.
+
+### Why a floor assertion on the non-degenerate rate is still refused
+
+It was the first proposal here, and the first argument against it was wrong and is
+withdrawn: "a floor on a random process fails intermittently" does **not** apply to the
+default gate, because `derandomize=True` makes 865/2200 an exact and reproducible integer.
+A floor would be perfectly stable under `make verify`. Three objections survive, and they
+are better ones.
+
+1. **It is a threshold on a quantity that is already exact and simply unrecorded.** The
+   number exists, is deterministic, and can be computed today. Asserting a bound on a
+   number nobody writes down is a worse instrument than writing it down — which is D0117,
+   and is why this section is downstream of that record.
+2. **It is intermittent on the one run that matters most.** `make laws-sweep`
+   (`pytest --hypothesis-seed=N`) exists precisely to explore beyond the fixed corpus, and
+   there the rate is a genuine random variable: seven runs of 400 draws put the per-shape
+   spread between best and worst at
+
+| | spread between best and worst of 7 runs |
+   |---|---|
+   | `join-then-project` | **20.2pp** (50.0% → 70.2%) |
+   | `aggregate-of-join` | 19.2pp |
+   | `select-and`, `distinct` | 16.5pp |
+   | `project-one` | 14.5pp |
+   | `select-or-not` | 14.0pp |
+   | … 15 further shapes … | 2.5–13.5pp |
+   | **mean over all 22** | **11.6pp** |
+
+   A floor tuned on the derandomized corpus is red on some sweeps and green on others with
+   nothing about the code having changed, and the observed institutional response to an
+   intermittently red gate is that it gets relaxed rather than investigated.
+3. **It treats the symptom.** It detects a badly shaped distribution instead of producing a
+   well-shaped one, and the three-cause table above says a single bound cannot even tell
+   you which of the three moved.
+
+### The rule worth taking to M2
+
+Three causes, no single knob, and the two most attractive knobs each make one shape worse
+while making another better:
+
+> **Draw the degenerate case as a named case, not as a side effect of the size
+> distribution — and let each shape state what its own interesting case is.**
+
+```python
+st.one_of(
+    st.just([]),                                              # the empty relation, named
+    st.lists(row_and_multiplicity, min_size=1, max_size=MAX_ROWS),
+)
+```
+
+The empty relation keeps its place in the corpus; what it loses is its status as the default
+outcome of several independent draws. Beside it, each shape declares the case it exists to
+exercise — a join wants overlapping keys, an anti-join wants *partial* overlap, a filter
+wants a literal drawn from the column it filters — so "nothing matched" becomes a case that
+was chosen rather than one that happened.
+
+Then **each generator reports its own shape through hypothesis's `event()`**, and the run
+reports a distribution somebody deliberately shaped rather than one somebody is policing.
+The difference between those two is the whole of this section, and it is why no part of it
+proposes a threshold.
+
+### What this cannot reach from here, and what it depends on
+
+`tests/laws/m1/_fragment.py` is frozen, sealed and inside `tests/laws` — the fix cannot be
+applied to M1 in place. That is D0103's supersession question for the third time (D0110 was
+the second), and the honest statement is that L1.16's 1335 effective examples stand as
+measured for M1 and the rule applies from M2 forward.
+
+And a shaped distribution is worth only as much as the record that carries it. An evidence
+record's required fields are `format_version, law_id, milestone, verdict, run_at, seed,
+descriptors, environment`, with `additionalProperties: false` — there is no field in which
+an `event()` distribution, an example count, or a non-degenerate count could be written, and
+`tannen laws report` prints `ok  pass` identically for all 22 rows above. Shaping the
+generators without that field means the next skew is found the way this one was: because
+somebody decided to measure. That is **D0117**, and it is why this section is a consequence
+of that record rather than a substitute for it.
+
 ## Why the existing guards could not catch it
 
 - `check_manifest.py` verifies frozen bytes are unchanged. Bytes, not meaning.

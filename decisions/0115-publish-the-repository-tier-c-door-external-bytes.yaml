@@ -78,6 +78,39 @@ decision: >-
   clean until the short-circuit was noticed. Both facts are why publication still needs a
   human to read the tree, and why this record does not claim the audit settles it.
   .
+  AMENDED 2026-08-30 AFTER REVIEW — THE THREE MECHANISMS ARE NOT EQUALS, AND ONE OF THE
+  FOUR ITEMS IS NOT A QUESTION. Mechanism (a) is recommended. It is the only one of the
+  three that keeps this door inside this repository: (b) makes the answer depend on which
+  siblings are public, and (c) makes publishing tannen wait on decisions about four other
+  repositories, one of them commercial and none of them this project's to schedule. (a)
+  needs one change to one builder-owned script and nothing from anyone else.
+  .
+  And the ADR-002 line should not go to the owner as an open question. Fifty-eight
+  verbatim lines of a commercial monorepo's internal ADR — PR numbers, source paths, a
+  corpus size, a cost estimate, an unreleased-model reference and a candid defect list —
+  is a no, and posing it as a choice invites a yes that nobody should have to give. Under
+  (a) it is also moot: the snapshot stays in the authorised clone, the public tree carries
+  the pin, and the citation discipline of BRIEF §2 is unbroken in both. The owner's
+  signature is then over three items, not four, and the fourth is a design note.
+  .
+  ONE CONDITION ON (a), AND IT IS NOT OPTIONAL. A degraded check_concepts.py that verifies
+  PINS when snapshots are absent is a check whose input set is empty in exactly the
+  configuration being shipped to the public. Today the script's hash loop runs over
+  `record["sources"]` for each of 8 records — 13 pins. If a public clone carries a
+  truncated or empty concepts/ directory, the loop runs fewer times or not at all, every
+  hash comparison it would have made is skipped, and the guard reports success. That is
+  species I of D0116's own taxonomy, installed by the fix for a publication, in the
+  configuration nobody runs locally — which is precisely the shape that produced D0112 ①.
+  .
+  So: the degraded mode COUNTS the pins it verified and compares that count against a
+  pinned expectation, and the expectation may not be derived from the same files it is
+  checking (deriving 13 from concepts/*.yaml makes a truncated concepts/ agree with
+  itself). It comes from an artifact the degraded path does not also skip and that the
+  custody floor already covers. And per D0116's rule the guard is watched failing before
+  it is believed: delete a concept record from a fixture clone, run the degraded path,
+  require red. Without that, the act of publishing installs the tenth instance of this
+  repository's dominant defect class, in its own publication door.
+  .
   ONE OPERATIONAL CONSEQUENCE WORTH EXPECTING. A public repository invites shallow clones,
   zip exports and `git push` without --tags, and RT-15 is exactly that shape: a working
   copy arriving without tags makes the custody floor fail and the receipt clock fresh
@@ -136,4 +169,11 @@ bindings:
       The actual blocker, at the path that holds it: 58 verbatim lines of a private
       commercial monorepo's ADR, vendored under BRIEF §2's citation discipline and
       published by any push of this tree.
-links: ["D0053", "D0112", "D0010", "D0024", "D0105"]
+  - type: file
+    target: scripts/check_concepts.py
+    strength: documentary
+    detail: >-
+      Where mechanism (a) lands, and the file that carries the condition above: the
+      degraded path must count the pins it verified and refuse a count it cannot match,
+      or publication ships a guard that is green because it looked at nothing.
+links: ["D0053", "D0112", "D0010", "D0024", "D0105", "D0116"]

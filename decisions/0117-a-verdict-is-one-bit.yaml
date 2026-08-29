@@ -1,0 +1,137 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0117
+title: "A verdict is one bit: an evidence record cannot say whether a law examined a hundred non-degenerate cases, sixteen, or none — and that is the artifact the Governor seam is specified to consume"
+tier: C
+date: "2026-08-30"
+risk_flags: ["governance-paths"]
+decision: >-
+  PROPOSED, for the owner: `governance/schemas/evidence-record.schema.json` gains a
+  required measure of WHAT A RUN ACTUALLY EXAMINED, alongside the verdict of whether it
+  passed. The shape is deliberately left open here — an example count, a count of
+  non-degenerate examples, a coverage map keyed by whatever the law's own generator
+  reports via hypothesis `event()` — because choosing it is part of what is being asked
+  for. What is NOT open is that today there is no field of any shape in which the answer
+  could be written.
+  .
+  THE RECORD AS FROZEN. Required fields are `format_version, law_id, milestone, verdict,
+  run_at, seed, descriptors, environment`. `verdict` is `{"enum": ["pass", "fail"]}` — one
+  bit. `additionalProperties: false`, so the count cannot even be added OPTIONALLY by a
+  runner that wants to emit it; the schema refuses the record. `format_version` is
+  `{"const": 0}`, so admitting one is a format bump, and the frozen conformance vectors
+  under tests/laws/evidence-vectors/ are regenerated with it.
+  .
+  WHAT THAT COSTS, CONCRETELY, TODAY. `tannen laws report` prints one row per law:
+  state, verdict, seed, run-at, descriptor. L0.3 is an example-only law over a handful of
+  fixtures. L1.16 is a differential oracle over twenty-two plan shapes against DuckDB,
+  a hundred examples each. Both print `ok  pass`. Nothing anywhere in the pipeline —
+  record, report, digest, or tag — distinguishes them, and nothing could, because the
+  distinguishing number is not collected.
+  .
+  AND IT IS NOT HYPOTHETICAL, WHICH IS HOW THIS WAS FOUND. Measured 2026-08-30 under the
+  gate's own settings — conftest.py registers `derandomize=True`, so these are exact
+  integers reproducible on every run and every machine, not estimates. L1.16 evaluates 2200
+  example-draws across its 22 shapes and 865 of them compare an EMPTY result to an empty
+  result. Per shape the effective examples run from 29 of 100 (`select-text`) to 88 of 100
+  (`union-then-distinct`). On an empty draw
+  `test_l1_16_the_fragment_agrees_with_duckdb` compares `[] == []`, which is true for any
+  implementation of anything, and `test_l1_16_no_null_ever_appears_on_either_side` executes
+  zero assertions. So two shapes' identical `pass` stand on threefold different evidence,
+  and no artifact this repository produces carries the number that would say so.
+  `docs/proposals/2026-08-26-law-validation-ratchet.md` has the per-shape table. D0114 is
+  the same fact one step further along: a law whose effective evidence is exactly zero,
+  also printing `pass`.
+  .
+  THAT THE NUMBER IS DETERMINISTIC IS THE ARGUMENT, NOT A MITIGATION. 1335 effective
+  examples out of 2200 is a fact about this repository as fixed as any hash in
+  MANIFEST.sha256. It can be computed today, it does not vary, and there is no field in
+  which to put it. This is not a request for a sampling estimate or a coverage heuristic;
+  it is a request for a place to write down an integer the runner already has.
+  .
+  WHY THIS IS ONE STRUCTURAL FACT AND NOT THREE FINDINGS. The 2026-08-30 sweep produced
+  three separate items — L1.16's generator draws the degenerate case most of the time
+  (F1), `tests/test_provenance_homomorphism.py` has the same weakness in the closure proof
+  D0107 and D0110 lean on (F2), and `tests/laws/m0/test_l0_encoding.py` loads a Grade-S
+  vector corpus with no non-emptiness guard (F3). Each is worth its own fix and D0118
+  takes two of them. But they are the same fact seen three times: THE PIPELINE HAS NO
+  PLACE TO PUT THE NUMBER THAT WOULD HAVE REVEALED ANY OF THEM. Fix the three generators
+  and the fourth instance is still invisible. That is why this is filed separately and
+  ahead of them.
+  .
+  THE PART THAT MAKES IT THE OWNER'S. The evidence record's own schema description calls
+  it "the future belief-update stream for the Governor seam" (BRIEF §7). A belief-update
+  stream in which every message is one bit cannot support an update whose size depends on
+  how much was examined — which is the only kind of update a Governor over evidence would
+  want to make. Building the seam's consumer first and discovering the wire format cannot
+  carry the quantity is the expensive ordering. M2 is the cheap moment.
+  .
+  AND WHAT IS ALREADY SIGNED STAYS SIGNED. `evidence/` is gitignored and regenerated, so
+  the artifact that crosses a milestone boundary is not the record — it is an owner-signed
+  close tag over a HEAD at which the report said `pass` for every law in the set. m0-close
+  is that, already signed. This proposal does not and cannot reach backwards: M0's and
+  M1's attestations say those laws passed, and they will never say more than that. The
+  question is only whether M2's do.
+rationale: >-
+  Tier C, and stopped rather than done, on three independent counts, any one of which
+  would be enough. `governance/schemas/evidence-record.schema.json` is (1) MANIFEST-frozen,
+  (2) inside the sealed directory `governance/schemas` (tier-c.yaml frozen_paths.sealed_dirs,
+  D0056), and (3) in the custody set as `governance/schemas/*.json`, so editing it
+  invalidates the owner's signature over governance/custody.sha256 and the gate stays red
+  until a sitting re-signs. It is additionally a Grade-S concept OWNED BY TANNEN, and
+  CLAUDE.md's hard rules forbid changing an owned concept's definition. The builder cannot
+  do any part of this, which is the correct outcome and not an obstacle.
+  .
+  Not filed as Tier A with the schema change drafted and unapplied. That was considered:
+  a drafted patch would be a `documentary` binding and would look like progress. It is
+  refused because the interesting decision here is WHICH quantity to record, and drafting
+  one answer into a file makes the queued question look settled when it is the part that
+  needs the owner's judgement. An example count is the cheapest and the weakest — it
+  cannot see F1, since the degenerate draws ARE examples. A count of non-degenerate
+  examples requires each law to say what degenerate means for it, which is real design.
+  .
+  Deliberately NOT proposed: nothing about making the number a ratchet metric or a gate
+  threshold. That is the next argument and it should be had separately — D0118 explains
+  why a floor assertion on a random process is the wrong instrument, and the same
+  objection would apply here. Measure first, publish one digest carrying true values, and
+  only then discuss what to do with them. That ordering is BRIEF §9.1's own metric-
+  calibration rule, and it exists precisely so a first honest count does not read as a
+  breach.
+  .
+  Filed ahead of D0116's detector in the sitting queue, on the reasoning the review made
+  plain: the detector formalises the one species of vacuous-green that is decidable by
+  inspection, and that species has cost this repository the least. This record is about
+  the layer at which every species would become visible at once, for every law, without
+  anyone having to guess which shape to grep for.
+reversibility: >-
+  The schema change itself is a one-way format bump in a small and specific sense: once
+  `format_version: 1` records exist in a store, a reader pinned to 0 cannot read them, and
+  the store is append-only by construction so the old records stay. That is cheap today —
+  the store is local, gitignored and regenerated by `make verify` from a freshly removed
+  directory, so there is no corpus to migrate and no consumer outside this repository.
+  It stops being cheap the moment the Governor seam has a consumer, which is the argument
+  for doing it at M2 rather than later. Every other part is ordinary: a field can be
+  widened, a metric can be dropped, and nothing here proposes a gate that could fail.
+status: blocked-on-owner
+bindings:
+  - type: manifest
+    target: governance/schemas/evidence-record.schema.json
+    strength: documentary
+    detail: >-
+      The frozen artifact this is about, named at the path that holds it. Frozen, sealed
+      and custody-set — three separate reasons the builder cannot touch it, and the record
+      of why this is queued rather than done.
+  - type: file
+    target: docs/proposals/2026-08-26-law-validation-ratchet.md
+    strength: documentary
+    detail: >-
+      Where the measurement that exposed this is written up, with the per-shape table and
+      the counterfactuals. The ratchet's mutant half is the thing an 84%-empty shape would
+      fail to kill, so the two proposals answer to each other.
+  - type: pytest
+    target: tests/laws/m1/test_l1_ops.py::test_l1_9_the_fragment_preserves_the_non_negative_cone
+    strength: documentary
+    detail: >-
+      The limiting case, already recorded as D0114: effective evidence exactly zero,
+      reported as `ok  pass`, indistinguishable in every artifact downstream. It is the
+      proof that the missing field is not a refinement — the pipeline cannot currently
+      tell a hundred cases from none.
+links: ["D0114", "D0116", "D0118", "D0094", "D0090", "D0107", "D0110"]
