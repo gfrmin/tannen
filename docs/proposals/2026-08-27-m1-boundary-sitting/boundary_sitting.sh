@@ -211,7 +211,7 @@ sign_tier_c_records() {
         case "$status" in accepted) ;; *) continue ;; esac
         verify_owner "$rec" tannen-decision && continue
         printf '\n'
-        sed -n '1,/^rationale:/p' "$rec" | head -40
+        page "$rec"
         note "-- $id ($rec): Tier C, status accepted, no owner signature"
         if confirm "Sign $id? (BRIEF §9.2: Tier C is affirmative signature only, never silence)"; then
             sign_owner "$rec" tannen-decision
@@ -710,8 +710,26 @@ for rec in "${queue[@]}"; do
     [ "$(sed -n 's/^tier: *//p' "$rec" | head -1)" = "C" ] || continue
     grep -q '^status: blocked-on-owner$' "$rec" || continue
     printf '\n'
-    sed -n '1,/^rationale:/p' "$rec" | head -40
     rec_id=$(sed -n 's/^id: *//p' "$rec" | head -1)
+    # The head -40 that used to stand here cut five of the eight queued records mid-
+    # sentence with no marker, D0115 (the external-bytes door) worst of all: its display
+    # ended at "Publishing tannen publishes all of it" and the next thing on screen was
+    # the signing prompt. Everything below — the ruling on the renavon excerpt, the
+    # recommended mechanism, the reversibility clause, the bindings — was never shown.
+    # A signature over bytes the signer was not shown is not consent. Page it whole.
+    note "$rec_id — $(wc -l < "$rec") lines, shown in full"
+    page "$rec"
+    # What a yes here does NOT do. Step 8 flips one status line and writes one .sig; no
+    # step of this driver applies what a record proposes, except where named below.
+    case "$rec_id" in
+        D0061) note "APPLIED-BY: already built and owner-signed; accepting ratifies executed work" ;;
+        D0095) note "APPLIED-BY: item 1 lands at step 11. Item 2 — the half this record calls" ;
+               note "            the one that matters more — is applied by NOTHING" ;;
+        D0108) note "APPLIED-BY: step 4d, earlier in this sitting. If you declined it there," ;
+               note "            the fix did not land and a yes here signs an untrue record" ;;
+        *)     note "APPLIED-BY: NOTHING in this sitting. A yes authorises future work only," ;
+               note "            and every artifact it needs is frozen or custody-set" ;;
+    esac
     # Accepting and signing are ONE act, and it rolls back. Since D0064 a Tier-C record
     # that says accepted without a signature reddens the gate, so flipping the status
     # first and prompting for the key second would leave a declined signature — or a

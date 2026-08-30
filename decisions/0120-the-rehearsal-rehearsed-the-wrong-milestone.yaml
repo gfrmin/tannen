@@ -1,0 +1,103 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0120
+title: "Every rehearsal of the M1 sitting rehearsed M0: steps 10 and 11 never executed, and two of the harness's own post-conditions passed off a tag the clone was cloned with"
+tier: A
+date: "2026-08-30"
+risk_flags: []
+decision: >-
+  RECORDED, and the documented command corrected in
+  docs/proposals/2026-08-27-m1-boundary-sitting/README.md. The M1 path has now been run
+  end to end and is GREEN — 12 of 12 checks, exit 0 — so this is an unproven path that has
+  been proven, not a break that was found. Saying that plainly is the point of the record.
+  .
+  THE DEFECT. `scripts/rehearse_sitting.sh:40` defaults `MILESTONE=m0` and passes it to the
+  driver at `:214`. Neither the README's documented rehearsal command nor D0105 item 0's
+  copy of it passes `--milestone m1`. Every rehearsal run as documented therefore executed
+  `bash scripts/boundary_sitting.sh m0`.
+  .
+  WHAT THAT SKIPPED, MECHANICALLY. Under m0 the clone already carries `m0-close`, so step
+  10's guard `git rev-parse -q --verify refs/tags/$MILESTONE-close` succeeds and the step
+  prints "already exists — skipped": the owner-only close tag is never minted. Under m0 the
+  clone also already lists `m0-close` and `m0-laws-freeze` in `required_tags`, so step 11's
+  `MISSING_TAGS` array is empty and the entire body is skipped. Step 11 is the step that
+  edits governance/tag-roles.yaml — MANIFEST-frozen and custody-set — then regenerates the
+  manifest row, regenerates the custody set and takes a SECOND owner signature, all after
+  step 9's gate has already run. Verified by simulating both guards at HEAD: m0 yields
+  step-10-skipped and MISSING_TAGS=''; m1 yields step-10-runs and
+  MISSING_TAGS='m1-laws-freeze'.
+  .
+  AND THE HARNESS REPORTED GREEN ANYWAY, WHICH IS THE PART THAT MATTERS. The verdict block
+  at `scripts/rehearse_sitting.sh:263-265` asserts "$MILESTONE-close exists" and
+  "$MILESTONE-close verifies as owner@tannen". Under m0 both passed by reading the real
+  `m0-close` tag minted at the real M0 sitting weeks earlier — a post-condition whose answer
+  does not depend on the run it is checking. That is D0116's class, species III, inside the
+  safety net built to catch it: the ninth instance, and the first one found in a check whose
+  entire purpose is to be a check.
+  .
+  MEASURED, NOT ARGUED. `TANNEN_REHEARSE_DRIVER=<the proposal copy> bash
+  scripts/rehearse_sitting.sh --milestone m1` was run to completion on 2026-08-30 at HEAD
+  3c2fdcf. Step 10 minted m1-close with the DELEGATIONS.md and custody.sha256 hashes quoted
+  per D0051; step 11 added both m1 tags to required_tags, regenerated the manifest row,
+  regenerated custody.sha256 to 60 paths and re-signed it; the final gate passed. Verdict:
+  12/12 ok, including "m1-close exists" and "m1-close verifies as owner@tannen" now green
+  over a tag the run itself created.
+rationale: >-
+  A rehearsal that cannot fail is worth what a law that cannot fail is worth, and this one
+  could not fail on the two steps it was most needed for. The steps it skipped are the ones
+  with the least margin: step 10 mints the tag D0049 reserves to the owner, and step 11
+  mutates a frozen, custody-set file and takes a second signature with no gate after it.
+  Both run at the very end of a sitting, after a 15-20 minute gate, with the key out.
+  .
+  The correct instrument is not a better default. A default is a guess about which
+  milestone is in flight, and the next boundary makes it wrong again in the same silent
+  direction. The instrument is a check whose answer depends on the run, and it is now
+  applied in scripts/rehearse_sitting.sh (builder-editable; in neither MANIFEST.sha256 nor
+  the custody set): the clone is probed for $MILESTONE-close BEFORE the driver starts, a
+  pre-existing tag REFUSES the run outright, and the verdict gains
+  "$MILESTONE-close was minted by THIS run". The refusal is early on purpose — deciding in
+  seconds beats discovering after two hours of gate that the run could never have said
+  anything about the two steps in question. --allow-preexisting-close keeps the legitimate
+  case (re-rehearsing steps 0-9 of a closed milestone) available, loudly.
+  .
+  ALL THREE BRANCHES WERE WATCHED, NOT ASSERTED. The exact command that had reported green
+  ten times — no --milestone flag — now exits 1 in seconds with "refusing to rehearse m0:
+  its close tag already exists in the clone". With --allow-preexisting-close it warns and
+  proceeds. With --milestone m1 it proceeds silently, because m1-close does not exist yet.
+  The negative control is the whole point: the check was watched failing on the input it
+  exists to catch, which is the discipline this repository keeps arriving at.
+  .
+  This also revises what "ten-times rehearsed" was worth as an assurance about the M1
+  sitting. It was ten proofs about steps 0-9 and zero about steps 10-11. The one m1 run now
+  on the record is worth more than all ten for those two steps, and is the only evidence
+  cited for them anywhere.
+reversibility: >-
+  The README correction is one flag in one unfrozen document. The finding itself is not
+  reversible and should not be: it is evidence about what earlier rehearsals did and did
+  not establish.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/README.md
+    strength: enforced
+    detail: >-
+      The documented rehearsal command now passes --milestone m1, with the reason stated
+      inline so the next reader cannot drop the flag as decoration.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: enforced
+    detail: >-
+      The CLOSE_TAG_PREEXISTED probe taken immediately after the clone, the refusal it
+      gates (overridable by --allow-preexisting-close), and the verdict check
+      "$MILESTONE-close was minted by THIS run". A rehearsal aimed at a milestone whose
+      close tag already exists now exits 1 instead of reporting green.
+  - type: file
+    target: docs/proposals/2026-08-29-a-check-that-cannot-fail.md
+    strength: documentary
+    detail: >-
+      The ninth instance of the class that proposal catalogues, and the first found inside
+      a check rather than in the code a check is aimed at.
+links:
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0105-m1-boundary-sitting-queue.yaml
+  - decisions/0113-the-sitting-can-accept-d0108-but-nothing-applied-it.yaml
+  - decisions/0119-a-signature-over-bytes-the-signer-was-not-shown.yaml

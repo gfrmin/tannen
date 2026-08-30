@@ -1,0 +1,83 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0119
+title: "Step 8 showed the owner 40 lines of a 179-line one-way door and then asked for a signature; five of the eight queued records were cut mid-sentence with no marker"
+tier: A
+date: "2026-08-30"
+risk_flags: []
+decision: >-
+  FIXED in docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh, the copy
+  step 0 installs over scripts/boundary_sitting.sh. That copy is neither MANIFEST-frozen
+  nor custody-set, which is the same standing that let step 4d land (D0113).
+  .
+  THE DEFECT, MEASURED. Step 8 displayed each queued record as
+  `sed -n '1,/^rationale:/p' "$rec" | head -40` and then prompted "Accept and SIGN <id>?".
+  Whichever bound comes first wins, and for five of the eight queued records `head -40`
+  won. Shown-of-total, measured by running the driver's own command: D0061 19/63,
+  D0095 19/74, D0108 31/65 — whole. D0105 40/139, D0106 40/119, D0110 40/101,
+  D0115 40/179, D0117 40/137 — cut, with nothing printed to say so. The `sed` range also
+  stops AT the `rationale:` key line, so no record's rationale, reversibility, status,
+  bindings or links were ever on screen, for any of the eight.
+  .
+  THE WORST CASE IS THE ONE-WAY DOOR. This was not reasoned about; it was observed in a
+  full m1 rehearsal transcript. The last line the owner sees for D0115 — the Tier-C
+  `external-bytes` publication door — is "Publishing tannen publishes all of it." The next
+  thing on screen is the signing prompt. Never shown: the ruling that the 58-line
+  renavon-monorepo excerpt "is a no", the recommended mechanism and its non-optional
+  pin-count condition, the reversibility clause, and all four bindings. A signature over
+  bytes the signer was not shown is not consent, and this is the record whose reversibility
+  is "bytes that leave are gone".
+  .
+  THE FIX. Both truncating pagers — step 8's and the one inside sign_tier_c_records — now
+  call `page "$rec"`, the idiom already used at six sites in the same file, preceded by a
+  note giving the record's length. The rehearsal sets PAGER=cat, so nothing consumes the
+  piped answer stream; a real sitting gets `less`.
+  .
+  AND A SECOND THING THE DISPLAY NEVER SAID. Step 8 flips one `status:` line and writes one
+  `.sig`. No step of the driver applies what a record proposes, except step 4d for D0108
+  and step 11 for D0095 item 1. The loop now prints an APPLIED-BY line per record saying
+  so in the four cases that differ: D0061 ratifies executed work; D0095's item 1 lands at
+  step 11 while item 2 — the half that record calls the one that matters more — is applied
+  by nothing; D0108 was applied at step 4d and a yes here signs an untrue record if 4d was
+  declined; everything else authorises future work only, on artifacts that are all frozen
+  or custody-set.
+rationale: >-
+  The whole rehearsal apparatus (D0065, D0066, D0069) exists to stop the sitting failing
+  with the owner's key out. It measures whether the mechanics complete. It cannot measure
+  whether the owner was shown what they signed, because a truncated record and a whole one
+  both produce exit 0 — which is why ten rehearsals passed over this. The defect was found
+  by running the driver's own pager command over the eight records and counting lines, and
+  confirmed against a real transcript.
+  .
+  Two arguments for paging whole rather than raising the limit. First, no constant is
+  right: the records run 63 to 179 lines and the next one will be longer. Second, the cut
+  is silent — `head` prints no marker, so the owner cannot distinguish a record that ended
+  from a record that was truncated, and the failure is invisible from inside the sitting.
+  .
+  The APPLIED-BY notes are the same defect one layer up. D0113 found that step 8 would
+  accept and sign D0108 while nothing applied its fix, and closed it by adding step 4d.
+  That closed the instance, not the class: six of the eight queued records still resolve to
+  a signature over a promise nothing keeps, and the display gave the owner no way to tell
+  those apart from the two that land. Naming it on screen is cheaper than a driver step per
+  record, and honest about which is which.
+reversibility: >-
+  Trivial. Both changes are in one builder-editable file and are display-only — no guard,
+  schema or signed artifact reads them. Reverting is `git checkout` on the driver copy.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      The two `page "$rec"` calls and the APPLIED-BY case statement are the fix; step 0 of
+      the sitting copies this file over scripts/boundary_sitting.sh, so it is what runs.
+  - type: file
+    target: decisions/0113-the-sitting-can-accept-d0108-but-nothing-applied-it.yaml
+    strength: documentary
+    detail: >-
+      D0113 closed the D0108 instance of "a yes nothing keeps" with a driver step; this
+      record closes the display half of the same class for the remaining six.
+links:
+  - decisions/0113-the-sitting-can-accept-d0108-but-nothing-applied-it.yaml
+  - decisions/0115-publish-the-repository-tier-c-door-external-bytes.yaml
+  - decisions/0105-m1-boundary-sitting-queue.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml

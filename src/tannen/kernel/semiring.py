@@ -255,7 +255,7 @@ def why_slot(semiring: Any) -> str | None:
     A fact about the semiring, not about any operator — which is why it lives here and not
     beside its first caller. Two things want it: enriching an annotation with a witness
     (`ops.anti_join`), and asking whether an annotation claims copies of a row it has no
-    derivation for (D0109, if the owner takes it)."""
+    derivation for (D0110, if the owner takes it)."""
     if semiring.name == "Why":
         return "self"
     left = getattr(semiring, "left", None)

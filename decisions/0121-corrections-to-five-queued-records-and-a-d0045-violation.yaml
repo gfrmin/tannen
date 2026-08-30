@@ -1,0 +1,117 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0121
+title: "Corrections to claims in five queued records that measurement falsifies — filed as a new record because D0045 makes the decision field immutable, which the 2026-08-30 amendments to D0115 and D0116 violated"
+tier: A
+date: "2026-08-30"
+risk_flags: []
+decision: >-
+  RECORDED. The eight Tier-C records queued for the M1 sitting were re-checked claim by
+  claim against HEAD 3c2fdcf. Six carry statements that measurement falsifies. They are
+  corrected HERE, in a new record, and NOT by editing the records themselves: D0045 makes
+  a record's decision, rationale, reversibility, tier, date and status immutable, and "a
+  change of mind is a NEW record".
+  .
+  THE PROCEDURAL DEFECT FIRST, BECAUSE IT IS MINE. Commit 3c2fdcf appended blocks headed
+  "AMENDED 2026-08-30 AFTER REVIEW" INSIDE the `decision:` field of D0115 (at line 81; the
+  field opens at line 7) and of D0116. `git show 3c2fdcf` records the hunk header as
+  `@@ -78,6 +78,39 @@ decision: >-`. That is exactly the edit D0045 forbids, and no guard
+  caught it — scripts/check_decisions.py validates a record against the schema and resolves
+  its bindings, but nothing compares a record's immutable fields against their committed
+  history. The amendments STAND. Reverting them would be a second edit to an immutable
+  field to conceal the first, and D0109 already settled that the record of what was known
+  when is part of the record. What changes is that further corrections go here.
+  .
+  THE FALSIFIED CLAIMS, EACH MEASURED.
+  .
+  (1) D0115, in the lines the owner actually sees at step 8: "gfrmin/pkm (204 lines)".
+  Measured: 252, across four snapshot files. The same sentence's own figures then fail to
+  add up — 204+177+107+58 = 546 against the 594 it claims two clauses earlier. The other
+  three are right (proplang 177, life-agent 107, renavon 58) and so are both totals:
+  concepts/snapshots/ holds 13 files and 627 lines, of which 594 are the four siblings and
+  the remaining 33 are tannen's own BRIEF excerpt. Only the pkm figure is wrong, and it is
+  wrong in the visible half of the one record that is a one-way door.
+  .
+  (2) D0115's amendment, arguing for mechanism (a): "(a) needs one change to one
+  builder-owned script and nothing from anyone else". scripts/check_concepts.py is NOT
+  builder-owned. It is a custody-set member (governance/tier-c.yaml:126) with a signed hash
+  (governance/custody.sha256). Any builder edit to it reddens check_manifest::check_custody
+  until an owner re-signs at a sitting. The recommendation of (a) survives — it is still the
+  only mechanism that keeps the door inside this repository — but its decisive argument does
+  not. The honest version is that (a) costs an owner signature too; it just costs one
+  signature here rather than four repositories' worth of scheduling.
+  .
+  (3) D0105 item 4: "Step 8 resolves the Tier-C queue: D0061 ... and D0095." Replaying step
+  8's own filter (tier C and the exact line `status: blocked-on-owner`) over decisions/*.yaml
+  at HEAD yields eight: D0061, D0095, D0105, D0106, D0108, D0110, D0115, D0117. The record
+  was written when the queue was two. It also promises a ruling on D0095 item 2 separable
+  from item 1; step 8 asks one question per RECORD, not per item, so no such choice exists.
+  .
+  (4) D0095's links name decisions/0061-owner-signs-a-custody-set.yaml. No such file exists;
+  the record is decisions/0061-custody-set-not-signed-manifest.yaml. Nothing validates
+  links, which is why it survived — the schema constrains bindings, not links.
+  .
+  (5) D0106's decision text, inside the visible 40 lines: "every artifact they would touch
+  is both a MANIFEST.sha256 frozen path and a governance/tier-c.yaml custody-set member".
+  scripts/check_decisions.py has no MANIFEST row; it is custody-set only. The record's own
+  rationale says so further down, past the truncation.
+  .
+  (6) src/tannen/kernel/semiring.py:258 attributed "asking whether an annotation claims
+  copies of a row it has no derivation for" to D0109. That is D0110's subject; D0109 is
+  anti_join's M3 expiry and why_slot's ownership. The parenthetical "if the owner takes it"
+  fits a blocked-on-owner record, which D0109 is not. FIXED in place — the file is in
+  neither MANIFEST.sha256 nor the custody set, and a comment is not a decision.
+rationale: >-
+  Five of these six live in records the owner is about to sign with a key that is out once
+  a milestone. A signature pins the record's whole bytes, so a false sentence corrected
+  after signing costs a re-signature at the next sitting; corrected before, it costs
+  nothing. That is the entire reason this is filed now rather than after.
+  .
+  The pattern across all six is one thing, and it is the same thing D0116 and D0118 found
+  in the test suite: a claim written when it was true, never re-run against the world. The
+  queue's records date from 2026-08-25 to 2026-08-29 and the repository has moved under
+  them — twelve records and two commits since D0115's audit alone. Nothing in the gate
+  re-checks a record's prose against the tree, and nothing can; the schema constrains
+  shape, the bindings constrain existence, and neither reads a sentence. The cure is not a
+  guard, it is re-measuring before a signature.
+  .
+  On the D0045 violation: the amendment was made in good faith to keep a correction beside
+  the text it corrects, which is genuinely more readable. It was still wrong, and the way it
+  was wrong is instructive — an in-place amendment is invisible in the projection and in the
+  digest, so a reader of DECISIONS.md cannot tell an original judgement from one revised
+  after review. That is precisely the property append-only records exist to have. The
+  absence of a guard is worth noting but not worth building one for yet: comparing immutable
+  fields against git history on every check_decisions run is a real cost, and this is the
+  first instance.
+reversibility: >-
+  The semiring.py comment fix is a one-line revert. The corrections themselves are not
+  reversible and should not be — they are measurements. The D0115/D0116 amendments are
+  deliberately left standing; undoing them would compound the violation rather than repair
+  it.
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/kernel/semiring.py
+    strength: enforced
+    detail: >-
+      Correction (6) is applied here: the docstring now names D0110, the record whose
+      subject it describes and whose status makes "if the owner takes it" true.
+  - type: file
+    target: decisions/0045-bindings-are-mutable-decisions-are-not.yaml
+    strength: documentary
+    detail: >-
+      The rule this record's own procedure obeys and that commit 3c2fdcf broke: decision,
+      rationale, reversibility, tier, date and status are immutable; a change of mind is a
+      new record. Named so the violation binds to the rule it violated.
+  - type: file
+    target: decisions/0115-publish-the-repository-tier-c-door-external-bytes.yaml
+    strength: documentary
+    detail: >-
+      Carries corrections (1) and (2). Left unedited on purpose; the corrections live here.
+links:
+  - decisions/0045-bindings-are-mutable-decisions-are-not.yaml
+  - decisions/0115-publish-the-repository-tier-c-door-external-bytes.yaml
+  - decisions/0105-m1-boundary-sitting-queue.yaml
+  - decisions/0106-post-sitting-review-rulings.yaml
+  - decisions/0095-required-tags-is-an-enumeration-that-lags.yaml
+  - decisions/0119-a-signature-over-bytes-the-signer-was-not-shown.yaml
+  - decisions/0109-anti-join-follow-ups-negatives-expire-at-m3.yaml

@@ -37,14 +37,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 
-MODE=worktree ANSWER=y KEEP=0 MILESTONE=m0
+MODE=worktree ANSWER=y KEEP=0 MILESTONE=m0 ALLOW_PREEXISTING_CLOSE=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --from)      MODE="$2"; shift 2 ;;
         --answers)   ANSWER="$2"; shift 2 ;;
         --milestone) MILESTONE="$2"; shift 2 ;;
         --keep)      KEEP=1; shift ;;
-        *) echo "usage: $0 [--from head|worktree] [--answers y|n] [--milestone m0] [--keep]" >&2
+        --allow-preexisting-close) ALLOW_PREEXISTING_CLOSE=1; shift ;;
+        *) echo "usage: $0 [--from head|worktree] [--answers y|n] [--milestone mN] [--keep] [--allow-preexisting-close]" >&2
            exit 2 ;;
     esac
 done
@@ -68,6 +69,29 @@ git -C "$CLONE" config user.email "rehearsal@invalid"
 git -C "$CLONE" config commit.gpgsign false
 git -C "$CLONE" config tag.gpgsign false
 note "cloned $(git -C "$CLONE" rev-parse --short HEAD) with $(git -C "$CLONE" tag | wc -l) tag(s)"
+
+# D0120: whether this run can exercise steps 10 and 11 at all is decided HERE, before two
+# hours of gate, not in the verdict. If $MILESTONE-close is already in the clone, step 10's
+# own guard prints "already exists — skipped" and never mints the owner-only close tag; and
+# if the milestone's tags are already in required_tags, step 11's MISSING_TAGS is empty and
+# the step that edits a frozen, custody-set file, re-manifests it, regenerates the custody
+# set and takes a SECOND owner signature is skipped whole. The default MILESTONE=m0 made
+# both true for every rehearsal ever run, while the verdict below still printed
+# "$MILESTONE-close exists" green — off the tag the clone was cloned with. A post-condition
+# whose answer does not depend on the run is not a post-condition.
+CLOSE_TAG_PREEXISTED=0
+git -C "$CLONE" rev-parse -q --verify "refs/tags/$MILESTONE-close" >/dev/null \
+    && CLOSE_TAG_PREEXISTED=1
+if [ "$CLOSE_TAG_PREEXISTED" = 1 ]; then
+    note "$MILESTONE-close is ALREADY in the clone — steps 10 and 11 will skip, and this"
+    note "run cannot say anything about them. Did you mean --milestone <the one in flight>?"
+    [ "$ALLOW_PREEXISTING_CLOSE" = 1 ] || {
+        echo "refusing to rehearse $MILESTONE: its close tag already exists in the clone," >&2
+        echo "so steps 10 and 11 cannot run (pass --allow-preexisting-close to rehearse" >&2
+        echo "steps 0-9 only, and read the verdict knowing 10-11 were not exercised)." >&2
+        exit 1
+    }
+fi
 
 if [ "$MODE" = worktree ]; then
     # The owner's real re-run starts from an uncommitted tree, so the resume path is only
@@ -260,6 +284,7 @@ check "the driver ran to completion (exit 0)"            test "$DRIVER_RC" -eq 0
 check "no step aborted the sitting"                      absent 'sitting: STOP' "$LOG"
 check "no silence over ${SILENCE_LIMIT}s went unannounced"     speaks_up "$STAMPED"
 if [ "$ANSWER" = y ]; then
+    check "$MILESTONE-close was minted by THIS run"      test "$CLOSE_TAG_PREEXISTED" -eq 0
     check "$MILESTONE-close exists"                      in_clone git rev-parse -q --verify "refs/tags/$MILESTONE-close"
     check "$MILESTONE-close verifies as owner@tannen"    in_clone git -c gpg.format=ssh \
               -c gpg.ssh.allowedSignersFile="$CLONE/allowed_signers" verify-tag "$MILESTONE-close"

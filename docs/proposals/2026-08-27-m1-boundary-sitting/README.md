@@ -16,8 +16,18 @@ disposable clone, with a throwaway key, and reports whether the mechanics hold:
 
 ```
 TANNEN_REHEARSE_DRIVER=docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh \
-    bash scripts/rehearse_sitting.sh
+    bash scripts/rehearse_sitting.sh --milestone m1
 ```
+
+**`--milestone m1` is load-bearing, not decoration.** `scripts/rehearse_sitting.sh:40`
+defaults to `MILESTONE=m0`, and every rehearsal run without the flag rehearsed *m0*. Under
+m0 the clone already carries `m0-close` and already lists `m0-close` and `m0-laws-freeze` in
+`required_tags`, so **step 10 skips** (`$MILESTONE-close already exists`) and **step 11's
+`MISSING_TAGS` is empty** — the two steps that mint the owner-only close tag and then edit,
+re-manifest, re-generate and re-sign the custody set never ran. Worse, the rehearsal's own
+verdict then printed `m0-close exists` and `m0-close verifies as owner@tannen` **green off
+the tag the clone was cloned with**: a post-condition whose answer does not depend on the run
+it is supposed to be checking.
 
 A green rehearsal proves the driver's own mechanics (step order, shell quoting, gates,
 idempotence) — never that the sitting itself is a good idea, and never custody (the
