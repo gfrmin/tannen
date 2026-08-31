@@ -44,6 +44,8 @@ roles:
 # Reachable by accident: shallow clones, exports and `git push` without --tags all
 # produce a working copy that looks exactly like this attack.
 required_tags:
+  - m1-laws-freeze
+  - m1-close
   - m0-close
   - brief-freeze
   - m0-laws-freeze
