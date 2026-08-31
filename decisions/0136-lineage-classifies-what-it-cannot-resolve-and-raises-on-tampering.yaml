@@ -1,0 +1,70 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0136
+title: "`lineage` classifies every atom it cannot resolve, and propagates the one error that is not a resolution failure"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  docs/specs/m2.md §7 requires `lineage` to be TOTAL: "an atom that does not resolve is
+  classified, never raised on". Totality has to be given a boundary, because `Store.get_value`
+  can fail three ways and they are not the same failure.
+  .
+  CLASSIFIED as `kind="unresolved"`:
+  (1) `MissingRef` — nothing is stored at that ref. This is the case §7 names, and §6's
+  absence witness is why it is not hypothetical: an anti-join cites a relation's content
+  address and nothing guarantees that relation was ever stored.
+  (2) `CanonicalEncodingError` — bytes are stored, and they are not a value. `Store.put_bytes`
+  legitimately holds raw bytes (a source's own bytes are stored that way), so a ref can
+  address something real that is nevertheless not a `srcrow/1` and not a `rel/1` and not
+  anything else with a decodable canonical form. The taxonomy has three kinds and none of
+  them is "bytes I cannot read", so this is the honest one: nothing here resolves to a value
+  lineage can describe.
+  .
+  PROPAGATED: `IntegrityError` — bytes at rest that no longer hash to the ref they are filed
+  under. This is not a citation failing to resolve; it is the store reporting that its own
+  contract has been broken, which `Store.get_bytes` verifies on every read precisely so it
+  can be noticed. Classifying it as `"unresolved"` would launder detected tampering into
+  "not found" inside the one read a reader is most likely to trust — a serve-layer lineage
+  view — and would make the store's verify-on-read pointless exactly where it matters most.
+  A lineage read that raises here is a lineage read that has found something no caller can
+  handle by carrying on.
+  .
+  The narrow reading of "total" — never raises, ever — was considered and rejected for that
+  reason. Totality here is a property of the CITATION (every atom gets a classification),
+  not a promise that the storage layer underneath is functioning.
+  .
+  A fourth kind for a malformed atom is not needed and is not added: `Why.of` refuses a
+  non-ref by name, so a malformed atom cannot reach a `Rel` and therefore cannot reach here
+  (L2.7 checks that rather than asserting it).
+rationale: >-
+  Tier A: reversible, in-repo, and the kind of ambiguity the spec deliberately leaves to
+  the builder. Recorded because "total" is the sort of word that later gets read as
+  "swallows everything", and the difference between the two readings is whether a corrupted
+  store is visible or silent. This repo has already paid once for a check that could not
+  fail (D0114, D0116); a read that cannot report is the same shape one layer down.
+reversibility: >-
+  Two exception classes in one `except` clause in unfrozen `src/tannen/sources.py`. Moving
+  `IntegrityError` into the classified set is a one-word change; the argument against it is
+  what is not reversible, so it is written here rather than in a comment.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/laws/m2/test_l2_lineage.py::test_l2_7_an_atom_that_is_not_in_the_store_is_classified_not_raised_on"
+    strength: enforced
+    detail: The `MissingRef` half — the case §7 names, classified rather than raised on.
+  - type: pytest
+    target: "tests/laws/m2/test_l2_lineage.py::test_l2_7_an_atom_outside_the_pinned_grammar_is_unconstructible"
+    strength: enforced
+    detail: >-
+      Why there is no fourth classification: `Why.of` refuses a non-ref by name, so the
+      malformed atom never arrives.
+  - type: file
+    target: src/tannen/sources.py
+    strength: enforced
+    detail: >-
+      `_cite`'s `except (MissingRef, CanonicalEncodingError)` and the docstring on `lineage`
+      stating what is deliberately outside it.
+links:
+  - decisions/0126-a-source-row-ref-resolves-to-the-row-it-names.yaml
+  - decisions/0132-the-absence-witness-is-a-conjunction.yaml
+  - docs/specs/m2.md §7

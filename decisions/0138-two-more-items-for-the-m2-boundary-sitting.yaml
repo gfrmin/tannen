@@ -1,0 +1,76 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0138
+title: "Two more items for the M2 boundary sitting: D0110's binding needs an owner re-signature, and a comment in MANIFEST.sha256 pointed at nothing"
+tier: A
+date: "2026-08-31"
+risk_flags: [governance-paths]
+decision: >-
+  D0131 opened the M2 boundary-sitting queue with the custody-set edits Session B may not
+  make. Two more items joined it during implementation. A decision record's text is
+  immutable (D0045), so they are queued HERE rather than appended to D0131.
+  .
+  ITEM 1 — D0110's first binding, and the re-signature it now needs. D0110 is Tier C and
+  owner-signed. Its first binding names
+  `tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image`
+  — THE ALARM, whose whole point was to make visible what would happen if `(n, 0_Why)` ever
+  became constructible. D0110 is what made it unconstructible, so the node's NAME is now the
+  opposite of what the node asserts. It cannot be renamed by the builder: the signature is
+  over the record's whole bytes (D0063 ruling 2, restated in `check_decisions.py`'s own
+  comment), so retargeting the binding invalidates it, and a Tier-C record whose signature
+  does not verify is a red guard. The node therefore keeps its name and carries the truth in
+  its docstring (D0137).
+  .
+  FOR THE OWNER, at the sitting: rename the node to something like
+  `test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed`, retarget D0110's
+  binding, and re-sign D0110. Nothing depends on this and nothing is blocked by it — it is a
+  name that lies in a docstring's company, not a guard that is wrong.
+  .
+  WHAT WAS LEARNED, and it generalises past this record: an owner signature over a whole
+  record file makes that record's BINDINGS as immutable as its text, which is not what D0045
+  says bindings are for. D0045 draws the line at decision-versus-enforcement — "what was
+  decided is history, what enforces it is present tense" — and a whole-file signature erases
+  that line for exactly the records most likely to outlive their first enforcing artifact.
+  The tension is real and is not resolved here. A signature over the record's IMMUTABLE
+  FIELDS ONLY (a canonical projection: id, title, tier, date, decision, rationale,
+  reversibility, status) would keep D0045's line intact and still vouch for everything the
+  owner actually read. That is a change to the signing scheme, which is trust-root territory
+  (`governance/tier-c.yaml` door 5) and squarely the owner's; it is raised, not proposed as
+  done.
+  .
+  ITEM 2 — a guard for paths named in MANIFEST.sha256's own comments. D0135 records that the
+  supersession note named `governance/superseded-laws.yaml`, which has never existed. A check
+  that every repo-relative path appearing in the manifest's comment block resolves would have
+  caught it in one line. It belongs in `scripts/check_manifest.py`, which is custody-set, so
+  it waits for a sitting.
+rationale: >-
+  Queued rather than escalated, per BRIEF §9.1 as amended: no Tier-C request halts work — it
+  is queued, work continues elsewhere, and the batch goes to the next boundary sitting. Both
+  items are cosmetic-to-small in effect and neither blocks M2's completion criteria. Recorded
+  now rather than remembered later because the D0110 item is invisible from the outside: the
+  guards are green, the suite is green, and the only symptom is a test name that says the
+  opposite of what the test does.
+reversibility: >-
+  A queue entry. Nothing is changed by it; the sitting decides.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image"
+    strength: documentary
+    detail: >-
+      The node whose name item 1 is about. Documentary: it records the intent to rename and
+      detects nothing — the guard that would detect a stale name does not exist.
+  - type: file
+    target: decisions/0110-nonzero-implies-witnessed-at-construction.yaml.sig
+    strength: documentary
+    detail: >-
+      The signature the rename would invalidate, and which only the owner can replace.
+  - type: file
+    target: MANIFEST.sha256
+    strength: documentary
+    detail: Item 2's subject — the comment block whose paths nothing checks.
+links:
+  - decisions/0045-bindings-are-mutable-decisions-are-not.yaml
+  - decisions/0110-nonzero-implies-witnessed-at-construction.yaml
+  - decisions/0131-the-m2-boundary-sitting-queue.yaml
+  - decisions/0135-the-supersession-note-named-a-registry-that-never-existed.yaml
+  - decisions/0137-the-d0110-alarm-was-read-and-what-replaced-it.yaml

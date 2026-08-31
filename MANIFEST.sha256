@@ -85,12 +85,16 @@ ef0de7d06f893d85861792f5f7be9a4598dff2daf200fab941808d2f2be38962  tests/laws/m2/
 
 # --- supersession notes (D0106 ruling 2; D0128) ------------------------------
 # tests/laws/m1/test_l1_rel.py
-#   PENDING RETIREMENT of ONE node: test_l1_5_mixing_semirings_is_refused_by_name.
+#   RETIRED, ONE node: test_l1_5_mixing_semirings_is_refused_by_name.
 #   Its line 244 builds `Rel(("a",), [({"a": 1}, (2, Why.zero))])` as incidental
 #   filler, and D0110 (owner-authorised) makes an unwitnessed nonzero annotation
 #   unconstructible. The file stays frozen and unedited; the node's claim — mixing
 #   semirings is refused by name — is carried forward verbatim by L2.2 in
-#   tests/laws/m2/test_l2_sources.py. The entry is in governance/superseded-laws.yaml
-#   under `pending` and is promoted to `superseded` by the change that lands D0110;
-#   until then the node still passes and marking it xfail(strict) would be a red gate.
-#   Every other law in that file is unaffected and stands.
+#   tests/laws/m2/test_l2_sources.py. The entry is in governance/laws.yaml, and M2
+#   Session B moved it from `pending` to `superseded` in the same change that landed
+#   D0110 — so conftest.py now marks it xfail(strict=True) and it must FAIL, which it
+#   does. Every other law in that file is unaffected and stands.
+#
+#   (The Session A spelling of this note named `governance/superseded-laws.yaml`, a
+#   file that has never existed; the registry has been `governance/laws.yaml`
+#   throughout. Corrected here rather than left to mislead — D0135.)

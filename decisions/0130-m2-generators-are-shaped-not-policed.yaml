@@ -61,6 +61,13 @@ bindings:
       the docstring carrying the 20-vs-200-vs-25 measurement where the next person to
       widen a budget will read it.
   - type: pytest
+    target: tests/laws/m2/test_l2_differential.py
+    strength: enforced
+    detail: >-
+      Added at M2 Session B (D0045): the shaped generators now drive a law that RUNS, so
+      `source_tables`' named overlap cases are exercised against tannen and not only
+      against the model and its mutants.
+  - type: pytest
     target: "tests/test_law_validation.py::test_every_mutant_dies_by_the_check_that_names_it"
     strength: enforced
     detail: >-

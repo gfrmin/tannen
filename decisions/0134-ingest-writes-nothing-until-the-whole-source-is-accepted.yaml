@@ -1,0 +1,67 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0134
+title: "`ingest` mints every source row and builds the relation BEFORE its first store write, so a refusal anywhere leaves the store untouched"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  `tannen.sources.ingest` runs in two passes. First it builds every `srcrow/1` value and
+  every row's ref, and constructs the `Rel`; only then does it write. A refusal anywhere in
+  the first pass — a source outside the pinned grammar (`RefError`), a row outside the
+  encodable domain (`CanonicalEncodingError`), a ragged row or a bad pair (`RelError`) —
+  therefore leaves the store byte-for-byte as it found it.
+  .
+  docs/specs/m2.md §2 asks for less: "a row outside the encodable domain is refused by name
+  and NOTHING IS WRITTEN FOR IT". A single-pass loop that writes each value as it mints it
+  satisfies that sentence exactly — the refused row is the one that never gets written —
+  and leaves every row before it in the store. This record chooses the stronger property.
+  .
+  WHY THE STRONGER ONE, and it is not tidiness. The store is append-only and write-once
+  (BRIEF §10), so there is no rollback: whatever a half-ingest wrote is there for good. What
+  it leaves behind is a set of minted `srcrow/1` values that no relation cites — atoms
+  addressing documents nobody can reach from any `Why`. That is D0126's "citation to a
+  document that does not exist" read backwards, and it is the one failure mode an
+  append-only store cannot clean up after. The only place to decide is before the first
+  write, so the decision is made there.
+  .
+  It also makes L2.1's assertion true for the reason it looks true. The law checks
+  `list(store.iter_refs()) == []` after a refusal on a one-row source; under a single-pass
+  loop that passes because the source had one row, and would keep passing while silently
+  meaning something weaker for a source with a hundred.
+  .
+  THE COST, STATED: the values and the pairs are both held before anything is written, so
+  a source costs memory proportional to its size twice over. That is a performance property
+  and there is no performance work before M5 (BRIEF §10). If it ever matters, the answer is
+  a streaming ingest that decides its refusal policy again, deliberately — not this loop
+  quietly reordered.
+rationale: >-
+  Tier A: reversible in-repo work, and exactly the "pinning ambiguous operator semantics"
+  BRIEF §9 assigns to the builder. Recorded rather than merely implemented because the spec
+  admits both readings and the weaker one is what an unthinking loop produces, so a later
+  reader finding the two-pass shape deserves to know it was chosen and why.
+reversibility: >-
+  A loop reordering in unfrozen `src/tannen/sources.py`, seconds to undo. What is NOT
+  reversible is any partial ingest a single-pass version would already have written, which
+  is the asymmetry the decision turns on.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/laws/m2/test_l2_sources.py::test_l2_1_a_row_outside_the_encodable_domain_is_refused_by_name"
+    strength: enforced
+    detail: >-
+      Asserts `list(store.iter_refs()) == []` after the M0 door refuses a float-valued row.
+  - type: pytest
+    target: "tests/laws/m2/test_l2_sources.py::test_l2_1_a_source_that_is_not_a_ref_is_refused_by_name"
+    strength: enforced
+    detail: >-
+      The same assertion for a source outside the pinned grammar, which is refused before
+      any row is looked at.
+  - type: file
+    target: src/tannen/sources.py
+    strength: enforced
+    detail: >-
+      `ingest`'s two passes: `minted` and `pairs` are both complete, and `Rel(...)` has
+      accepted them, before the `store.put_value` loop begins.
+links:
+  - decisions/0126-a-source-row-ref-resolves-to-the-row-it-names.yaml
+  - docs/specs/m2.md §2

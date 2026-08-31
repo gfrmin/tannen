@@ -147,15 +147,24 @@ def _key_of(row: dict, keys: tuple[str, ...]) -> tuple[bytes, ...]:
     return tuple(encode_canonical(row[k]) for k in keys)
 
 
-def _add_witness(semiring: Any, slot: str, annotation: Any, witness: Any) -> Any:
-    """Add `witness` into the `Why` component `slot` names. ENRICHES an annotation, never
-    decides whether a row is there — presence is the bag image, a separate question with a
-    separate answer (see `anti_join`)."""
+def _conjoin_witness(semiring: Any, slot: str, annotation: Any, witness: Any) -> Any:
+    """MULTIPLY `witness` into the `Why` component `slot` names, so every support set
+    gains it (docs/specs/m2.md §6, D0132).
+
+    `mul` and not `add`: the claim an absence witness makes is a CONJUNCTION — this row's
+    own derivation held AND the right relation lacked this key at that version. `add`
+    reads as *or*, which leaves the citation standing as an independent derivation of a
+    row it cannot derive, and then §5 predicts a row survives the deletion of the very
+    source row it came from.
+
+    It ENRICHES an annotation and never decides whether a row is there — presence is the
+    bag image, a separate question with a separate answer (see `anti_join`).
+    """
     if slot == "self":
-        return semiring.add(annotation, witness)
+        return semiring.mul(annotation, witness)
     if slot == "left":
-        return (semiring.left.add(annotation[0], witness), annotation[1])
-    return (annotation[0], semiring.right.add(annotation[1], witness))
+        return (semiring.left.mul(annotation[0], witness), annotation[1])
+    return (annotation[0], semiring.right.mul(annotation[1], witness))
 
 
 def _callable(name: str, fn: Any, what: str) -> None:
@@ -289,9 +298,12 @@ def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
     block. That is a real disagreement with the projection `(n, w) -> n`, which IS a
     semiring homomorphism; RG&T buys commutation with it for RA+ only, and anti_join is
     outside RA+. This operator follows `to_bag` and `aggregate` rather than the projection,
-    so all three agree on what "really there" means. Neither `(0, w)` nor `(n, ∅)` is
-    reachable by composing operators over well-formed inputs — see
-    tests/test_provenance_homomorphism.py, which checks that rather than asserting it.
+    so all three agree on what "really there" means. `(0, w)` is not reachable by composing
+    operators over well-formed inputs, and `(n, ∅)` is not reachable AT ALL since D0110
+    — a retained row is a witnessed row (docs/specs/m2.md §3), so the second half of the
+    symmetry is now unconstructible rather than merely unreachable, and the disagreement
+    D0107 weighed dissolves instead of having to be decided. Both are checked in
+    tests/test_provenance_homomorphism.py rather than asserted here.
 
     Every surviving row's `Why`, where there is one, gains a witness naming `right`'s own
     content address — the claim being made ("this key was absent from R") is about the
@@ -300,6 +312,17 @@ def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
     was nothing to check, so nothing to cite, and anti_join is exactly the identity
     (L1.8) — a witness added unconditionally would violate that, since a survivor's
     annotation would then differ from its input's.
+
+    The witness goes in with `mul`, so EVERY support set gains it (docs/specs/m2.md §6,
+    D0132). M1 used `add`, which reads as *or* and leaves the citation standing as an
+    independent derivation of a row it cannot derive: delete the left source row and the
+    absence witness alone still predicts survival, while the left relation is empty and
+    the row is gone. The claim is conjunctive — this row's own derivation held AND the
+    right relation lacked this key at that version — and `_conjoin_witness` is where that
+    is spelled. Because deleting anything the right operand reads MOVES its address, no
+    witness of an old output survives into the new one: an anti-join's rows are
+    recomputed, never inherited, which is what makes M2 §5's theorem exact for a
+    non-monotone operator.
     """
     taken = _take("anti_join", a, b)
     if isinstance(taken, Quarantine):
@@ -334,7 +357,7 @@ def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
         if _key_of(row, keys) in present:
             continue
         if witness is not None:
-            annotation = _add_witness(S, slot, annotation, witness)
+            annotation = _conjoin_witness(S, slot, annotation, witness)
         acc[key] = (row, annotation)
     return _finish("anti_join", left, left.schema, acc, carried, [], operators)
 

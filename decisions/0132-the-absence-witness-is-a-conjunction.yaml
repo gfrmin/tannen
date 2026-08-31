@@ -76,6 +76,13 @@ bindings:
       empty right operand is cited by nothing (so L1.8's identity still holds exactly);
       and deleting a row the right operand reads moves the address, so no old witness
       survives into the new output.
+  - type: pytest
+    target: tests/laws/m2/test_l2_antijoin.py
+    strength: enforced
+    detail: >-
+      Upgraded at M2 Session B (D0045) when the fix landed: L2.6 now RUNS against
+      `ops.anti_join` and passes, and it fails against the `add` it replaced — checked by
+      reverting the change and watching L2.6, L2.3's anti-join half and L2.9 all go red.
   - type: manifest
     target: tests/laws/m2/_model.py
     strength: enforced
@@ -85,11 +92,12 @@ bindings:
       catches the opposite failure of citing nothing at all.
   - type: file
     target: src/tannen/kernel/ops.py
-    strength: documentary
+    strength: enforced
     detail: >-
-      Where the defect is, in `_add_witness` as called from `anti_join`: `add` where the
-      operator's own docstring describes a conjunction. Documentary because Session B
-      makes the change — Session A freezes the law that demands it and does not implement.
+      Where the defect WAS, in `_add_witness` as called from `anti_join`: `add` where the
+      operator's own docstring described a conjunction. M2 Session B made the change — the
+      helper is now `_conjoin_witness` and uses the semiring's `mul` — so this binding is
+      no longer documentary.
 links:
   - decisions/0107-anti-join-why-cannot-decide-an-answer.yaml
   - decisions/0109-anti-join-follow-ups-negatives-expire-at-m3.yaml

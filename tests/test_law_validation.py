@@ -22,6 +22,7 @@ out.
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 import textwrap
@@ -221,19 +222,50 @@ def test_check_laws_refuses_an_entry_that_is_both_active_and_pending(tmp_path: P
 # ------------------------------------------------------------------------ the registry itself
 
 
-def test_the_pending_retirement_is_the_node_the_spec_names() -> None:
+RETIRED_NODE = "tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name"
+
+
+def test_the_retirement_is_the_node_the_spec_names_and_it_is_now_ACTIVE() -> None:
     """docs/specs/m2.md §8 names one node awaiting retirement, and it must be the one the
-    registry holds. Session B promotes it to `superseded` in the same change that lands
-    D0110 — before that change the node still PASSES, and a strict xfail on a passing test
-    is a red gate, which is why the two lists exist."""
+    registry holds.
+
+    Session A froze it under `pending`, because before D0110 landed the node still PASSED
+    and a strict xfail on a passing test is a red gate. Session B landed D0110 and PROMOTED
+    it to `superseded` in the same change — which is the moment the retirement became true
+    rather than a claim about the future — so what this test asserts moved with it. The
+    node, successor and record did not move, and that is what is checked here; the
+    `pending` list is now empty, and an empty `pending` is the normal resting state
+    (an entry sits there only between a Session A freeze and the Session B change that
+    activates it).
+    """
     import yaml
 
     registry = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
-    assert registry["superseded"] == [], "nothing is retired yet at the m2 freeze"
-    pending = registry["pending"]
-    assert len(pending) == 1
-    assert pending[0]["node"] == (
-        "tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name"
+    assert registry["pending"] == [], "nothing is awaiting activation now that D0110 has landed"
+    superseded = registry["superseded"]
+    assert len(superseded) == 1
+    assert superseded[0]["node"] == RETIRED_NODE
+    assert superseded[0]["successor"] == "L2.2"
+    assert superseded[0]["record"] == "D0128"
+
+
+def test_the_retired_node_actually_fails_now() -> None:
+    """The half a registry entry cannot state about itself, and the half that makes strict
+    xfail worth choosing over a skip (D0128): the node must FAIL for the retirement to be
+    honest. Run in a subprocess with `--runxfail`, which reports the underlying outcome
+    instead of the xfail mark, so this reads the node's real verdict rather than the
+    conftest marking it was given.
+
+    Without this, a supersession would be self-certifying — the registry says retired, the
+    conftest says xfail, and nothing anywhere checks that the behaviour changed.
+    """
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "--runxfail", "-q", "-p", "no:cacheprovider", RETIRED_NODE],
+        cwd=REPO_ROOT, capture_output=True, text=True,
+        env={**os.environ, "TANNEN_NO_EVIDENCE": "1"},
     )
-    assert pending[0]["successor"] == "L2.2"
-    assert pending[0]["record"] == "D0128"
+    assert result.returncode != 0, (
+        "the retired node PASSES — D0110's door is open again, and the supersession is "
+        f"claiming a retirement that has not happened:\n{result.stdout}"
+    )
+    assert "RelError" in result.stdout, result.stdout + result.stderr

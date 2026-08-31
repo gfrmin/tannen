@@ -67,6 +67,13 @@ bindings:
       L2.3 in three parts — the positive fragment, the left-deletion case across an
       anti-join, and the aggregate group-key form — and L2.4's antichain/sufficiency/
       minimality triple.
+  - type: pytest
+    target: tests/laws/m2/test_l2_provenance.py
+    strength: enforced
+    detail: >-
+      Upgraded at M2 Session B (D0045): L2.3 and L2.4 now RUN against the shipped package
+      — the iff on the positive fragment, the group-key form for `aggregate`, and the
+      anti-join's left-deletion half — rather than being frozen and skipped.
   - type: manifest
     target: tests/laws/m2/_model.py
     strength: enforced

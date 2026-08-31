@@ -54,9 +54,13 @@ validation:
   declarations_required_from: m2
 
 # --- WHAT HAS BEEN RETIRED --------------------------------------------------------
-superseded: []
-
-pending:
+#
+# PROMOTED from `pending` to `superseded` by the M2 Session B change that lands D0110
+# (docs/specs/m2.md §8): `Rel` now refuses a nonzero annotation with an empty `Why`, so
+# the node below FAILS and the strict xfail is a live assertion rather than a claim about
+# the future. Nothing else about the entry changed — its node, successor, record and
+# reason are the text Session A froze.
+superseded:
   - node: "tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name"
     successor: "L2.2"
     record: "D0128"
@@ -68,3 +72,5 @@ pending:
       unconstructible. The annotation was never what the law was about. The file is frozen
       and sealed, so it cannot be edited; L2.2 restates the claim with a witnessed filler
       and this entry retires the node that cannot survive the new door.
+
+pending: []

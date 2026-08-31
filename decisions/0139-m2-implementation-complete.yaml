@@ -1,0 +1,122 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0139
+title: "M2 implementation complete: nine frozen laws green with zero skips, one M1 node retired forward, no frozen path touched"
+tier: A
+date: "2026-08-31"
+risk_flags: [governance-paths]
+decision: >-
+  Session B is complete under BRIEF §8's frozen-oracle protocol, against docs/specs/m2.md
+  §12's list item by item: `uv run pytest tests/laws/m2` passes with 113 nodes and ZERO
+  skips; `uv run tannen laws report` shows fresh evidence for L2.1-L2.9; `make verify` is
+  green including `lint-imports --config governance/importlinter.toml`, which still proves
+  the kernel imports no IO and no clock — `tannen.sources` is shell, and it is the module a
+  source layer creeping into the kernel would have shown up in;
+  `tests/test_law_validation.py` is green (22 nodes: the model passes every family and all
+  seven mutants die by the check that names them); and the retired M1 node reports XFAIL,
+  never XPASS.
+  .
+  THREE CHANGES TO SHIPPED CODE, and nothing else was needed.
+  .
+  (1) `src/tannen/sources.py`, new — `SOURCE_ROW_TAG`, `source_row_value`,
+  `source_row_ref`, `ingest`, `Citation`, `lineage`. The effectful shell, outside
+  `tannen.kernel` by construction. It supplies what M1 lacked and what made BRIEF §6's L5
+  unstatable rather than merely unimplemented: a way to MINT a ref from data. Its two open
+  questions are D0134 (ingest is atomic) and D0136 (lineage's totality boundary).
+  .
+  (2) `Rel._init` gained `_refuse_unwitnessed` — D0110, owner-signed. Located structurally
+  by `semiring.why_slot`, beside the existing zero-annotation drop, so it covers the public
+  constructor, `_from_pairs`, `from_value` and every operator's output at once, and leaves
+  `Z` and `B` untouched.
+  .
+  (3) `ops.anti_join`'s `_add_witness` became `_conjoin_witness` and uses `mul` — D0132.
+  .
+  EACH WAS SHOWN TO BE LOAD-BEARING BY REVERTING IT AND WATCHING THE LAWS GO RED, not by
+  observing that they were green with it. Reverting (3) to `add`: 17 failures across the three
+  law files that touch `anti_join` — 8 of L2.6's 9 nodes, all 3 of L2.3's anti-join nodes,
+  and all 6 of L2.9's. The 8-of-9 is exactly what Session A measured on its throwaway
+  pre-freeze prototype, from the other side of the freeze and with neither number visible
+  to the other. Reverting (2): `DID NOT RAISE RelError` at
+  test_l2_sources.py:126, two failures, both L2.2. Green as a starting condition proves
+  nothing; the M2 laws were skipping before this session and would print the same "N
+  skipped" whether they were right or nonsense (D0094), which is why the check was done
+  from the failing side.
+  .
+  THE SUPERSESSION WAS ACTIVATED, which is the mechanism's first real use.
+  `governance/laws.yaml` moved
+  `tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name` from
+  `pending` to `superseded` in the same change that landed D0110, exactly as D0128 planned:
+  before that change the node passed, and a strict xfail on a passing test is a red gate.
+  It now reports XFAIL under `conftest.py`'s `xfail(strict=True)`, L1.5's three healthy
+  nodes still attest evidence (the plugin excludes the retired node from both the run and
+  the expected set), and MANIFEST.sha256's notes block was updated — its Session A spelling
+  named a registry file that has never existed (D0135).
+  .
+  WHAT WAS NOT DONE, and is not a gap. The `unvalidated` ratchet metric stays where D0129
+  and D0131 put it: `scripts/gen_projections.py`, `scripts/check_decisions.py`, the Makefile
+  and the CI workflow are all custody-set, so wiring `check_laws.py` into `make verify`
+  waits for the M2 boundary sitting. `check_laws.py` runs today from
+  `tests/test_law_validation.py` and reports "7 frozen law file(s) declare their validation,
+  16 exempt" — the residue exists, is exact, and is written down. Two items joined the
+  sitting queue during implementation (D0138).
+  .
+  THE GATE, AS IT RAN. `make verify`: 712 passed, 2 skipped, 1 xfailed; 36 law(s) carry
+  fresh passing evidence (L0.1-L0.10, L1.1-L1.17, L2.1-L2.9); 139 records valid, 72 pytest
+  bindings green, 0 unenforced, 13 Tier-C doors owner-signed and 1 queued; three import
+  contracts kept; custody floor intact with every guard failing its poison. The two skips
+  are both pre-existing and both recorded: the S-pending conformance vector (no owner has
+  published one, and writing it here would be Tier C) and D0124's empty parameter set.
+  The one xfail is the retired node.
+  .
+  THE KILL CRITERION WAS NOT TRIGGERED. §12 names a failure of L2.3 in the IFF direction as
+  the thing that stops everything; L2.3 passed on its first run against the shipped package,
+  in both directions, on all twelve positive shapes, all three anti-join shapes and both
+  aggregate shapes.
+rationale: >-
+  Recorded so the digest's laws section and the M2 boundary sitting have one record to point
+  at for "the milestone is done", and so that the two facts a green suite cannot show —
+  that each change was verified from its failing side, and that the kill criterion never
+  fired — are written down rather than inferred.
+reversibility: >-
+  A statement of state; nothing to reverse. The tag that will attest it (m2-close) is the
+  owner's, at the sitting (D0049).
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/laws/m2/test_l2_provenance.py
+    strength: enforced
+    detail: >-
+      L2.3 and L2.4 — the deletion theorem in both directions and the minimal-witness
+      claims. §12's kill criterion lives here.
+  - type: pytest
+    target: tests/laws/m2/test_l2_differential.py
+    strength: enforced
+    detail: >-
+      L2.9, the differential against the frozen model: green only if every operator agrees
+      with `_model.py` annotation for annotation on every catalogue shape.
+  - type: pytest
+    target: tests/laws/m2/test_l2_executor.py
+    strength: enforced
+    detail: >-
+      L2.8 — the theorem carried through the store, a registered descriptor and the trace,
+      which is the only form in which a user meets it.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_every_mutant_dies_by_the_check_that_names_it"
+    strength: enforced
+    detail: >-
+      The half that would catch a law which cannot fail, run at every commit including the
+      freeze commit.
+  - type: manifest
+    target: docs/specs/m2.md
+    strength: enforced
+    detail: The spec whose §12 states the completion criteria this record claims.
+links:
+  - decisions/0125-m2-is-provenance-and-what-that-excludes.yaml
+  - decisions/0110-nonzero-implies-witnessed-at-construction.yaml
+  - decisions/0128-supersession-mechanised-and-its-first-use.yaml
+  - decisions/0129-the-validation-ratchet-reachable-half.yaml
+  - decisions/0132-the-absence-witness-is-a-conjunction.yaml
+  - decisions/0134-ingest-writes-nothing-until-the-whole-source-is-accepted.yaml
+  - decisions/0135-the-supersession-note-named-a-registry-that-never-existed.yaml
+  - decisions/0136-lineage-classifies-what-it-cannot-resolve-and-raises-on-tampering.yaml
+  - decisions/0137-the-d0110-alarm-was-read-and-what-replaced-it.yaml
+  - decisions/0138-two-more-items-for-the-m2-boundary-sitting.yaml

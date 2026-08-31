@@ -165,15 +165,20 @@ bindings:
       passes after. Run alongside the other five operators' homomorphism checks in the
       same file so a future change to any operator gets the same standing detector.
   - type: pytest
-    target: tests/test_provenance_homomorphism.py::test_an_empty_why_has_no_bag_image_so_it_cannot_block
+    target: tests/test_provenance_homomorphism.py::test_a_zero_count_with_support_is_retained_and_still_cannot_block
     strength: enforced
     detail: >-
       The contested case, pinned as specified behaviour rather than left in the gap
-      between two generators: (3, 0_Why) is non-zero and retained (L1.4) but has no bag
-      image (L1.2 as amended by D0093), so it does not block under ZxWhy while blocking
-      under Z. Alongside test_the_bag_image_is_not_a_homomorphism, which is why the
-      projection cannot be used as the yardstick here, and the two closure tests, which
-      are what earn restricting the non-RA+ laws to the reachable annotations.
+      between two generators. Retargeted at M2 Session B (D0045, D0137): this binding named
+      test_an_empty_why_has_no_bag_image_so_it_cannot_block, which made the point over
+      (3, 0_Why) — an annotation D0110 now refuses at construction, so the node could not
+      survive. The claim it carried survives over the OTHER member of the L1.2/D0093 pair,
+      which D0110 does not touch: (0, {{r}}) is non-zero and retained (L1.4) but has no bag
+      image, so it does not block under ZxWhy — and here it does not block under Z either,
+      because pi1 sends it to Z's own zero. Alongside test_the_bag_image_is_not_a_homomorphism,
+      which is why the projection cannot be used as the yardstick, and the closure test,
+      which is what earned restricting the non-RA+ laws to the reachable annotations before
+      the restriction became the whole domain.
   - type: file
     target: src/tannen/kernel/ops.py
     strength: enforced

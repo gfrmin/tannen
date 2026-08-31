@@ -1,0 +1,113 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0137
+title: "The D0110 alarm was read: two unfrozen test files asserted behaviour over values that no longer exist, and here is what replaced them"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  D0110 said one of its consequences was an alarm — "the test that should be read the day an
+  ingest path lands" — and docs/specs/m2.md §3 says "this is that day". Two unfrozen test
+  files had to change, and what each was replaced WITH is the part worth recording, because
+  deleting a test is the cheapest way to make a suite green.
+  .
+  ONE. `tests/test_provenance_homomorphism.py`. Its `REACHABLE` / `ANY_ANNOTATION` split
+  existed to keep unwitnessed annotations away from the three tests (distinct, aggregate,
+  anti_join) that could not survive them, and D0110 leaves no unwitnessed annotation for a
+  `Rel` to hold, so the split collapses to one generator. Two tests lost their premise
+  outright:
+  .
+  `test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image` — the alarm itself. It
+  fed `anti_join` a `(2, 0_Why)` left row and asserted that the absence witness handed the
+  row a bag image it did not have going in. READ, and INVERTED IN PLACE: its input is now
+  refused at construction, so the node builds the same scenario and asserts the refusal.
+  It also went off for a second reason nobody had noticed, which D0132 records — under the
+  conjunctive witness it would not have held anyway.
+  .
+  ITS NAME IS NOW WRONG AND IS KEPT ANYWAY, which is the part worth recording. D0110 is
+  Tier C and OWNER-SIGNED, and `scripts/check_decisions.py` says why that matters in its own
+  comment: "the signature is over the record's whole bytes (D0063 ruling 2), which is why a
+  later binding change costs a re-signature". D0110's first binding is this exact node id.
+  Deleting or renaming it would leave a signed record binding something that does not
+  collect — a red guard — and retargeting the binding is an edit to signed bytes, which is
+  the owner's act and not the builder's. Discovered the direct way: the retarget was written,
+  `ssh-keygen -Y verify` was run against it, and it returned "incorrect signature"; the file
+  was restored and every other signed record checked untouched. The rename and the
+  re-signature are queued to the M2 boundary sitting (D0138); until then the docstring
+  carries what the name cannot.
+  .
+  The node also earns the file's single generator, which is why it did not simply become a
+  one-line refusal check. A generator that quietly cannot reach a case is indistinguishable
+  from a case that cannot exist, and this repo has already been bitten by exactly that
+  (D0114: a law whose generator could not draw the value it forbade). L2.2 asserts the same
+  refusal in the frozen corpus; the duplicate is deliberate and local to the generator that
+  depends on it.
+  .
+  `test_an_empty_why_has_no_bag_image_so_it_cannot_block` — pinned the anti_join/pi1
+  disagreement using a `(3, 0_Why)` right row. Also unconstructible, and bound by D0107,
+  which is Tier A and unsigned, so its binding COULD be retargeted (D0045). Replaced by
+  `test_a_zero_count_with_support_is_retained_and_still_cannot_block`, which makes the same
+  point over `(0, w)` — the half of the L1.2/D0093 pair D0110 does NOT touch, still
+  retained, still with no bag image, still not blocking. D0107's binding and its `detail`
+  both moved with it.
+  .
+  TWO. `tests/test_law_validation.py::test_the_pending_retirement_is_the_node_the_spec_names`
+  asserted `registry["superseded"] == []` — "nothing is retired yet at the m2 freeze". True
+  at the freeze; false the moment Session B promoted the entry, which is the change D0128
+  planned. Renamed to `test_the_retirement_is_the_node_the_spec_names_and_it_is_now_ACTIVE`
+  and rewritten to assert the promoted state, with the node, successor and record checked
+  unchanged — those are what must not move, and the list an entry sits in is what must.
+  D0128's binding to the old node id was retargeted under D0045 (bindings attach to the
+  present tense; the decision text is history and is untouched).
+  .
+  A SECOND TEST WAS ADDED THERE TOO: `test_the_retired_node_actually_fails_now` runs the
+  retired node in a subprocess under `--runxfail` and requires it to fail with a `RelError`.
+  Without it a supersession is self-certifying — the registry says retired, `conftest.py`
+  marks it xfail, `check_laws.py` validates the entry's SHAPE, and nothing anywhere checks
+  that the behaviour actually changed. Strict xfail catches a node that starts passing again
+  during a normal run; this catches the case where it never failed in the first place.
+rationale: >-
+  Recorded because every change here makes a suite smaller or greener, and that is precisely
+  the shape of change that should not be invisible. The rule applied throughout: a test whose
+  PREMISE became unconstructible keeps its CLAIM only if the claim can be re-stated over a
+  value that still exists — otherwise the node is turned into an assertion that the premise
+  is gone, which is what "the alarm was read" actually means; a test whose premise merely
+  moved is rewritten to the new premise; and wherever a generator narrowed, something now
+  asserts that the narrowing was forced rather than convenient. Nothing was deleted to make
+  a count go down.
+reversibility: >-
+  Ordinary unfrozen test files; every change is reversible by editing them. What is not
+  reversible is the door D0110 closed, which is why the tests had to move rather than the
+  code.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image"
+    strength: enforced
+    detail: >-
+      The alarm, inverted in place and keeping its (now stale) name because D0110 is
+      owner-signed and binds this node id. What earns the single generator: the values it
+      stopped drawing are refused, checked here rather than assumed.
+  - type: pytest
+    target: "tests/test_provenance_homomorphism.py::test_a_zero_count_with_support_is_retained_and_still_cannot_block"
+    strength: enforced
+    detail: >-
+      The surviving half of the L1.2/D0093 pair, and the one annotation anti_join must still
+      not let block a left row.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_the_retired_node_actually_fails_now"
+    strength: enforced
+    detail: >-
+      The check that stops a supersession being self-certifying: the retired node is run
+      under --runxfail and must fail with RelError.
+  - type: file
+    target: tests/test_provenance_homomorphism.py
+    strength: enforced
+    detail: >-
+      Its module docstring states which tests were removed, why their premises are gone, and
+      what carries their claims forward.
+links:
+  - decisions/0110-nonzero-implies-witnessed-at-construction.yaml
+  - decisions/0114-l1-9-is-a-law-that-cannot-fail.yaml
+  - decisions/0128-supersession-mechanised-and-its-first-use.yaml
+  - decisions/0132-the-absence-witness-is-a-conjunction.yaml
+  - decisions/0045-bindings-are-mutable-decisions-are-not.yaml

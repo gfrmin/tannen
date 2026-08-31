@@ -1,0 +1,57 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0135
+title: "MANIFEST.sha256's supersession note pointed readers at `governance/superseded-laws.yaml`, a file that has never existed"
+tier: A
+date: "2026-08-31"
+risk_flags: [governance-paths]
+decision: >-
+  DEFECT in a Session A artifact, found while promoting the entry it describes. The
+  supersession-notes block appended to `MANIFEST.sha256` at `m2-laws-freeze` told a reader
+  that "the entry is in governance/superseded-laws.yaml under `pending`". There is no such
+  file and there never was: the registry is `governance/laws.yaml`, which is what
+  `conftest.py` reads, what `scripts/check_laws.py` validates, and what the file's own
+  header calls itself. Corrected in place, with the correction named, in the same change
+  that promoted the entry.
+  .
+  WHY IT WAS CORRECTED RATHER THAN SUPERSEDED. `MANIFEST.sha256` is not a frozen path — it
+  is the instrument that freezes the others, and it carries no row for itself. The
+  supersession-notes block is a comment inside it, addressed to a human reader, and CLAUDE.md
+  requires this block to be kept current as milestones retire nodes. Editing it is the
+  normal act; the only thing worth recording is that a Session A artifact said something
+  false and this is where it stopped.
+  .
+  WHY IT MATTERS AT ALL, given no guard reads the comment. That is exactly the point: the
+  notes block is the ONLY place a human is directed to when they want to know why a frozen
+  law file has a node that is expected to fail, and it named a file they would not find.
+  Nothing would have gone red. The failure mode of a wrong pointer in a comment is a person
+  concluding the mechanism does not exist.
+  .
+  NO GUARD IS PROPOSED FOR IT HERE. A check that every path mentioned in the manifest's
+  comments resolves is a plausible thing to build and would live in `scripts/check_manifest.py`,
+  which is custody-set — so it is queued to the M2 boundary sitting rather than written now
+  (D0131's shape). What is delivered is the correction.
+rationale: >-
+  Recorded rather than silently fixed because BRIEF §9's discipline is that the record of a
+  mistake is part of the record, and because this is the second Session A artifact defect of
+  this milestone found by simply USING the thing the artifact describes (D0133 was the
+  first). Two of two suggests the pattern is worth naming: the parts of a freeze nobody
+  executes are the parts that are wrong, and prose in a comment is never executed.
+reversibility: >-
+  A comment correction in an unfrozen file. Trivially reversible and there is no reason to.
+status: accepted
+bindings:
+  - type: file
+    target: MANIFEST.sha256
+    strength: enforced
+    detail: >-
+      The supersession-notes block now names `governance/laws.yaml`, records that the entry
+      was promoted from `pending` to `superseded` by this session, and states the old
+      spelling so a reader who saw it knows what happened.
+  - type: file
+    target: governance/laws.yaml
+    strength: enforced
+    detail: The registry itself — the file the note should have named all along.
+links:
+  - decisions/0128-supersession-mechanised-and-its-first-use.yaml
+  - decisions/0131-the-m2-boundary-sitting-queue.yaml
+  - decisions/0133-d0129s-transcript-labels-a-three-file-run-as-one.yaml

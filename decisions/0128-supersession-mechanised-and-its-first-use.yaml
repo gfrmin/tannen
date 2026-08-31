@@ -101,7 +101,7 @@ bindings:
       The two-list invariant. An entry in both would mean conftest marking a node xfail
       while the registry still says the behaviour has not landed.
   - type: pytest
-    target: "tests/test_law_validation.py::test_the_pending_retirement_is_the_node_the_spec_names"
+    target: "tests/test_law_validation.py::test_the_retirement_is_the_node_the_spec_names_and_it_is_now_ACTIVE"
     strength: enforced
     detail: >-
       Ties the registry to docs/specs/m2.md §8: one pending entry, that node, successor

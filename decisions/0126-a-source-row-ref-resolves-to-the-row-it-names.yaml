@@ -58,6 +58,13 @@ bindings:
       the store to its source and row, distinguishes rows from rows and sources from
       sources, merges identical rows into one witness, is idempotent, and writes nothing
       for a row it refuses.
+  - type: pytest
+    target: tests/laws/m2/test_l2_sources.py
+    strength: enforced
+    detail: >-
+      Upgraded at M1's precedent (D0045) when the law went green at M2 Session B: the
+      manifest row proves L2.1 is frozen, this node proves it runs and passes against
+      `tannen.sources.ingest`.
   - type: manifest
     target: docs/specs/m2.md
     strength: enforced

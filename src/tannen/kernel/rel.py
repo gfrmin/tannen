@@ -8,6 +8,10 @@ annotations in a commutative semiring S, with finite support.
   Decimal), so what comes back out of a Rel is what its identity was computed over.
 - Zero annotations are absent, not stored — dropped after merging, and "zero" means the
   semiring's `zero` and nothing else: under ℤ × Why, `(0, {{r}})` is retained (§3).
+- A RETAINED ROW IS A WITNESSED ROW (docs/specs/m2.md §3, D0110): once the zeros are gone,
+  no surviving row may carry an empty `Why` under a semiring that has one. `(n, ∅)` claims
+  copies of a row it has no derivation for, which is a contradiction in a provenance
+  semiring rather than a value. `Z` and `B`, which make no provenance claim, are untouched.
 - Iteration is in canonical-byte order. Every operator and every canonical form depends on
   that order and on nothing hash-seeded (L1.15).
 - `annotations=None` means the default `ZxWhy`; any other choice requires
@@ -21,7 +25,7 @@ from typing import Any
 
 from tannen.kernel.encoding import content_address, decode_canonical, encode_canonical
 from tannen.kernel.outcome import OperatorError
-from tannen.kernel.semiring import SEMIRINGS, ZxWhy, is_bag_semiring
+from tannen.kernel.semiring import SEMIRINGS, ZxWhy, is_bag_semiring, why_slot
 
 __all__ = ["DEFAULT_ANNOTATIONS", "REL_TAG", "Rel", "RelError"]
 
@@ -86,6 +90,34 @@ def _merge(columns: tuple[str, ...], semiring: Any, rows: Iterable[Any]) -> dict
     return merged
 
 
+def _refuse_unwitnessed(semiring: Any, entries: tuple[tuple[bytes, dict, Any], ...]) -> None:
+    """A retained row is a witnessed row (docs/specs/m2.md §3, D0110).
+
+    An annotation that is not the semiring's zero and carries an EMPTY `Why` claims copies
+    of a row it has no derivation for — "n copies of this, and there is no derivation of
+    it" — which is a contradiction in a provenance semiring, not a value. Zero annotations
+    have already been dropped when this runs, so the rule needs no second clause: what is
+    left with an empty `Why` necessarily has a nonzero count.
+
+    Located structurally by `semiring.why_slot` (D0109), so `Z` and `B` — which make no
+    provenance claim — are untouched. `(0, {{r}})` is still retained: it is witnessed and
+    it is not the product zero, and having no bag image is L1.2 as amended by D0093.
+    """
+    slot = why_slot(semiring)
+    if slot is None:
+        return
+    for _, row, annotation in entries:
+        why = annotation if slot == "self" else annotation[0] if slot == "left" else annotation[1]
+        if not why:
+            raise RelError(
+                f"unwitnessed annotation {annotation!r} for row {row!r}: nonzero with an empty "
+                f"Why claims copies of a row {semiring.name} has no derivation for. A retained "
+                "row is a witnessed row (docs/specs/m2.md §3, D0110); mint the row's ref with "
+                "tannen.sources.ingest, or annotate with a semiring that makes no provenance "
+                "claim and say why (BRIEF §5.5)"
+            )
+
+
 class Rel:
     __slots__ = ("_schema", "_annotations", "_reason", "_entries", "_index", "_address")
 
@@ -120,6 +152,7 @@ class Rel:
             for key, (row, annotation) in sorted(merged.items())
             if annotation != semiring.zero
         )
+        _refuse_unwitnessed(semiring, self._entries)
         self._index = {key: i for i, (key, _, _) in enumerate(self._entries)}
         self._address: str | None = None
 
