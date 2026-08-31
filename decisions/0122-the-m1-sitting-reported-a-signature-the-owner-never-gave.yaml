@@ -1,0 +1,160 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0122
+title: "Five defects the M1 boundary sitting found by being run, one of which printed 'signed:' over a signature the owner declined"
+tier: A
+date: "2026-08-31"
+risk_flags: [governance-paths]
+decision: >-
+  The M1 boundary sitting ran on 2026-08-30/31 and closed green. It also failed twice in
+  ways two rehearsals and a full pre-flight did not surface, and found three more defects
+  that did not stop it. All five are recorded here because the next driver inherits them,
+  and because two were fixed mid-sitting — inside the window before step 7 re-signed the
+  custody set, which is the only window in which scripts/boundary_sitting.sh can be
+  edited at all.
+  .
+  (1) FIXED. Step 5's binding check promised "up to a minute" and took about ten, with
+  its output swallowed by a `$( )` capture so the terminal printed nothing at all. "Up to
+  a minute" was a true M0 measurement; at M1 the same check re-runs 54 pytest bindings.
+  The owner read a still terminal as a hung one and killed the driver — exit 130 at
+  22:31:58, the first run's death. This is D0069's failure class exactly (the owner
+  cannot tell waiting from hung), one step further in, and D0069's own cure had already
+  been applied to step 0's gate and not to this. Fixed the same way: an honest ETA that
+  says ten minutes and says the output arrives in bursts, and `tee` into a log the
+  existing grep still reads. The rehearsal harness's silence rule tolerates it because a
+  `[waiting]` line arms until the next step header.
+  .
+  (2) FIXED, AND THE SHARP ONE. `sign_owner` announced a signature that was never taken.
+  `ssh-keygen -Y sign` finding an existing `<file>.sig` asks "Overwrite (y/n)?" and, on
+  any answer but y, EXITS 0 WITHOUT WRITING. The `|| die` therefore never fired, the
+  driver printed "signed: governance/custody.sha256.sig (namespace tannen-custody)", and
+  the custodian — checking the bytes rather than the claim — went red one line later
+  against a signature dated five days earlier. The sitting then stopped itself with
+  "custodian RED with the custody set signed — hand back to the builder; sign nothing
+  further", which is the floor working: the driver lied and the floor caught it. M0 never
+  met this because no path it signed had a prior signature; step 4c never meets it
+  because it `rm -f`s the old .sig first. Fixed by making `sign_owner` do the same, with
+  the reasoning that every call site reaches it only when the existing signature is
+  already known invalid.
+  .
+  (3) NOT FIXED — RECORDED, AND IT LEFT THE CORPUS INDEX WRONG. Step 5b's README row for
+  `check-decisions-file-skip` was never offered. Its idempotence guard is
+  `! grep -q 'check-decisions-file-skip' tests/poison/README.md`, and step 5 — earlier in
+  the same sitting — appends prose that NAMES the fixture in the course of explaining
+  that its row comes at step 5b. The explanation satisfies the grep, so the guard reads
+  "already added" and the prompt never renders. The sentence stating why the row is
+  absent is the thing that guarantees it stays absent. Consequence in the tree today:
+  tests/poison/check-decisions-file-skip is installed, custody-set, and exercised by both
+  the custodian and (as of D0123) pytest, but has no row in the corpus index that D0059
+  binds as `enforced` with the words "one row per finding that became a fixture". No gate
+  is red — the index is content, and README.md's own manifest row is intact — so this is
+  an accuracy defect, not a breakage. It is not fixed here because tests/poison/ is
+  author-key territory (CLAUDE.md hard rules, BRIEF §9.1) and README.md is in the
+  custody set the owner signed hours ago; the row and the guard both queue to the M2
+  sitting. The rehearsals did not catch it because they reproduced it faithfully — step 5
+  writes the prose in a clone too — and nothing asserted the row's presence.
+  .
+  (4) NOT FIXED — RECORDED. Step 4b's failure advice is "apply the two blocks in any
+  editor and re-run; this step returns", but the re-run takes the skip branch, which
+  never calls `regen_manifest_row BRIEF.md`. A BRIEF.md amended out-of-band therefore
+  reaches step 9's gate with a stale manifest row and dies there, one full sitting later
+  than the mistake. Closed by hand this time (see below), not in code.
+  .
+  (5) NOT FIXED — RECORDED. Two smaller ones. Step 0's offer to run `make verify` is a
+  trap on a RESUMED sitting: `unexpected_failures()` tolerates custody-set failures plus
+  `custody drift: scripts/boundary_sitting.sh` by literal name, so a sitting resumed
+  mid-flight — with legitimate drift on BRIEF.md, CLAUDE.md and tests/poison/README.md,
+  all of it the sitting's own work — dies at its own first question. And the closing note
+  says "open M1 Session A in a fresh session" with M1 hardcoded, where every neighbouring
+  line interpolates `$MILESTONE`; after m1-close the next session is M2's.
+  .
+  ONE DEVIATION FROM THE PROTOCOL, STATED RATHER THAN BURIED. Step 4b asks the owner to
+  amend BRIEF.md — a frozen, custody-set, owner-text file — in their own editor. In the
+  first run that editor session exited without saving and the driver correctly reported
+  "BRIEF.md unchanged — the amendment has NOT landed". The owner then instructed the
+  builder to apply it by script ("step 2 is too manual, i accept your recommendations"),
+  and it was applied verbatim from the two fenced blocks in
+  docs/proposals/2026-08-25-boundary-sitting/brief-9.1-amendment.md, with BRIEF.md's
+  manifest row regenerated by hand to cover defect (4). What makes this a deviation and
+  not a violation: the owner was shown both blocks in full at step 4b before the editor
+  opened (first-run transcript, the amendment paged whole), the instruction to apply them
+  was explicit, and at step 7 the owner signed governance/custody.sha256 — which carries
+  BRIEF.md's hash — so the owner's own signature covers the amended bytes. The
+  authorisation was affirmative and the signature is over what was shown, which is
+  D0119's test. It is recorded because a builder editing a frozen owner-text path is
+  exactly the act that should never be inferable from silence.
+rationale: >-
+  Filed as one record rather than five because they share a cause worth naming: every one
+  of them is a step that reports success it did not achieve, or asks a question it has
+  already made unanswerable. (2) prints "signed:" over no signature. (3) skips a step by
+  matching its own explanation. (4) advertises a recovery path that leaves a stale hash.
+  (5) offers a gate that its own tolerance list cannot pass. Only (1) is a different
+  shape — a true statement gone stale — and it is the one that killed the run. This is
+  the class docs/proposals/2026-08-29-a-check-that-cannot-fail.md catalogues, arriving in
+  the driver rather than in a guard, and (3) is its tenth instance and second inside a
+  check rather than in the code a check is aimed at (D0120 was the first).
+  .
+  Why only two are fixed. scripts/boundary_sitting.sh is in the custody set the owner
+  signed at step 7. Editing it now would break `sha256sum -c governance/custody.sha256`,
+  and D0070 already established what that costs: check_decisions and the custodian read a
+  custody set that does not verify as a red floor with NO builder-side repair, until a
+  human with a key is next in the room — which at boundary-sitting cadence is a milestone
+  away. (1) and (2) were fixed inside the sitting, before step 7 re-signed, and are
+  therefore covered by that signature. (3), (4) and (5) are described precisely enough
+  that the M2 sitting's driver can carry the fixes from the start, which is where they
+  belong: the M1 driver is now a historical artifact of a sitting that happened, and
+  editing it would make the record disagree with the run.
+  .
+  The honest summary of the sitting's own verdict: it closed green, and it closed green
+  partly because it stopped itself when its driver lied to it. A sitting that had trusted
+  `sign_owner`'s "signed:" line would have proceeded to sign eight Tier-C records, mint
+  m1-close and commit, all resting on a custody signature that did not cover the custody
+  set. The floor is what made the difference, not the driver, which is the argument
+  D0061 made for having a floor at all.
+reversibility: >-
+  The two applied fixes are four lines and a comment in a shell script; reverting them
+  reinstates a driver that hangs silently and one that misreports signatures, so the
+  reversal is available and would not be wanted. The three recorded defects change
+  nothing yet and can be declined at the M2 sitting simply by not carrying them forward.
+  The BRIEF.md deviation is not reversible in the ordinary sense and is not meant to be —
+  the text is owner-authorised, owner-signed via custody, and frozen.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      Carries both applied fixes: step 5's honest ten-minute ETA with `tee` streaming into
+      the log its grep reads, and `sign_owner`'s `rm -f -- "$1.sig"` before signing, each
+      with the failure that produced it named in a comment. Step 0 copies this file over
+      scripts/boundary_sitting.sh, so it is what runs; the two are byte-identical.
+  - type: manifest
+    target: BRIEF.md
+    strength: enforced
+    detail: >-
+      The §9.1 amendment applied under the deviation described above. The manifest row was
+      regenerated when the amendment landed, which is the half step 4b's skip branch omits
+      (defect 4); check_manifest going green on BRIEF.md is what proves the row was not
+      left stale, and governance/custody.sha256 carries the same hash under the owner's
+      step-7 signature.
+  - type: file
+    target: tests/poison/README.md
+    strength: documentary
+    detail: >-
+      The corpus index defect (3) left incomplete: no row for check-decisions-file-skip.
+      Documentary, and it must stay documentary until the owner adds the row — claiming
+      otherwise is the same false-report shape this record is about. The row text is
+      ready at docs/proposals/2026-08-27-m1-boundary-sitting/poison-readme-row-file-skip.md.
+  - type: file
+    target: docs/proposals/2026-08-29-a-check-that-cannot-fail.md
+    strength: documentary
+    detail: >-
+      Defect (3) is the tenth instance of that proposal's class and the second found
+      inside a check rather than in the code a check is aimed at.
+links:
+  - decisions/0069-the-sitting-said-nothing-while-it-worked.yaml
+  - decisions/0070-post-sitting-binding-and-poison-followups.yaml
+  - decisions/0119-a-signature-over-bytes-the-signer-was-not-shown.yaml
+  - decisions/0120-the-rehearsal-rehearsed-the-wrong-milestone.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0061-custody-set-not-signed-manifest.yaml
+  - decisions/0103-rt-m1-05-file-binding-skip-detection.yaml

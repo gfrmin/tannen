@@ -1,0 +1,130 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0123
+title: "The M1 sitting's builder follow-ups: both new fixtures reach pytest, and RT-M1-01/RT-M1-05 get the enforced bindings they were promised"
+tier: A
+date: "2026-08-31"
+risk_flags: [governance-paths]
+decision: >-
+  The two builder follow-ups the M1 boundary sitting named, done — the M1 analogue of
+  D0070, and deliberately shaped the same way.
+  .
+  (1) THE POISON MATRIX REACHES BOTH NEW FIXTURES FROM PYTEST. The sitting installed two
+  fixtures (tests/poison/oracle-shadow for RT-M1-01, tests/poison/check-decisions-file-skip
+  for RT-M1-05) and wired both into scripts/custodian.sh. Neither was reachable from `uv
+  run pytest`, which is the command CI and a builder actually run — the same gap D0070
+  closed for M0's seven. `check_decisions_file_skip` joins the POISON table as an eleventh
+  row, named exactly as the custodian names it. `oracle-shadow` gets a dedicated test
+  instead, because every difference from the table's runner is load-bearing: no `-I -P`
+  (the attack under test is a module reaching sys.modules through PYTHONPATH, which
+  isolated mode ignores outright — under `-I` the fixture's own setup could never run and
+  the guard would report green having never been challenged), `-B` (it imports from inside
+  a sealed directory an unmanifested __pycache__ would break), and it is a pytest run
+  rather than a check_*.py run, so there is no --root. A shared runner would have erased
+  all three and proved the wrong thing works.
+  .
+  ONE CHANGE APPLIED TO EVERY ROW RATHER THAN THE ONE THAT NEEDS IT. The table's runner now
+  sets PYTHONDONTWRITEBYTECODE=1 in the child environment. The variable, not the `-B` flag,
+  because check_decisions.py resolves a pytest binding by spawning pytest as a SUBPROCESS:
+  `-B` sets sys.dont_write_bytecode on the process it is given to and does not survive that
+  fork, while run_pytest's `env={**os.environ, ...}` forwards the variable. This is the
+  custodian's own reasoning, confirmed live at the sitting. It is applied to all eleven
+  rows because the hazard belongs to any fixture tree that gets imported, not to one guard.
+  .
+  BOTH NEW TESTS WERE WATCHED FAILING BEFORE THEY WERE BELIEVED (D0116's rule, and the
+  standard this repo now holds itself to). check_decisions_file_skip: a scratch copy of the
+  fixture with its `pytest.mark.skip` decorator removed stops emitting "unexplained skip"
+  entirely — the run still exits non-zero for an unrelated missing-projection reason, which
+  is precisely why the test asserts the MARKER and not merely the exit code, and why
+  asserting the exit code alone would have been the weaker check it looks like.
+  oracle-shadow: a scratch copy whose bootstrap plugin no longer installs the decoy — the
+  way neglect would rot it — makes the L1.16 run pass and exit 0, so the test's
+  `returncode != 0` assertion fires. Neither fixture's own tree was touched to prove this;
+  tests/poison/ is author-key territory and is in the custody set.
+  .
+  (2) TWO RECORDS GAIN THE ENFORCED BINDINGS THEY NAMED IN ADVANCE. D0102 (RT-M1-01) and
+  D0103 (RT-M1-05) each described a fixture the owner would install at a sitting, and each
+  carried a documentary binding to the drafted artifact in the meantime. Both artifacts now
+  exist in the tree, so both records get the pytest binding the fixture makes resolvable —
+  D0045's rule exactly: what was decided is history and immutable, what enforces it is
+  present tense, and attaching a binding when the artifact finally exists records history
+  rather than rewriting it. D0103's documentary binding on the drafted patch is KEPT rather
+  than replaced: the patch file still exists, the sitting applied it, and the binding is a
+  true statement about where the applied change came from.
+  .
+  WHAT IS DELIBERATELY NOT UPGRADED. Every one of the thirteen accepted Tier-C records is
+  now owner-signed, and D0070's constraint binds: the signature covers the record's whole
+  bytes, so any edit breaks it, and check_decisions reads a signed-but-unverifying Tier-C
+  record exactly as it reads an unsigned one — accepted without authority, a red gate with
+  no builder-side fix. That is eight more records than the five D0070 met. Any binding
+  upgrade they want waits for the M2 sitting, in the same pass that re-signs them. D0059's
+  pytest binding is also left alone: its detail says "ten poison runs through this one
+  node" and describes what the M0 sitting installed, which is still an accurate statement
+  about M0. Editing it to say eleven would rewrite a true sentence about a past sitting to
+  cover a present one; this record carries the eleventh instead.
+rationale: >-
+  The poison half buys what D0070 said it buys, and it is worth restating rather than
+  assuming: nothing the custodian did not already check. The custodian runs in `make
+  verify` and catches a weakened guard on its own. What changes is the distance between
+  weakening a guard and finding out — `uv run pytest` is what a builder runs while
+  working, and a failure arrives named `check_decisions_file_skip` with the fixture's own
+  marker in the assertion message rather than as one line in a custodian sweep at the end.
+  For oracle-shadow there is a second, sharper reason: D0102's existing enforced binding
+  covers tests/test_laws_runner.py::test_a_shadowed_oracle_module_is_refused, which builds
+  its decoy in a tmp directory. That proves the GUARD works. It cannot notice the INSTALLED
+  fixture rotting, because it never touches it — and an installed fixture that has quietly
+  stopped shadowing anything is a custodian line that says "fails its poison as required"
+  while proving nothing. The rot test above is exactly that failure, and it is now covered.
+  .
+  The same gap exists for RT-M1-05 and is now closed the same way. The sitting's step 5b
+  added tests/test_governance_scripts.py::test_a_skip_hidden_inside_a_passing_file_binding_is_caught,
+  which constructs its own tmp tree per D0092's rule — again proving the guard, again blind
+  to the installed fixture. The table row is what watches the fixture.
+  .
+  On leaving thirteen signed records alone: this is the second sitting in a row where the
+  follow-up work has been shaped by which records happen to be signed, and it is worth
+  naming as a cost of the design rather than an inconvenience. Owner signatures over whole
+  record bytes make a record's bindings as immutable as its decision, which is the opposite
+  of what D0045 established and what the §9.1 ratchet needs. D0070 met it with five
+  records; there are now thirteen, and the number only grows. A mechanism that lets a
+  binding be attached to a signed record without invalidating the signature — signing a
+  canonical subset of fields, or a detached bindings file — is real design work and is
+  offered to M2 as input, not decided here.
+reversibility: >-
+  Test additions and two binding edits on unsigned Tier-A records; revert in minutes and
+  nothing signed depends on either. The PYTHONDONTWRITEBYTECODE change is the only one
+  that touches existing rows, and reverting it restores a latent sealed-directory hazard
+  rather than a behaviour anything depends on.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_guard_fails_its_poison"
+    strength: enforced
+    detail: >-
+      Eleven poison runs through this one node as of this record, each asserting its guard
+      fails for the finding's own marker; the eleventh is check_decisions_file_skip
+      (RT-M1-05). The custodian remains the floor; this is the same matrix from plain
+      `uv run pytest`. A guard later softened turns this red.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_oracle_shadow_fails_its_poison"
+    strength: enforced
+    detail: >-
+      RT-M1-01's installed fixture, invoked exactly as scripts/custodian.sh invokes it —
+      no -I -P, PYTHONPATH pointed at the fixture, -B, the venv interpreter at a literal
+      path. Watched failing against a fixture whose bootstrap plugin no longer installs
+      the decoy, which is the rot this test exists to catch and the tmp-decoy test in
+      tests/test_laws_runner.py structurally cannot.
+  - type: file
+    target: decisions/0070-post-sitting-binding-and-poison-followups.yaml
+    strength: documentary
+    detail: >-
+      The M0 record this one is the analogue of, including the constraint it discovered
+      about binding upgrades to signed Tier-C records — met again here, at thirteen
+      records instead of five.
+links:
+  - decisions/0070-post-sitting-binding-and-poison-followups.yaml
+  - decisions/0045-bindings-are-mutable-decisions-are-not.yaml
+  - decisions/0102-rt-m1-01-oracle-shadow-defence-in-depth.yaml
+  - decisions/0103-rt-m1-05-file-binding-skip-detection.yaml
+  - decisions/0059-m0-red-team-findings.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0122-the-m1-sitting-reported-a-signature-the-owner-never-gave.yaml

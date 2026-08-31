@@ -70,6 +70,14 @@ POISON = [
      ["scripts/check_tag_signers.py", "--root", "tests/poison/custodian-tag-signer",
       "--repo", "tests/poison/custodian-tag-signer/repo.bundle"],
      "required tag missing"),
+    # Installed at the M1 boundary sitting (RT-M1-05, D0103). The fixture proves the
+    # patch that landed with it: a whole-FILE pytest binding whose run mixes passes with
+    # one unexplained skip used to report enforced, because `pytest_violation` called a
+    # run skipped only when NOTHING in it passed. Most bindings in decisions/*.yaml name
+    # a file rather than a node, so that was the common case, not the corner.
+    ("check_decisions_file_skip",
+     ["scripts/check_decisions.py", "--root", "tests/poison/check-decisions-file-skip"],
+     "unexplained skip"),
 ]
 
 
@@ -83,10 +91,49 @@ def test_guard_fails_its_poison(name: str, args: list[str], marker: str) -> None
     # channel `-I` does not close (it ignores PYTHON* variables, not arbitrary ones), and
     # the custodian unsets it for the same reason. A poison run must not be silenceable.
     env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    # The env VARIABLE, not the -B flag, and it is set for every row rather than the one
+    # that needs it today. check_decisions.py resolves a pytest binding by spawning pytest
+    # as a SUBPROCESS; -B sets sys.dont_write_bytecode on the process it is given to and
+    # does not survive that fork, while run_pytest's env={**os.environ, ...} forwards this.
+    # Without it the file-skip fixture's tree gets imported and leaves __pycache__ inside
+    # tests/poison/ — a sealed directory where every file needs a manifest row — so the
+    # next check_manifest run goes red for a reason nothing in this file explains. The
+    # hazard belongs to any fixture tree that gets imported, not to one guard, which is
+    # why it is applied here once instead of per row. (-I ignores PYTHON* for the outer
+    # interpreter, which is fine: the value only has to reach the child.)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     result = run([sys.executable, "-I", "-P", *args], env=env)
     combined = result.stdout + result.stderr
     assert result.returncode != 0, f"guard '{name}' PASSED its poison — weakened:\n{combined}"
     assert marker in combined, f"guard '{name}' failed poison for the wrong reason:\n{combined}"
+
+
+def test_oracle_shadow_fails_its_poison() -> None:
+    """RT-M1-01 (D0102): L1.16's differential oracle refuses to run against a `_fragment`
+    that is not the frozen one, instead of silently comparing against the impostor.
+
+    Deliberately NOT a row in POISON above, because every difference from that table is
+    load-bearing and a shared runner would erase all three. No `-I -P`: the attack under
+    test is a module reaching sys.modules through PYTHONPATH ahead of the frozen file's
+    bare `import _fragment as F`, and isolated mode ignores PYTHONPATH outright — under
+    `-I` the fixture's own setup could never run, so the guard would report green having
+    never been challenged. `-B` because the fixture is imported from inside
+    tests/poison/oracle-shadow, a sealed directory an unmanifested __pycache__ would
+    break. And it is a pytest run rather than a check_*.py run, so there is no --root.
+    The venv interpreter at a literal path (D0063 ruling 3) is the one thing it keeps.
+    """
+    env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    env["PYTHONPATH"] = str(REPO_ROOT / "tests" / "poison" / "oracle-shadow")
+    result = run(
+        [str(REPO_ROOT / ".venv" / "bin" / "python"), "-B", "-m", "pytest",
+         "-p", "bootstrap_shadow", "tests/laws/m1/test_l1_duckdb.py",
+         "-k", "test_l1_16_the_catalogue_covers_every_operator_of_the_fragment", "-q"],
+        env=env,
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, f"oracle-shadow PASSED its poison — weakened:\n{combined}"
+    assert "RT-M1-01" in combined, combined
+    assert "shadowed" in combined, combined
 
 
 LINT_ISOLATED = [

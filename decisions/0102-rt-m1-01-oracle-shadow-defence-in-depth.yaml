@@ -53,10 +53,20 @@ bindings:
       Constructs a tmp decoy _fragment module plus a tmp -p bootstrap plugin, runs
       test_l1_duckdb.py's L1.16 node as a subprocess against it, and asserts the run
       exits non-zero with RT-M1-01 and "shadowed" in the output.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_oracle_shadow_fails_its_poison"
+    strength: enforced
+    detail: >-
+      ENFORCED, added 2026-08-31 (D0123): the fixture this record described was installed
+      at the M1 boundary sitting as tests/poison/oracle-shadow, so the binding it named in
+      advance now resolves. Exercises the INSTALLED fixture the way scripts/custodian.sh
+      does, which the tmp-decoy test above structurally cannot — that one proves the guard
+      works, this one notices the fixture rotting into a no-op while the custodian still
+      reports "fails its poison as required".
   - type: file
     target: docs/redteam/2026-08-26-m1-boundary.md
     strength: documentary
     detail: >-
       RT-M1-01's full claim, reproduction transcript, and the explicit statement that
       this closes detection, not the naming hazard itself.
-links: ["D0089", "D0092"]
+links: ["D0089", "D0092", "D0123"]

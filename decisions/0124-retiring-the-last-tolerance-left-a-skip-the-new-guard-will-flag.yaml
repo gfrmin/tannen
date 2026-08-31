@@ -1,0 +1,93 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0124
+title: "Retiring the last tolerance left a permanently-skipped test whose reason RT-M1-05's new guard does not allow, and the repo's dominant binding form is the one that trips it"
+tier: A
+date: "2026-08-31"
+risk_flags: [governance-paths]
+decision: >-
+  RECORDED, NOT FIXED. Two things the M1 sitting did interact, and the interaction is
+  latent rather than live. Step 4d applied D0111 and retired the last entry from
+  KNOWN_DIVERGENCES in tests/test_operating_manual.py, which is the intended end state —
+  a tolerance list should empty out. But `test_a_known_divergence_still_names_a_real_command`
+  is parametrized over `sorted(KNOWN_DIVERGENCES)[:]`, and pytest given an empty parameter
+  set SKIPS the test with the reason "got empty parameter set for (identity)". Step 5b, in
+  the same sitting, landed RT-M1-05's guard, whose allow-list is
+  `ALLOWED_SKIP_REASON_PREFIXES = ("S-pending: ",)` — one entry. The new skip's reason is
+  not on it.
+  .
+  NOTHING IS RED TODAY, and the reason it is not is narrow. Both records that bind this
+  file — D0111 and D0113 — bind NODES, and neither names the dormant one, so no bound run
+  ever sees the skip. `make verify` is green: check_decisions reports 56 pytest bindings
+  green and 0 unenforced. The full suite reports 577 passed, 2 skipped, and both skips are
+  accounted for: the S-pending conformance skip (allow-listed, and correct per BRIEF §2 —
+  vectors are never written on an owner's behalf) and this one.
+  .
+  WHY IT WILL BITE ANYWAY. D0103's own text observes that "Most pytest bindings in
+  decisions/*.yaml name a whole FILE, not one node" — that is the repo's dominant form and
+  the very fact RT-M1-05 was filed about. The next file-level binding on
+  tests/test_operating_manual.py therefore fires the guard on a test that is behaving
+  correctly. Verified directly rather than reasoned about: feeding that file's real
+  `pytest -rs` output to `check_decisions.unexplained_skips` returns
+  `['got empty parameter set for (identity)']`.
+  .
+  THREE FIXES, AND WHY NONE IS APPLIED HERE. (a) Add the empty-parameter-set reason to the
+  allow-list — cheapest, and wrong as a reflex: the allow-list is the guard's whole
+  discrimination, and widening it to admit a pytest-generated string admits every future
+  empty parametrize, including ones that ARE defects. (b) Replace the empty parametrize
+  with a test that asserts the tolerance list is empty and says so — turning a skip into a
+  pass, which is what the state actually is, and which is the D0116 shape: a check whose
+  input set is empty should say the set is empty, not vanish from the run. (c) Leave it and
+  rely on node-level bindings forever, which is the status quo plus a tripwire nobody can
+  see. (b) is recommended. It is not applied here because the file carries documented
+  fail-when-fixed behaviour (D0113's whole subject), because the choice between "assert
+  empty" and "assert each entry is real" is a design call about what that test is FOR, and
+  because nothing is broken while it waits. tests/test_operating_manual.py is neither
+  manifested nor custody-set, so whoever takes it needs no signature — this is deferred on
+  judgement, not blocked.
+rationale: >-
+  Filed because the cost of finding this later is asymmetric. Today it is four lines of
+  explanation. At M2 it arrives as a red gate on a binding someone just wrote, pointing at
+  a test that is doing exactly what it should, with a guard that was added specifically to
+  catch dishonest skips accusing an honest one — and the obvious repair under that pressure
+  is (a), the wrong one, because it makes the red go away in one line.
+  .
+  It is also worth naming as a shape rather than an incident. Both halves were improvements
+  landed at the same sitting: emptying a tolerance list is the ratchet working, and refusing
+  unexplained skips is a red-team finding closed. Neither is wrong, and their composition is
+  still a trap. That composition is not something either record's own review could have
+  caught, because each was reviewed against its own purpose — which is an argument for
+  running the full gate and reading its SKIP lines after a sitting, not only its exit code.
+  This was found that way: the suite's skip count went from one to two, and the second one
+  had no owner.
+reversibility: >-
+  Nothing is changed, so nothing needs reverting. Whichever fix is chosen later is a
+  few lines in one unfrozen test file.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_a_skip_hidden_inside_a_passing_file_binding_is_caught"
+    strength: enforced
+    detail: >-
+      The guard whose allow-list this record is about, watched failing against its own
+      fixture. It is bound here so that a future widening of ALLOWED_SKIP_REASON_PREFIXES
+      has a record pointing at what the list is for.
+  - type: file
+    target: tests/test_operating_manual.py
+    strength: documentary
+    detail: >-
+      Holds both halves: KNOWN_DIVERGENCES, now empty by D0111, and the parametrized
+      test at line 206 that skips because of it. Documentary because nothing yet enforces
+      the choice this record defers.
+  - type: file
+    target: docs/proposals/2026-08-29-a-check-that-cannot-fail.md
+    strength: documentary
+    detail: >-
+      A check whose parameter set went empty and therefore stopped running. It reports
+      "skipped" rather than "passed", so it is the honest member of that proposal's class
+      — which is exactly why it is safe to leave for now and worth recording anyway.
+links:
+  - decisions/0111-the-operating-manual-is-now-checked-against-the-gate.yaml
+  - decisions/0113-the-sitting-can-accept-d0108-but-nothing-applied-it.yaml
+  - decisions/0103-rt-m1-05-file-binding-skip-detection.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0123-m1-sitting-followups-poison-matrix-and-bindings.yaml

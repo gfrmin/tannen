@@ -77,8 +77,28 @@ bindings:
     detail: >-
       The verified patch, ready for the owner to apply at the M1 boundary sitting.
       Verified to apply cleanly against a clean clone of this milestone's current HEAD.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_guard_fails_its_poison"
+    strength: enforced
+    detail: >-
+      ENFORCED, added 2026-08-31 (D0123): the patch above was applied and the fixture
+      installed as tests/poison/check-decisions-file-skip at the M1 boundary sitting
+      (step 5b), so RT-M1-05 now has a poison row in the shared matrix, named
+      check_decisions_file_skip exactly as scripts/custodian.sh names it, asserting the
+      marker "unexplained skip". Watched failing against a fixture with its skip decorator
+      removed — the run still exits non-zero for an unrelated reason, so the marker
+      assertion rather than the exit code is what carries this.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_a_skip_hidden_inside_a_passing_file_binding_is_caught"
+    strength: enforced
+    detail: >-
+      ENFORCED, added 2026-08-31 (D0123): the guard-side half, landed by the sitting's own
+      step 5b alongside the patch. Builds a self-contained tree per D0092's rule — one
+      passing test and one unexplained skip behind a whole-file binding — and requires
+      check_decisions to report it. Proves the GUARD; the poison row above proves the
+      installed FIXTURE. Neither substitutes for the other.
   - type: file
     target: docs/redteam/2026-08-26-m1-boundary.md
     strength: documentary
     detail: RT-M1-05's full claim, reproduction, and the addendum explaining why it could not be committed this session.
-links: ["D0009", "D0087", "D0092", "D0061", "D0063"]
+links: ["D0009", "D0087", "D0092", "D0061", "D0063", "D0123"]
