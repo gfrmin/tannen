@@ -1,0 +1,77 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0130
+title: "D0118's rule applied: M2's generators draw the degenerate case by name, and the one mutant that needed 200 draws is the measurement that proves it"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  M2's law generators are built to D0118's rule, and the rule is now in a frozen file
+  rather than in a proposal. `_model.source_tables` draws each table as
+  `st.one_of(st.just([]), st.lists(..., min_size=1, max_size=4))` — the empty relation
+  keeps its place in the corpus and loses its status as the default outcome of several
+  independent draws — and every shape declares the case it exists to exercise through a
+  named `overlap` mode:
+  .
+    partial — some keys match and some do not: what an anti-join needs to both keep and drop
+    full    — every key matches: what a join needs
+    none    — no key matches: the empty result as a case CHOSEN rather than one that happened
+    grouped — one key for every row: multi-member groups, which is what an aggregate needs
+  .
+  Every draw reports its shape through hypothesis `event()`. No threshold anywhere: D0118
+  measured why a floor on the non-degenerate rate is the wrong instrument, and none of its
+  three surviving objections is weakened by anything here.
+  .
+  `"grouped"` EXISTS BECAUSE IT HAD TO, and the measurement is the argument. The
+  `aggregate-forgets-the-group` mutant — an aggregate citing only its group's first member
+  — survived 20 draws under `"full"` and died only around 200. It is caught solely when
+  the DELETED row is the first member of a group with at least two, and under `"full"`
+  that conjunction is rare. Under `"grouped"` it dies well inside 25. The cure was to draw
+  the interesting case on purpose, not to raise the example budget until the accident
+  happened often enough — which is D0118's whole thesis, reproduced on a new generator
+  within a day of the rule being written.
+rationale: >-
+  Filed separately from D0129 because it is a rule about how laws are WRITTEN rather than
+  about the apparatus that validates them, and because it now has an independent
+  confirmation that is worth being findable on its own.
+  .
+  The confirmation matters more than it looks. D0118's evidence was retrospective: it
+  measured `_fragment.py`, a frozen generator nobody could change, and its rule was
+  therefore advice for a future nobody had tested. This is the first generator written
+  under the rule, and the first time the rule's prediction — that a shaped case beats a
+  bigger budget — was checked against a specific mutant with a specific number attached.
+  It held, and it held by a factor of eight.
+  .
+  Deliberately NOT done here: nothing is changed in `tests/test_provenance_homomorphism.py`,
+  whose `st.lists(..., max_size=4)` has the same unshaped draw and carries the closure
+  proof D0107 cites. D0118 left it alone because altering what a currently-green law
+  examines, with no field in any evidence record to say it changed, loses the before/after.
+  That reasoning is unchanged, and Session B will rewrite that file anyway for D0110 —
+  which is the right moment, since the file is being rewritten rather than silently
+  re-tuned.
+reversibility: >-
+  Frozen with the laws. The generator can only be superseded, which is the same bargain
+  `_fragment.py` struck and the reason its shapes were each executed before the freeze.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m2/_model.py
+    strength: enforced
+    detail: >-
+      `source_tables` with its four named overlap modes and its `event()` reporting, and
+      the docstring carrying the 20-vs-200-vs-25 measurement where the next person to
+      widen a budget will read it.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_every_mutant_dies_by_the_check_that_names_it"
+    strength: enforced
+    detail: >-
+      What holds the measurement honest: `aggregate-forgets-the-group` must die at the
+      shipped budget of 25 examples. If the generator is ever reshaped so that it does not,
+      this goes red rather than going quiet.
+  - type: file
+    target: docs/proposals/2026-08-26-law-validation-ratchet.md
+    strength: documentary
+    detail: "The rule's origin, its three measured causes, and the two cures that did not work."
+links:
+  - decisions/0118-generators-are-shaped-not-policed.yaml
+  - decisions/0129-the-validation-ratchet-reachable-half.yaml
+  - decisions/0117-a-verdict-is-one-bit.yaml

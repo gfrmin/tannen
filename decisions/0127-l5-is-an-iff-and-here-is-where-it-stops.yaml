@@ -1,0 +1,84 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0127
+title: "L5 is frozen as the survival THEOREM, not as the soundness BRIEF §6 asks for — and the two operators outside it are named rather than approximated"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  BRIEF §6 asks for soundness: "delete a source row; every changed output row must have
+  carried its ref". The true statement is an IFF, and the iff is what L2.3 freezes:
+  .
+  For any graph over the positive fragment and any set D of source rows, the witnesses of
+  an output row over `R \ D` are EXACTLY those support sets of its witnesses over `R` that
+  are disjoint from `refs(D)` — so the row survives iff some support set is disjoint, and
+  it survives carrying exactly those.
+  .
+  WHY THE STRONGER FORM IS AVAILABLE AT ALL. Antichain-normalised `Why` is PosBool, so
+  Green, Karvounarakis & Tannen's evaluation result has a closed form on support sets, and
+  the closed form is checkable in both directions rather than merely assertable in one.
+  Soundness is the corollary. Stating only the weaker form would have been stating less
+  than is true, and the extra direction is the half that catches provenance which
+  OVER-cites: a support set that is not really a derivation survives a deletion it should
+  not, and plain soundness would never notice.
+  .
+  THE POSITIVE FRAGMENT is `select`, `project`, `map_rows`, `union`, `join`, `distinct`.
+  Two operators are outside it and each is named:
+  .
+  `aggregate` — the folded value reads the deleted rows' VALUES, not merely their
+  presence, so deleting a contributor replaces the output row with a DIFFERENT row
+  (`{k:1, s:3}` becomes `{k:1, s:1}`) and no claim about that row surviving could be true.
+  What holds exactly is the theorem on the GROUP KEY: project the output onto `by` and L5
+  applies unchanged. This is the same shape as `by` being non-empty in m1 §4.1 — where SQL
+  would invent a NULL, tannen states the boundary instead.
+  .
+  `anti_join` — non-monotone, and D0132's subject.
+  .
+  WHAT IS DELIBERATELY NOT CLAIMED. The Z component is not part of the theorem. It counts
+  derivations, and a semiring that tracks how many survive a deletion is N[X], which BRIEF
+  §8 puts after M5. `Why` answers WHETHER, not HOW MANY, and the spec says so rather than
+  letting a law imply otherwise by testing only cases where the two coincide.
+rationale: >-
+  Tier A test design, and the record exists because three of the four scoping calls above
+  are places where a law that looked right would have been wrong.
+  .
+  The aggregate exclusion was found by the Session A model, not by reasoning: the first
+  transcription ran `check_deletion_characterisation` over every shape including the
+  aggregates, and it failed. Chasing the failure is what produced the group-key form. That
+  is the frozen-model apparatus (D0129) paying for itself before the milestone it was
+  built for had any implementation.
+  .
+  The minimality clause of L2.4 has the same history and is worth recording as a trap.
+  "Every support set is minimal" reads naturally as "deleting a proper subset of it leaves
+  the row standing", and that is FALSE: a join witness `{a, b}` dies when either half goes
+  and is minimal all the same. The correct triple is antichain + sufficiency (keeping only
+  the support set yields the row) + minimality (keeping only a proper subset does not).
+  The model caught the wrong version on its first run.
+reversibility: >-
+  Frozen with the laws, so not reversible within M2 except by supersession. If the iff
+  turns out to be too strong for some operator M3 adds, the correction is a new law file
+  and a record — never a quiet weakening of this one, which is what the kill criterion in
+  docs/specs/m2.md §12 exists to forbid.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m2/test_l2_provenance.py
+    strength: enforced
+    detail: >-
+      L2.3 in three parts — the positive fragment, the left-deletion case across an
+      anti-join, and the aggregate group-key form — and L2.4's antichain/sufficiency/
+      minimality triple.
+  - type: manifest
+    target: tests/laws/m2/_model.py
+    strength: enforced
+    detail: >-
+      `check_deletion_characterisation`, `check_aggregate_key_characterisation` and
+      `check_minimal_witnesses`, with `surviving()` as the closed form the theorem is
+      stated over. The `mul-left-only` mutant is what proves the first discriminates.
+  - type: manifest
+    target: docs/specs/m2.md
+    strength: enforced
+    detail: "§4 (the deletion homomorphism), §5 (the theorem, the fragment, §5.1's unclaimed Z component, §5.2's minimality)."
+links:
+  - decisions/0125-m2-is-provenance-and-what-that-excludes.yaml
+  - decisions/0132-the-absence-witness-is-a-conjunction.yaml
+  - decisions/0129-the-validation-ratchet-reachable-half.yaml

@@ -79,12 +79,25 @@ class _LawRun:
 
 
 class LawEvidencePlugin:
-    def __init__(self, config: Any) -> None:
+    def __init__(self, config: Any, superseded: Any = ()) -> None:
         self.config = config
         self.root = Path(config.rootpath)
         self.enabled = os.environ.get(DISABLE_ENV, "").lower() not in _TRUE
         self._runs: dict[str, _LawRun] = {}
         self._functions: dict[str, tuple[str, str]] = {}  # nodeid → (law_id, function)
+        # Law nodes a forward supersession has retired (D0106 ruling 2, D0128), as
+        # {law-file relpath: {function names}}. They are marked xfail(strict=True) by the
+        # root conftest, and a strict xfail reports as SKIPPED — which would otherwise make
+        # every law sharing the file attest nothing at all, turning a retirement into a
+        # silent hole in the evidence. They are excluded from both the run and the expected
+        # set instead, so the law's REMAINING nodes still attest.
+        #
+        # Passed in rather than read here: the registry is YAML, pyyaml is a dev
+        # dependency, and a governance file is not something the shipped package parses.
+        self._superseded: dict[str, set[str]] = {}
+        for nodeid in superseded:
+            path, _, function = str(nodeid).partition("::")
+            self._superseded.setdefault(path, set()).add(function.split("[", 1)[0])
 
     # ------------------------------------------------------------------ hooks
 
@@ -104,6 +117,9 @@ class LawEvidencePlugin:
             if located is None:
                 continue
             milestone, law, function = located
+            path = item.nodeid.partition("::")[0]
+            if function in self._superseded.get(path, ()):
+                continue
             self._functions[item.nodeid] = (law, function)
             run = self._runs.setdefault(law, _LawRun(milestone=milestone))
             if getattr(getattr(item, "function", None), "is_hypothesis_test", False):
@@ -163,7 +179,12 @@ class LawEvidencePlugin:
             if run.milestone not in expectations:
                 expectations[run.milestone] = discover_laws(self.root, run.milestone)
             modules = expectations[run.milestone].get(law, {})
-            expected = {name for names in modules.values() for name in names}
+            expected = {
+                name
+                for rel, names in modules.items()
+                for name in names
+                if name not in self._superseded.get(rel, ())
+            }
             if run.skipped or not expected or run.observed != expected:
                 incomplete.append(law)
                 continue

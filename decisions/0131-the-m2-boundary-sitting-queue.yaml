@@ -1,0 +1,127 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0131
+title: "The M2 boundary sitting queue, opened at Session A so that nothing needing the owner's key depends on somebody remembering it — including one item that would otherwise never surface at all"
+tier: C
+date: "2026-08-31"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  QUEUED FOR THE M2 BOUNDARY SITTING, non-blocking (BRIEF §9.2): work continues around
+  every item below. Opened now, at the START of the milestone rather than at its end,
+  because the digest's "Requires owner" section is a query over TIER-C records, and
+  several of the things the M2 sitting must do are recorded in TIER-A records that will
+  never appear there. This record is the surface those items need.
+  .
+  (1) THE POISON CORPUS INDEX, AND THE GUARD THAT MADE ITS OWN STEP UNREACHABLE.
+  `tests/poison/README.md` still has no row for `check-decisions-file-skip`. The fixture is
+  installed, custody-set, and exercised by both the custodian and pytest, but D0059 binds
+  that README as `enforced` with the words "one row per finding that became a fixture", so
+  the index is wrong. The row text is ready at
+  docs/proposals/2026-08-27-m1-boundary-sitting/poison-readme-row-file-skip.md.
+  .
+  The step that should have added it cannot: its idempotence guard is
+  `! grep -q 'check-decisions-file-skip' tests/poison/README.md`, and step 5 — earlier in
+  the same sitting — appends prose that NAMES the fixture while explaining that its row
+  comes at step 5b. The explanation satisfies the grep, so the guard reads "already added"
+  and the prompt never renders. The sentence stating why the row is absent is what
+  guarantees it stays absent. Both the row and the guard need the owner: `tests/poison/` is
+  author-key territory (CLAUDE.md hard rules, BRIEF §9.1) and README.md is in the custody
+  set. THIS IS THE ITEM THAT WOULD OTHERWISE BE LOST — it is recorded in D0122, which is
+  Tier A and does not surface in any digest section the owner reads.
+  .
+  (2) D0117 — THE EVIDENCE RECORD'S MISSING QUANTITY. Owner-accepted, and unappliable by
+  the builder on three independent counts: `governance/schemas/evidence-record.schema.json`
+  is MANIFEST-frozen, inside the sealed `governance/schemas`, and custody-set as
+  `governance/schemas/*.json`. M2 shapes its generators and reports through `event()`
+  (D0130), and `scripts/check_laws.py` prints the exempt count (D0129), so two of the
+  numbers D0117 asks for now exist — with nowhere in an evidence record to put them.
+  .
+  (3) CUSTODY-SET ADDITIONS: `scripts/check_laws.py` and `governance/laws.yaml`. A guard
+  that can retire a frozen law, and the data it reads, belong under the owner's signature.
+  Today they are ordinary builder-editable files, which is the weakest part of D0128's
+  mechanism and is stated rather than glossed.
+  .
+  (4) GATE WIRING. `check_laws.py` is reached only from `tests/test_law_validation.py`;
+  the direct invocation belongs in `Makefile` and `.github/workflows/ci.yml`, and the
+  `unvalidated` ratchet metric belongs in `scripts/gen_projections.py` and
+  `scripts/check_decisions.py`. All four are custody-set (D0129).
+  .
+  (5) `governance/tag-roles.yaml` `required_tags` NOW LAGS BY TWO. D0095 filed this when
+  `m1-laws-freeze` was missing; `m2-laws-freeze` joins it today. The enumeration must be
+  extended at every boundary and cannot be extended by the builder.
+  .
+  (6) `ALLOWED_SKIP_REASON_PREFIXES` AND D0124'S CHOSEN FIX. D0124 recommends replacing the
+  empty parametrize in `tests/test_operating_manual.py` with a test that asserts the
+  tolerance list is empty and says so — turning a skip into a pass, which is what the state
+  actually is. That file needs no signature; the allow-list in `check_decisions.py` does.
+  D0128 routed around the allow-list by using a strict xfail rather than a skip, so this is
+  no longer urgent — but the tripwire D0124 describes is still armed for the next
+  file-level binding on that file.
+  .
+  (7) THE M1 SITTING'S REMAINING DRIVER DEFECTS, for whoever drives the M2 sitting. D0122
+  (4): step 4b's failure advice sends the owner to an editor, and the re-run takes the skip
+  branch, which never regenerates BRIEF.md's manifest row — so an out-of-band amendment
+  dies at step 9, one full sitting later than the mistake. D0122 (5): step 0's `make verify`
+  offer is a trap on a RESUMED sitting, and the closing note hardcodes "M1" where every
+  neighbouring line interpolates `$MILESTONE`. And D0123's batch of binding upgrades to the
+  now-fourteen signed Tier-C records, in the same pass that re-signs them.
+  .
+  (8) D0106 ITEMS (1) AND (3), still unbuilt: an optional `bindings_count` on the decision
+  schema, and the governance-mechanics/kernel line-count ratio as a defect signal. Both
+  touch custody-set files.
+rationale: >-
+  Filed as Tier C rather than Tier A even though the builder is not asking for a DECISION
+  on most of it, because the tier is what determines visibility. BRIEF §9.1's digest is
+  exception-only: it renders risk-flagged records, K=3 sampled others, and the Tier-C
+  queue. A Tier-A record carrying an owner-key item is invisible by construction, and item
+  (1) is exactly that — a real defect in a bound artifact, recorded honestly in D0122, in a
+  section no owner reads. The fix is not to make D0122 louder; it is to have a Tier-C
+  record that names it.
+  .
+  Opened at Session A rather than at the boundary because of D0045: a decision record's
+  fields are immutable, so a queue record written at the end can only contain what was
+  remembered then, while one written at the start can be joined by later records that link
+  to it. D0105 was written days before the M1 sitting and was the right shape for it; this
+  is the same shape moved earlier, and later M2 items arrive as their own records rather
+  than as edits to this one.
+  .
+  Status is `blocked-on-owner` and not `accepted`: `scripts/check_decisions.py` requires a
+  valid owner signature on any Tier-C record claiming `accepted`, and claiming it without
+  one is precisely the "accepted without authority" state D0064 made a red gate.
+reversibility: >-
+  A queue, not a change: nothing here alters an artifact, and declining any item at the
+  sitting costs only this record's accuracy. Item (1) is the one with a cost to leaving
+  undone, and the cost is an index that misdescribes the corpus it indexes — an accuracy
+  defect rather than a breakage, which is why it has survived one sitting already.
+status: blocked-on-owner
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-27-m1-boundary-sitting/poison-readme-row-file-skip.md
+    strength: documentary
+    detail: >-
+      Item (1)'s ready text. Documentary and it must stay documentary until the owner adds
+      the row — claiming otherwise would be the same false report D0122 is about.
+  - type: manifest
+    target: governance/schemas/evidence-record.schema.json
+    strength: documentary
+    detail: >-
+      Item (2)'s artifact, named at the path that holds it: frozen, sealed and custody-set,
+      three separate reasons the builder cannot touch it.
+  - type: file
+    target: governance/tier-c.yaml
+    strength: documentary
+    detail: >-
+      Items (3) and (4): the custody set is declared here, so adding scripts/check_laws.py
+      and governance/laws.yaml to it is an edit to this file plus a re-signature.
+  - type: file
+    target: governance/tag-roles.yaml
+    strength: documentary
+    detail: "Item (5): `required_tags`, now short of both m1-laws-freeze and m2-laws-freeze."
+links:
+  - decisions/0122-the-m1-sitting-reported-a-signature-the-owner-never-gave.yaml
+  - decisions/0123-m1-sitting-followups-poison-matrix-and-bindings.yaml
+  - decisions/0124-retiring-the-last-tolerance-left-a-skip-the-new-guard-will-flag.yaml
+  - decisions/0117-a-verdict-is-one-bit.yaml
+  - decisions/0095-required-tags-is-an-enumeration-that-lags.yaml
+  - decisions/0106-post-sitting-review-rulings.yaml
+  - decisions/0105-m1-boundary-sitting-queue.yaml
+  - decisions/0129-the-validation-ratchet-reachable-half.yaml

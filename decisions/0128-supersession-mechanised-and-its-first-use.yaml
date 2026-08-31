@@ -1,0 +1,134 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0128
+title: "D0106 ruling 2 had no mechanism: a forward supersession needs the retired node to stop being a false red, and a strict xfail is the only form of that which stays an assertion"
+tier: A
+date: "2026-08-31"
+risk_flags: ["governance-paths"]
+decision: >-
+  D0106 ruling 2 (owner-signed) settled that a law found wrong after its milestone closed
+  is superseded FORWARD — a new file under the current milestone's directory, never an
+  in-place edit, the old file retained and marked superseded in MANIFEST.sha256's notes,
+  a record binding old and new. It has never been exercised, and D0110 is its first real
+  case. Exercising it turned up the half the ruling did not supply: what happens to the
+  OLD node, which is frozen, sealed, and about to start failing.
+  .
+  THE MECHANISM, THREE PARTS.
+  .
+  (1) `governance/laws.yaml` holds the retirements, in two lists. `superseded` is ACTIVE.
+  `pending` is VALIDATED BUT NOT ACTIVE. Both are checked identically by
+  `scripts/check_laws.py`: the node must exist in the named file, the successor law must
+  be defined by some law file, and the record must exist by declared id.
+  .
+  (2) The root `conftest.py` marks every ACTIVE entry `pytest.mark.xfail(strict=True)`.
+  Strict xfail, and neither a skip nor a deselection, for two reasons. It keeps the
+  retirement a LIVE ASSERTION: the node was retired because the behaviour it depends on
+  changed, so it must now fail, and if it starts passing again — because that change was
+  reverted — the gate goes red. That is D0092's pass-before/fail-after discipline applied
+  to a retirement, and it is the difference between retiring a law and looking away from
+  one. And it emits no SKIP line, so it stays clear of
+  `check_decisions.ALLOWED_SKIP_REASON_PREFIXES`, the one-entry custody-set allow-list
+  D0124 flags as too narrow to widen safely.
+  .
+  (3) `scripts/check_laws.py` refuses an entry whose successor no law file defines — a
+  claim retired with nothing carrying it forward is a claim dropped, which is precisely
+  what D0106 ruling 2 exists to prevent.
+  .
+  WHY TWO LISTS, WHICH IS THE PART THAT IS NOT OBVIOUS. At the m2-laws-freeze commit `Rel`
+  still ACCEPTS the unwitnessed annotation, so
+  `tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name` still
+  PASSES — and a strict xfail on a passing test is an XPASS, which is a red gate. A
+  supersession cannot be activated before the change that retires the node has landed. So
+  the entry is frozen as `pending` data now, with node, successor and record all
+  guard-checked at Session A, and Session B PROMOTES it to `superseded` in the same change
+  that lands D0110. Promotion is a two-line move and it is the moment the retirement
+  becomes true rather than a claim about the future.
+  .
+  THE PLUGIN HAD TO LEARN ABOUT IT, and this is the sharp edge. A strict xfail reports as
+  SKIPPED, and `tannen.laws.plugin` treats any skip in a law as "partly run, attests
+  nothing". Left alone, retiring ONE node of L1.5 would have silently stopped L1.5 —
+  including its three healthy nodes — from ever writing evidence again, and `tannen laws
+  report` would have gone red for a law that was fine. The plugin now takes the retired
+  nodeids and excludes them from both the run and the expected set, so the law's remaining
+  nodes still attest. The registry is passed IN from conftest rather than read inside the
+  package: pyyaml is a dev dependency and a governance file is not something the shipped
+  package should parse.
+  .
+  THE MANIFEST NOTE is a `#` block beside the file's row, naming the node, the reason, the
+  successor and the fact that the retirement is pending. `parse_manifest` already ignores
+  comment lines, so "marked superseded in the manifest notes" needed no new mechanism —
+  only somebody to write the note.
+rationale: >-
+  Tier A. Nothing here edits a frozen path, a custody-set file, or a signed one:
+  `governance/laws.yaml` and `scripts/check_laws.py` are new, `conftest.py` and
+  `src/tannen/laws/plugin.py` are neither frozen nor custody-set. Adding both to the
+  custody set is queued to the M2 sitting (D0131) — a mechanism that can retire a frozen
+  law should be under the owner's signature, and the builder cannot put it there.
+  .
+  On changing the plugin during Session A: precedent, and the same precedent. M1's Session
+  A landed D0090 because freezing a milestone's laws made `make verify` halt, and D0091
+  because binding two records took a ratchet baseline to a value its regex could not
+  match. Both were machinery the freeze itself broke, fixed by the session that broke it.
+  This is the third instance, and it is worth naming as a pattern: the frozen-oracle
+  protocol regularly discovers that the surrounding apparatus assumed the previous
+  milestone's shape.
+  .
+  ALTERNATIVES CONSIDERED. Deselecting the node: it leaves no assertion at all and the
+  plugin's expected set still counts it, so the evidence hole appears anyway — strictly
+  worse. Skipping with an allow-listed reason: needs an edit to `check_decisions.py`,
+  which is custody-set, so it could not land until the sitting, and D0124 argues that
+  widening that allow-list is the wrong reflex. Making the D0110 refusal opt-in so the old
+  law keeps passing: rejected by D0110 itself — "a guard that has to be switched on is one
+  nobody switches on".
+reversibility: >-
+  Deleting an entry un-retires a node, and the guard would then have nothing to say — so
+  the mechanism is only as strong as the custody-set membership queued for it, which is
+  stated plainly rather than implied. Everything else is new code and new data, revertible
+  in minutes, and the plugin change is additive with an empty default.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_law_validation.py::test_check_laws_refuses_a_supersession_whose_successor_no_law_defines"
+    strength: enforced
+    detail: >-
+      Watched failing first against a scratch tree naming successor L9.404, and passing
+      against the same tree with a real successor — the positive control is
+      `test_check_laws_accepts_a_frozen_law_that_declares_its_validation`, so a broken
+      fixture cannot make the negative look green.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_check_laws_refuses_an_entry_that_is_both_active_and_pending"
+    strength: enforced
+    detail: >-
+      The two-list invariant. An entry in both would mean conftest marking a node xfail
+      while the registry still says the behaviour has not landed.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_the_pending_retirement_is_the_node_the_spec_names"
+    strength: enforced
+    detail: >-
+      Ties the registry to docs/specs/m2.md §8: one pending entry, that node, successor
+      L2.2, this record. It also asserts `superseded` is still empty at the freeze, which
+      is what makes the gate green today.
+  - type: file
+    target: governance/laws.yaml
+    strength: enforced
+    detail: "The registry itself, with the two-list reasoning written where it is read."
+  - type: file
+    target: src/tannen/laws/plugin.py
+    strength: enforced
+    detail: >-
+      The `superseded` parameter and the two places it is consulted: collection (so a
+      retired node's xfail does not mark the law skipped) and the expected set (so the
+      law's remaining nodes still attest).
+  - type: manifest
+    target: tests/laws/m1/test_l1_rel.py
+    strength: documentary
+    detail: >-
+      The frozen file whose one node is pending retirement, retained unedited and annotated
+      in MANIFEST.sha256's supersession notes. Documentary: nothing enforces the retirement
+      until Session B promotes the entry.
+links:
+  - decisions/0106-post-sitting-review-rulings.yaml
+  - decisions/0110-nonzero-implies-witnessed-at-construction.yaml
+  - decisions/0103-rt-m1-05-file-binding-skip-detection.yaml
+  - decisions/0124-retiring-the-last-tolerance-left-a-skip-the-new-guard-will-flag.yaml
+  - decisions/0090-laws-report-can-say-frozen-not-yet-implemented.yaml
+  - decisions/0092-the-receipt-clock-test-borrowed-its-boundary.yaml

@@ -1,0 +1,98 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0132
+title: "anti_join's absence witness is combined with `add`, which reads as OR: a survivor is predicted to outlive the deletion of the very source row it came from"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  DEFECT, found while writing M2's spec, in shipped M1 code. `src/tannen/kernel/ops.py`
+  gives every `anti_join` survivor a witness naming the right relation's content address
+  and combines it with `_add_witness`, which calls the semiring's `add`. Under `Why`,
+  `add` is UNION OF SUPPORT SETS — a disjunction — so the citation ends up standing beside
+  the row's own derivation as an independent one. The claim being made is conjunctive:
+  "this row's own derivation held AND the right relation lacked this key at this version."
+  The fix is `mul`, so every support set gains the atom. L2.6 freezes it.
+  .
+  REPRODUCED BEFORE IT WAS BELIEVED, against the tree at 4845d9f:
+  .
+    left  = Rel(("k","x"), [({"k":1,"x":1}, (1, Why.of({A})))])
+    right = Rel(("k","y"), [({"k":2,"y":9}, (1, Why.of({B})))])
+    ops.anti_join(left, right, ("k",))  ->  (1, {{A}, {addr(right)}})
+  .
+  Delete source row A. `{addr(right)}` is disjoint from `{A}`, so D0127's theorem predicts
+  the row survives. The left relation is now empty, so it does not. Printed side by side:
+  `predicted-present=True actually-present=False`. Under `mul` the annotation is
+  `{{A, addr(right)}}`, deleting A kills the only witness, and prediction and reality
+  agree.
+  .
+  NOTHING FROZEN PINS THE OLD BEHAVIOUR, which is why this is an ordinary Session B change
+  and not a supersession. Checked rather than assumed: no M1 law asserts the witness
+  COMBINATION (the anti_join laws are L1.7's type rules, L1.8's identity against an empty
+  right, and L1.16's differential, which compares BAG IMAGES and is unaffected because
+  both combinations give the same multiplicity for a witnessed row); and
+  `tests/laws/m1/golden-rels.json` contains no anti_join vector — its four operator
+  vectors are union, join, project and distinct. `src/` is not a frozen path.
+  .
+  ONE UNFROZEN TEST DOES DEPEND ON IT.
+  `tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image`
+  asserts the consequence of `add` for a `(2, 0_Why)` input. D0110 makes that input
+  unconstructible, so the test needs rewriting for that reason anyway; D0110's own binding
+  calls it "the alarm... the test that should be read the day an ingest path lands". This
+  is that day, and it went off for a second reason nobody had noticed.
+  .
+  THE OLD BEHAVIOUR IS KEPT AS A MUTANT. `_model.MUTANTS["antijoin-disjunctive"]` is
+  exactly `add`, and L2.6 must kill it. A defect that becomes a mutant cannot come back
+  quietly.
+rationale: >-
+  Recorded as a defect rather than a design change because the docstring in `ops.py`
+  already states the conjunctive claim in words — "the claim being made ('this key was
+  absent from R') is about the right relation as a whole at this version" — and then
+  implements a disjunction. The prose was right and the operator disagreed with it, which
+  is the ordinary shape of a bug rather than a change of mind.
+  .
+  Why M1 could not have caught it. D0107 and D0109 worked hard on anti_join's PRESENCE
+  test (which annotations count as "really there") and settled it correctly against the
+  bag image. The witness COMBINATION is a different question, it was never asked, and no
+  M1 law could have asked it: the only instrument that discriminates `add` from `mul` here
+  is a deletion test, and until M2 there were no source rows to delete. This is what a
+  milestone whose subject is provenance is for.
+  .
+  It also sharpens what D0114 said about a law that cannot fail. L1.9's evidence was
+  vacuous because its generator could not draw a negative; here the whole apparatus for
+  drawing the discriminating case did not exist. Both are the same lesson at different
+  depths: an assertion is only as strong as the inputs that can reach it.
+reversibility: >-
+  A one-line change in unfrozen `src/`, reversible in seconds — and reverting it would
+  reintroduce a provenance that predicts survival for rows that vanish, so it is available
+  and would not be wanted. The frozen law and the mutant are the parts that are not
+  reversible, and that is deliberate.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m2/test_l2_antijoin.py
+    strength: enforced
+    detail: >-
+      L2.6's three claims: every survivor's every support set carries the address; an
+      empty right operand is cited by nothing (so L1.8's identity still holds exactly);
+      and deleting a row the right operand reads moves the address, so no old witness
+      survives into the new output.
+  - type: manifest
+    target: tests/laws/m2/_model.py
+    strength: enforced
+    detail: >-
+      `check_absence_witness`, plus `MUTANTS["antijoin-disjunctive"]` — the M1 behaviour
+      preserved as the mutant this law kills — and `MUTANTS["antijoin-no-witness"]`, which
+      catches the opposite failure of citing nothing at all.
+  - type: file
+    target: src/tannen/kernel/ops.py
+    strength: documentary
+    detail: >-
+      Where the defect is, in `_add_witness` as called from `anti_join`: `add` where the
+      operator's own docstring describes a conjunction. Documentary because Session B
+      makes the change — Session A freezes the law that demands it and does not implement.
+links:
+  - decisions/0107-anti-join-why-cannot-decide-an-answer.yaml
+  - decisions/0109-anti-join-follow-ups-negatives-expire-at-m3.yaml
+  - decisions/0110-nonzero-implies-witnessed-at-construction.yaml
+  - decisions/0114-l1-9-is-a-law-that-cannot-fail.yaml
+  - decisions/0127-l5-is-an-iff-and-here-is-where-it-stops.yaml

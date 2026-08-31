@@ -44,8 +44,8 @@ def _isolated_from_the_ambient_evidence_store(monkeypatch: pytest.MonkeyPatch) -
 def spec_law_table(milestone: str = "m0") -> dict[str, str]:
     """The law table of a frozen milestone spec, as {law id: file}.
 
-    Tolerates a trailing column: M0's table is (law, statement, file) and M1's adds a
-    "discharges" column, so the file cell is matched as the third one rather than the last.
+    Tolerates a trailing column: M0's table is (law, statement, file) and M1's and M2's add
+    a "discharges" column, so the file cell is matched as the third one rather than the last.
     """
     spec = REPO_ROOT / "docs" / "specs" / f"{milestone}.md"
     rows = re.findall(
@@ -56,7 +56,7 @@ def spec_law_table(milestone: str = "m0") -> dict[str, str]:
     return {law: file for law, file in rows}
 
 
-@pytest.mark.parametrize("milestone", ["m0", "m1"])
+@pytest.mark.parametrize("milestone", ["m0", "m1", "m2"])
 def test_discovery_matches_the_frozen_spec_table(milestone: str) -> None:
     """The runner's law set is the spec's law set — checked, not assumed.
 
@@ -79,9 +79,10 @@ def test_law_ids_sort_numerically() -> None:
 
 
 def test_milestone_labels() -> None:
-    assert discovery.milestones(REPO_ROOT) == ["m0", "m1"]
+    assert discovery.milestones(REPO_ROOT) == ["m0", "m1", "m2"]
     assert discovery.milestone_label("m0") == "M0"
     assert discovery.milestone_label("m1") == "M1"
+    assert discovery.milestone_label("m2") == "M2"
     assert discovery.milestone_label("m5b") == "M5b"
     with pytest.raises(ValueError):
         discovery.milestone_label("laws")

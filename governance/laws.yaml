@@ -1,0 +1,70 @@
+# governance/laws.yaml — the two governance facts about this repo's frozen laws:
+# which milestones must declare how their laws were validated, and which law nodes a
+# forward supersession has retired. Consumed by scripts/check_laws.py and by conftest.py.
+#
+# D0106 ruling 2 (owner-signed): a law found wrong AFTER its milestone's Session B closed
+# is superseded FORWARD — a new file under the CURRENT milestone's directory, never an
+# in-place edit and never back-dated into the closed milestone — with the old file
+# retained, marked superseded in MANIFEST.sha256's notes, and a decision record binding
+# old and new. This file is the machine-readable half of that: it is what conftest.py
+# reads to mark the retired node, and what scripts/check_laws.py validates.
+#
+# THE NODE IS MARKED xfail(strict=True), NOT skipped and NOT deselected (D0128):
+#   - strict xfail keeps the retirement a LIVE assertion. If the node starts passing again
+#     — because the behaviour that retired it was reverted — the gate goes red. A skip
+#     would look away and say nothing.
+#   - it emits no SKIP line, so it does not collide with check_decisions'
+#     ALLOWED_SKIP_REASON_PREFIXES, a custody-set allow-list D0124 flags as too narrow to
+#     widen safely.
+#
+# Adding an entry is not a way around the freeze. The claim a retired node made must be
+# carried forward by the named successor law; check_laws.py fails an entry whose successor
+# no law file defines.
+# TWO LISTS, AND THE ORDER MATTERS (D0128).
+#
+#   superseded: ACTIVE — conftest marks these xfail(strict=True) and they must fail NOW.
+#   pending:    VALIDATED, NOT ACTIVE — check_laws.py checks node, successor and record
+#               exactly as it checks an active entry, but conftest does not mark them.
+#
+# The split exists because a supersession cannot be recorded before the behaviour that
+# retires the node has landed: at the m2-laws-freeze commit `Rel` still ACCEPTS the
+# unwitnessed annotation, so the node below still passes, and a strict xfail on a passing
+# test is a red gate. The entry is therefore frozen here as data — its successor law, its
+# record and its node all guard-checked at Session A — and Session B PROMOTES it to
+# `superseded` in the same change that lands D0110. Promotion is a two-line move, and it
+# is the change that makes the retirement true rather than a claim about the future.
+version: 1
+
+# --- WHO MUST DECLARE (D0094 §3, D0129) -------------------------------------------
+#
+# Every frozen law file at or after `declarations_required_from` carries a module-level
+# VALIDATED_BY (naming a model check) or VALIDATION_REASON (saying why the family cannot
+# be model-checked). Neither asserts correctness; they make the gap COUNTABLE, which is
+# the bargain `unenforced_reason` already strikes for decisions.
+#
+# M0 and M1 are exempt, and the exemption is a fact about the freeze rather than a
+# concession: their law files were frozen and sealed BEFORE this rule existed, so adding
+# a declaration to one is an edit to a frozen path — the exact act CLAUDE.md forbids.
+# Retrofitting them would mean superseding sixteen files, which D0094 explicitly declined
+# ("retrofitting models for all of them now would restart Session A"). What the rule buys
+# instead is that the exempt files are COUNTED: scripts/check_laws.py reports the number,
+# and it is the `unvalidated` residue the digest metric will consume once the M2 boundary
+# sitting lands it (D0131). A number nobody writes down is D0117's whole complaint.
+validation:
+  declarations_required_from: m2
+
+# --- WHAT HAS BEEN RETIRED --------------------------------------------------------
+superseded: []
+
+pending:
+  - node: "tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name"
+    successor: "L2.2"
+    record: "D0128"
+    reason: >-
+      The node's claim — mixing semirings is refused by name — is correct and is carried
+      forward verbatim by L2.2. What is wrong is its FILLER: line 244 builds
+      `Rel(("a",), [({"a": 1}, (2, Why.zero))])` purely to have a Rel with the default
+      semiring, and D0110 (owner-authorised) makes an unwitnessed nonzero annotation
+      unconstructible. The annotation was never what the law was about. The file is frozen
+      and sealed, so it cannot be edited; L2.2 restates the claim with a witnessed filler
+      and this entry retires the node that cannot survive the new door.

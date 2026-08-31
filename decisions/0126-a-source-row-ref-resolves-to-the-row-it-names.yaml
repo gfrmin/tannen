@@ -1,0 +1,68 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0126
+title: "A source row's ref is the address of a srcrow/1 value that ingest WRITES, because a citation to a document that does not exist is not provenance"
+tier: A
+date: "2026-08-31"
+risk_flags: ["ref-grammar"]
+decision: >-
+  A source row's ref is the content address of
+  `{"tannen": "srcrow/1", "source": <source ref>, "row": <row>}`, and
+  `tannen.sources.ingest` WRITES that value into the store before it hands the ref out.
+  Every `Why` atom this system mints therefore dereferences to a value that explains
+  itself. The `source` field is a ref in the pinned grammar, refused by
+  `tannen.kernel.refs` — the grammar has one home and this opens no second one.
+  .
+  TWO ALTERNATIVES, REJECTED, AND WHY. (1) HASH-ONLY: compute
+  `content_address({source, row})` and store nothing. Cheaper by one write per row, and it
+  makes every atom a citation to a document that does not exist. `Why` elements are refs
+  precisely so that "lineage is portable across all systems" (BRIEF §2); a ref that
+  resolves to nothing is portable in the way an unresolvable footnote is portable.
+  (2) ONE REF PER SOURCE: annotate every row of a source with the source's own ref.
+  Cheapest, and it makes L5 stop discriminating — deleting any row would move every output
+  row's provenance equally, so the deletion test could no longer tell which output row
+  depended on which input row, which is the entire question it exists to answer.
+  .
+  IDENTICAL ROWS IN ONE SOURCE ARE ONE ROW. A source is content-addressed, so two rows
+  with the same canonical bytes have the same ref: their counts add and their witness does
+  not. Putting an index in the ref was considered and rejected — it would make ingest
+  order-dependent, which is the one thing content addressing buys, and it would mean
+  re-reading the same bytes twice produced two different provenance graphs.
+  .
+  THE COST, STATED RATHER THAN DISCOVERED LATER: one append-only store write per distinct
+  source row. It is not optimised and must not be — there is no performance work before M5
+  (BRIEF §10) — and if it ever needs to be, the fix is a batched write of the same values,
+  not a cheaper identity.
+rationale: >-
+  Tier A: reversible in-repo work, contract-conformant, and exactly the kind of "pinning
+  ambiguous semantics" BRIEF §9 assigns to the builder. It is recorded rather than merely
+  implemented because the rejected options are both defensible on cost and the argument
+  against each is about what provenance IS, not about what is convenient.
+  .
+  The shape follows pkm's event identity — "hash of inputs incl. producer config" — read
+  for a source row: the source and the row are exactly the two things that would make this
+  a different row, and nothing else is in the hash. It is not a new mechanism; it is M0's
+  content addressing applied one level down.
+reversibility: >-
+  The ref FORM is one-way in the sense that matters: refs already minted address values
+  already written, and the store is append-only, so changing the form later means a second
+  form coexisting with the first rather than replacing it. That is the argument for
+  deciding it before the first ingest rather than after. The store write itself is
+  ordinary and could be dropped later without changing any address.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m2/test_l2_sources.py
+    strength: enforced
+    detail: >-
+      L2.1: the ref is in the pinned grammar, is the address of what it names, resolves in
+      the store to its source and row, distinguishes rows from rows and sources from
+      sources, merges identical rows into one witness, is idempotent, and writes nothing
+      for a row it refuses.
+  - type: manifest
+    target: docs/specs/m2.md
+    strength: enforced
+    detail: "§2, including both rejected alternatives and the stated cost."
+links:
+  - concepts/pkm-event-identity.yaml
+  - concepts/provenance-ref-grammar.yaml
+  - decisions/0125-m2-is-provenance-and-what-that-excludes.yaml

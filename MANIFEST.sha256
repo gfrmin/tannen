@@ -72,3 +72,25 @@ a2b782e857f9ad28c540b631373a100aff1bfde41b0c88127293ee07af8d5986  tests/poison/c
 71b14a6b75fdb614da1bf0e737f076f6ae597f565b4b8a5d4e12fd377ec1bd8e  tests/poison/check-decisions-file-skip/tests/mixed_cases.py
 3215138df937358e8160464ff79ea7fbe9fb292243289b18d26c8cd778d4dde5  scripts/custodian.sh
 d302eb86958ac8c3050fb47d7ab793abd46d89f8654f1f51b88e88fc3501d813  governance/tag-roles.yaml
+876ea1b4270d3d62f3dc4bc565bc3b860cba085471c02339eed6da0bc43607fa  docs/specs/m2.md
+1a6487244a80117f9403f6e06090b6612db461aa1fd7401e662d231fe3896e18  tests/laws/m2/_model.py
+f138cfe1ed3c5b970f923d2ee5d4569ab1a63a539f61bc98e9ed5a7fdf26ef46  tests/laws/m2/_subject.py
+19d1263b77e92014e78354b506f1ed36bfaa49af98f1c7feca492cfdc2b06630  tests/laws/m2/test_l2_antijoin.py
+0fb9526cac640b467f92cdfb5ff49479290b8d5263f590412a6be59290f969fb  tests/laws/m2/test_l2_differential.py
+7594f63c3213eaaa05a98a1c0e190051a0be4ee03f409ba17fbdab7722be6247  tests/laws/m2/test_l2_executor.py
+71dc0185e08902d6c7328baec5f18d434cb6bdb6fd8f93dbb326a0adec8790a4  tests/laws/m2/test_l2_inertness.py
+bded0ca525901d99b942203378ec34fcd66cef39c76c406cc8a86c9e90311cb1  tests/laws/m2/test_l2_lineage.py
+ef0de7d06f893d85861792f5f7be9a4598dff2daf200fab941808d2f2be38962  tests/laws/m2/test_l2_provenance.py
+409b89c1c091e6c5a6f62a77f5f98813af17dea43ae10a8b78280477fb6d25a2  tests/laws/m2/test_l2_sources.py
+
+# --- supersession notes (D0106 ruling 2; D0128) ------------------------------
+# tests/laws/m1/test_l1_rel.py
+#   PENDING RETIREMENT of ONE node: test_l1_5_mixing_semirings_is_refused_by_name.
+#   Its line 244 builds `Rel(("a",), [({"a": 1}, (2, Why.zero))])` as incidental
+#   filler, and D0110 (owner-authorised) makes an unwitnessed nonzero annotation
+#   unconstructible. The file stays frozen and unedited; the node's claim — mixing
+#   semirings is refused by name — is carried forward verbatim by L2.2 in
+#   tests/laws/m2/test_l2_sources.py. The entry is in governance/superseded-laws.yaml
+#   under `pending` and is promoted to `superseded` by the change that lands D0110;
+#   until then the node still passes and marking it xfail(strict) would be a red gate.
+#   Every other law in that file is unaffected and stands.

@@ -1,0 +1,75 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0125
+title: "M2 is provenance: the source layer that makes L5 statable at all, and the four things it deliberately is not"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  M2's scope, fixed at Session A and frozen with docs/specs/m2.md.
+  .
+  IN. (1) `tannen.sources` — a source/ingest layer minting one ref per source row
+  (D0126). (2) The invariant that a retained row is a witnessed row (D0110, owner-
+  authorised). (3) L5 stated at full strength (D0127). (4) `anti_join`'s absence witness,
+  corrected (D0132). (5) A total lineage read. (6) The supersession mechanism D0110 needs
+  (D0128). (7) The reachable half of D0094's validation ratchet (D0129), with M2's
+  generators built to D0118's rule (D0130).
+  .
+  WHY THE SOURCE LAYER IS THE MILESTONE AND NOT A PRELUDE TO IT. M1 shipped `Why`, made
+  `Z*Why` the default, and gave every operator a semiring rule that IS its provenance
+  rule. It shipped no way to MINT a ref from data: `Rel(...)` takes whatever `Why` a
+  caller hand-writes, and the executor's only source is
+  `Rel.from_value(store.get_value(ref))`. BRIEF §6's L5 — delete a source row, and every
+  changed output row must have carried its ref — was therefore not merely unimplemented at
+  M1, it was UNSTATABLE: there were no source rows and no refs for them. Everything else in
+  M2 is downstream of fixing that.
+  .
+  OUT, each named so a reader does not go looking. Deltas and retractions are M3, and
+  D0109's `anti_join` negative-annotation expiry falls there rather than here. Oracles,
+  captures, SpendGuard and the R2 backend are M4; the source layer is NOT the capture
+  layer, because `ingest` is deterministic and reads bytes the store already holds, while
+  BRIEF P8's `capture` is oracles only. The Grade-S governor wire is M4 at the earliest
+  (D0088, unchanged). N[X] provenance — counting how many derivations survive a deletion
+  — is post-M5, and D0127 states which half of the annotation this milestone therefore
+  does not claim. Renavon inputs are M5 and are a Tier-C door regardless.
+  .
+  PROVSQL IS CITED AND NEVER VENDORED. BRIEF §11 calls ProvSQL's tests "a correctness
+  quarry for L5". They stay a quarry to read and never a corpus to copy: vendoring
+  third-party test data is a licensing act and licensing is Tier C — the same reasoning
+  docs/specs/m1.md §0.1 gives for not vendoring the Lean formalisation, applied before
+  anyone reaches for it rather than after.
+rationale: >-
+  Recorded rather than assumed because "M2 provenance (L5)" is four words in BRIEF §8 and
+  everything above is an inference from them. The inference worth defending is that a
+  source layer belongs here at all — BRIEF §4 puts oracles and captures at M4, and a
+  careless reading would put ALL ingest there and leave M2 with nothing but a law it
+  cannot state. D0110, which the owner signed, settles it in the same direction from the
+  other end: it says the unwitnessed-annotation door "should land BEFORE M2 builds capture
+  on top of the current permissiveness", which presumes M2 has an ingest path. It does.
+  .
+  The out-list is longer than the in-list on purpose. Three of the four exclusions are
+  places where a plausible next step would quietly widen the milestone: adding deltas
+  because provenance and deltas are two instances of one mechanism (P4), adding N[X]
+  because the count component is right there, or adding a capture because ingest looks
+  like one. Naming them costs a paragraph now and saves the argument later.
+reversibility: >-
+  Scope is the most reversible thing in a milestone until its laws are frozen, and after
+  the freeze it is not reversible at all — which is why it is recorded before the tag
+  rather than after. Nothing here binds M3.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m2.md
+    strength: enforced
+    detail: >-
+      The spec this record fixes the scope of, frozen at m2-laws-freeze. §0.1 states the
+      "unstatable at M1" argument; §0.2 carries the ProvSQL non-vendoring pin.
+  - type: file
+    target: BRIEF.md
+    strength: documentary
+    detail: >-
+      §8 ("M2 provenance (L5)"), §6 (L5's own wording), §11 (ProvSQL as a quarry) and P8
+      (capture is oracles only) are the four sentences this scope is derived from.
+links:
+  - decisions/0110-nonzero-implies-witnessed-at-construction.yaml
+  - decisions/0088-governor-wire-is-out-of-m1.yaml
+  - decisions/0109-anti-join-follow-ups-negatives-expire-at-m3.yaml

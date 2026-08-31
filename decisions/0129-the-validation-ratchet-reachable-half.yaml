@@ -1,0 +1,155 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0129
+title: "D0094's ratchet, built as far as the custody set allows: the model and the mutants land, the digest column does not, and the exempt count is printed so the gap is a number rather than a silence"
+tier: A
+date: "2026-08-31"
+risk_flags: ["governance-paths"]
+decision: >-
+  D0094 scheduled a three-part law-validation ratchet for M2. Parts 1 and 2 land whole;
+  part 3 lands in halves, and the half that does not is queued rather than quietly
+  dropped.
+  .
+  (1) A MODEL BESIDE THE LAWS. `tests/laws/m2/_model.py` is a self-contained transcription
+  of the spec — PosBool `Why`, the annotation product, the operators, the deletion
+  homomorphism — frozen inside the seal and importing nothing from tannen, exactly as
+  `_fragment.py` does not (D0089). Every check is written against a `Subject` interface;
+  `tests/laws/m2/_subject.py` puts the shipped package behind the same interface, so one
+  assertion text runs against both.
+  .
+  `TannenSubject` DELIBERATELY DOES NOT SUBCLASS the model. Inheriting would let a
+  forgotten method fall back to model code, and the law would then report the model passing
+  while wearing tannen's name — the exact vacuous green
+  docs/proposals/2026-08-29-a-check-that-cannot-fail.md catalogues. `_model.REQUIRED` is
+  checked against the adapter's own `__dict__` instead, so a missing method is a hole and
+  never a fallback.
+  .
+  (2) THE FREEZE GATE'S SECOND ASSERTION. It is no longer "every law skips" but "every
+  model-checked family PASSES against the model and FAILS against a stated mutant". Seven
+  mutants ship, paired to families in `_model.CAUGHT_BY`, and
+  `test_every_family_is_aimed_at_by_a_mutant` refuses a family nothing is aimed at — a
+  mutant nobody aims a check at proves nothing, and a family nothing is aimed at has
+  unmeasured discrimination. `MUTANTS["antijoin-disjunctive"]` is tannen's own M1
+  behaviour (D0132).
+  .
+  (3) THE GAP IS COUNTABLE. Every frozen law file at or after
+  `governance/laws.yaml`'s `declarations_required_from` declares module-level
+  `VALIDATED_BY` or `VALIDATION_REASON`, parsed STATICALLY by `scripts/check_laws.py` —
+  static like `tannen.laws.discovery`, so the check does not depend on the law files being
+  importable and a pre-implementation tree reports the whole set rather than nothing.
+  .
+  M0 AND M1 ARE EXEMPT AND COUNTED. Their law files were frozen and sealed before this
+  rule existed, so adding a declaration to one is an edit to a frozen path — the exact act
+  CLAUDE.md forbids — and retrofitting sixteen files by supersession is what D0094 itself
+  declined. `check_laws.py` therefore prints the exemption as a number: today it reads
+  "7 frozen law file(s) declare their validation, 16 exempt". That number IS the
+  `unvalidated` residue, and printing it is the cheapest possible answer to D0117's
+  complaint — the quantity exists, is exact, and is written down somewhere.
+  .
+  WHAT DOES NOT LAND, AND WHY IT IS QUEUED RATHER THAN DEFERRED. The `unvalidated` metric
+  in the digest lives in `scripts/gen_projections.py` and `scripts/check_decisions.py`, and
+  the lines that would run `check_laws.py` in the gate live in `Makefile` and
+  `.github/workflows/ci.yml`. All four are custody-set: editing any of them invalidates the
+  owner's signature over `governance/custody.sha256` and the gate stays red until a sitting
+  re-signs. So `check_laws.py` is reached from `tests/test_law_validation.py` instead — the
+  D0070/D0123 pattern, where the custodian is the floor and pytest is the distance between
+  weakening a guard and finding out. The four edits are queued to the M2 sitting (D0131).
+rationale: >-
+  The measurement is the point, and it paid for itself before the milestone had any
+  implementation. Two defects in Session A's own work were found by the model rather than
+  by review: `check_deletion_characterisation` was written over every shape including the
+  aggregates and failed, which is what produced D0127's group-key form; and
+  `check_minimal_witnesses` was first written as "deleting a proper subset leaves the row
+  standing", which is false for a join witness. Neither would have been caught by any
+  guard in this repository, and both were caught in the first ten minutes of running the
+  model.
+  .
+  A third finding is about the apparatus rather than the laws, and is the reason the mutant
+  half is not gold-plating. The first mutant driver bound its shapes with default arguments;
+  hypothesis refuses a property with defaults, so every mutant "died" of an InvalidArgument
+  before any law ran, and the report read `KILLED` six times. Only the MODEL row —
+  which read FAIL for the same reason — showed that the driver was broken. A matrix
+  where every mutant dies is exactly what a working matrix looks like, which is why the
+  positive control has to be in the same table as the negatives.
+  .
+  THE LAWS WERE RUN AGAINST AN IMPLEMENTATION BEFORE THEY WERE FROZEN, which is the
+  M1 Session A precedent ("all 22 L6 shapes executed against DuckDB, 200 trials") applied
+  to a milestone whose surface does not exist yet. A throwaway prototype — `tannen.sources`
+  plus D0110's check and D0132's `mul` — was written in a scratch directory, copied over
+  `src/`, measured, and discarded; it is not committed and Session B does not inherit it.
+  Session A does not implement, but it does not freeze an oracle it has not run either.
+  What the run established, against the tree at 4845d9f:
+  .
+    tests/laws/m2                    113 passed, 0 failed  (the frozen laws are satisfiable)
+    revert D0132 (mul -> add)          8 of 9 L2.6 nodes fail
+    revert D0110 (drop the check)      2 L2.2 nodes fail, the other 10 pass
+    tests/laws (M0+M1+M2)            506 passed, 1 FAILED
+    tests/test_provenance_homomorphism  6 failed, 47 passed
+  .
+  The single frozen failure is
+  `test_l1_5_mixing_semirings_is_refused_by_name` — the node governance/laws.yaml already
+  names as pending. That is D0110's claim ("a grep confirms it is the ONLY such
+  construction in the frozen corpus") verified by execution across 507 nodes rather than by
+  grep, and it is what makes D0128's promotion a two-line move rather than a search. The
+  six unfrozen failures are all in the file D0110's own binding calls "the alarm"; four of
+  them are its RA+ tests drawing `ANY_ANNOTATION`, whose collapse into one generator D0110
+  predicted in as many words.
+  .
+  A fourth finding, recorded because it is D0118's rule earning its place: the
+  `aggregate-forgets-the-group` mutant survived 20 draws and died only around 200, because
+  it is caught solely when the deleted row is the FIRST member of a group with at least
+  two. The fix was a named `"grouped"` case in the generator, not a bigger example budget.
+  Under it the mutant dies well inside 25 draws, and the whole matrix runs in about five
+  seconds — a gate that costs a minute gets disabled.
+reversibility: >-
+  The model and the mutants are frozen and can only be superseded. Everything else — the
+  guard, its tests, the exemption floor in governance/laws.yaml — is new and revertible.
+  The `declarations_required_from: m2` floor is the one value worth naming as a ratchet: it
+  may move forward when a milestone's laws are frozen under the rule, and moving it
+  BACKWARD would silently exempt files that already declare, which is why it is data a
+  guard reads rather than a constant in the guard.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_law_validation.py::test_the_model_passes_every_family"
+    strength: enforced
+    detail: >-
+      Half one of D0094 §2, run at every commit including the freeze commit: it imports
+      _model.py directly, needs no tannen, and is therefore not behind M2's sentinel.
+      D0093 — an axiom demanding a semiring with no zero divisors, frozen into a product
+      semiring — fails this on its first run.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_every_mutant_dies_by_the_check_that_names_it"
+    strength: enforced
+    detail: >-
+      Half two, and the half most likely to be dropped as gold-plating: seven mutants, each
+      killed by the family CAUGHT_BY names. It is also the only half that catches a law
+      which cannot FAIL (D0114).
+  - type: pytest
+    target: "tests/test_law_validation.py::test_check_laws_refuses_a_frozen_law_that_declares_nothing"
+    strength: enforced
+    detail: >-
+      Part 3's guard, watched failing against a scratch tree whose law file declares
+      neither, with `test_check_laws_accepts_a_frozen_law_that_declares_its_validation` as
+      the positive control on the same fixture.
+  - type: file
+    target: scripts/check_laws.py
+    strength: enforced
+    detail: >-
+      The guard: static parse, the declaration rule scoped by `declarations_required_from`,
+      the exempt count printed, and the supersession half (D0128).
+  - type: file
+    target: docs/proposals/2026-08-26-law-validation-ratchet.md
+    strength: documentary
+    detail: >-
+      The proposal this implements, including the scope limits and the honest statement of
+      what it does not fix. Its "Candidates for M2" reading — the semiring/provenance laws
+      are model-checkable, the executor and store laws are not — is exactly how L2.1, L2.7
+      and L2.8 came to carry a VALIDATION_REASON instead.
+links:
+  - decisions/0094-law-validation-ratchet.yaml
+  - decisions/0093-l1-2-multiplicity-axiom-was-unsatisfiable.yaml
+  - decisions/0114-l1-9-is-a-law-that-cannot-fail.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0117-a-verdict-is-one-bit.yaml
+  - decisions/0118-generators-are-shaped-not-policed.yaml
+  - decisions/0089-law-helpers-frozen-inside-the-seal.yaml
