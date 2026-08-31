@@ -1,0 +1,127 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0140
+title: "The M2 sitting's driver copy, and the four defects it fixes — one of which had made a filed, ready, owner-blocked item unreachable for two sittings running"
+tier: A
+date: "2026-08-31"
+risk_flags: [governance-paths]
+decision: >-
+  `docs/proposals/2026-08-31-m2-boundary-sitting/` opens, carrying a tuned copy of
+  `scripts/boundary_sitting.sh` and a README. It is DELIBERATELY INCOMPLETE and its README
+  says so at the top: the M2 boundary red team has not run, and the queue's ready text is not
+  drafted. What is here is the set of changes confirmed live against this tree on 2026-08-31,
+  none of which any red-team finding can invalidate.
+  .
+  ONE. THE POISON-README GUARD, WHICH IS D0131 ITEM (1) AND THE ITEM D0131 SAID WOULD
+  OTHERWISE BE LOST. Three steps guarded their README append with
+  `grep -q '<fixture>' tests/poison/README.md` — does this name appear ANYWHERE in the file.
+  Step 5 appends `$PROPOSALS_M1/poison-readme-rows.md`, and that file's fourth line reads
+  "`check-decisions-file-skip/` (RT-M1-05) is deliberately not in this table". The sentence
+  explaining why the row was absent is what satisfied step 5b's grep, so step 5b read
+  "already added" and the row has never once been offered — through the M1 sitting and into
+  this one. Replaced by `readme_row_absent()`, which anchors on a markdown TABLE ROW
+  (`^| \`name/\` |`); prose never starts a line that way.
+  .
+  MEASURED, not argued. Both spellings were run against the live `tests/poison/README.md`:
+  `lint-imports-kernel` present under both (row at line 36), `oracle-shadow` present under
+  both (row at line 58), `check-decisions-file-skip` present under the OLD guard and ABSENT
+  under the new one — its only mention is prose at line 52. Exactly one fixture changes
+  verdict and it is the one the finding is about; nothing else in the corpus moves.
+  .
+  The state this leaves is worth stating plainly, because it is not what D0131 assumed: the
+  fixture IS installed (`tests/poison/check-decisions-file-skip/` exists), the guard patch IS
+  shipped (`scripts/check_decisions.py` carries RT-M1-05 twice), and the custodian already
+  reports `guard 'check_decisions_file_skip' fails its poison as required`. Only the index row
+  was ever missing. D0059 binds that README with the words "one row per finding that became a
+  fixture", so the corpus has been correctly built and incorrectly described for two sittings.
+  .
+  TWO. STEP 4b's SKIP BRANCH NEVER REGENERATED A MANIFEST ROW (D0122 item 4). The step's own
+  failure advice sends the owner to an editor OUTSIDE the driver — "apply the two blocks in
+  any editor and re-run; this step returns". On that re-run the "already applied" grep is
+  true, the skip branch is taken, and `regen_manifest_row` is never reached: BRIEF.md's bytes
+  and its MANIFEST row disagree in silence until step 9's gate fails on a frozen path, five
+  signatures and one full sitting after the mistake that caused it. New helper
+  `manifest_row_current()` compares the file's `sha256sum` output against MANIFEST.sha256 as a
+  whole line — the sum's output IS the row format, so this is the exact comparison and not a
+  proxy — and the skip branch now offers to regenerate. Checked from the failing side in a
+  sandbox: current for an unmodified manifested file, STALE both when the bytes drift and when
+  the row is absent. The true case alone would not have distinguished a working check from one
+  that always returns true.
+  .
+  THREE. STEP 0's GATE OFFER WAS A TRAP ON A RESUMED SITTING (D0122 item 5). Steps 1-8 flip
+  record statuses, write `.sig` files, amend frozen text and move fixtures; every one of those
+  is custody drift or a stale projection by the time it is done. `unexpected_failures()`
+  tolerates exactly two patterns plus this file's own name — correct for step 0 of a FRESH
+  sitting, where nothing else should be dirty — so on a resumed sitting the gate an owner is
+  invited to run "before signing anything" goes red over the work they already did, and
+  `die()` stops the sitting they came back to finish. The driver now detects a tree dirty
+  beyond its own copy, says which state it is in, offers `git status --short`, and defers to
+  step 9's gate. Verified on all four cases, and the discriminating one is the third: the
+  driver's own copy drifting is the documented PRECONDITION for running it at all, so it must
+  not count as resumed, and it does not.
+  .
+  FOUR. THE CLOSING NOTE HARDCODED THE MILESTONE ITS NEIGHBOURS INTERPOLATE (D0122 item 5).
+  The last line an owner reads said "open M1 Session A in a fresh session" — the milestone
+  that had just ENDED. Now `${NEXT_MILESTONE^^}`, derived arithmetically from `$MILESTONE`, so
+  it cannot drift again.
+  .
+  ALSO: `VERIFY_ETA` 15-20 minutes -> 35-40, re-measured rather than guessed (712 tests
+  against M1's 537; `make verify` timed end to end 2026-08-31, pytest alone 1300.60s, D0139).
+  This is the number D0069 is about — an owner watching a still terminal for forty minutes
+  against a twenty-minute promise concludes it is hung, and at the M0 sitting killed the
+  driver twice before it reached its first question. Step 5's prose was rewritten (its claim
+  that the RT-M1-05 fix "is not committed yet" is two sittings stale) and `check-decisions-file-skip`
+  joins `FIXTURES`, where the loop skips it by name.
+  .
+  WHAT WAS DELIBERATELY NOT DONE. Step 11 needed no edit: its loop is already generic over
+  `$MILESTONE` and will pick up both `m2-laws-freeze` (present in refs, absent from
+  `required_tags` — D0131 item 5, confirmed live) and `m2-close` the moment step 10 mints it.
+  That genericity is also why the README states the milestone argument is load-bearing: driven
+  at the wrong milestone the step finds both tags present, skips whole, and prints nothing
+  that looks wrong.
+rationale: >-
+  Opened now, before the red team runs, because these six changes are exactly the ones no
+  finding can invalidate — three filed defects, a re-measurement and two prose corrections —
+  and because the red-team session should attack a clean tree at a237a55 rather than share one
+  with half-finished materials. The alternative, one directory written after the red team,
+  would have folded a two-sitting-old defect into a batch where it reads as routine.
+  .
+  Item one deserves its own sentence: D0131 filed it as "THIS IS THE ITEM THAT WOULD OTHERWISE
+  BE LOST", and it was lost again — the M1 sitting ran the step, the step skipped, and nothing
+  anywhere said so. What made it recoverable was not vigilance but D0131 having been written
+  as a Tier-C record specifically so it would surface in a section an owner reads. The
+  mechanism worked; this record is the other half of it.
+reversibility: >-
+  A draft directory under docs/proposals/, plus this record. Nothing in the repo's behaviour
+  changes until the owner copies the driver over scripts/boundary_sitting.sh at the sitting,
+  which is their act and reversible by not doing it. The four defects the copy fixes are
+  unfixed in the committed driver until then, exactly as they have been.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      The driver copy itself. Documentary and it must stay so until the owner installs it:
+      claiming a guard fix is enforced while the shipped driver still carries the defect would
+      be the same false report D0122 is about.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/README.md
+    strength: documentary
+    detail: >-
+      States what is missing (the red team, the queue's ready text), the 2026-09-07 receipt
+      deadline, and the measured before/after for both new helpers.
+  - type: file
+    target: tests/poison/README.md
+    strength: documentary
+    detail: >-
+      The index item one is about — correctly built, incorrectly described. The row it is
+      missing is ready at
+      docs/proposals/2026-08-27-m1-boundary-sitting/poison-readme-row-file-skip.md.
+links:
+  - decisions/0131-the-m2-boundary-sitting-queue.yaml
+  - decisions/0138-two-more-items-for-the-m2-boundary-sitting.yaml
+  - decisions/0122-the-m1-sitting-reported-a-signature-the-owner-never-gave.yaml
+  - decisions/0059-m0-red-team-findings.yaml
+  - decisions/0068-the-sitting-is-rehearsed-before-it-is-run.yaml
+  - decisions/0095-required-tags-is-an-enumeration-that-lags.yaml
+  - decisions/0139-m2-implementation-complete.yaml
