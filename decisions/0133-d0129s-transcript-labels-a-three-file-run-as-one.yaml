@@ -1,0 +1,77 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0133
+title: "D0129's pre-freeze transcript labels a three-file pytest run as if it were one file, so its last line reads as 47 passing nodes in a file that has twelve"
+tier: A
+date: "2026-08-31"
+risk_flags: []
+decision: >-
+  CORRECTION to D0129, filed as a new record because a decision's fields are immutable
+  (D0045) and D0129 was committed at a1c93fe.
+  .
+  D0129's pre-freeze validation transcript ends with the line
+  `tests/test_provenance_homomorphism  6 failed, 47 passed`. The failure count is right and
+  the pass count belongs to a different question. The command actually run was
+  .
+    pytest tests/test_provenance_homomorphism.py tests/test_m1_kernel.py tests/test_kernel_surface.py
+  .
+  — three files, 53 nodes collected — and the transcript line names only the first.
+  Measured now, without the prototype and therefore reproducible from the tree as it
+  stands: `tests/test_provenance_homomorphism.py` collects **12** nodes; the three files
+  together collect **53**. With 6 failures and 47 passes summing to exactly 53, the split
+  is determined: **6 of that file's 12 nodes failed and 6 passed**, and the other two files
+  contributed all 41 remaining passes and no failures.
+  .
+  WHAT DOES NOT CHANGE. Every other line of the transcript is a single-target run and
+  stands as written, including the one that carries the weight: the whole frozen corpus at
+  506 passed with exactly 1 failure. The six failures are the same six either way, they are
+  all in the file D0110's own binding calls "the alarm", and Session B rewrites it. Nothing
+  about M2's scope, its laws or its freeze depends on this number.
+  .
+  THE CORRECTED LINE, for anyone reading D0129 later:
+  `tests/test_provenance_homomorphism.py  6 failed, 6 passed (12 nodes)`.
+rationale: >-
+  Filed rather than shrugged off because the sentence is exactly the shape this repository
+  keeps catching in its own tooling and has twice made a record of: a report that states
+  more than the run it names actually showed. D0122's five defects were all steps
+  "reporting success they did not achieve"; D0116's whole subject is checks whose output
+  does not depend on their input. A transcript line attributing 47 passes to a file with 12
+  nodes is the same species, in a record whose entire purpose is to say what was measured.
+  It cost nothing to state accurately and it should not be left standing because the
+  conclusion happens to survive it.
+  .
+  Worth naming as a process point rather than only as an error. The transcript was compiled
+  from four separate pytest invocations run over about twenty minutes, and the last of them
+  bundled three files for speed. The label was written from the intent of the run ("check
+  what Session B must rewrite") rather than from its command line. A transcript assembled
+  by hand from several runs needs the command beside each line, not just the result — which
+  is the small, boring, generalisable lesson, and is why the corrected line above carries a
+  node count.
+  .
+  It is also, precisely, the thing D0117 is about one level up: a number was recorded with
+  no field saying what produced it, so nothing could check it but a person re-reading the
+  scrollback.
+reversibility: >-
+  A correction record. Nothing executes and nothing is bound to a gate; deleting it would
+  restore an inaccurate line in D0129 and nothing else.
+status: accepted
+bindings:
+  - type: file
+    target: decisions/0129-the-validation-ratchet-reachable-half.yaml
+    strength: documentary
+    detail: >-
+      The record corrected, at the last line of its pre-freeze transcript. Documentary
+      because D0129's own bytes are immutable — this record is the correction, and a reader
+      who reaches D0129 through DECISIONS.md reaches this one too.
+  - type: file
+    target: tests/test_provenance_homomorphism.py
+    strength: documentary
+    detail: >-
+      The file whose node count is the correction: 12, not 47. Also what Session B rewrites
+      for D0110 and D0132, at which point the count moves and this record becomes history
+      about a measurement rather than a description of the tree.
+links:
+  - decisions/0129-the-validation-ratchet-reachable-half.yaml
+  - decisions/0045-bindings-are-mutable-decisions-are-not.yaml
+  - decisions/0122-the-m1-sitting-reported-a-signature-the-owner-never-gave.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0117-a-verdict-is-one-bit.yaml
