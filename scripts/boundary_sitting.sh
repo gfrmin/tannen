@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # scripts/boundary_sitting.sh — interactive driver for a MILESTONE BOUNDARY sitting
-# (docs/SITTING.md; the M0→M1 queue is decision D0060). OWNER-RUN, owner key present.
+# (docs/SITTING.md; the M0→M1 queue was D0060, this M1→M2 queue is D0105). OWNER-RUN,
+# owner key present.
+#
+# THIS COPY is docs/proposals/2026-08-27-m1-boundary-sitting/boundary_sitting.sh, tuned
+# for the M1 boundary (D0104's red-team findings, D0095's required_tags lag). Per
+# CLAUDE.md's build protocol, the original scripts/boundary_sitting.sh is never edited in
+# place outside a sitting — the owner copies THIS FILE over it before running (step 0 of
+# D0105's queue), the same way step 6 below replaces scripts/custodian.sh. That copy is
+# itself expected custody drift, tolerated in unexpected_failures() below by name.
 #
 # Builder-drafted, and it signs nothing by itself: every signature is your key answering
 # your passphrase, and every edit to author-key territory (scripts/custodian.sh,
@@ -18,9 +26,15 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-MILESTONE="${1:-m0}"
+MILESTONE="${1:-m1}"
 OWNER_KEY="${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}"
+# PROPOSALS still names the M0→M1 sitting's own directory: steps 3/4/4b/6 below compare
+# against artifacts drafted there, and every one of those comparisons is already-applied
+# (a no-op skip) as of this milestone — nothing there needed a second draft. PROPOSALS_M1
+# is this sitting's own directory, used only where this milestone adds something new
+# (the oracle-shadow poison row, the custodian.sh diff carrying its poison line).
 PROPOSALS="docs/proposals/2026-08-25-boundary-sitting"
+PROPOSALS_M1="docs/proposals/2026-08-27-m1-boundary-sitting"
 CANDIDATES="docs/redteam/fixture-candidates"
 KEYREF="$OWNER_KEY"          # what ssh-keygen -Y sign is pointed at (key file, or .pub
                              # when the private half is loaded into an agent)
@@ -29,10 +43,12 @@ KEYREF="$OWNER_KEY"          # what ssh-keygen -Y sign is pointed at (key file, 
 # through pyproject.toml and uv.lock, which are builder-controlled; a script that drives the
 # owner's key should not take its interpreter from the party it is checking on.
 PY="$PWD/.venv/bin/python"
-# How long the gate takes on the owner's machine, measured not guessed (2026-08-25). It is
-# printed before the run so silence has a stated duration; wrong by a minute is fine, absent
-# is not — an unbounded wait with no output is indistinguishable from a hang.
-VERIFY_ETA="a minute"
+# How long the gate takes, measured not guessed. M0's "a minute" (2026-08-25, 174 tests) is
+# stale: M1 added eight semirings, the executor and the layer lattice, and the batched
+# pytest check_decisions.py runs to resolve bindings now carries the full 537-test suite.
+# Measured this session, under shared-machine load, at 14-20 minutes; a quiet machine may
+# be faster, but "a minute" would read as hung long before the gate finishes.
+VERIFY_ETA="15-20 minutes (M1's suite is much larger than M0's; a quiet machine may be faster)"
 
 say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
@@ -58,6 +74,15 @@ edit() { eval "${EDITOR:-nano}" '"$@"'; }
 page() { eval "${PAGER:-less}" '"$@"'; }
 
 sign_owner() {   # <file> <namespace>   -> writes <file>.sig
+    # A pre-existing <file>.sig makes ssh-keygen ask "Overwrite (y/n)?" — and on any
+    # answer but y it exits 0 WITHOUT WRITING, so the die below never fires and the
+    # "signed:" note lies. Confirmed at the real M1 sitting (2026-08-30, step 7): the
+    # prompt landed right after the pager and a passphrase, got a stray non-y, and the
+    # custodian went red one line later over the untouched Aug-26 custody signature.
+    # M0 never saw this — no path had a prior signature then. Every call site reaches
+    # here only when the existing signature is already invalid (verify_owner failed, or
+    # the file was just edited), so remove it rather than leave a prompt to mis-answer.
+    rm -f -- "$1.sig"
     ssh-keygen -Y sign -f "$KEYREF" -n "$2" "$1" >/dev/null \
         || die "signature failed for $1 (namespace $2)"
     note "signed: $1.sig (namespace $2)"
@@ -73,17 +98,41 @@ verify_owner() { # <file> <namespace>   -> 0 if a valid owner signature is alrea
 # Until then those two failures ARE the agenda, not a red gate. Everything else is a red
 # gate. This names the tolerated two and nothing more; once step 7 is done it matches
 # nothing and the checks below are ordinary ones.
-# Deliberately NOT tolerated: check_manifest's "custody drift" — that is the channel
-# that says a file the owner signed for has changed, and it must still stop the sitting
-# at step 0, where nothing has been touched yet and drift means someone edited a guard
-# outside this driver. The lines below are the custodian's redundant second channel for
-# the same fact, which step 7 answers by regenerating and re-signing.
+# Deliberately NOT tolerated in general: check_manifest's per-file "custody drift" — that
+# is the channel that says a file the owner signed for has changed, and it must still stop
+# the sitting at step 0, where nothing has been touched yet and drift means someone edited
+# a guard outside this driver. The lines below are the custodian's redundant second channel
+# for the same fact, which step 7 answers by regenerating and re-signing.
+#
+# ONE exception, scoped by name, not by pattern: scripts/boundary_sitting.sh itself. This
+# sitting's own header says the owner copies THIS FILE over the real one before running it
+# (the same move step 6 makes for custodian.sh), and that copy is drift against the custody
+# set signed at the LAST sitting — before this driver has done anything. Tolerating drift
+# on this one path, by its literal name, is not the same defect the general tolerance above
+# was written to avoid: it does not hide a change to any OTHER guard, and it stops meaning
+# anything the moment step 7 re-signs, same as the rest.
+#
+# TWO OUTPUT SHAPES, one filter. scripts/custodian.sh's bad() prints one self-contained
+# line, "custodian: FAIL — <message>" — marker and detail together, which is what every
+# pattern above was written against. scripts/check_manifest.py's Failures.finish() prints
+# a bare count on its own line ("check_manifest: FAIL (N violation(s))") and each violation
+# on the NEXT line, indented ("  - <message>"), with no "FAIL" on it at all — this is
+# EXACTLY the shape check_manifest's own per-file custody drift arrives in (confirmed
+# directly: `check_manifest: FAIL (1 violation(s))` then `  - custody drift:
+# scripts/boundary_sitting.sh changed since...` on the line below). A filter matching only
+# lines containing ": FAIL" — the M0-era form — NEVER SEES that second line, so a pattern
+# aimed at it silently excuses nothing; the count line survives as "unexpected" and stops
+# the sitting at its own first question. Caught by rehearsing this copy, not by reading it.
+# So: keep both a "<script>: FAIL (N violation(s))" line AND an indented "  - " detail line,
+# apply the same patterns to both, and — the part that closes the gap — drop a bare count
+# line entirely once no detail line beneath it can still be pending. There is exactly one
+# script (check_manifest) that can emit this shape at step 0, exactly one violation it can
+# have here (this file's own drift), so counting is unambiguous without parsing the number.
 unexpected_failures() {   # <captured output> -> prints the failures step 7 will not fix
-    printf '%s\n' "$1" | grep ': FAIL' \
-        | grep -v 'custody set hashes do not verify' \
-        | grep -v 'custody\.sha256\.sig absent' \
-        | grep -v 'custody\.sha256\.sig does not verify' \
-        | grep -v 'custody floor violated'
+    local tolerated='custody set hashes do not verify|custody\.sha256\.sig absent|custody\.sha256\.sig does not verify|custody floor violated|custody drift: scripts/boundary_sitting\.sh'
+    printf '%s\n' "$1" | grep -E ': FAIL|^  - ' \
+        | grep -Ev "$tolerated" \
+        | grep -Ev '^[a-z_]+: FAIL \([0-9]+ violation\(s\)\)$'
 }
 
 regen_manifest_row() {   # author-key territory: caller confirms before calling
@@ -171,7 +220,7 @@ sign_tier_c_records() {
         case "$status" in accepted) ;; *) continue ;; esac
         verify_owner "$rec" tannen-decision && continue
         printf '\n'
-        sed -n '1,/^rationale:/p' "$rec" | head -40
+        page "$rec"
         note "-- $id ($rec): Tier C, status accepted, no owner signature"
         if confirm "Sign $id? (BRIEF §9.2: Tier C is affirmative signature only, never silence)"; then
             sign_owner "$rec" tannen-decision
@@ -298,15 +347,184 @@ else
     fi
 fi
 
+# ---------------------------------------------------------------- 4c. signed-record binding upgrades
+say "Step 4c — D0070's two drafted binding upgrades, on D0049 and D0063 (D0105 item 3)"
+note "A binding on a SIGNED Tier-C record cannot be edited between sittings (the"
+note "signature covers the record's whole bytes) — D0070 drafted these at the M0->M1"
+note "sitting and left them for the next one to apply and re-sign. D0063's needs step 4b"
+note "landed first (BRIEF.md must actually say 'Metric calibration' for its manifest"
+note "binding to mean anything); D0049's needs a corruption fix found while drafting"
+note "this: a missing newline swallowed its third binding into the second's prose,"
+note "silently dropping the documentary binding to the custodian-close-tag-signer"
+note "proposal (confirmed live 2026-08-27 — 'raw dashes: 2, parsed bindings: 2' where 3"
+note "were written; every OTHER decisions/*.yaml file was checked the same way and none"
+note "else has this defect). Restoring it and adding the new binding are one edit below."
+if ! grep -q 'Metric calibration' BRIEF.md; then
+    note "BRIEF.md does not yet carry step 4b's amendment — D0063's upgrade needs that"
+    note "first. Apply step 4b, then re-run this script; it resumes here."
+else
+    if grep -q 'target: scripts/custodian.sh' decisions/0049-*.yaml; then
+        note "D0049 already upgraded — skipped"
+    elif confirm "Fix D0049's swallowed binding and add manifest:scripts/custodian.sh?"; then
+        python3 - <<'PY'
+import glob, pathlib
+path = pathlib.Path(glob.glob("decisions/0049-*.yaml")[0])
+src = path.read_text()
+broken = ("once the owner applies it (D0045).  - type: manifest\n"
+          "    target: DELEGATIONS.md\n")
+assert src.count(broken) == 1, "expected corruption pattern not found — check by hand"
+fixed = ("once the owner applies it (D0045).\n"
+         "  - type: manifest\n"
+         "    target: DELEGATIONS.md\n")
+src = src.replace(broken, fixed)
+anchor = src.rstrip().rsplit("\n", 1)[-1] + "\n"   # the file's own last line (links: [...])
+assert anchor.startswith("links: ["), f"expected a links: line last, got {anchor!r}"
+addition = (
+    "  - type: manifest\n"
+    "    target: scripts/custodian.sh\n"
+    "    detail: >-\n"
+    "      ENFORCED, added at the M1 boundary sitting (2026-08-27): the second binding\n"
+    "      above described the drafted custodian patch as documentary, pending the\n"
+    "      owner applying it; the patch (the *-close signer case) landed at the M0->M1\n"
+    "      sitting and scripts/custodian.sh is in MANIFEST.sha256, so this upgrades the\n"
+    "      claim from documentary to enforced.\n"
+)
+src = src[: -len(anchor)] + addition + anchor
+path.write_text(src)
+PY
+        git --no-pager diff decisions/0049-*.yaml
+        if confirm "Keep this edit and re-sign D0049?"; then
+            rm -f decisions/0049-*.yaml.sig
+            sign_owner "$(ls decisions/0049-*.yaml)" tannen-decision
+        else
+            git checkout -- decisions/0049-*.yaml
+            note "reverted — D0049 keeps its corrupted binding and stale-looking signature"
+        fi
+    fi
+    if grep -q 'target: BRIEF.md' decisions/0063-*.yaml; then
+        note "D0063 already upgraded — skipped"
+    elif confirm "Add manifest:BRIEF.md to D0063?"; then
+        python3 - <<'PY'
+import glob, pathlib
+path = pathlib.Path(glob.glob("decisions/0063-*.yaml")[0])
+src = path.read_text()
+anchor = src.rstrip().rsplit("\n", 1)[-1] + "\n"
+assert anchor.startswith("links: ["), f"expected a links: line last, got {anchor!r}"
+addition = (
+    "  - type: manifest\n"
+    "    target: BRIEF.md\n"
+    "    detail: >-\n"
+    "      ENFORCED, added at the M1 boundary sitting (2026-08-27): ruling 5's\n"
+    "      amendment (the metric-calibration bullet and the signature-as-presence-vs-\n"
+    "      authorisation distinction) is applied to BRIEF.md at this sitting's step 4b,\n"
+    "      and BRIEF.md is in MANIFEST.sha256, so the prior documentary binding\n"
+    "      upgrades to enforced.\n"
+)
+src = src[: -len(anchor)] + addition + anchor
+path.write_text(src)
+PY
+        git --no-pager diff decisions/0063-*.yaml
+        if confirm "Keep this edit and re-sign D0063?"; then
+            rm -f decisions/0063-*.yaml.sig
+            sign_owner "$(ls decisions/0063-*.yaml)" tannen-decision
+        else
+            git checkout -- decisions/0063-*.yaml
+            note "reverted — D0063 keeps its documentary-only binding"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------- 4d. the operating manual
+say "Step 4d — CLAUDE.md tells every session to run a command that checks nothing (D0108)"
+if grep -q 'lint-imports --config governance/importlinter.toml' CLAUDE.md; then
+    note "CLAUDE.md already passes the config — skipped"
+else
+    note "CLAUDE.md's Verification block says 'uv run lint-imports'. Run exactly as"
+    note "written it prints 'Could not read any configuration.' and reads NO contracts:"
+    note "they moved to governance/importlinter.toml as RT-02's resolution (D0063 ruling"
+    note "3). The Makefile and scripts/custodian.sh were both updated to pass --config;"
+    note "the manual was not, and it is the file an agent follows at the start of every"
+    note "session. CI was never unprotected — it runs the Makefile. The instruction is"
+    note "what is wrong, and it fails in the direction that reads as green."
+    note ""
+    note "TWO FILES MOVE TOGETHER, and that is the whole reason this is a step and not a"
+    note "one-line hand edit. tests/test_operating_manual.py (D0111) compares the manual"
+    note "against 'make verify' and tolerates exactly this divergence BY NAME. The moment"
+    note "CLAUDE.md is correct that test FAILS ON PURPOSE — 'D0108 is FIXED ... delete the"
+    note "entry from KNOWN_DIVERGENCES' — and step 9's gate would stop this sitting over"
+    note "it, after fifteen minutes, with your key out. So the fix and the retirement of"
+    note "its tolerance are one edit, confirmed once, reverted together."
+    if python3 - <<'PY'
+import pathlib, sys
+
+manual = pathlib.Path("CLAUDE.md")
+src = manual.read_text(encoding="utf-8")
+old = "uv run lint-imports               # kernel has no IO; no cross-repo imports\n"
+new = ("uv run lint-imports --config governance/importlinter.toml   "
+       "# kernel has no IO; no cross-repo imports\n")
+if src.count(old) != 1:
+    sys.exit("CLAUDE.md's lint-imports line is not the expected one — apply by hand")
+
+test = pathlib.Path("tests/test_operating_manual.py")
+tsrc = test.read_text(encoding="utf-8")
+# The COMMENT goes with the entry. A tolerance map whose entry is gone but whose comment
+# still explains why the entry is there is the same class of defect as the stale CLAUDE.md
+# line this step exists to fix — prose describing a state the code left behind.
+block = """#: The one divergence that exists today, and why it is still here. D0108 is Tier C: the fix
+#: is one line in CLAUDE.md, which is frozen AND custody-set, so only the owner may make it.
+#: When they do, this test fails with the message below and the entry gets deleted in the
+#: same sitting. A SECOND entry should never be added without a decision record saying why.
+KNOWN_DIVERGENCES = {
+    ("import-linter", None, "governance/importlinter.toml"): "D0108",
+}
+"""
+replacement = """#: Empty since the M1 boundary sitting, where D0108's one-line fix to CLAUDE.md landed and
+#: this entry was deleted in the same step (D0113). The map stays as the declared home for a
+#: tolerated divergence: a new entry needs a decision record saying why the manual and the
+#: gate are allowed to disagree, and the tests below keep one honest once it exists.
+KNOWN_DIVERGENCES: dict[tuple[str, str | None, str | None], str] = {}
+"""
+if tsrc.count(block) != 1:
+    sys.exit("KNOWN_DIVERGENCES is not the expected block — apply by hand")
+
+manual.write_text(src.replace(old, new), encoding="utf-8")
+test.write_text(tsrc.replace(block, replacement), encoding="utf-8")
+PY
+    then
+        git --no-pager diff CLAUDE.md tests/test_operating_manual.py
+        if confirm "Keep BOTH edits?"; then
+            regen_manifest_row CLAUDE.md
+            note "D0108 is applied. Step 8 will offer to accept and sign the record; this"
+            note "step is what makes accepting it there true rather than aspirational."
+        else
+            git checkout -- CLAUDE.md tests/test_operating_manual.py
+            note "reverted — both files. CLAUDE.md keeps the line that checks nothing, and"
+            note "D0111 keeps tolerating it; leave D0108 blocked at step 8 to match."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+        note "Leave D0108 blocked at step 8 and hand it back to a builder session."
+    fi
+fi
+
 # ---------------------------------------------------------------- 5. poison fixtures
 say "Step 5 — install the red-team poison fixtures (author-key territory)"
-note "Seven fixtures, all drafted under $CANDIDATES and verified to fail their guard for"
-note "the intended reason. Installing one is a git mv, a manifest row per file, and a"
-note "poison line in the custodian — the custodian replacement in step 6 already carries"
-note "every line, so the fixtures must land first or it will fail on missing paths."
+note "Eight fixtures. Seven are the M0→M1 corpus, already installed by that sitting (this"
+note "loop skips them). The eighth, oracle-shadow (RT-M1-01), is new: drafted under"
+note "$CANDIDATES and verified to fail src/tannen/laws/plugin.py's oracle-shadow check for"
+note "the intended reason. check-decisions-file-skip (RT-M1-05) is deliberately NOT in"
+note "this list — its guard fix is not committed yet (D0103); installing that fixture"
+note "before the fix lands would leave the custodian permanently red against the shipped"
+note "guard, which step 5's own marking convention exists to prevent. It joins this list"
+note "at the sitting where the RT-M1-05 patch (docs/redteam/fixture-candidates/check-decisions-file-skip/rt-m1-05-check-decisions.patch)"
+note "is actually applied — see D0105's queue, item after the custody re-signature."
+note "Installing one is a git mv, a manifest row per file, and a poison line in the"
+note "custodian — the custodian replacement in step 6 already carries every line, so the"
+note "fixtures must land first or it will fail on missing paths."
 FIXTURES="lint-imports-kernel check-decisions-ratchet check-decisions-nested-hatch
           check-manifest-sealed check-manifest-unsigned-policy
-          check-decisions-unsigned-tier-c custodian-tag-signer"
+          check-decisions-unsigned-tier-c custodian-tag-signer
+          oracle-shadow"
 if [ ! -d tests/poison/custodian-tag-signer ]; then
     note "The tag-signer fixture is a git bundle carrying a builder-signed close tag."
     note "It is generated HERE, at the sitting, and never shipped pre-built (conferral"
@@ -335,6 +553,13 @@ if ! grep -q 'lint-imports-kernel' tests/poison/README.md; then
         git --no-pager diff tests/poison/README.md
     fi
 fi
+if [ -d tests/poison/oracle-shadow ] && ! grep -q 'oracle-shadow' tests/poison/README.md; then
+    if confirm "Add oracle-shadow (RT-M1-01) to the tests/poison/README.md table?"; then
+        cat "$PROPOSALS_M1/poison-readme-rows.md" >> tests/poison/README.md
+        regen_manifest_row tests/poison/README.md
+        git --no-pager diff tests/poison/README.md
+    fi
+fi
 
 # Installing a fixture MOVES files, and a decision record whose binding names the candidate
 # path stops resolving the instant it does. Nothing surfaces that until a guard runs, and
@@ -347,25 +572,84 @@ fi
 # either — step 4b edits BRIEF.md, which is in the custody set, so check_manifest reports
 # custody drift until step 7 re-signs. Both are the sitting working, not the sitting broken.
 # A `git mv` produces exactly two messages, and these are they.
-waiting "checking the decision bindings still resolve — up to a minute; it runs pytest"
-broken=$("$PY" -I -P scripts/check_decisions.py 2>&1 \
-    | grep -E 'binding does not resolve — (target does not exist|not listed in MANIFEST)' || true)
+# "Up to a minute" was M0's measurement, when check_decisions had a handful of bindings.
+# At M1 it re-runs 54 pytest bindings and takes about TEN minutes — and this line's stale
+# ETA plus a captured-and-silent run got the driver killed right here at the real M1
+# sitting (2026-08-30, exit 130): the same still-terminal-reads-as-hung class as D0069,
+# one step further in. Same cure as step 0's gate, and for the same reason: tee streams
+# the run while the log keeps what the grep below needs. The rehearsal harness's silence
+# rule stays satisfied — a [waiting] line arms until the next step header.
+waiting "checking the decision bindings still resolve — about 10 minutes (54 pytest bindings; output streams below, with still stretches between batches)"
+bindings_log=$(mktemp -t tannen-bindings.XXXXXX)
+"$PY" -I -P scripts/check_decisions.py 2>&1 | tee "$bindings_log"
+broken=$(grep -E 'binding does not resolve — (target does not exist|not listed in MANIFEST)' "$bindings_log" || true)
+rm -f "$bindings_log"
 [ -z "$broken" ] || die "a decision binding stopped resolving when the fixtures moved:
 $broken
   Retarget it to the installed tests/poison/ path — builder work, no signature involved.
   Nothing has been signed; the fixtures stay installed and step 5 will skip them next run."
 
+# ---------------------------------------------------------------- 5b. RT-M1-05
+say "Step 5b — land RT-M1-05: the guard patch and its fixture, together (D0103, D0105 item 2)"
+note "scripts/check_decisions.py is custody-set — D0063's own binding on"
+note "tests/test_governance_scripts.py runs it — so a builder session that patches it"
+note "alone would cascade into a red gate on every commit after, before this sitting's"
+note "step 7 could re-sign custody to absorb the drift (see D0103). The patch and the"
+note "fixture below land here, staged into the SAME commit step 9 makes."
+if grep -q 'RT-M1-05' scripts/check_decisions.py; then
+    note "patch already applied — skipped"
+else
+    if confirm "Read the patch first?"; then
+        page "$CANDIDATES/check-decisions-file-skip/rt-m1-05-check-decisions.patch"
+    fi
+    if confirm "Apply it (scripts/check_decisions.py, tests/test_governance_scripts.py)?"; then
+        git apply "$CANDIDATES/check-decisions-file-skip/rt-m1-05-check-decisions.patch" \
+            || die "patch did not apply cleanly — the tree has moved since it was drafted; land it by hand"
+        git --no-pager diff --stat scripts/check_decisions.py tests/test_governance_scripts.py
+    else
+        note "declined — the fixture below only installs once the patch is applied, so it"
+        note "is skipped too this pass"
+    fi
+fi
+if grep -q 'RT-M1-05' scripts/check_decisions.py && [ ! -d tests/poison/check-decisions-file-skip ]; then
+    if confirm "Install the check-decisions-file-skip fixture (RT-M1-05)?"; then
+        # Only decisions/ and tests/ move — the .patch file stays at its documented path:
+        # D0103 and D0104 both carry a binding to it there, and a git mv of the whole
+        # candidate directory would break both the same way an earlier binding to
+        # oracle-shadow's own candidate path broke when step 5 moved IT (D0104 dropped
+        # that one rather than repeat the fragility here).
+        mkdir -p tests/poison/check-decisions-file-skip
+        git mv "$CANDIDATES/check-decisions-file-skip/decisions" \
+               tests/poison/check-decisions-file-skip/decisions || die "git mv failed"
+        git mv "$CANDIDATES/check-decisions-file-skip/tests" \
+               tests/poison/check-decisions-file-skip/tests || die "git mv failed"
+        add_manifest_rows tests/poison/check-decisions-file-skip
+        note "installed with $(find tests/poison/check-decisions-file-skip -type f | wc -l) manifest row(s)"
+    fi
+fi
+if [ -d tests/poison/check-decisions-file-skip ] && ! grep -q 'check-decisions-file-skip' tests/poison/README.md; then
+    if confirm "Add check-decisions-file-skip (RT-M1-05) to tests/poison/README.md?"; then
+        cat "$PROPOSALS_M1/poison-readme-row-file-skip.md" >> tests/poison/README.md
+        regen_manifest_row tests/poison/README.md
+        git --no-pager diff tests/poison/README.md
+    fi
+fi
+
 # ---------------------------------------------------------------- 6. the custodian
 say "Step 6 — the custodian itself (trust root; yours alone to apply)"
-if diff -q scripts/custodian.sh "$PROPOSALS/custodian.sh" >/dev/null; then
+# $PROPOSALS_M1/custodian.sh, not $PROPOSALS/custodian.sh: the M0→M1 draft is already
+# installed (that comparison would read "already applied" and never offer the one line
+# this milestone adds). This sitting's own draft is the LIVE custodian.sh plus one new
+# poison line for oracle-shadow (RT-M1-01) — the diff below should show only that.
+if diff -q scripts/custodian.sh "$PROPOSALS_M1/custodian.sh" >/dev/null; then
     note "already applied — skipped"
 else
     note "Read the whole diff. This file is the guard of the guards; the poison corpus"
     note "keeps it honest, and every line you accept here is a line you are vouching for."
     pause "Enter for the diff (q quits the pager)..."
-    diff -u scripts/custodian.sh "$PROPOSALS/custodian.sh" | page
+    diff -u scripts/custodian.sh "$PROPOSALS_M1/custodian.sh" | page
     if confirm "Install this custodian?"; then
-        cp "$PROPOSALS/custodian.sh" scripts/custodian.sh
+        cp "$PROPOSALS_M1/custodian.sh" scripts/custodian.sh
         regen_manifest_row scripts/custodian.sh
         note "running it — every guard must FAIL its poison, for its own marker."
         note ""
@@ -444,8 +728,26 @@ for rec in "${queue[@]}"; do
     [ "$(sed -n 's/^tier: *//p' "$rec" | head -1)" = "C" ] || continue
     grep -q '^status: blocked-on-owner$' "$rec" || continue
     printf '\n'
-    sed -n '1,/^rationale:/p' "$rec" | head -40
     rec_id=$(sed -n 's/^id: *//p' "$rec" | head -1)
+    # The head -40 that used to stand here cut five of the eight queued records mid-
+    # sentence with no marker, D0115 (the external-bytes door) worst of all: its display
+    # ended at "Publishing tannen publishes all of it" and the next thing on screen was
+    # the signing prompt. Everything below — the ruling on the renavon excerpt, the
+    # recommended mechanism, the reversibility clause, the bindings — was never shown.
+    # A signature over bytes the signer was not shown is not consent. Page it whole.
+    note "$rec_id — $(wc -l < "$rec") lines, shown in full"
+    page "$rec"
+    # What a yes here does NOT do. Step 8 flips one status line and writes one .sig; no
+    # step of this driver applies what a record proposes, except where named below.
+    case "$rec_id" in
+        D0061) note "APPLIED-BY: already built and owner-signed; accepting ratifies executed work" ;;
+        D0095) note "APPLIED-BY: item 1 lands at step 11. Item 2 — the half this record calls" ;
+               note "            the one that matters more — is applied by NOTHING" ;;
+        D0108) note "APPLIED-BY: step 4d, earlier in this sitting. If you declined it there," ;
+               note "            the fix did not land and a yes here signs an untrue record" ;;
+        *)     note "APPLIED-BY: NOTHING in this sitting. A yes authorises future work only," ;
+               note "            and every artifact it needs is frozen or custody-set" ;;
+    esac
     # Accepting and signing are ONE act, and it rolls back. Since D0064 a Tier-C record
     # that says accepted without a signature reddens the gate, so flipping the status
     # first and prompting for the key second would leave a declined signature — or a
@@ -510,20 +812,35 @@ else
     rm -f "$msg"
 fi
 
-say "Step 11 — the close tag joins the required set, and the custody set is re-signed"
-if git rev-parse -q --verify "refs/tags/$MILESTONE-close" >/dev/null \
-   && ! grep -q "  - $MILESTONE-close\$" governance/tag-roles.yaml; then
+say "Step 11 — the tags this milestone minted join the required set, and the custody set is re-signed"
+# D0095: required_tags always lags by construction — a boundary tag is minted by the same
+# session that cannot then add it to the frozen, custody-set file that names it required.
+# $MILESTONE-laws-freeze was minted at M1 Session A's freeze commit and has been missing
+# from required_tags ever since (filed D0095, blocked-on-owner); $MILESTONE-close is
+# minted moments ago, at step 10, above. Both are added here, in the SAME motion, so this
+# boundary does not repeat D0095's own lag at the next one — exactly its recommendation.
+MISSING_TAGS=()
+for suffix in laws-freeze close; do
+    tag="$MILESTONE-$suffix"
+    if git rev-parse -q --verify "refs/tags/$tag" >/dev/null \
+       && ! grep -q "  - $tag\$" governance/tag-roles.yaml; then
+        MISSING_TAGS+=("$tag")
+    fi
+done
+if [ "${#MISSING_TAGS[@]}" -gt 0 ]; then
     note "A tag that exists but is not required can be deleted in silence (RT-15)."
-    if confirm "Add $MILESTONE-close to tag-roles.yaml required_tags?"; then
-        python3 - "$MILESTONE" <<'PY'
+    note "Missing from required_tags: ${MISSING_TAGS[*]}"
+    if confirm "Add ${MISSING_TAGS[*]} to tag-roles.yaml required_tags?"; then
+        python3 - "${MISSING_TAGS[@]}" <<'PY'
 import pathlib, sys
-milestone = sys.argv[1]
+tags = sys.argv[1:]
 p = pathlib.Path("governance/tag-roles.yaml")
 src = p.read_text()
 anchor = "required_tags:\n"
 assert src.count(anchor) == 1
 end = src.index(anchor) + len(anchor)
-p.write_text(src[:end] + f"  - {milestone}-close\n" + src[end:])
+addition = "".join(f"  - {t}\n" for t in tags)
+p.write_text(src[:end] + addition + src[end:])
 PY
         regen_manifest_row governance/tag-roles.yaml
         git --no-pager diff governance/tag-roles.yaml

@@ -48,7 +48,7 @@ reversibility: >-
   A one-line edit to a frozen, custody-set document, and its MANIFEST.sha256 and
   governance/custody.sha256 entries re-signed. No code, no behaviour, no data. Fully
   reversible by the owner; not touchable by the builder at all.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: manifest
     target: CLAUDE.md

@@ -49,7 +49,7 @@ reversibility: >-
   what the custody floor considers mandatory, and a rule that over-derives would make every
   shallow clone fail the custodian, which is why it is proposed for a sitting rather than
   drafted here.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: config
     target: governance/tag-roles.yaml#required_tags

@@ -39,7 +39,7 @@ reversibility: >-
   sittings. pyproject.toml is deliberately excluded so dependency work does not halt
   mid-milestone; its import contracts are covered by the contract-shape check in
   check_manifest instead.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: config
     target: governance/tier-c.yaml#custody.file

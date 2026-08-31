@@ -88,7 +88,7 @@ uv run tannen laws report         # evidence freshness for current descriptors
 uv run python scripts/check_manifest.py    # frozen paths intact
 uv run python scripts/check_concepts.py    # concept records ↔ vendored artifacts complete; projections fresh
 uv run python scripts/check_decisions.py   # records schema-valid; bindings resolve; veto clocks computed
-uv run lint-imports               # kernel has no IO; no cross-repo imports
+uv run lint-imports --config governance/importlinter.toml   # kernel has no IO; no cross-repo imports
 ```
 
 CI runs the same five. A session that leaves any of them red leaves a note at the top of

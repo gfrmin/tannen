@@ -78,6 +78,36 @@ NESTED_ENV = "TANNEN_CHECK_DECISIONS_NESTED"
 #: (RT-08) — `make verify` clears the variable so the honest path is the default one.
 NOT_RESOLVED = object()
 
+#: RT-M1-05 (2026-08-26 boundary red team): `pytest_violation` used to call a run "skipped"
+#: only when NOTHING in it passed (`skipped and "passed" not in out`). A binding that names
+#: a whole FILE — most of them do (see decisions/*.yaml) — can hold several test functions;
+#: if ONE of them is skipped while its siblings pass, that condition never trips, the run
+#: exits 0, and the binding is reported enforced/green even though the specific enforcement
+#: the record cares about may be exactly the skipped one. `tests/test_conformance.py` has a
+#: real, DESIGNED skip of this shape (an S-pending concept's vectors are legitimately absent
+#: until the owner publishes them, D0009) and is bound at file granularity by D0087, so the
+#: fix cannot simply be "any skip fails" without breaking a binding that was never broken.
+#: The distinguishing fact is that a designed skip documents ITSELF: `pytest.skip(reason=…)`
+#: carries why. Anything else that skips inside an otherwise-passing binding is treated as
+#: unexplained and fails — a smuggled-in `pytest.mark.skip` has no such reason and nothing
+#: about its presence looks different from ordinary output unless you go looking, which is
+#: the whole problem this closes.
+ALLOWED_SKIP_REASON_PREFIXES = ("S-pending: ",)
+
+#: `pytest -rs` prints one line per skip in "short test summary info":
+#: `SKIPPED [<count>] <file>:<line>: <reason>`. This is the only place a reason is visible
+#: in captured stdout without switching to `-v` (which would also change the "N skipped"
+#: counting line every other check here already parses).
+_SKIP_REASON_RE = re.compile(r"^SKIPPED \[\d+\] [^:\n]+:\d+: (.*)$", re.MULTILINE)
+
+
+def unexplained_skips(out: str) -> list[str]:
+    """Skip reasons in a pytest run's output that are not on the allowed list."""
+    return [
+        reason for reason in _SKIP_REASON_RE.findall(out)
+        if not reason.startswith(ALLOWED_SKIP_REASON_PREFIXES)
+    ]
+
 
 def binding_violation(root: Path, kind: str, target: str) -> str | None:
     if kind == "file":
@@ -123,7 +153,8 @@ def run_pytest(root: Path, targets: list[str]) -> subprocess.CompletedProcess:
     runs under (`uv run python scripts/check_decisions.py`), so this reuses the resolved
     environment instead of paying `uv run`'s resolution cost per binding."""
     return subprocess.run(
-        [sys.executable, "-m", "pytest", *targets, "-q", "--no-header", "-p", "no:cacheprovider"],
+        [sys.executable, "-m", "pytest", *targets, "-q", "--no-header", "-rs",
+         "-p", "no:cacheprovider"],
         cwd=root, capture_output=True, text=True, check=False,
         env={**os.environ, NESTED_ENV: "1"},
     )
@@ -136,6 +167,13 @@ def pytest_violation(root: Path, targets: list[str], label: str) -> str | None:
         return f"pytest node does not collect: {label}"
     if re.search(r"\b[1-9]\d* skipped\b", out) and " passed" not in out:
         return f"pytest node is skipped (a skipped binding is not enforcement): {label}"
+    unexplained = unexplained_skips(out)
+    if unexplained:
+        return (
+            f"pytest node has an unexplained skip inside an otherwise-passing run "
+            f"(RT-M1-05: a whole-file binding with a mix of passed and skipped tests "
+            f"reads as fully enforced) — {label}: {'; '.join(unexplained)}"
+        )
     if run.returncode != 0:
         return f"pytest node fails: {label}"
     return None

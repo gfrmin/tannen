@@ -115,7 +115,7 @@ reversibility: >-
   construction) and the custody re-signatures, which are themselves re-issuable over a
   later state at the next sitting. Every applied patch, every fixture installation, and
   every binding upgrade can be reverted individually.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-08-27-m1-boundary-sitting/README.md

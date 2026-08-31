@@ -163,8 +163,22 @@ Pre-decided in this brief so they are never asked again: canonical encoding (§4
 
 - **The custodian.** `scripts/custodian.sh` is small and author-frozen (manifested together with `allowed_signers` and `tests/poison/`). It verifies: signed tags; frozen-path hashes; that the CI config's hash is manifested; and **guard liveness by poison** — every guard must FAIL against `tests/poison/` (one deliberately violating fixture per guard). A guard that passes its poison is weakened, and the custodian says so.
 - **Attention receipts.** Each custodian run writes an author-signed dated receipt. Tier-B silence-as-consent is valid **only while the latest receipt is fresh**; stale ⇒ Tier-B blocks accumulate and work pauses at the next milestone boundary.
+- **Two speech acts, never substituted.** A signature over a *projection* (a digest) is
+  PRESENCE: "I saw what I was shown." A signature over a *record* (a Tier-C decision) is
+  AUTHORISATION: "this door opens." The two may not stand in for one another. Batch
+  attestation over a digest is a fine receipt and a terrible authorisation, because a
+  digest is composed by the party it measures — tier, risk flags and the sample are all
+  builder-side inputs — so a record hidden from every projection would inherit consent it
+  was never shown for. Authorisation attaches to the artifact of record, never to a
+  report about it.
 - **Cadence.** Owner sittings at **milestone boundaries only**; receipt validity = next boundary + 7 days. Mandatory extra sittings gate M4 (before any nonzero budget) and M5 (before touching Renavon inputs).
 - **Exception-only digest.** The digest surfaces risk-flagged decisions (spend, public surface, ref grammar, governance paths) plus K=3 randomly sampled others; the rest auto-consent under a fresh receipt. Ratcheted metrics: the unenforced count and the Grade-P/S-pending residue must trend down.
+- **Metric calibration.** A ratcheted metric must be TRUE for one digest before it is
+  ENFORCED from the next. A metric added and ratcheted in the same breath establishes its
+  baseline in the state where nothing has been measured yet, so the first honest
+  measurement reads as a breach — the ratchet then punishes accurate self-reporting,
+  which inverts it. Land the measurement, publish one digest carrying true values, and
+  only then compare against it.
 - **Red team.** At each milestone boundary; findings become poison fixtures.
 - **Opening.** `docs/OPENING.md` includes custodian cron setup on the owner's machine with hardware-key signing (touch = presence), and the first receipt.
 

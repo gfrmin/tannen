@@ -29,13 +29,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-#: The one divergence that exists today, and why it is still here. D0108 is Tier C: the fix
-#: is one line in CLAUDE.md, which is frozen AND custody-set, so only the owner may make it.
-#: When they do, this test fails with the message below and the entry gets deleted in the
-#: same sitting. A SECOND entry should never be added without a decision record saying why.
-KNOWN_DIVERGENCES = {
-    ("import-linter", None, "governance/importlinter.toml"): "D0108",
-}
+#: Empty since the M1 boundary sitting, where D0108's one-line fix to CLAUDE.md landed and
+#: this entry was deleted in the same step (D0113). The map stays as the declared home for a
+#: tolerated divergence: a new entry needs a decision record saying why the manual and the
+#: gate are allowed to disagree, and the tests below keep one honest once it exists.
+KNOWN_DIVERGENCES: dict[tuple[str, str | None, str | None], str] = {}
 
 
 def _repo_text(name: str, root: Path = ROOT) -> str:

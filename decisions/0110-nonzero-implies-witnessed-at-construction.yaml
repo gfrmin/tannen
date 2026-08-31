@@ -75,7 +75,7 @@ reversibility: >-
   after M2's capture layer that stops being true, which is the argument for doing it now
   rather than later. The code change itself is small and reversible; the compatibility
   boundary is not.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: pytest
     target: tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image

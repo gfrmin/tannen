@@ -90,7 +90,7 @@ reversibility: >-
   (2), once ratified, governs how future frozen-law defects are corrected; reversing it
   later would not invalidate any correction already made under it (each stays a discrete,
   separately-superseded file), only change the rule for corrections after the reversal.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: manifest
     target: governance/schemas/decision-record.schema.json

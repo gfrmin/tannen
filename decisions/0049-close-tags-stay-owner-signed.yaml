@@ -54,7 +54,8 @@ bindings:
     detail: >-
       The drafted guard: custodian check 3 gains a `*-close` case requiring
       "signature for owner@tannen", plus the companion DELEGATIONS.md freeze. Upgrades
-      to a manifest binding on scripts/custodian.sh once the owner applies it (D0045).  - type: manifest
+      to a manifest binding on scripts/custodian.sh once the owner applies it (D0045).
+  - type: manifest
     target: DELEGATIONS.md
     detail: >-
       ENFORCED, added 2026-08-25 under D0045: the known weakness named in the first
@@ -62,4 +63,12 @@ bindings:
       custody set (D0061), so the text quoted verbatim in the brief-freeze tag message
       can no longer drift away from the signature that blessed it without a guard
       saying so.
+  - type: manifest
+    target: scripts/custodian.sh
+    detail: >-
+      ENFORCED, added at the M1 boundary sitting (2026-08-27): the second binding
+      above described the drafted custodian patch as documentary, pending the
+      owner applying it; the patch (the *-close signer case) landed at the M0->M1
+      sitting and scripts/custodian.sh is in MANIFEST.sha256, so this upgrades the
+      claim from documentary to enforced.
 links: ["D0015", "D0032", "D0035", "D0036", "D0045", "D0047"]

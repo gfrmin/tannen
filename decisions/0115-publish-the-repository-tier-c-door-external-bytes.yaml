@@ -147,7 +147,7 @@ reversibility: >-
   default. Every OTHER item here is reversible — a remote can be removed, a licence
   changed going forward, policy.yaml re-signed — which is precisely why the snapshot
   question must be settled BEFORE the first push rather than after.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: config
     target: governance/policy.yaml#external_surface.publishing

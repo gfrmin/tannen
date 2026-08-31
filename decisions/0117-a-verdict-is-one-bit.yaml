@@ -110,7 +110,7 @@ reversibility: >-
   It stops being cheap the moment the Governor seam has a consumer, which is the argument
   for doing it at M2 rather than later. Every other part is ordinary: a field can be
   widened, a metric can be dropped, and nothing here proposes a gate that could fail.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: manifest
     target: governance/schemas/evidence-record.schema.json

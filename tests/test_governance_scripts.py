@@ -165,6 +165,62 @@ def test_stale_projection_detected(tmp_path: Path) -> None:
     assert "stale" in (result.stdout + result.stderr)
 
 
+def test_a_skip_hidden_inside_a_passing_file_binding_is_caught(tmp_path: Path) -> None:
+    """RT-M1-05 (2026-08-26 boundary red team). Most pytest bindings in decisions/*.yaml
+    name a whole FILE, not one node (D0083, D0093, D0100, D0101, ...). `pytest_violation`
+    used to call a run "skipped" only when NOTHING in it passed; a file with several test
+    functions where just one is skipped and the rest pass never tripped that condition,
+    the run exited 0, and the binding was reported enforced.
+
+    Constructed as a self-contained tree (D0092's rule): a decision record bound to a file
+    holding one passing test and one `pytest.mark.skip`-ed test with no allow-listed
+    reason. Before the fix this tree's check_decisions run was fully green; after, the
+    skip must surface as a binding failure.
+    """
+    root = tmp_path / "tree"
+    (root / "decisions").mkdir(parents=True)
+    (root / "tests").mkdir()
+    (root / "decisions" / "0001-poison-file-skip.yaml").write_text(
+        "id: D0001\n"
+        "title: Probe -- file-level pytest binding with one skipped node\n"
+        "tier: A\n"
+        'date: "2020-01-02"\n'
+        "decision: >-\n"
+        "  Bind this record to a whole test FILE. One test function in it is skipped;\n"
+        "  another passes.\n"
+        "rationale: RT-M1 probe 5.\n"
+        "reversibility: n/a (probe)\n"
+        "status: accepted\n"
+        "bindings:\n"
+        "  - type: pytest\n"
+        "    target: tests/test_mixed.py\n",
+        encoding="utf-8",
+    )
+    (root / "tests" / "test_mixed.py").write_text(
+        "import pytest\n\n"
+        "def test_this_one_passes():\n"
+        "    assert True\n\n"
+        '@pytest.mark.skip(reason="the enforcement this binding claims never actually runs")\n'
+        "def test_this_one_is_skipped():\n"
+        "    assert False\n",
+        encoding="utf-8",
+    )
+    # This test may itself be running NESTED inside another check_decisions.py's own
+    # pytest-binding resolution (e.g. D0063 binds tests/test_governance_scripts.py at
+    # file granularity, and check_decisions.py resolves it by running this whole file
+    # with TANNEN_CHECK_DECISIONS_NESTED=1 set). That variable is ambient-environment
+    # (RT-08) and would otherwise be inherited by the subprocess below, switching off
+    # the very check this test exists to exercise. Clear it, the same way
+    # test_guard_fails_its_poison does, so this test's verdict never depends on how it
+    # was reached.
+    env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    result = run([sys.executable, "scripts/check_decisions.py", "--root", str(root)], env=env)
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, f"a hidden skip inside a passing file binding went undetected:\n{out}"
+    assert "unexplained skip" in out, out
+    assert "RT-M1-05" in out, out
+
+
 def test_same_day_boundary_starts_the_receipt_clock(monkeypatch: pytest.MonkeyPatch) -> None:
     """A boundary minted the SAME DAY as the receipt must start the seven-day clock.
 

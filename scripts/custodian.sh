@@ -217,6 +217,44 @@ poison check_tag_signers_required "required tag missing" \
     "$PY" -I -P scripts/check_tag_signers.py \
     --root tests/poison/custodian-tag-signer --repo tests/poison/custodian-tag-signer/repo.bundle
 
+# The M1 boundary sitting adds one fixture: oracle-shadow (RT-M1-01,
+# docs/redteam/2026-08-26-m1-boundary.md). Deliberately WITHOUT -I -P, unlike every guard
+# above: the attack this proves the defence against is a module reaching sys.modules
+# through PYTHONPATH before the frozen file's bare `import _fragment as F` does, and -I
+# ignores PYTHONPATH entirely (RT-08's own closed channel) — under -I this fixture's own
+# setup could never run, isolated mode would silently make it untestable rather than
+# green. The interpreter is still the literal venv path, never `uv run` (RT-02, ruling 3);
+# only the isolation flag is absent, and only for this one line, and only because the
+# fixture's job requires the very channel -I exists to close.
+# -B (PYTHONDONTWRITEBYTECODE): importing _fragment.py and bootstrap_shadow.py from
+# INSIDE tests/poison/oracle-shadow — a sealed directory where every file needs a
+# manifest row — would otherwise write __pycache__/*.pyc there on the first run,
+# unmanifested. The same hazard --no-cache already closes for lint-imports (D0063
+# rationale: "running import-linter with a poison fixture as the working directory
+# writes a cache INSIDE a sealed directory, breaking the seal"); -B is pytest's
+# equivalent for the interpreter's own bytecode cache, which --no-cache does not reach.
+# Found by rehearsing this fixture inside its OWN eventual tests/poison/ location, not
+# by reading it: docs/redteam/fixture-candidates/oracle-shadow/ is unsealed, so nothing
+# there surfaced it.
+poison oracle-shadow "RT-M1-01" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONPATH=tests/poison/oracle-shadow \
+    "$PY" -B -m pytest -p bootstrap_shadow tests/laws/m1/test_l1_duckdb.py \
+    -k test_l1_16_the_catalogue_covers_every_operator_of_the_fragment -q
+
+# A second M1 fixture: check-decisions-file-skip (RT-M1-05), lands together with the
+# guard patch it proves (this sitting's step 5b), never before it — see D0105 item 2.
+# check_decisions.py itself spawns pytest as a SUBPROCESS (run_pytest: `sys.executable -m
+# pytest ...`), so -B on THIS outer interpreter does not reach it: -B sets
+# sys.dont_write_bytecode on the process it is given to, and subprocess.run starts a new
+# one. PYTHONDONTWRITEBYTECODE=1 is an environment variable, which run_pytest's
+# `env={**os.environ, ...}` DOES forward to the child — confirmed live (2026-08-27): the
+# outer-process -B flag left __pycache__ behind under tests/poison/, unmanifested and
+# sealed the same way oracle-shadow's did; the env var closes it because it survives the
+# fork where the flag does not.
+poison check_decisions_file_skip "unexplained skip" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONDONTWRITEBYTECODE=1 \
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-file-skip
+
 if [ "$FAIL" -ne 0 ]; then
     bad "custody floor violated"
     exit 1

@@ -74,6 +74,15 @@ edit() { eval "${EDITOR:-nano}" '"$@"'; }
 page() { eval "${PAGER:-less}" '"$@"'; }
 
 sign_owner() {   # <file> <namespace>   -> writes <file>.sig
+    # A pre-existing <file>.sig makes ssh-keygen ask "Overwrite (y/n)?" — and on any
+    # answer but y it exits 0 WITHOUT WRITING, so the die below never fires and the
+    # "signed:" note lies. Confirmed at the real M1 sitting (2026-08-30, step 7): the
+    # prompt landed right after the pager and a passphrase, got a stray non-y, and the
+    # custodian went red one line later over the untouched Aug-26 custody signature.
+    # M0 never saw this — no path had a prior signature then. Every call site reaches
+    # here only when the existing signature is already invalid (verify_owner failed, or
+    # the file was just edited), so remove it rather than leave a prompt to mis-answer.
+    rm -f -- "$1.sig"
     ssh-keygen -Y sign -f "$KEYREF" -n "$2" "$1" >/dev/null \
         || die "signature failed for $1 (namespace $2)"
     note "signed: $1.sig (namespace $2)"
@@ -563,9 +572,18 @@ fi
 # either — step 4b edits BRIEF.md, which is in the custody set, so check_manifest reports
 # custody drift until step 7 re-signs. Both are the sitting working, not the sitting broken.
 # A `git mv` produces exactly two messages, and these are they.
-waiting "checking the decision bindings still resolve — up to a minute; it runs pytest"
-broken=$("$PY" -I -P scripts/check_decisions.py 2>&1 \
-    | grep -E 'binding does not resolve — (target does not exist|not listed in MANIFEST)' || true)
+# "Up to a minute" was M0's measurement, when check_decisions had a handful of bindings.
+# At M1 it re-runs 54 pytest bindings and takes about TEN minutes — and this line's stale
+# ETA plus a captured-and-silent run got the driver killed right here at the real M1
+# sitting (2026-08-30, exit 130): the same still-terminal-reads-as-hung class as D0069,
+# one step further in. Same cure as step 0's gate, and for the same reason: tee streams
+# the run while the log keeps what the grep below needs. The rehearsal harness's silence
+# rule stays satisfied — a [waiting] line arms until the next step header.
+waiting "checking the decision bindings still resolve — about 10 minutes (54 pytest bindings; output streams below, with still stretches between batches)"
+bindings_log=$(mktemp -t tannen-bindings.XXXXXX)
+"$PY" -I -P scripts/check_decisions.py 2>&1 | tee "$bindings_log"
+broken=$(grep -E 'binding does not resolve — (target does not exist|not listed in MANIFEST)' "$bindings_log" || true)
+rm -f "$bindings_log"
 [ -z "$broken" ] || die "a decision binding stopped resolving when the fixtures moved:
 $broken
   Retarget it to the installed tests/poison/ path — builder work, no signature involved.

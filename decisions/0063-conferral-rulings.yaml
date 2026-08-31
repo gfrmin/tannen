@@ -96,4 +96,12 @@ bindings:
       DOCUMENTARY (ruling 5): BRIEF.md is frozen owner text, so the builder drafts the two
       bullets and the owner applies them. Upgrades to a manifest binding on BRIEF.md once
       applied (D0045).
+  - type: manifest
+    target: BRIEF.md
+    detail: >-
+      ENFORCED, added at the M1 boundary sitting (2026-08-27): ruling 5's
+      amendment (the metric-calibration bullet and the signature-as-presence-vs-
+      authorisation distinction) is applied to BRIEF.md at this sitting's step 4b,
+      and BRIEF.md is in MANIFEST.sha256, so the prior documentary binding
+      upgrades to enforced.
 links: ["D0045", "D0049", "D0052", "D0056", "D0059", "D0061", "D0062"]
