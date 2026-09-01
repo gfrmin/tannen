@@ -7,42 +7,56 @@ document** — read it first, with `D0138` beside it, the way `CONFERRAL.md` was
 document at M0→M1 and `D0105` at M1→M2. Everything else about how a boundary sitting works is
 unchanged from `docs/SITTING.md`.
 
-> ## ⚠ NOT YET READY TO RUN — one input outstanding
+> ## ✅ READY TO RUN — rehearsed green on every path
 >
-> Updated 2026-09-01, second pass. **The red team has run**
-> (`docs/redteam/2026-09-01-m2-boundary.md`, D0141 — eight findings, one critical) and
-> **the queue is now drafted into the driver** as steps 4e, 4f, 4g, 4h, 4i, 4j, 5 and 8b. Two
-> queued items closed themselves as builder work and need nothing from you. What remains:
+> Updated 2026-09-02, third pass. The red team has run
+> (`docs/redteam/2026-09-01-m2-boundary.md`, D0141 — eight findings, one critical) and its
+> queue is drafted into the driver as steps 4e, 4f, 4g, 4h, 4i, 4j, 5 and 8b. Two queued
+> items closed themselves as builder work and need nothing from you.
 >
-> 1. **The finished driver has been rehearsed three times, it failed three times, and the
->    three defects it found are fixed — but the corrected driver has not yet completed a
->    run** (D0068, D0147). Sequence, 2026-09-01: an earlier copy, before the seven new steps,
->    ran green end to end — exit 0 over 878 lines, `m2-close` minted and verifying, custody
->    signed, receipt taken and signed, the clone's own `make verify` green, **13 of 13 verdict
->    checks**. The FINISHED driver then failed its first run: **exit 1, ten failed
->    post-conditions**, stopping at step 5 on `a decision binding stopped resolving when the
->    fixtures moved` — D0141's binding orphaned by step 5's `git mv`, and, in the same
->    check's output, step 4g's guard patch turning four cases of
->    `tests/test_tier_c_signatures.py` red. With those fixed, the third run reached the close
->    — receipt signed, `m2-close` minted and verifying, custody signed, custodian green, **8
->    of 13** — and then failed step 11's gate on `DECISIONS.md`'s attention-receipt line,
->    because the projection is generated at step 9 and both of its clock-dependent inputs are
->    written after it. All three are interactions between a step and a file it never names;
->    all three are fixed in this copy. None was visible to reading, and every new step had
->    already been sandbox-tested individually. **A run stops at its first failure, so each of
->    those runs tested only as far as it got — the count of runs is not coverage, and only a
->    green one clears the driver. Re-run all three paths under _Before running anything_
->    before the key is anywhere near this.**
+> **The driver has now completed a green run on the shape you will use.**
+> `--from worktree --answers y`, 2026-09-02: **13 of 13 verdict checks**, `rehearsal: the
+> sitting completes`, 106 minutes. `m2-close` minted by that run and verifying as
+> `owner@tannen`; custody set signed; a fresh attention receipt taken and signed; the
+> custodian green with **no tolerances**; the clone's own `make verify` green end to end;
+> nothing left uncommitted; no Tier-C door left unsigned. `--from head --answers y` reached
+> the same place independently, and `--from head --answers n` covered the decline path.
 >
-> **One coverage gap that run exposed, and it is in the harness rather than in either
-> driver.** Its transcript's fourth line reads *"so this is a RESUMED sitting"*, so **step 0's
-> precondition gate never ran**. `scripts/rehearse_sitting.sh:145-170` enrols a throwaway key,
-> rewrites `MANIFEST.sha256`, regenerates `governance/custody.sha256` and re-signs it before
-> the driver starts; under `--from worktree` those four edits stay uncommitted, and the
-> corrected `RESUMED` test sees tracked modifications and reports a resumed sitting —
-> **correctly, on the evidence in front of it**. So `--from worktree` can never exercise the
-> `RESUMED=0` branch, which is precisely the RT-M2-06 D1 fix. Only `--from head`, which
-> commits the fixture's edits (`rehearse_sitting.sh:163`), leaves a clean tree.
+> **It took six runs to get there, and that is the point of rehearsing** (D0068, D0147,
+> D0148, D0149). The finished driver failed its first three runs, one defect each, and every
+> one of them was an *interaction* — a step versus a file it never names — that reading and
+> per-step sandboxing had both missed: step 5's `git mv` orphaning D0141's binding; step 4g's
+> guard patch reddening four cases of `tests/test_tier_c_signatures.py`, a file it never
+> mentions; and `DECISIONS.md` left stale at step 11's closing gate. **A run stops at its
+> first failure, so each run tested only as far as it got — the count of runs is not
+> coverage, and only a green run clears the driver.**
+>
+> **One expected failure line, and you should see it.** At step 5 the transcript prints
+> `check_decisions: FAIL (2 violation(s))` — D0063's binding on `tests/test_governance_scripts.py`,
+> and `DECISIONS.md` stale — because mid-sitting the tree is legitimately dirty. **Two is
+> correct; more than two is new and worth stopping for.**
+>
+> **Two things the runs corrected in this README's own earlier text**, kept because a
+> retracted claim is easier to trust than a quietly deleted one:
+>
+> - The `--from head --answers n` path was described here as *cheap*. It is not: it costs
+>   about an hour, because only step 9's **commit** sits behind a `confirm` — its gate,
+>   custodian and digest run whatever you answer. Its non-zero exit is also **not** a defect;
+>   it is step 10 refusing to tag a tree whose signed receipt is uncommitted (D0051), which
+>   is the guard working. (D0148)
+> - Run 3 was described as failing because *both* of the projection's clock-dependent inputs
+>   arrive after it is generated. Only one does. Step 9 regenerates **twice** — once at its
+>   top and again via `make digest` at its end, after the receipt is written and signed — so
+>   the close tag is the sole input arriving after the last regeneration. The step-11 fix is
+>   unchanged; the reason for it is narrower and stronger. (D0148)
+>
+> **A coverage note that is in the harness, not in either driver.** Under `--from worktree`
+> the harness enrols a throwaway key, rewrites `MANIFEST.sha256`, regenerates
+> `governance/custody.sha256` and re-signs it before the driver starts, and those four edits
+> stay uncommitted — so the `RESUMED` test sees tracked modifications and reports a resumed
+> sitting, **correctly, on the evidence in front of it**. `--from worktree` therefore can
+> never exercise the `RESUMED=0` branch, which is precisely the RT-M2-06 D1 fix; only
+> `--from head`, which commits the fixture's edits, leaves a clean tree. Both were run.
 
 ## The clock
 
@@ -72,22 +86,42 @@ re-manifest, re-generate and re-sign the custody set never run at all. The verdi
 green off the tag the clone was cloned with: a post-condition whose answer does not depend on the
 run it is checking.
 
-**Three runs, and each covers something the others cannot:**
+**Three runs, and each covers something the others cannot.** All three were run green on
+2026-09-02; re-run them after ANY edit to the driver, and pass `--keep` or the clone and
+its transcript are deleted on exit and only the verdict summary survives.
 
 ```
-# 1. RESUMED=0 + the decline path, cheaply — head mode commits the fixture's own edits,
-#    so the tree is clean and step 0's precondition gate finally runs. `n` declines it,
-#    so there is no 40-minute make verify inside the run.
-… scripts/rehearse_sitting.sh --milestone m2 --from head --answers n
+# 1. RESUMED=0 + the decline path — head mode commits the fixture's own edits, so the
+#    tree is clean and step 0's precondition gate runs. Budget ~1h: `n` declines step 0's
+#    gate but step 9's gate, custodian and digest are NOT behind a confirm and run anyway.
+#    Expect a non-zero exit: step 10 correctly refuses to tag over an uncommitted receipt.
+… scripts/rehearse_sitting.sh --milestone m2 --from head --answers n --keep
 
 # 2. the same RESUMED=0 entry with the gate ACCEPTED. ~2h: step 0's gate, step 9's gate,
 #    and the verdict's own make verify.
-… scripts/rehearse_sitting.sh --milestone m2 --from head --answers y
+… scripts/rehearse_sitting.sh --milestone m2 --from head --answers y --keep
 
-# 3. the shape you will actually run, and the only one whose verdict checks all thirteen
-#    post-conditions.
-… scripts/rehearse_sitting.sh --milestone m2 --answers y
+# 3. the shape you will actually run — entering at RESUMED=1, as you will. ~1h45m.
+… scripts/rehearse_sitting.sh --milestone m2 --answers y --keep
 ```
+
+The thirteen verdict checks key off whether the run mints `m2-close`, **not** off the mode,
+so runs 2 and 3 are both scored on all thirteen. Run 3 matters for its entry shape, not for
+extra coverage.
+
+**The test count you should see, because three different numbers are in play.** The gate
+runs **715 passed / 1 skipped / 1 xfailed** before the sitting and **716** after it — step 5b
+lands the RT-M1-05 guard patch together with its fixture, and that fixture is a test. The
+driver's own `waiting` lines still say *"712 tests"*; that figure is stale and deliberately
+left alone, because editing the driver invalidates the green rehearsals and costs about four
+hours to re-prove, to correct a parenthetical nobody acts on. The ETA beside it — 35-40
+minutes — is current and is the number that matters. Rising from 715 to 716 across the
+sitting is expected, not drift.
+
+**Never edit the driver or the harness while a run is executing it.** `bash` reads a script
+incrementally by byte offset, so an edit mid-run kills the running shell with a syntax error
+on a line that is perfectly valid — and takes the verdict's failure-analysis section with it
+(D0149).
 
 Read each verdict **and** the "Unexpected failure lines" section beneath it — a driver that
 prints FAIL and carries on is worse than one that stops.

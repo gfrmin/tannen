@@ -128,7 +128,15 @@ history and tags.
   It is the difference between finding a defect here and finding it with your key on the
   table — the first three attempts at the M0 sitting each stopped on one this would have
   caught (D0065, D0066, D0067, D0069), and the M2 driver's first three runs each found a
-  further defect that close reading and per-step sandboxing had both missed (D0147).
+  further defect that close reading and per-step sandboxing had both missed (D0147). The M2
+  driver went green on its sixth run, on all three paths (D0148, D0149).
+
+  **Two things learned there that apply to every sitting from now on.** A run stops at its
+  first failure, so each run tests only as far as it gets: **the count of runs is not
+  coverage, and only a green run clears the driver.** And **never edit the driver or the
+  harness while a run is executing it** — `bash` reads a script incrementally by byte offset,
+  so an edit mid-run kills the running shell with a syntax error on a line that is perfectly
+  valid, and takes the verdict's failure analysis with it (D0149).
 
   Run it after ANY edit to the driver, and read a green result for what it is: proof of
   mechanism, not of custody. It signs with a throwaway key, because the real key is
