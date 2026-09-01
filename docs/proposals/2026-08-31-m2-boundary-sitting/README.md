@@ -14,13 +14,25 @@ unchanged from `docs/SITTING.md`.
 > **the queue is now drafted into the driver** as steps 4e, 4f, 4g, 4h, 4i, 4j, 5 and 8b. Two
 > queued items closed themselves as builder work and need nothing from you. What remains:
 >
-> 1. **This driver has not been rehearsed in its current shape** (D0068). An earlier copy —
->    before the seven new steps — ran green end to end on 2026-09-01: driver exit 0 over 878
->    lines, `m2-close` minted and verifying, custody signed, receipt taken and signed, the
->    clone's own `make verify` green, **13 of 13 verdict checks**, no unexpected failure
->    lines. That run is banked evidence for the four RT-M2-06 fixes and for the milestone
->    roll; it says nothing about the steps added since. Re-run before the key is anywhere
->    near it, on all three paths named under **Before running anything**.
+> 1. **The finished driver has been rehearsed three times, it failed three times, and the
+>    three defects it found are fixed — but the corrected driver has not yet completed a
+>    run** (D0068, D0147). Sequence, 2026-09-01: an earlier copy, before the seven new steps,
+>    ran green end to end — exit 0 over 878 lines, `m2-close` minted and verifying, custody
+>    signed, receipt taken and signed, the clone's own `make verify` green, **13 of 13 verdict
+>    checks**. The FINISHED driver then failed its first run: **exit 1, ten failed
+>    post-conditions**, stopping at step 5 on `a decision binding stopped resolving when the
+>    fixtures moved` — D0141's binding orphaned by step 5's `git mv`, and, in the same
+>    check's output, step 4g's guard patch turning four cases of
+>    `tests/test_tier_c_signatures.py` red. With those fixed, the third run reached the close
+>    — receipt signed, `m2-close` minted and verifying, custody signed, custodian green, **8
+>    of 13** — and then failed step 11's gate on `DECISIONS.md`'s attention-receipt line,
+>    because the projection is generated at step 9 and both of its clock-dependent inputs are
+>    written after it. All three are interactions between a step and a file it never names;
+>    all three are fixed in this copy. None was visible to reading, and every new step had
+>    already been sandbox-tested individually. **A run stops at its first failure, so each of
+>    those runs tested only as far as it got — the count of runs is not coverage, and only a
+>    green one clears the driver. Re-run all three paths under _Before running anything_
+>    before the key is anywhere near this.**
 >
 > **One coverage gap that run exposed, and it is in the harness rather than in either
 > driver.** Its transcript's fourth line reads *"so this is a RESUMED sitting"*, so **step 0's
@@ -186,11 +198,11 @@ application**, because a step that silently applies twice is worse than one that
 |---|---|---|
 | **4e** | D0131 item 3, **as RT-M2-02 corrects it** | `conftest.py` and `scripts/check_laws.py` into the custody set. **Not `governance/laws.yaml`** — see below. |
 | **4f** | D0131 item 4 | `check_laws.py` into `Makefile` (CI inherits it via `make verify`); `ci.yml`'s comment block and `tests/test_law_validation.py`'s docstring move with it. |
-| **4g** | RT-M2-05 | `check_decisions.py` learns to compare `DECISIONS.md`'s date-dependent claims against what today computes. |
+| **4g** | RT-M2-05 | `check_decisions.py` learns to compare `DECISIONS.md`'s date-dependent claims against what today computes — **and `tests/test_tier_c_signatures.py`'s throwaway projection moves with it**, or four of that file's cases go red (D0147). |
 | **4h** | D0123 / D0131 item 7 | Three binding upgrades — D0110, D0108, D0095 — each edit-then-sign, one record at a time. |
 | **4i** | D0131 item 8 = D0106 item 1 | Optional `bindings_count` on the decision schema, the check that reads it, and its regression test — all three together. |
 | **4j** | D0131 item 2 = D0117 | Optional `examined` `{law_nodes, test_cases}` on the evidence schema, plus `build_record` and the plugin that fill it. Schema first — proven, not assumed. |
-| **5** | RT-M2-01 | Installs `oracle-shadow-model`, this milestone's poison fixture, and its README row. |
+| **5** | RT-M2-01 | Installs `oracle-shadow-model`, this milestone's poison fixture, and its README row — then **retargets D0141's binding** to the installed path, because the `git mv` orphans it (D0147). |
 | **8b** | D0138 item 1 | Renames the alarm node, retargets **three** bindings, re-signs D0110. |
 
 **D0110 is signed twice in one sitting, and that is intended.** Step 4h upgrades its

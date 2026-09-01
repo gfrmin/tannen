@@ -1,0 +1,176 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0147
+title: "Three defects in the M2 sitting driver that only executing it could find: a binding orphaned by the fixture it names, a guard patch that reddens a test file it never mentions, and a projection left stale by the two steps that run after it"
+tier: A
+date: "2026-09-01"
+risk_flags: [governance-paths]
+decision: >-
+  The M2 driver was read closely, step by step, and every new step was applied in a sandbox
+  and watched refusing a second application (D0143). All three defects below survived all of
+  that and were found by rehearsing the finished driver end to end — one per run, each
+  deeper than the last, because a rehearsal only tests as far as it gets. None is exotic;
+  all three are the same shape — a step's blast radius reaching past the file it edits, to a
+  file it does not name.
+  .
+  (1) A BINDING THAT NAMED THE FIXTURE'S CANDIDATE PATH DIED WHEN STEP 5 MOVED IT.
+  Found by the first rehearsal, which exited 1 at step 5 with ten failed post-conditions.
+  D0141 binds `docs/redteam/fixture-candidates/oracle-shadow-model/README.md`. Step 5
+  `git mv`s that directory into `tests/poison/`, and the driver's own post-move guard —
+  written for exactly this, twenty lines below the move — stopped the sitting with
+  "a decision binding stopped resolving when the fixtures moved". The guard was right. The
+  sitting stopping was not: the repair is mechanical, it is builder work, and it belongs in
+  the same breath as the move that causes it rather than in the owner's lap five steps in.
+  .
+  FIXED BY RETARGETING, NOT DROPPING. At M1 the same shape was answered by deleting the
+  binding before the sitting (D0104's note, quoted in step 5b). That is a real answer and a
+  lossy one: `tests/poison/` is sealed and manifested, so a binding on the installed path
+  still names a file whose removal turns `check_manifest` red, where a dropped binding names
+  nothing. Step 5 now retargets it, correcting the `detail`'s tense in the same replacement
+  — "staged outside tests/poison/" stops being true the instant the `git mv` lands, and a
+  true future tense left standing becomes a false present one, which is the correction step
+  4h makes to D0110 for the same reason. Guarded on the directory AND on the old path still
+  being present, so it is inert on a resumed sitting and on a declined install.
+  .
+  THIS IS BUILDER WORK BECAUSE OF A FACT ABOUT D0141 SPECIFICALLY, not a general licence:
+  it is Tier A and unsigned. Were it Tier C and signed, D0063 ruling 2 would make its
+  bindings as immutable as its text and the edit and the re-signature would have to be one
+  act — the shape step 4h uses.
+  .
+  (2) STEP 4g'S GUARD PATCH TURNS FOUR CASES OF A TEST FILE IT NEVER MENTIONS RED.
+  Found by the same run, as two of the four violations at step 5's post-move check.
+  `tests/test_tier_c_signatures.py` is hermetic: it builds a throwaway tree and writes a
+  `DECISIONS.md` that is a bare `input_hash` header, with a comment saying projection
+  freshness is not what those tests are about. RT-M2-05's fix gives the projection a SECOND
+  thing it must carry — the attention-receipt line the run computes, because the hash cannot
+  see the clock — so a bare header stopped being a fresh projection the moment the patch
+  landed. Four of the file's seven cases assert exit 0; all four went red. D0063 and D0064
+  both bind that file, which is how the rehearsal surfaced it.
+  .
+  Left as drafted, step 4g would have closed the M2 boundary on a red suite — the gate at
+  step 9 would have failed, after five signatures and a receipt.
+  .
+  THE FIXTURE IS CORRECTED IN THE SAME EDIT, from `receipt_state` — the function the guard
+  itself calls — so a throwaway tree with no `receipts/` states the STALE verdict it
+  actually has rather than faking a FRESH one. The alternative, letting the guard pass when
+  the projection carries no receipt line at all, was rejected: it reopens the hole RT-M2-05
+  named, since `DECISIONS.md`'s own bytes are not an input to the hash that guards it, so
+  deleting the line would become the evasion. `tests/test_tier_c_signatures.py` is neither
+  frozen nor custody-set, so it needs no signature; it lands beside the guard because
+  landing it separately means landing it red. Same shape as step 4f (the Makefile and its
+  docstring) and step 4i (the schema, the check and the test).
+  .
+  (3) THE PROJECTION IS STALE AT THE CLOSING GATE, BECAUSE BOTH OF ITS CLOCK-DEPENDENT
+  INPUTS ARRIVE AFTER THE LAST STEP THAT REGENERATED IT. Found by the third rehearsal, the
+  first to survive far enough to reach the close: eight post-conditions green — receipt taken
+  and signed, `m2-close` minted and verifying as `owner@tannen`, custody set signed,
+  custodian green with no tolerances — and then step 11's `make verify` red, with
+  "DECISIONS.md's attention-receipt line is not what today computes". `DECISIONS.md` was last
+  generated at the top of step 9. Step 9's custodian then writes `receipts/<today>.md` and
+  step 10 mints the close tag, and BOTH are inputs to the freshness verdict, so the
+  projection asserts the PREVIOUS boundary's window while the run computes this one's. The
+  second violation in that gate — `tests/test_governance_scripts.py` — was a cascade of the
+  first, since that file runs `check_decisions` against the real tree.
+  .
+  THIS IS RT-M2-05'S OWN FINDING, REAPPEARING INSIDE THE DRIVER THAT FIXES IT, and that is
+  the argument for the fix rather than an irony. Before step 4g's check existed nothing could
+  say the projection was stale, so every prior sitting simply carried the staleness into its
+  closing commit — which is precisely the state the red team found in the tree M1 left
+  behind. The new check found it on its first outing, in the one place the builder had not
+  thought to look.
+  .
+  FIXED BY REGENERATING IN STEP 11, immediately before the closing gate, because there is no
+  earlier point at which both inputs exist. Neither `DECISIONS.md` nor `CONCEPTS.md` is in
+  `MANIFEST.sha256` or in the custody set — checked against both files, not assumed — so the
+  regeneration disturbs no seal and invalidates no signature, and step 11's own commit picks
+  the result up. The alternative of regenerating after the sitting was rejected because it is
+  what was already nominally true and what failed: `docs/SITTING.md` listed "regenerate the
+  projections" under work for the builder afterwards, which means the boundary commit is
+  sealed and tagged around a projection known to be wrong. That line is the habit that caused
+  this, and it has been removed.
+  .
+  VERIFIED FROM THE FAILING SIDE, all three items, per `produce-the-failure`.
+  (1) was watched stopping a rehearsal, and the corrected step was watched applying its diff
+  and the same check then passing on to step 5b in a live run.
+  (2) was reproduced locally in the order that proves it: guard patched and fixture NOT ->
+  4 failed / 3 passed, each failure naming the missing attention-receipt line; fixture
+  patched -> 7 passed. The guard itself was then checked both ways on the real tree — exit 0
+  today, and exit 1 at `--today 2026-09-08` with four violations naming the header and
+  D0006/D0014/D0020, which is precisely what step 4g's own note text promises.
+  (3) was reproduced in the rehearsal clone kept frozen in the state the failure left it:
+  `check_decisions` red on the attention-receipt line, then `gen_projections.py`, then
+  `check_decisions: OK — 146 records valid, DECISIONS.md fresh`. That clone's full
+  `make verify` was then run to completion — green end to end, 716 passed / 1 skipped /
+  1 xfailed, custodian green, custody floor intact — which is what establishes that the
+  second violation was a cascade of the first and not a separate defect.
+  .
+  NOT A DEFECT, AND WORTH KNOWING BEFORE THE NEXT RUN: step 5's post-move check reports two
+  violations mid-sitting — a stale `DECISIONS.md` (step 4 edited decision records, so the
+  input hash has legitimately moved and step 9 regenerates) and `tests/test_governance_scripts.py`
+  failing on the dirty tree. Two is the expected noise at that point. Four was defect (2).
+rationale: >-
+  Recorded because the lesson is about method, not about three shell blocks. The M1 sitting
+  was killed three times by defects a single execution would have found, which is why
+  `scripts/rehearse_sitting.sh` exists (D0069). This session then read the driver line by
+  line, sandbox-tested every new step, predicted one failure from reading alone — and still
+  shipped three defects that the rehearsals found. Sandboxing a step proves the step applies;
+  only running the whole driver proves the steps do not damage each other, because all three
+  here are interactions: a step that moves a file versus a record that names it, a step that
+  patches a guard versus a test file that calls it, and two steps that write the inputs of a
+  projection generated before them.
+  .
+  The second lesson is about the rehearsals themselves. They found one defect per run, not
+  three in one: a run stops at its first failure, so everything downstream of that point is
+  untested and the next defect is invisible until the previous one is fixed. Defect (3) lives
+  at step 11 and could not have been seen by a run that died at step 5. A single green
+  rehearsal is therefore the evidence that matters, and a count of runs is not a measure of
+  coverage — which is also why the run that found (3) is not the run that clears the driver.
+  The reading was not wasted and it was not sufficient. The rehearsal is not a formality to
+  perform once the materials look right; it is the check.
+reversibility: >-
+  All three are edits to `docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh`,
+  which is a proposal document with no manifest row and no custody entry, plus two
+  corrections to `docs/SITTING.md`, which is likewise unfrozen. Reverting any of them
+  restores the defect the rehearsal found, and the rehearsal finds it again.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      All three fixes: step 5's retarget block, step 4g's third file, and step 11's
+      regeneration before the closing gate. Documentary because a proposal document is not
+      executed by any guard — the driver is enforced only by being run, which is what the
+      rehearsal harness does and what this record is about.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      The harness that found all three. Named here because the claim this record makes is
+      about it: sandbox-testing every step in isolation did not substitute for end-to-end
+      runs, and one run per defect is what it took.
+  - type: pytest
+    target: "tests/test_tier_c_signatures.py"
+    strength: documentary
+    detail: >-
+      Item (2)'s file. DOCUMENTARY and that is the honest grade today: the file passes
+      against the shipped guard, so it detects nothing about this record until step 4g
+      lands, at which point it becomes the detector — it is the thing that goes red if the
+      guard is applied without its fixture correction.
+  - type: file
+    target: decisions/0141-m1-m2-boundary-red-team-eight-findings-one-critical.yaml
+    strength: documentary
+    detail: >-
+      Item (1)'s record — the binding step 5 now retargets, and the one whose Tier A,
+      unsigned status is what makes the driver's edit builder work rather than an owner act.
+  - type: file
+    target: docs/SITTING.md
+    strength: documentary
+    detail: >-
+      Item (3)'s cause and its correction. This file told the owner that regenerating the
+      projections was builder work for afterwards, which is what left the boundary commit
+      sealed around a projection known to be wrong; the line is gone and the step-11
+      placement is stated in its place.
+links:
+  - decisions/0143-the-m2-sitting-queue-drafted-into-the-driver.yaml
+  - decisions/0141-m1-m2-boundary-red-team-eight-findings-one-critical.yaml
+  - decisions/0146-two-ways-an-ad-hoc-run-leaks-into-a-guarded-one.yaml

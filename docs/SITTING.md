@@ -119,10 +119,16 @@ history and tags.
   what a finished sitting leaves behind: the close tag signed and verifying, the custody
   set signed, a fresh signed receipt, the custodian green with no tolerances, `make verify`
   green, nothing uncommitted, no Tier-C door left unsigned — and that no step went quiet for
-  more than 25 seconds without first saying how long it would be (D0069). It takes a couple of minutes
-  and it is the difference between finding a defect here and finding it with your key on
-  the table — the first three attempts at the M0 sitting each stopped on one that this
-  would have caught (D0065, D0066, D0067, D0069).
+  more than 25 seconds without first saying how long it would be (D0069). **Budget about two
+  hours** for the accept-everything path: it runs two full gates and a thirteen-minute
+  binding sweep. A driver with a defect in it usually dies inside the first twenty minutes,
+  so a bad run is cheap and only a good one is slow. **Pass `--keep`**, or the clone and its
+  transcript are deleted on exit and all that survives is the verdict's summary.
+
+  It is the difference between finding a defect here and finding it with your key on the
+  table — the first three attempts at the M0 sitting each stopped on one this would have
+  caught (D0065, D0066, D0067, D0069), and the M2 driver's first three runs each found a
+  further defect that close reading and per-step sandboxing had both missed (D0147).
 
   Run it after ANY edit to the driver, and read a green result for what it is: proof of
   mechanism, not of custody. It signs with a throwaway key, because the real key is
@@ -134,8 +140,17 @@ history and tags.
 
 Upgrade the bindings the sitting made enforceable (D0045: the decision is immutable, the
 binding is its present-tense attachment), add the new fixtures to
-`tests/test_governance_scripts.py`, regenerate the projections, and open the next
-milestone's Session A in a fresh session.
+`tests/test_governance_scripts.py`, and open the next milestone's Session A in a fresh
+session.
+
+**The projections are not one of them, and listing them here was the bug.** `DECISIONS.md`
+renders the attention-receipt verdict, whose inputs are the latest receipt AND the first
+boundary tag on or after it (`scripts/_gov.py:303`) — and the sitting creates both, after
+the point where it last regenerated. Left to afterwards, the closing commit carries a
+projection asserting the PREVIOUS boundary's freshness, which is what RT-M2-05 found in the
+tree M1 left behind. The M2 driver copy regenerates at its step 11, between the close tag
+and the closing gate, and `scripts/boundary_sitting.sh` inherits that when the copy replaces
+it at the sitting (D0147).
 
 **One of those upgrades cannot be done afterwards.** An owner signature covers a decision
 record's whole bytes, so editing a binding on a **signed Tier-C record** breaks its

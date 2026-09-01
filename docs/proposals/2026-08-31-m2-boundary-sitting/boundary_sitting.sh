@@ -824,6 +824,15 @@ else
     note "checked and is simply blind to what varies. Why it stayed hidden: every session"
     note "so far added a record, which moves the hash and forces a regeneration. The drift"
     note "is only visible on a day when nothing lands."
+    note ""
+    note "AND IT TAKES A TEST FILE WITH IT, which a REHEARSAL found and reading did not."
+    note "tests/test_tier_c_signatures.py builds a throwaway tree and writes a DECISIONS.md"
+    note "that is a bare input-hash header — enough to satisfy the hash check, and from the"
+    note "moment the patch below lands, not enough to be a fresh projection. Four of its"
+    note "seven cases assert exit 0 and all four went red. The fixture is corrected in the"
+    note "SAME edit, from receipt_state — the function the guard itself calls — so a tree"
+    note "with no receipts/ states the STALE verdict it actually has rather than faking a"
+    note "FRESH one. Landing the guard without it would close the sitting on a red suite."
     if python3 - <<'PY'
 import pathlib, sys
 
@@ -875,11 +884,48 @@ addition = '''
 if src.count(anchor) != 1:
     sys.exit("check_decisions.py's projection-freshness block is not the expected one — apply by hand")
 
-src = src.replace(old_import, new_import).replace(anchor, anchor + addition)
-p.write_text(src, encoding="utf-8")
+# THE THIRD FILE MOVES WITH THE OTHER TWO HERE TOO. tests/test_tier_c_signatures.py is
+# neither frozen nor custody-set, so it needs no signature — but its `run()` helper writes
+# a DECISIONS.md that is a bare header, and the check above turns four of its seven cases
+# red the instant it lands. Same shape as step 4f (the Makefile and its docstring) and step
+# 4i (the schema, the check, and the test). Found by rehearsing, not by reading: the M2
+# rehearsal reported D0063 and D0064's bindings on this file as "pytest node fails".
+t = pathlib.Path("tests/test_tier_c_signatures.py")
+tsrc = t.read_text(encoding="utf-8")
+t_import = "from _gov import git_env, input_hash  # noqa: E402\n"
+t_import_new = "from _gov import git_env, input_hash, receipt_state  # noqa: E402\n"
+t_dt = "import subprocess\nimport sys\n"
+t_dt_new = "import datetime as dt\nimport subprocess\nimport sys\n"
+t_old = '''        paths = sorted((root / "decisions").glob("*.yaml"))
+        (root / "DECISIONS.md").write_text(header(input_hash(paths, root)))
+'''
+t_new = '''        #
+        # RT-M2-05 gave the projection a SECOND thing it must carry: the attention-receipt
+        # line this run computes, because the input hash above cannot see the clock. A bare
+        # header stopped being a fresh projection the moment that check landed, and this
+        # fixture said so by turning every exit-0 case below red. Rendered from
+        # `receipt_state` — the function the guard itself calls — so a throwaway tree with
+        # no receipts/ states the STALE verdict it actually has instead of faking a FRESH
+        # one. The record cases are unaffected: none of them carries a veto_by, so the
+        # guard's Tier-B row comparison has nothing to look for.
+        paths = sorted((root / "decisions").glob("*.yaml"))
+        fresh, detail = receipt_state(root, dt.date.fromisoformat(TODAY))
+        (root / "DECISIONS.md").write_text(
+            header(input_hash(paths, root))
+            + f"\\nAttention receipt: **{'FRESH' if fresh else 'STALE'}** — {detail}\\n")
+'''
+for name, text in (("_gov import", t_import), ("stdlib imports", t_dt), ("run() helper", t_old)):
+    if tsrc.count(text) != 1:
+        sys.exit(f"tests/test_tier_c_signatures.py's {name} is not the expected shape "
+                 f"({tsrc.count(text)} matches) — apply by hand")
+
+p.write_text(src.replace(old_import, new_import).replace(anchor, anchor + addition),
+             encoding="utf-8")
+t.write_text(tsrc.replace(t_dt, t_dt_new).replace(t_import, t_import_new)
+                 .replace(t_old, t_new), encoding="utf-8")
 PY
     then
-        git --no-pager diff scripts/check_decisions.py
+        git --no-pager diff scripts/check_decisions.py tests/test_tier_c_signatures.py
         if confirm "Make DECISIONS.md's date-dependent claims checkable?"; then
             note "applied. scripts/check_decisions.py is custody-set and carries no manifest"
             note "row, so there is nothing to re-manifest — step 7's gen_custody covers it."
@@ -887,8 +933,9 @@ PY
             note "sees a freshly rendered file; if it fires there, read it as the projection"
             note "being stale rather than as this patch being wrong."
         else
-            git checkout -- scripts/check_decisions.py
+            git checkout -- scripts/check_decisions.py tests/test_tier_c_signatures.py
             note "reverted — DECISIONS.md keeps asserting a freshness no guard can check."
+            note "Both files revert together; the fixture is only correct beside the guard."
         fi
     else
         note "the edit did not apply cleanly (message above) — nothing was changed."
@@ -1394,6 +1441,63 @@ if [ -d tests/poison/oracle-shadow-model ] && readme_row_absent oracle-shadow-mo
     fi
 fi
 
+# A BINDING THAT NAMES THE CANDIDATE PATH DIES THE INSTANT THE FIXTURE MOVES, and D0141
+# carries one — docs/redteam/fixture-candidates/oracle-shadow-model/README.md. THIS WAS
+# FOUND BY A REHEARSAL, not by reading: the check twenty lines below stopped the sitting
+# with "a decision binding stopped resolving when the fixtures moved", exactly as it was
+# written to. The check is right; leaving the owner to repair the record mid-sitting is
+# what is wrong, and the repair belongs in the same breath as the move that causes it.
+# At M1 the same shape was answered by DROPPING the binding before the sitting (D0104's
+# note, quoted in step 5b below). That is a real answer and a lossy one: the installed
+# fixture is sealed and manifested, so a binding pointing at it still names a real file,
+# where a dropped binding names nothing. Retarget rather than drop.
+# BUILDER WORK, NO SIGNATURE — and that is a fact about D0141 specifically, not a general
+# licence: it is Tier A and unsigned. Were it Tier C and signed, D0063 ruling 2 would make
+# its bindings as immutable as its text and the edit and the re-sign would have to be one
+# act, which is the shape step 4h uses for D0110.
+# The detail text is corrected in the same replacement. "Staged outside tests/poison/"
+# stops being true the moment the git mv lands, and a true future tense left standing is a
+# false present one — the same correction step 4h makes to D0110, for the same reason.
+if [ -d tests/poison/oracle-shadow-model ] \
+   && grep -q 'fixture-candidates/oracle-shadow-model' decisions/0141-*.yaml; then
+    if confirm "Retarget D0141's binding to the installed tests/poison/ path?"; then
+        python3 - <<'PY' || die "retarget_d0141: the binding is not the expected text — retarget it by hand"
+import glob, pathlib, sys
+
+hits = glob.glob("decisions/0141-*.yaml")
+if len(hits) != 1:
+    sys.exit(f"expected exactly one D0141 record, found {len(hits)}")
+path = pathlib.Path(hits[0])
+src = path.read_text(encoding="utf-8")
+old = """  - type: file
+    target: docs/redteam/fixture-candidates/oracle-shadow-model/README.md
+    strength: documentary
+    detail: >-
+      RT-M2-01's fixture candidate — the `_model` decoy, staged outside tests/poison/ because
+      installing it before the guard is widened would leave the custodian permanently red.
+"""
+new = """  - type: file
+    target: tests/poison/oracle-shadow-model/README.md
+    strength: documentary
+    detail: >-
+      RT-M2-01's poison fixture — the `_model` decoy. INSTALLED at the M2 boundary sitting,
+      step 5, and retargeted from docs/redteam/fixture-candidates/oracle-shadow-model/ by
+      that same step. It was staged outside tests/poison/ until then because installing it
+      before D0142 widened the guard would have left the custodian permanently red against
+      a check that did not yet exist; D0142 shipped first, so the fixture bites.
+"""
+if src.count(old) != 1:
+    sys.exit(f"{path}: the candidate-path binding is not the expected text ({src.count(old)} matches)")
+path.write_text(src.replace(old, new), encoding="utf-8")
+print(path)
+PY
+        git --no-pager diff decisions/0141-*.yaml
+    else
+        note "declined — the check below will stop the sitting on this binding, and the"
+        note "message it prints tells you the retarget to make. Nothing is signed yet."
+    fi
+fi
+
 # Installing a fixture MOVES files, and a decision record whose binding names the candidate
 # path stops resolving the instant it does. Nothing surfaces that until a guard runs, and
 # the next guard run is step 9 — five signatures later. D0065's lesson points forward as
@@ -1811,6 +1915,22 @@ PY
         sign_owner governance/custody.sha256 tannen-custody
     fi
 fi
+# THE PROJECTION IS STALE HERE, AND UNTIL RT-M2-05 LANDED NOTHING COULD SAY SO. DECISIONS.md
+# was last generated at the top of step 9 — before step 9's custodian wrote receipts/<today>.md
+# and before step 10 minted $MILESTONE-close. BOTH of the projection's clock-dependent inputs
+# arrived after it: the attention-receipt verdict names the latest receipt AND the first
+# boundary tag on or after it (_gov.py:303), so the file still asserts the PREVIOUS boundary's
+# freshness while this run computes this one's. Step 4g's check is what notices, and it
+# noticed here first: the M2 rehearsal's final gate failed on exactly this line, with the
+# sitting otherwise complete — receipt taken, close tag minted and verifying, custodian green
+# (D0147). Before that check existed the staleness was simply carried into the closing commit,
+# which is what RT-M2-05 found in the tree M1 left behind.
+#
+# REGENERATED HERE BECAUSE THERE IS NO EARLIER POINT WHERE BOTH INPUTS EXIST. Step 9's own
+# regeneration cannot see either; moving it after step 9's custodian would still miss the tag.
+# Neither DECISIONS.md nor CONCEPTS.md is in MANIFEST.sha256 or the custody set, so this
+# disturbs no seal and no signature — checked, not assumed — and the commit below picks it up.
+"$PY" -I -P scripts/gen_projections.py || die "projection generation failed"
 waiting "the last full gate, with the close tag in the required set: about $VERIFY_ETA"
 make verify || die "verify red at the close — hand back to the builder"
 if [ -n "$(git status --porcelain)" ]; then
