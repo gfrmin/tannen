@@ -325,11 +325,36 @@ def test_a_pending_milestone_does_not_mask_a_live_one(tree: Path) -> None:
 # ------------------------------------------------------------------ emission
 
 
+#: The project's own environment overrides — every variable that changes what a run DOES,
+#: not merely where it writes. This list exists because the child env below used to be
+#: `dict(os.environ, TANNEN_EVIDENCE_ROOT=…)`: inherit everything, override one. An ambient
+#: TANNEN_NO_EVIDENCE=1 — exactly what someone sets to keep an ad-hoc run from dirtying
+#: evidence/ — then rode into the child, the plugin wrote nothing, and four tests below
+#: failed asserting records that were never going to exist. The failures name the harness,
+#: so they read as a real regression in it; the cause is outside the process entirely.
+#:
+#: Same shape as `_gov.GIT_LOCATION_VARS`, and the same rule: scrub the family, then set
+#: exactly what you mean. A test that says what it needs must not also inherit the negation
+#: of it.
+TANNEN_ENV_VARS = (
+    "TANNEN_EVIDENCE_ROOT",
+    "TANNEN_NO_EVIDENCE",
+    "TANNEN_CHECK_DECISIONS_NESTED",
+)
+
+
+def child_env(**overrides: str) -> dict[str, str]:
+    """os.environ minus every TANNEN_* override, plus exactly what the caller asks for."""
+    env = {k: v for k, v in os.environ.items() if k not in TANNEN_ENV_VARS}
+    env.update(overrides)
+    return env
+
+
 def run_pytest(args: list[str], evidence_root: Path) -> subprocess.CompletedProcess:
-    env = dict(os.environ, TANNEN_EVIDENCE_ROOT=str(evidence_root))
     return subprocess.run(
         [sys.executable, "-m", "pytest", *args, "-q", "-p", "no:cacheprovider"],
-        cwd=REPO_ROOT, capture_output=True, text=True, env=env, check=False,
+        cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+        env=child_env(TANNEN_EVIDENCE_ROOT=str(evidence_root)),
     )
 
 
@@ -378,7 +403,7 @@ def test_an_explicit_seed_is_recorded_as_itself(tmp_path: Path) -> None:
 
 
 def test_evidence_emission_can_be_switched_off(tmp_path: Path) -> None:
-    env = dict(os.environ, TANNEN_EVIDENCE_ROOT=str(tmp_path / "ev"), TANNEN_NO_EVIDENCE="1")
+    env = child_env(TANNEN_EVIDENCE_ROOT=str(tmp_path / "ev"), TANNEN_NO_EVIDENCE="1")
     result = subprocess.run(
         [sys.executable, "-m", "pytest", "tests/laws/m0/test_l0_descriptor.py", "-q",
          "-p", "no:cacheprovider"],
@@ -414,8 +439,7 @@ def test_a_shadowed_oracle_module_is_refused(tmp_path: Path) -> None:
         "import _fragment  # noqa: F401 -- primes sys.modules before collection\n",
         encoding="utf-8",
     )
-    env = dict(os.environ, TANNEN_EVIDENCE_ROOT=str(tmp_path / "ev"),
-               PYTHONPATH=str(shadow_dir))
+    env = child_env(TANNEN_EVIDENCE_ROOT=str(tmp_path / "ev"), PYTHONPATH=str(shadow_dir))
     result = subprocess.run(
         [sys.executable, "-m", "pytest", "-p", "bootstrap_shadow",
          "tests/laws/m1/test_l1_duckdb.py",
@@ -473,3 +497,38 @@ def test_cli_unknown_milestone_is_not_silently_green(tree: Path, capsys: pytest.
     evidence_tree(tree)
     assert main(["laws", "report", "--root", str(tree), "--milestone", "m9"]) == 1
     assert "unknown milestone: m9" in capsys.readouterr().out
+
+
+def test_the_harness_scrubs_an_ambient_tannen_variable(tmp_path: Path) -> None:
+    """A test that says what it needs must not also inherit the negation of it.
+
+    `run_pytest` used to build its child env as `dict(os.environ,
+    TANNEN_EVIDENCE_ROOT=…)`. An ambient TANNEN_NO_EVIDENCE=1 — which is exactly what
+    someone sets so an ad-hoc run does not dirty `evidence/` — then rode into the child,
+    the plugin wrote nothing, and four tests in this file failed asserting records that
+    were never going to exist. Every one of those failures NAMES THE HARNESS, so they read
+    as a regression in it while the cause is outside the process entirely.
+
+    CONSTRUCTS THE HOSTILE STATE (D0092): it sets the variable in this process's own
+    environment for the duration, rather than trusting that nobody ever will. Without the
+    scrub in `child_env` this fails; with it, the ambient value is dropped and the record
+    is written.
+
+    `_gov.git_env` is the same rule for GIT_*, and it exists because GIT_DIR beats
+    `git -C`. Two families, one lesson: scrub, then set what you mean.
+    """
+    before = os.environ.get("TANNEN_NO_EVIDENCE")
+    os.environ["TANNEN_NO_EVIDENCE"] = "1"
+    try:
+        result = run_pytest(["tests/laws/m0/test_l0_descriptor.py"], tmp_path / "ev")
+    finally:
+        if before is None:
+            os.environ.pop("TANNEN_NO_EVIDENCE", None)
+        else:
+            os.environ["TANNEN_NO_EVIDENCE"] = before
+    assert result.returncode == 0, result.stdout + result.stderr
+    records = stored_records(tmp_path / "ev")
+    assert [r["law_id"] for r in records] == ["L0.9"], (
+        "an ambient TANNEN_NO_EVIDENCE reached the child and disabled the plugin, so this "
+        f"harness reports absence as failure:\n{result.stdout}{result.stderr}"
+    )

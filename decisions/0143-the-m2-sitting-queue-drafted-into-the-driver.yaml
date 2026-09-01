@@ -1,0 +1,152 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0143
+title: "The M2 sitting queue is drafted into the driver: seven steps, three judgement calls, and two items that closed themselves"
+tier: A
+date: "2026-09-01"
+risk_flags: [governance-paths]
+decision: >-
+  `docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh` now carries the whole
+  queue as executable steps. Seven were added — 4e, 4f, 4g, 4h, 4i, step 5's fixture install,
+  and 8b — and the driver went from 868 lines to 1468.
+  .
+  EVERY STEP WAS APPLIED IN A SANDBOX AND WATCHED REFUSING A SECOND APPLICATION. That is not
+  ceremony: step 4i's first spelling APPLIED TWICE, inserting a duplicate JSON key and a
+  duplicate Python block, both of which parse. Its outer `grep -q` shell guard would have
+  caught it in practice, but every other step's heredoc refuses on its own, and a single
+  point of failure in an idempotence check is exactly what a resumed sitting walks into. The
+  self-guard was added and the double application re-run to confirm it now refuses.
+  .
+  4e — D0131 ITEM 3, AS RT-M2-02 CORRECTS IT. `conftest.py` and `scripts/check_laws.py` into
+  the custody set; `governance/laws.yaml` deliberately NOT. The naive form buys nothing:
+  `conftest.py:24` is `SUPERSEDED_REGISTRY = ROOT / "governance" / "laws.yaml"`, and that
+  line does not read the registry — it chooses which file IS the registry. Leaving
+  `laws.yaml` builder-editable preserves what D0128 exists for: a `pending`→`superseded`
+  promotion stays a two-line builder move instead of becoming an owner act at a sitting. The
+  residual attack becomes "invent a successor law and a decision record", which
+  `check_laws.py` already refuses unless both exist and which leaves a trail. The step tells
+  the owner how to add `laws.yaml` by hand if they want the stronger property anyway.
+  .
+  4f — D0131 ITEM 4. `check_laws.py` into the Makefile; CI inherits it because ci.yml runs
+  `make verify` and nothing else, so the ci.yml edit is its comment block, which would
+  otherwise start lying. `tests/test_law_validation.py`'s docstring — "not yet in make
+  verify ... waits for the M2 boundary sitting" — moves in the same confirmation. This step
+  is what makes item 3 matter: today the guard reaches the gate ONLY as a subprocess of
+  `tests/test_law_validation.py`, the file RT-M2-02's attack edits.
+  .
+  A DEFECT FOUND AND FIXED IN 4f WHILE WRITING IT: the first version called
+  `regen_manifest_row Makefile`. Custody membership and MANIFEST.sha256 rows are INDEPENDENT
+  SETS, and the Makefile is custody-set with no manifest row — as are
+  `.pre-commit-config.yaml`, `governance/policy.yaml`, `scripts/_gov.py`,
+  `check_decisions.py` and `gen_projections.py`. The call would not have refreshed a row; it
+  would have CREATED one, silently enlarging the frozen-path set at a sitting. The
+  neighbouring call on `ci.yml` is correct, which is how the wrong one looked right.
+  .
+  4g — RT-M2-05. `check_decisions.py` compares `DECISIONS.md`'s two date-dependent claims —
+  the attention-receipt verdict and every Tier-B effective status — against what the run
+  computes. Not a wider input hash: `today` can never be a file, and the receipt's bytes do
+  not change when it goes stale. Not a re-render either: importing `gen_projections` would
+  make the guard depend on the generator it audits. Verified both ways — the shipped guard
+  exits 0 at `--today 2026-09-08` with the file asserting FRESH; the patched one exits 1
+  with four violations naming the header and D0006/D0014/D0020.
+  .
+  4h — D0123 / D0131 ITEM 7. THREE binding upgrades, not fourteen: D0110 (`rel.py` detail
+  says "where the check WOULD go"; `_refuse_unwitnessed` is at rel.py:93, called from :155,
+  and a pytest binding on frozen L2.2 joins it), D0108 (CLAUDE.md was corrected at the M1
+  sitting and its manifest row now pins the CORRECTED bytes), D0095 (`required_tags` half (1)
+  applied at M1; the new text says half (2) is applied by nothing rather than rounding up).
+  TEN RECORDS HAVE NO UPGRADE AVAILABLE and that is the useful half of the answer — D0049
+  and D0063 were already upgraded at M1, D0036 at the opening sitting, D0060/D0061/D0105 are
+  documentary by nature and say so, D0047 named none, and D0106/D0115/D0117 name mechanisms
+  still unbuilt. Each upgrade is edit-then-sign, ONE RECORD AT A TIME: batch-edit then
+  batch-sign leaves N records edited and unsigned if one passphrase is mistyped, which is a
+  red gate with no builder-side fix. Measured after applying all three: 142 records still
+  schema-valid, binding strengths 291/78 → 295/75.
+  .
+  4i — D0131 ITEM 8 = D0106 ITEM 1. Optional `bindings_count` on the decision schema, the
+  check that compares it with `len(bindings)`, and a regression test that constructs two
+  records — one lying, one honest — and requires the guard to catch the first WITHOUT
+  flagging the second, because otherwise the check is a ban on the field rather than a
+  checksum. All three land together: the schema has `additionalProperties: false`, so a
+  record carrying the field is invalid until the schema knows it, and the field is inert
+  until the checker reads it. All 142 existing records validate unchanged. The summary line
+  reports coverage ("0/142 declare bindings_count") rather than implying the checksum is
+  universal — D0116's shape, stated as a number instead of a silence.
+  .
+  8b — D0138 ITEM 1. The rename, and THREE bindings retargeted rather than the one D0138
+  named: D0110 (Tier C, signed, re-signed in the same step) plus D0137 and D0138 (Tier A,
+  unsigned, free under D0045). Found by grep, not taken from D0138's list. The step also
+  states a cost D0138 did not anticipate: `docs/specs/m2.md:121` names this node in prose and
+  that file is FROZEN, so the rename strands a reference in the M2 spec that no guard checks.
+  The step says so and offers declining as a real option.
+  .
+  4j — D0131 ITEM 2 = D0117. An optional `examined` object on the evidence schema,
+  {law_nodes, test_cases}, plus `build_record` and the plugin that fill it. D0117 left the
+  SHAPE open deliberately, so it is proposed rather than assumed, and the step says what the
+  number is not: test_cases counts INVOCATIONS, one tier below an example count, so a single
+  `@given` is one test case however many examples it drew. It does not close D0114 — L1.9
+  would read 44 while D0114 records its effective evidence as zero. Measured on the real
+  suite: L2.9 reports {1, 34} — one node, thirty-four catalogue shapes — and L0.3 reports
+  {2, 19}. The verdict bit cannot tell either from a law that ran once.
+  .
+  THE ORDER IN 4j IS PROVEN RATHER THAN ASSUMED. `additionalProperties: false` means a
+  record carrying `examined` is refused until the schema knows the field: run with the code
+  half alone against the unmodified schema, every `EvidenceStore.put` raises "Additional
+  properties are not allowed ('examined' was unexpected)" and the law suite dies. So the
+  schema cannot go second, and the step writes it first. `format_version` stays 0 — the
+  store is gitignored and regenerated by `make verify`, and the five frozen conformance
+  vectors still parse (2/2 positives accepted, 3/3 negatives rejected), so a bump would
+  force regenerating them for no reader's benefit.
+  .
+  AND THE BETTER ANSWER THAT IS DELIBERATELY NOT IN IT. D0130's `event()` counts are
+  exactly what D0117 names third and they ARE reachable — but hypothesis writes its own
+  internal retry notes into the same undifferentiated dict (`control.py:294-311` plus five
+  internals sites), so wired in, M2's laws yield {'overlap: partial': 1700, ...} and M0's
+  yield a wall of version-dependent strategy reprs. There is no marker separating a law's
+  declared shape from hypothesis's bookkeeping. Filed as its own follow-up.
+  .
+  WHAT IS NOT A STEP, AND WHY THAT IS THE RECOMMENDATION: D0106 item 3, the
+  mechanics/kernel line-count ratio. See D0145.
+rationale: >-
+  Step 2 of the approved plan: the sitting needs its inputs written before the owner's key is
+  out, and a queue that exists only as prose in D0131 is a queue somebody has to re-derive at
+  the sitting. Drafting it as steps means each item was forced through the same three
+  questions — what exactly does it edit, what breaks between the edit and the signature, and
+  what does declining cost — and two of those questions produced findings (the Makefile
+  manifest row; step 4i's double application) that reading alone would not have.
+reversibility: >-
+  Fully reversible: this is a draft in docs/proposals/, and nothing in it takes effect until
+  the owner copies it over scripts/boundary_sitting.sh and runs it. Every step reverts its own
+  edits on a declined confirmation.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      The driver itself. Documentary and it must stay so until the owner runs it — a drafted
+      patch awaiting owner application enforces nothing, which is the distinction D0052's
+      `strength` field exists to make.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/upgrade_binding.py
+    strength: documentary
+    detail: >-
+      Step 4h's applier, a separate file rather than an inline heredoc because three
+      near-identical multi-line YAML edits are unreadable inline and untestable in place.
+      Applied and re-refused in a sandbox against a copy of decisions/.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/poison-readme-rows.md
+    strength: documentary
+    detail: Step 5's table row for oracle-shadow-model, in the M1 rows file's shape.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/README.md
+    strength: documentary
+    detail: >-
+      The run sheet: what each step does, the three judgement calls, and the rehearsal
+      coverage gap `--from worktree` cannot close.
+links:
+  - decisions/0140-the-m2-sitting-driver-and-four-defects-the-m1-sitting-left.yaml
+  - decisions/0141-m1-m2-boundary-red-team-eight-findings-one-critical.yaml
+  - decisions/0131-the-m2-boundary-sitting-queue.yaml
+  - decisions/0138-two-more-items-for-the-m2-boundary-sitting.yaml
+  - decisions/0123-m1-sitting-followups-poison-matrix-and-bindings.yaml
+  - decisions/0106-post-sitting-review-rulings.yaml

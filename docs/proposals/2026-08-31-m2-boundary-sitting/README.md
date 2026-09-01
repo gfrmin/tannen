@@ -7,23 +7,30 @@ document** — read it first, with `D0138` beside it, the way `CONFERRAL.md` was
 document at M0→M1 and `D0105` at M1→M2. Everything else about how a boundary sitting works is
 unchanged from `docs/SITTING.md`.
 
-> ## ⚠ STILL NOT READY TO RUN — two inputs outstanding
+> ## ⚠ NOT YET READY TO RUN — one input outstanding
 >
-> Updated 2026-09-01. **The red team has run** (`docs/redteam/2026-09-01-m2-boundary.md`,
-> D0141 — eight findings, one critical), and its results are folded in below. What remains:
+> Updated 2026-09-01, second pass. **The red team has run**
+> (`docs/redteam/2026-09-01-m2-boundary.md`, D0141 — eight findings, one critical) and
+> **the queue is now drafted into the driver** as steps 4e, 4f, 4g, 4h, 4i, 4j, 5 and 8b. Two
+> queued items closed themselves as builder work and need nothing from you. What remains:
 >
-> 1. **The queue's ready text is not drafted** — D0131 items 2/3/4/6/8 (item 3 now corrected by
->    RT-M2-02), D0123's binding upgrades, and D0138's two. See **Still to draft** below.
-> 2. **This driver has not been rehearsed** (D0068). Run
->    `TANNEN_REHEARSE_DRIVER=docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh bash scripts/rehearse_sitting.sh --milestone m2`
->    on both `--answers y` and `--answers n` before the owner's key is anywhere near it. Four
->    defects found by RT-M2-06 are fixed in this copy and **none of those fixes has been
->    exercised end to end**.
+> 1. **This driver has not been rehearsed in its current shape** (D0068). An earlier copy —
+>    before the seven new steps — ran green end to end on 2026-09-01: driver exit 0 over 878
+>    lines, `m2-close` minted and verifying, custody signed, receipt taken and signed, the
+>    clone's own `make verify` green, **13 of 13 verdict checks**, no unexpected failure
+>    lines. That run is banked evidence for the four RT-M2-06 fixes and for the milestone
+>    roll; it says nothing about the steps added since. Re-run before the key is anywhere
+>    near it, on all three paths named under **Before running anything**.
 >
-> One thing the red team says should happen *before* the sitting, not at it: RT-M2-01's
-> `src/tannen/laws/plugin.py` widening is builder-landable, and until it lands the
-> `oracle-shadow-model/` fixture cannot be installed — installing it first would leave the
-> custodian permanently red.
+> **One coverage gap that run exposed, and it is in the harness rather than in either
+> driver.** Its transcript's fourth line reads *"so this is a RESUMED sitting"*, so **step 0's
+> precondition gate never ran**. `scripts/rehearse_sitting.sh:145-170` enrols a throwaway key,
+> rewrites `MANIFEST.sha256`, regenerates `governance/custody.sha256` and re-signs it before
+> the driver starts; under `--from worktree` those four edits stay uncommitted, and the
+> corrected `RESUMED` test sees tracked modifications and reports a resumed sitting —
+> **correctly, on the evidence in front of it**. So `--from worktree` can never exercise the
+> `RESUMED=0` branch, which is precisely the RT-M2-06 D1 fix. Only `--from head`, which
+> commits the fixture's edits (`rehearse_sitting.sh:163`), leaves a clean tree.
 
 ## The clock
 
@@ -51,7 +58,27 @@ TANNEN_REHEARSE_DRIVER=docs/proposals/2026-08-31-m2-boundary-sitting/boundary_si
 `MISSING_TAGS` is empty**, and the two steps that mint the owner-only close tag and then edit,
 re-manifest, re-generate and re-sign the custody set never run at all. The verdict then prints
 green off the tag the clone was cloned with: a post-condition whose answer does not depend on the
-run it is checking. Run the decline path too (`--answers n`).
+run it is checking.
+
+**Three runs, and each covers something the others cannot:**
+
+```
+# 1. RESUMED=0 + the decline path, cheaply — head mode commits the fixture's own edits,
+#    so the tree is clean and step 0's precondition gate finally runs. `n` declines it,
+#    so there is no 40-minute make verify inside the run.
+… scripts/rehearse_sitting.sh --milestone m2 --from head --answers n
+
+# 2. the same RESUMED=0 entry with the gate ACCEPTED. ~2h: step 0's gate, step 9's gate,
+#    and the verdict's own make verify.
+… scripts/rehearse_sitting.sh --milestone m2 --from head --answers y
+
+# 3. the shape you will actually run, and the only one whose verdict checks all thirteen
+#    post-conditions.
+… scripts/rehearse_sitting.sh --milestone m2 --answers y
+```
+
+Read each verdict **and** the "Unexpected failure lines" section beneath it — a driver that
+prints FAIL and carries on is worse than one that stops.
 
 A green rehearsal proves step order, shell quoting, the gates and idempotence. It proves nothing
 about custody — its signatures are structurally correct and attest to nothing.
@@ -87,6 +114,9 @@ the eight changes below are defects that sitting left behind, all filed at the t
 | **Step 2 anchors on the guard's message, not its docstring** | **RT-M2-06 D4.** The probe grepped `"affirmative signature only"`, whose only match is the module docstring at `check_decisions.py:13`; the enforcement is at 292-307. Delete the enforcement, keep the docstring, and the step reported "present — skipped". This is the same prose-versus-enforcement bug `readme_row_absent` was written to fix — **fixed in one place and left in another.** Now anchored on `Tier-C record accepted without an owner signature`, the message the guard emits. |
 | `cd "$(dirname "$0")/.."` gains `|| exit 1` | **RT-M2-06 D5** (SC2164). There is no `set -e`, so a failed `cd` continued in the wrong directory with every relative path — and `ssh-keygen -Y sign`, `git tag -s` — resolving against the wrong tree. |
 | Closing note `"M1 Session A"` → `"${NEXT_MILESTONE^^} Session A"` | **D0122 item (5).** The one line an owner reads *last* named the milestone that had just ended, while every neighbouring line interpolated `$MILESTONE`. |
+| **Seven new steps: 4e, 4f, 4g, 4h, 4i, 5's fixture, 8b** | The queue, drafted. See **The queue, as drafted into this driver** below for what each does and the three judgement calls inside them. |
+| **Step 9's binding-count ETA is derived, not written** | Same class as `VERIFY_ETA`, fixed structurally rather than re-measured. The line promised *"about 10 minutes (54 pytest bindings)"*; the real number is now 73, and that literal is what got the driver killed at the real M1 sitting once already (D0069, one step further in). It is now read off `decisions/` at run time by `grep -A1 'type: pytest'` over unique targets, so it cannot go stale — the same move D0142 made on the oracle set, for the same reason: a hand-maintained constant in a governance script is a constant that is one milestone behind at every boundary. |
+| **Step 4f does NOT call `regen_manifest_row Makefile`** | Custody membership and `MANIFEST.sha256` rows are **independent sets**, and this is where that bites. The Makefile is custody-set with **no** manifest row (nor have `.pre-commit-config.yaml`, `governance/policy.yaml`, `scripts/_gov.py`, `check_decisions.py`, `gen_projections.py`). Calling `regen_manifest_row` on it would not refresh a row — it would **create** one, silently enlarging the frozen-path set at a sitting. Caught by checking rather than by pattern-matching the neighbouring line, which did call it, correctly, on `ci.yml`. |
 | Step 5's prose rewritten; `FIXTURES` gains `check-decisions-file-skip` and a marked red-team slot | The M1 prose said the RT-M1-05 guard fix "is not committed yet". It is: `scripts/check_decisions.py` carries `RT-M1-05` and `tests/poison/check-decisions-file-skip/` is installed and exercised by the custodian. Only its README row was ever missing. Listing it keeps the loop's skip-by-name idempotence honest about the corpus it indexes. |
 
 ### Verified, not asserted
@@ -145,38 +175,120 @@ projection fix (RT-M2-05), which touches `check_decisions.py` and `gen_projectio
 and a fixture whose guard patch has not landed leaves the custodian permanently red against a
 guard that is not shipped (D0104's note on `check-decisions-file-skip`).
 
-## Still to draft
+## The queue, as drafted into this driver
 
-Ready text for the queue, none of which exists yet:
+Every item below is a step in this directory's `boundary_sitting.sh`, in dependency order.
+Each one guards its own idempotence, shows a diff, asks once, and reverts everything it
+touched if the answer is no. Each was applied in a sandbox and **watched refusing a second
+application**, because a step that silently applies twice is worse than one that fails.
 
-- **D0131 item 2** — D0117's evidence-record quantity. `governance/schemas/evidence-record.schema.json`
-  is frozen, inside a sealed directory, *and* custody-set: three separate reasons the builder
-  cannot touch it.
-- **D0131 item 3, AS CORRECTED BY RT-M2-02** — `scripts/check_laws.py`, `governance/laws.yaml`
-  **and `conftest.py`** into the custody set. The two-file version does not work: `conftest.py`
-  chooses which file is the registry, so signing `laws.yaml` alone is decorative (RT-M2-02
-  variant C, reproduced with `laws.yaml` byte-identical). Note the cost to state plainly —
-  custodying `laws.yaml` makes D0128's Session-B `pending`→`superseded` promotion an owner act,
-  which is the one thing D0128 designed to be a builder two-line move; if that is unacceptable,
-  drop `laws.yaml` and take the `check_supersessions` hardening instead, but `conftest.py` and
-  `check_laws.py` are non-negotiable either way. **Do NOT freeze
-  `tests/test_law_validation.py`** — it changes every milestone and freezing it halts Session B.
-- **D0131 item 4** — gate wiring: `check_laws.py` into `Makefile` and `.github/workflows/ci.yml`;
-  the `unvalidated` ratchet metric into `scripts/gen_projections.py` and `scripts/check_decisions.py`.
-  RT-M2-02 raises the priority: today `check_laws.py`'s only path into the gate is a subprocess
-  launched from `tests/test_law_validation.py` — the very file an attacker edits.
-- **D0131 item 6** — `ALLOWED_SKIP_REASON_PREFIXES` and D0124's chosen fix.
-- **D0131 item 8** — D0106 items 1 and 3 (optional `bindings_count`; the governance/kernel
-  line-count ratio as a defect signal).
-- **D0123** — the batch of binding upgrades to the now-fourteen signed Tier-C records, applied in
-  the same pass that re-signs them.
-- **D0138 item 1** — rename `test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image` to
-  something that says what it now asserts, retarget D0110's binding, re-sign D0110.
-  **The rename and the re-signature must land in the same step**: D0110 is Tier C and
-  owner-signed, the signature covers the record's whole bytes (D0063 ruling 2), and between the
-  two acts `check_decisions.py` sees a signed Tier-C record binding a node that does not collect.
-- **D0138 item 2** — a `check_manifest.py` guard that every repo-relative path in
-  `MANIFEST.sha256`'s own comment block resolves. D0135 is the finding it would have caught.
+| Step | Item | What it does |
+|---|---|---|
+| **4e** | D0131 item 3, **as RT-M2-02 corrects it** | `conftest.py` and `scripts/check_laws.py` into the custody set. **Not `governance/laws.yaml`** — see below. |
+| **4f** | D0131 item 4 | `check_laws.py` into `Makefile` (CI inherits it via `make verify`); `ci.yml`'s comment block and `tests/test_law_validation.py`'s docstring move with it. |
+| **4g** | RT-M2-05 | `check_decisions.py` learns to compare `DECISIONS.md`'s date-dependent claims against what today computes. |
+| **4h** | D0123 / D0131 item 7 | Three binding upgrades — D0110, D0108, D0095 — each edit-then-sign, one record at a time. |
+| **4i** | D0131 item 8 = D0106 item 1 | Optional `bindings_count` on the decision schema, the check that reads it, and its regression test — all three together. |
+| **4j** | D0131 item 2 = D0117 | Optional `examined` `{law_nodes, test_cases}` on the evidence schema, plus `build_record` and the plugin that fill it. Schema first — proven, not assumed. |
+| **5** | RT-M2-01 | Installs `oracle-shadow-model`, this milestone's poison fixture, and its README row. |
+| **8b** | D0138 item 1 | Renames the alarm node, retargets **three** bindings, re-signs D0110. |
+
+**D0110 is signed twice in one sitting, and that is intended.** Step 4h upgrades its
+`src/tannen/kernel/rel.py` binding and re-signs; step 8b then retargets its alarm-node
+binding and re-signs again. They are separate queued items (D0123 and D0138 item 1) and
+either can be declined on its own, so merging them to save a passphrase would cost you that
+choice. The two edits do not touch the same binding, and step 8b's guard expects exactly one
+target naming the old node — which is still true after 4h.
+
+### The three judgement calls inside them
+
+**D0131 item 3 does not include `governance/laws.yaml`, and that is a decision.** RT-M2-02
+showed the naive form buys nothing: `conftest.py:24` is
+`SUPERSEDED_REGISTRY = ROOT / "governance" / "laws.yaml"`, and that line does not read the
+registry — **it chooses which file is the registry**. Reproduced with `laws.yaml`
+byte-identical, its signature verifying, and the pin in `tests/test_law_validation.py`
+passing unmodified. So the set is the two files that decide *where* the registry lives.
+Leaving `laws.yaml` out preserves what D0128 was designed for — a `pending`→`superseded`
+promotion stays a two-line builder move rather than becoming an owner act at a sitting. The
+residual attack is then not "edit a line" but "invent a successor law and a decision
+record", which `check_laws.py` already refuses unless both exist, and which leaves a trail.
+Step 4e says how to add `laws.yaml` by hand if you want the stronger property anyway.
+
+**`tests/test_law_validation.py` is deliberately not frozen.** It is the file the attack
+also edits, which makes freezing it tempting — but it changes at every milestone by design
+(it pins the current registry's single entry by name), and custodying it would halt
+Session B until a sitting. Step 4f is the answer instead: give the guard its own way into
+the gate so it no longer arrives only as a subprocess of the file under attack.
+
+**D0106 item 3 — the mechanics/kernel line-count ratio — is NOT a step, and declining it is
+the recommendation.** Four reasons, three of them measured:
+
+1. **D0106 disqualifies it itself**: *"Filed as a proposal, not a ruling, because unlike (1)
+   and (2) the reviewer offered it as a suspicion to test, not a decided rule."* D0116 is the
+   governing precedent — adding a ratcheted metric to a confirm-and-diff sequence
+   "would present a decision as a formality".
+2. **The number is not defined.** Faithful readings of the one sentence give **1.45, 2.48,
+   2.79, 3.52 and 4.06**. One of its three named arms (`tests/poison/`) contains a binary git
+   bundle whose line count is 8 or 12 depending on the implementation.
+3. **The naive ratchet is provably wrong.** Measured across every boundary tag, the ratio
+   goes 384.50 → 316.00 → 11.69 → 11.71 → 2.74 → 2.89 → 2.79. It *rises* at
+   `m1-close → m2-laws-freeze` purely because Session A adds guards against a frozen kernel.
+   A gate on it fires at every laws-freeze, forever, unless "measure at `*-close` only" is
+   decided first — which item 3 does not say. It also fell from 384 to 2.79 while mechanism
+   *tripled*, because the denominator was the kernel being written.
+4. **BRIEF §9.1's metric-calibration rule forbids enforcing it here anyway**: land the
+   measurement, publish one digest carrying true values, and only then compare.
+
+And one mechanical trap worth recording even though nothing acts on it: the third metric
+must go on **its own comment line with its own regex**, never by extending `METRICS_RE`
+(`_gov.py:22`). Every existing digest carries two fields — including
+`tests/poison/check-decisions-ratchet/digest/2020-01-01.md`, which is `MANIFEST.sha256` row
+35 *and* custody-set, so the builder can never regenerate it. Extending the regex in place
+silently disarms the whole ratchet: measured, the poison fixture stops emitting
+`RATCHET BREACH` and three `tests/test_governance_ratchet.py` nodes go red.
+
+### Two items that left the queue without needing you
+
+- **D0131 item 6 (D0124)** — closed as **builder work** on 2026-09-01, no signature involved.
+  The tripwire was live: `binding_violation(root, "pytest", "tests/test_operating_manual.py")`
+  returned a violation against the real tree, because `sorted(KNOWN_DIVERGENCES)[:]` is empty
+  and pytest skips an empty parameter set with a reason no allow-list entry matches. D0124
+  offered two fixes; the allow-list was **not** widened — that list is the guard's whole
+  discrimination, and admitting a pytest-generated string would admit every future empty
+  parametrize including the real defects. The parametrized test became one that asserts the
+  map is empty *and* that any entry names a real command, so the check states its input set
+  rather than vanishing with it. Seven passes, zero skips, guard verdict `None`.
+- **RT-M2-01** — the guard half closed as builder work (D0142); only the fixture install at
+  step 5 is yours. `src/` carries no manifest row and no custody entry.
+
+### Before you start: five seconds that can save the sitting
+
+```
+find tests/poison -name __pycache__ -type d      # must print nothing
+```
+
+`scripts/custodian.sh:66` enumerates `find tests/poison -type f` and requires a manifest row
+for **every** result, with no `__pycache__` exclusion — while `check_manifest.py:113` skips
+those paths by name. So a stray `.pyc`, which any import from `tests/poison/` without `-B`
+creates, leaves `check_manifest` green and the custodian red. The driver's
+`unexpected_failures()` does not tolerate a `not manifested:` line, so step 0's gate would
+stop the sitting over build debris — and the message reads as "add a manifest row", which
+would be wrong twice (the file is gitignored, and its name carries the interpreter version).
+Cost this pass 37 minutes of gate. The one-line exclusion is queued for M3 rather than added
+here: `custodian.sh` is the trust root, and step 6 would need a newly tuned copy for it
+(D0146).
+
+### One follow-up this pass deliberately did not ship
+
+**D0130's `event()` counts are the answer D0117 really wants, and they are not safe yet.**
+They are reachable — `hypothesis.statistics.collector` from a `trylast` hookwrapper yields
+exact integers — but hypothesis writes its **own internal retry notes into the same
+undifferentiated dict** (`control.py:294-311` plus five internals sites). Wired in, M2's
+laws yield `{'overlap: partial': 1700, 'table a: empty': 378, …}` — exactly what D0117
+asks for — while M0's yield a wall of version-dependent strategy `repr`s. There is no
+marker separating a law's declared shape from hypothesis's bookkeeping, and
+`describe_statistics`'s own docstring disclaims format stability. Step 4j ships the
+countable tier instead and says so; the non-degeneracy split is its own record.
 
 ## What the sitting ends with
 

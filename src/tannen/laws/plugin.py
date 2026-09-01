@@ -33,39 +33,77 @@ __all__ = ["LawEvidencePlugin", "DISABLE_ENV"]
 DISABLE_ENV = "TANNEN_NO_EVIDENCE"
 _TRUE = {"1", "true", "yes", "on"}
 
-#: RT-M1-01 (2026-08-26 boundary red team). `tests/laws/m1/test_l1_duckdb.py` (frozen,
-#: manifested) loads its L1.16 oracle half with a bare `import _fragment as F` — `tests/`
-#: carries no `__init__.py` anywhere, so D0089's frozen `_fragment.py` is a plain
-#: top-level module, not a package member. Python caches imports by NAME in
-#: `sys.modules`, so anything that imports a different module also named `_fragment`
-#: FIRST wins: a new, unmanifested `tests/conftest.py` doing `import _fragment` from a
-#: directory pytest's "prepend" import mode puts ahead of `tests/laws/m1/` on
-#: `sys.path` gets cached first, and `test_l1_duckdb.py` silently receives THAT module
-#: instead of the frozen one. Confirmed live: a decoy `tests/_fragment.py` re-exporting
-#: the real module's names passed every test while `sys.modules['_fragment'].__file__`
-#: pointed outside `tests/laws/m1/` the whole run, and no guard in `make verify`
-#: noticed. This check is defence in depth, not a fix for the naming hazard itself —
-#: the real fix is a package-qualified import in the frozen law file, which only the
-#: owner may make (CLAUDE.md: frozen paths are read-only outside a supersession).
-_ORACLE_MODULE_NAME = "_fragment"
-_ORACLE_REL_PATH = Path("tests") / "laws" / "m1" / "_fragment.py"
+#: RT-M1-01 (2026-08-26 boundary red team) and RT-M2-01 (2026-09-01).
+#: `tests/laws/m1/test_l1_duckdb.py` (frozen, manifested) loads its L1.16 oracle half
+#: with a bare `import _fragment as F` — `tests/` carries no `__init__.py` anywhere, so
+#: D0089's frozen `_fragment.py` is a plain top-level module, not a package member.
+#: Python caches imports by NAME in `sys.modules`, so anything that imports a different
+#: module also named `_fragment` FIRST wins: a new, unmanifested `tests/conftest.py`
+#: doing `import _fragment` from a directory pytest's "prepend" import mode puts ahead
+#: of `tests/laws/m1/` on `sys.path` gets cached first, and `test_l1_duckdb.py` silently
+#: receives THAT module instead of the frozen one. Confirmed live: a decoy
+#: `tests/_fragment.py` re-exporting the real module's names passed every test while
+#: `sys.modules['_fragment'].__file__` pointed outside `tests/laws/m1/` the whole run,
+#: and no guard in `make verify` noticed. This check is defence in depth, not a fix for
+#: the naming hazard itself — the real fix is a package-qualified import in the frozen
+#: law file, which only the owner may make (CLAUDE.md: frozen paths are read-only
+#: outside a supersession).
+#:
+#: THE SET IS DERIVED, NOT ENUMERATED — that is RT-M2-01. The first spelling pinned the
+#: single name `_fragment`. M2 then added `tests/laws/m2/_model.py`, bare-imported by
+#: five frozen law files, and this guard did not cover it: a decoy `_model` stubbing
+#: `check_differential` to return None makes L2.9 — BRIEF §6's kill criterion — vacuous
+#: while all 113 M2 law nodes pass and `check_manifest` still reports the seals
+#: unbroken. Reproduced live before this widening was written, then again after it
+#: (docs/redteam/2026-09-01-m2-boundary.md). A guard that must be widened by hand at
+#: every boundary is a guard that is a milestone behind at every boundary, so the map is
+#: read off the filesystem: every `tests/laws/m*/_*.py`. Those paths are themselves
+#: frozen, so shrinking the map means deleting a manifested file, and `check_manifest`
+#: is the check that says so.
+
+
+def _frozen_oracles(root: Path) -> dict[str, list[Path]]:
+    """Oracle module name → the frozen file(s) entitled to answer to it.
+
+    A list rather than a single path because two milestones CAN name their oracles
+    alike, and a bare `import` cannot say which one a law received. That is reported as
+    a defect in its own right below, not silently resolved in favour of either.
+    """
+    oracles: dict[str, list[Path]] = {}
+    for path in sorted((root / LAWS_DIR).glob("m*/_*.py")):
+        if path.stem.startswith("__"):
+            continue
+        oracles.setdefault(path.stem, []).append(path.resolve())
+    return oracles
 
 
 def _oracle_shadow_problem(root: Path) -> str | None:
-    """None if `_fragment` was never imported this run, or was imported from the frozen
-    file; else a message naming what shadowed it."""
-    module = sys.modules.get(_ORACLE_MODULE_NAME)
-    if module is None:
+    """None if every frozen oracle imported this run came from its frozen file; else a
+    message naming EVERY one that did not. All of them, because a run that shadows two
+    oracles and is told about one has been told the smaller half of its problem."""
+    problems: list[str] = []
+    for name, frozen in sorted(_frozen_oracles(root).items()):
+        if len(frozen) > 1:
+            listed = ", ".join(str(path) for path in frozen)
+            problems.append(
+                f"{name!r} is defined by more than one frozen law directory ({listed}), "
+                "so a bare import cannot say which one a law received and neither can this check"
+            )
+            continue
+        module = sys.modules.get(name)
+        if module is None:
+            continue
+        actual_file = getattr(module, "__file__", None)
+        actual = Path(actual_file).resolve() if actual_file else None
+        if actual == frozen[0]:
+            continue
+        problems.append(f"sys.modules[{name!r}] is {actual}, not the frozen {frozen[0]}")
+    if not problems:
         return None
-    expected = (root / _ORACLE_REL_PATH).resolve()
-    actual_file = getattr(module, "__file__", None)
-    actual = Path(actual_file).resolve() if actual_file else None
-    if actual == expected:
-        return None
-    return (
-        f"sys.modules[{_ORACLE_MODULE_NAME!r}] is {actual}, not the frozen {expected} "
-        "(RT-M1-01: the L1.16 differential oracle was shadowed by a different module of "
-        "the same name — docs/redteam/2026-08-26-m1-boundary.md)"
+    return "; ".join(problems) + (
+        " — a differential oracle was shadowed by a different module of the same name "
+        "(RT-M1-01, docs/redteam/2026-08-26-m1-boundary.md; RT-M2-01, "
+        "docs/redteam/2026-09-01-m2-boundary.md)"
     )
 
 

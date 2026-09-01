@@ -1,0 +1,85 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0144
+title: "D0124's tripwire was armed against the real tree, and it is disarmed by making the test state its input set rather than by widening the allow-list"
+tier: A
+date: "2026-09-01"
+decision: >-
+  `tests/test_operating_manual.py`'s `@pytest.mark.parametrize("identity",
+  sorted(KNOWN_DIVERGENCES)[:])` is replaced by
+  `test_the_tolerance_list_is_empty_and_any_entry_in_it_names_a_real_command`, which asserts
+  both halves in one non-parametrized test: every entry names a check both files still
+  contain, AND the map is empty. D0131 item 6 leaves the queue as builder work — no
+  signature was involved.
+  .
+  THE TRIPWIRE WAS LIVE, not hypothetical. Reproduced against the working tree on
+  2026-09-01 through the guard's own function:
+  `check_decisions.binding_violation(root, "pytest", "tests/test_operating_manual.py")`
+  returned "pytest node has an unexplained skip inside an otherwise-passing run". The map has
+  been empty since the M1 sitting deleted D0108's entry (D0113); pytest skips an empty
+  parameter set with the reason "got empty parameter set for (identity)"; and
+  `ALLOWED_SKIP_REASON_PREFIXES` has exactly one entry, `"S-pending: "`. So the next
+  FILE-level pytest binding on that file — the repo's dominant binding form — would have
+  failed the gate on a test that was behaving correctly, on `make verify`, in CI, and on
+  every pre-commit run.
+  .
+  THE ALLOW-LIST WAS NOT WIDENED, and that is the decision. D0124 offered both fixes.
+  Widening is the worse one: that list is the guard's ENTIRE discrimination between a skip
+  that documents itself and one that hides a hole, and admitting a pytest-generated string
+  admits every future empty parametrize including the ones that are real defects. Nothing in
+  `scripts/check_decisions.py` is touched, which is also why this needed no sitting.
+  .
+  BOTH ASSERTIONS ARE KEPT, because either alone is wrong. Assert-empty alone deletes a check
+  the file's own comment says it wants. Assert-each-entry-real alone is the zero-iteration
+  vacuous-green shape (`docs/proposals/2026-08-29-a-check-that-cannot-fail.md`) — the exact
+  defect being cured, re-introduced one line down. Ordered as written, the per-entry check
+  runs when there are entries and the emptiness assertion ALWAYS executes, so the test can
+  never be green for having looked at nothing.
+  .
+  THE COST, STATED: a future legitimate tolerance now costs an edit to this assertion as well
+  as an entry in the map. That is intended rather than tolerated — `tests/test_operating_manual.py`
+  already says "A SECOND entry should never be added without a decision record saying why",
+  and forcing the edit is the mechanism that makes that sentence true. The failure message
+  says so.
+  .
+  VERIFIED FROM THE FAILING SIDE, three ways. Before: 6 passed, 1 skipped, guard returns a
+  violation. After: 7 passed, 0 skipped, guard returns None. And the new test was watched
+  failing against two seeded states — an entry naming a check that is in neither file, and
+  D0108's old entry restored — with a different message each time.
+  .
+  NOT FOLDED IN, and flagged instead: `empty_parameter_set_mark = "fail_at_collect"` in
+  `pyproject.toml` would make EVERY future empty parametrize a loud collection error rather
+  than a silent skip, repo-wide, without touching the custody-set allow-list — and
+  `pyproject.toml` is deliberately outside the custody set. It is a blunt instrument (one
+  empty parametrize interrupts the whole run) and its ordering is load-bearing (applied
+  before this fix it halts collection of the entire suite). It is its own decision, not a
+  rider on this one. The class has population: that proposal counted 31 parametrize/loop
+  sites, 11 with no visible non-emptiness guard.
+rationale: >-
+  D0131 queued this to the sitting on the assumption the allow-list would have to move. It
+  does not, so the item leaves the queue entirely rather than consuming owner attention — the
+  cheapest possible outcome for a queued item, and worth recording as such so the sitting is
+  not left looking for it. Recorded rather than done silently because choosing NOT to widen
+  the allow-list is the substantive half of the decision.
+reversibility: >-
+  Reversible: restore the parametrized form. Doing so re-arms the tripwire, and the guard's
+  own function reports it in one call.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_operating_manual.py::test_the_tolerance_list_is_empty_and_any_entry_in_it_names_a_real_command"
+    strength: enforced
+    detail: >-
+      The replacement. Its emptiness assertion always executes, so the node cannot pass by
+      having no input — which is the property the parametrized form lacked.
+  - type: file
+    target: scripts/check_decisions.py
+    strength: documentary
+    detail: >-
+      `ALLOWED_SKIP_REASON_PREFIXES` and `unexplained_skips`, named as the thing this record
+      decided NOT to change. Documentary by construction: the value of this binding is that
+      the file is unmodified.
+links:
+  - decisions/0124-retiring-the-last-tolerance-left-a-skip-the-new-guard-will-flag.yaml
+  - decisions/0131-the-m2-boundary-sitting-queue.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0113-the-sitting-can-accept-d0108-but-nothing-applied-it.yaml

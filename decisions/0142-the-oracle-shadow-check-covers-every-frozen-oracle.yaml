@@ -1,0 +1,95 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0142
+title: "RT-M2-01 closed at the guard: the oracle-shadow check now derives its set from the filesystem instead of pinning one module name"
+tier: A
+date: "2026-09-01"
+risk_flags: [governance-paths]
+decision: >-
+  `src/tannen/laws/plugin.py`'s oracle-shadow check no longer pins the single name
+  `_fragment`. `_frozen_oracles(root)` reads the set off the filesystem — every
+  `tests/laws/m*/_*.py` — and `_oracle_shadow_problem` reports EVERY imported oracle whose
+  `sys.modules` entry is not the frozen file, plus any module name two frozen law
+  directories both define, which a bare `import` cannot disambiguate and neither can this
+  check.
+  .
+  WHY DERIVED RATHER THAN A THREE-NAME LIST. RT-M2-01 is not "the check forgot `_model`";
+  it is that a hand-maintained set is a milestone behind at every boundary, because the
+  oracle is written in Session A and the guard can only be widened afterwards. Reading the
+  set from the tree closes the class: M3's oracle is covered the day it is frozen. The map
+  cannot be shrunk by deleting an oracle — the law directories are frozen and manifested,
+  so `check_manifest` is the check that notices.
+  .
+  WHAT THIS DOES NOT FIX, and it is the same disclaimer the M1 spelling carried: this is
+  defence in depth, not a repair of the naming hazard. The real fix is a package-qualified
+  import inside the frozen law files, and those are frozen — only the owner may make it,
+  and only through a supersession.
+  .
+  VERIFIED FROM THE FAILING SIDE, in this order. (1) Against `plugin.py` as committed at
+  79c57d2, a decoy `_model` faithfully re-exporting `tests/laws/m2/_model.py` was primed
+  into `sys.modules` ahead of the frozen file and `tests/laws/m2/test_l2_differential.py`
+  reported **34 passed, exit 0**, with a probe plugin confirming
+  `sys.modules['_model'].__file__` pointed at the decoy for the whole run. L2.9 is BRIEF
+  §6's kill criterion; it was answerable by an impostor. (2) With the widening applied the
+  same command exits 1 at collection, naming the decoy's path and the frozen one it
+  displaced. (3) M1's shipped `tests/poison/oracle-shadow` fixture still exits non-zero
+  and still emits its marker, so the widening did not trade the old coverage for the new.
+  (4) The new regression test was run against the reverted `plugin.py` and FAILED with the
+  message it was written to produce, before being run against the widened one and passing.
+  .
+  THE REGRESSION TEST CONSTRUCTS THE VIOLATING STATE ITSELF (D0092):
+  `test_oracle_shadow_covers_every_frozen_oracle_not_just_fragment` writes the decoy and
+  its bootstrap plugin into `tmp_path` rather than reading a `tests/poison/` fixture.
+  Installing a fixture there is the owner's act at a boundary sitting, and a regression
+  test that waits for a sitting is not a regression test. It makes two subprocess runs, not
+  one: the second establishes that the decoy re-exports the real model's API, so the
+  first's non-zero exit is the guard biting rather than an import error wearing its
+  clothes. `PYTHONDONTWRITEBYTECODE=1` because `tests/laws/` is sealed and an unmanifested
+  `__pycache__` there would turn the next `check_manifest` red for a reason the test does
+  not explain.
+  .
+  THE POISON FIXTURE IS STILL THE OWNER'S, AND IS STILL QUEUED. This record closes the
+  finding at the guard; `docs/redteam/fixture-candidates/oracle-shadow-model/` closes it at
+  the custody floor, and that install is step 5 of the M2 boundary sitting. The order is
+  not reversible: installing the fixture before this widening shipped would have left the
+  custodian permanently red against a guard that does not exist (D0104's note on
+  check-decisions-file-skip).
+rationale: >-
+  D0141 recorded eight findings and closed none, deliberately — a probe must not grade its
+  own fix. This is the one closure taken before the sitting rather than after it, because
+  it is the sitting's own precondition: without it the owner cannot install the critical
+  finding's poison fixture, and a boundary that installs no fixture is indistinguishable
+  from a boundary whose red team was never run. `src/` carries zero MANIFEST.sha256 rows
+  and no custody-set entry, so this is builder territory and needs no signature. RT-M2-04
+  and RT-M2-07 are deliberately NOT closed here: both alter kernel semantics that frozen M1
+  and M2 laws exercise, and a week before a close tag is the wrong place for that. They go
+  to M3.
+reversibility: >-
+  Reversible: revert the two hunks. Doing so re-opens RT-M2-01 and the regression test goes
+  red naming it, which is the point of writing the test before the fix rather than after.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_oracle_shadow_covers_every_frozen_oracle_not_just_fragment"
+    strength: enforced
+    detail: >-
+      Constructs a faithful decoy `_model` in tmp_path, primes it into sys.modules ahead of
+      the frozen file, and requires the run to abort naming RT-M2-01. Fails against the
+      pre-widening plugin, which was checked before it was checked green.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_oracle_shadow_fails_its_poison"
+    strength: enforced
+    detail: >-
+      M1's shipped fixture, unchanged: the widening must not trade `_fragment` coverage for
+      `_model` coverage.
+  - type: file
+    target: src/tannen/laws/plugin.py
+    strength: enforced
+    detail: The guard itself — `_frozen_oracles` and `_oracle_shadow_problem`.
+  - type: file
+    target: docs/redteam/2026-09-01-m2-boundary.md
+    strength: documentary
+    detail: RT-M2-01, the finding this closes, with the reproduction it was found by.
+links:
+  - decisions/0141-m1-m2-boundary-red-team-eight-findings-one-critical.yaml
+  - decisions/0102-rt-m1-01-oracle-shadow-defence-in-depth.yaml
+  - decisions/0092-the-receipt-clock-test-borrowed-its-boundary.yaml

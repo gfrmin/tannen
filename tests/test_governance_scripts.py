@@ -136,6 +136,76 @@ def test_oracle_shadow_fails_its_poison() -> None:
     assert "shadowed" in combined, combined
 
 
+def test_oracle_shadow_covers_every_frozen_oracle_not_just_fragment(tmp_path: Path) -> None:
+    """RT-M2-01 (D0141), the M1->M2 boundary red team's one critical finding: the check
+    above pinned the single name `_fragment`, so M2's `_model` — bare-imported by five
+    frozen law files — was unguarded. A decoy `_model` re-exporting the real one made
+    L2.9, BRIEF §6's kill criterion, answerable by an impostor while all 113 M2 law
+    nodes passed and check_manifest reported the seals unbroken.
+
+    This test CONSTRUCTS THE VIOLATING STATE ITSELF (D0092) rather than reading a
+    tests/poison/ fixture: installing one there is the owner's act at a boundary sitting,
+    and a regression test that waits for a sitting is not a regression test. The poison
+    fixture is queued separately (docs/redteam/fixture-candidates/oracle-shadow-model/)
+    and proves the same thing from the custodian's floor.
+
+    Two runs, because "pytest exited non-zero" alone would be satisfied by a decoy that
+    merely fails to import. The second run establishes that the decoy is FAITHFUL — it
+    answers to the name with the real module's API — so the first run's non-zero exit is
+    the guard biting and not an import error wearing its clothes.
+    """
+    # Walks up to MANIFEST.sha256 rather than counting parents, so the decoy is
+    # position-independent: tmp_path is nowhere near the repo.
+    (tmp_path / "_model.py").write_text(
+        "import importlib.util as ilu\n"
+        "from pathlib import Path\n"
+        f"real = Path({str(REPO_ROOT)!r}) / 'tests' / 'laws' / 'm2' / '_model.py'\n"
+        "spec = ilu.spec_from_file_location('_model_real_regression', real)\n"
+        "mod = ilu.module_from_spec(spec)\n"
+        "spec.loader.exec_module(mod)\n"
+        "for name in dir(mod):\n"
+        "    if not name.startswith('__'):\n"
+        "        globals()[name] = getattr(mod, name)\n"
+    )
+    # Loaded with -p before collection, so this import wins the sys.modules cache ahead
+    # of the frozen law file's own bare `import _model as M`.
+    (tmp_path / "bootstrap_shadow_model_regression.py").write_text("import _model  # noqa: F401\n")
+
+    env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    env["PYTHONPATH"] = str(tmp_path)
+    # tests/laws/ is a SEALED directory: exec_module on the frozen _model.py would drop
+    # an unmanifested __pycache__ beside it and turn the next check_manifest run red for
+    # a reason nothing here explains. Same hazard, same cure, as the POISON runner above.
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    # No -I -P: the attack IS a module reaching sys.modules through PYTHONPATH, and
+    # isolated mode ignores PYTHONPATH outright, so under -I the fixture could never run
+    # and the guard would report green having never been challenged.
+    shadowed = run(
+        [str(REPO_ROOT / ".venv" / "bin" / "python"), "-B", "-m", "pytest",
+         "-p", "bootstrap_shadow_model_regression", "tests/laws/m2/test_l2_differential.py",
+         "-q"],
+        env=env,
+    )
+    combined = shadowed.stdout + shadowed.stderr
+    assert shadowed.returncode != 0, (
+        "a decoy _model answered for the frozen tests/laws/m2/_model.py and L2.9 ran "
+        f"against it anyway — the oracle-shadow check has narrowed again:\n{combined}"
+    )
+    assert "RT-M2-01" in combined, combined
+    assert "shadowed" in combined, combined
+    assert str(tmp_path) in combined, f"the guard named some other module:\n{combined}"
+
+    faithful = run(
+        [str(REPO_ROOT / ".venv" / "bin" / "python"), "-B", "-c",
+         "import _model; assert _model.check_differential and _model.SHAPES"],
+        env=env,
+    )
+    assert faithful.returncode == 0, (
+        "the decoy does not re-export the frozen model's API, so the run above proves "
+        f"nothing about shadowing:\n{faithful.stdout + faithful.stderr}"
+    )
+
+
 LINT_ISOLATED = [
     str(REPO_ROOT / ".venv" / "bin" / "python"), "-I", "-c",
     "import sys; from importlinter.cli import lint_imports_command; "

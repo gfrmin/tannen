@@ -25,8 +25,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[1]
 
 #: Empty since the M1 boundary sitting, where D0108's one-line fix to CLAUDE.md landed and
@@ -203,10 +201,40 @@ def test_the_detector_catches_a_documented_check_the_gate_does_not_run(tmp_path:
     assert missing == {"scripts/check_nonexistent.py"}
 
 
-@pytest.mark.parametrize("identity", sorted(KNOWN_DIVERGENCES)[:])
-def test_a_known_divergence_still_names_a_real_command(identity) -> None:
-    """A tolerance entry that no longer matches anything real would silence the detector
-    quietly. Require each one to name a check both files still contain."""
-    name = identity[0]
-    assert name in documented_checks(), f"{name} is no longer documented in CLAUDE.md"
-    assert name in verify_target(), f"{name} is no longer in the Makefile's verify target"
+def test_the_tolerance_list_is_empty_and_any_entry_in_it_names_a_real_command() -> None:
+    """The tolerance map, checked at both of its sizes, without vanishing at the empty one.
+
+    A tolerance entry that no longer matches anything real would silence the detector
+    quietly, so each one must name a check both files still contain. And an EMPTY map — the
+    state since the M1 sitting deleted D0108's entry (D0113) — has to report as a PASS that
+    says the set is empty, not as an absence.
+
+    This was `@pytest.mark.parametrize("identity", sorted(KNOWN_DIVERGENCES)[:])`, and
+    pytest given an empty parameter set SKIPS, with the reason "got empty parameter set for
+    (identity)". That reason is not on `check_decisions.ALLOWED_SKIP_REASON_PREFIXES` (one
+    entry, "S-pending: "), so the next FILE-level pytest binding on this file — the repo's
+    dominant binding form — would have failed on an unexplained skip from a test that was
+    behaving correctly (D0124; applied here per D0131 item 6). Widening that allow-list was
+    the other option and is the worse one: the list is the guard's whole discrimination, and
+    admitting a pytest-generated string admits every future empty parametrize including the
+    ones that are real defects. This is the D0116 shape instead — a check whose input set is
+    empty says the set is empty rather than dropping out of the run.
+    """
+    documented, gate = documented_checks(), verify_target()
+    stale = sorted(
+        f"{name} (tolerated by {record})"
+        for (name, _, _), record in KNOWN_DIVERGENCES.items()
+        if name not in documented or name not in gate
+    )
+    assert not stale, (
+        f"KNOWN_DIVERGENCES tolerates a divergence on a check that is no longer in both "
+        f"files: {stale}. A tolerance naming nothing real silences the detector quietly — "
+        "delete the entry, or correct the check identity it names."
+    )
+    assert not KNOWN_DIVERGENCES, (
+        f"KNOWN_DIVERGENCES is not empty: {sorted(KNOWN_DIVERGENCES.values())}. An entry "
+        "means CLAUDE.md and `make verify` are allowed to disagree, which needs a decision "
+        "record saying why — cite it and relax this assertion in the same change. The "
+        "empty list is the intended end state, so this failure is the reminder, not a "
+        "regression."
+    )

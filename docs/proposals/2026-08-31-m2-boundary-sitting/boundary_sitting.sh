@@ -611,15 +611,718 @@ PY
     fi
 fi
 
+# ---------------------------------------------------------------- 4e. the law registry
+say "Step 4e — the supersession registry's real hinge is conftest.py, not laws.yaml (D0131 item 3, as RT-M2-02 corrects it)"
+if grep -q '^    - scripts/check_laws\.py$' governance/tier-c.yaml; then
+    note "already in the custody set — skipped"
+else
+    note "D0131 item (3) asked for scripts/check_laws.py AND governance/laws.yaml in the"
+    note "custody set: 'a guard that can retire a frozen law, and the data it reads'."
+    note "THE M2 RED TEAM SHOWED THE SECOND HALF DOES NOT WORK (RT-M2-02, D0141)."
+    note ""
+    note "conftest.py:24 reads SUPERSEDED_REGISTRY = ROOT/'governance'/'laws.yaml'. That"
+    note "line does not read the registry — IT CHOOSES WHICH FILE IS THE REGISTRY. Point"
+    note "it at a second file and a law is retired with laws.yaml BYTE-IDENTICAL and its"
+    note "signature verifying. Reproduced: the pin in tests/test_law_validation.py caps the"
+    note "real registry at one entry and passed unmodified throughout. Signing the data"
+    note "while the pointer stays builder-editable buys nothing at all."
+    note ""
+    note "SO THE SET IS conftest.py AND scripts/check_laws.py — the two files that decide"
+    note "where the registry lives. check_laws.py hardcodes the same path (line 44) and is"
+    note "the only guard in NEITHER the manifest nor the custody set, while eight sibling"
+    note "scripts are custody-set."
+    note ""
+    note "governance/laws.yaml IS DELIBERATELY LEFT OUT, and this is the trade to weigh:"
+    note "custodying it would make every future pending→superseded promotion an owner act"
+    note "at a sitting, which is exactly the two-line builder move D0128 was designed to"
+    note "make cheap. Left out, the residual attack is not 'edit a line' but 'invent a"
+    note "successor law and a decision record' — which check_laws.py already refuses"
+    note "unless both exist (check_laws.py:16-18), and which leaves a written trail. If"
+    note "you want the stronger property anyway, add '- governance/laws.yaml' to the same"
+    note "block by hand before answering; nothing below depends on its absence."
+    note ""
+    note "NOT PROPOSED, and the reason matters: tests/test_law_validation.py. It is the"
+    note "file the attack also edits, so freezing it is tempting — but it changes at every"
+    note "milestone by design (it pins the current registry's single entry by name), and"
+    note "custodying it would halt Session B until a sitting. The answer to that file is"
+    note "D0131 item (4), the step below: get check_laws.py into the gate directly, so it"
+    note "no longer reaches the gate only as a subprocess of the file under attack."
+    note ""
+    note "COST, stated before you sign it: after this, ANY edit to conftest.py turns the"
+    note "gate red until the next sitting re-signs. conftest.py is the composition root"
+    note "for the evidence plugin and the Hypothesis profile — M2 edited it once, for"
+    note "D0128. Expect roughly one sitting-sized edit per milestone, not none."
+    if python3 - <<'PY'
+import pathlib, sys
+
+p = pathlib.Path("governance/tier-c.yaml")
+src = p.read_text(encoding="utf-8")
+# conftest.py sits with the repo-root files it belongs to; check_laws.py with its eight
+# sibling guards, in the order they run. Anchored on the line AFTER each insertion point
+# so a reordering of the block fails loudly here instead of silently misplacing a path.
+edits = [
+    ("    - .pre-commit-config.yaml\n", "    - conftest.py\n"),
+    ("    - scripts/check_receipts.py\n", "    - scripts/check_laws.py\n"),
+]
+for anchor, addition in edits:
+    if src.count(anchor) != 1:
+        sys.exit(f"tier-c.yaml's custody block is not the expected shape at {anchor.strip()!r} — apply by hand")
+    if addition in src:
+        sys.exit(f"{addition.strip()!r} is already present — apply by hand")
+    src = src.replace(anchor, anchor + addition)
+p.write_text(src, encoding="utf-8")
+PY
+    then
+        git --no-pager diff governance/tier-c.yaml
+        if confirm "Add conftest.py and scripts/check_laws.py to the custody set?"; then
+            regen_manifest_row governance/tier-c.yaml
+            note "added. Step 7 regenerates governance/custody.sha256 from this list and"
+            note "signs it; until then check_manifest reports the set as stale, which is"
+            note "this sitting working rather than this sitting broken."
+        else
+            git checkout -- governance/tier-c.yaml
+            note "reverted — the registry's pointer stays builder-editable and RT-M2-02"
+            note "stays open. Say so in the receipt; a declined finding is a decision."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+    fi
+fi
+
+# ---------------------------------------------------------------- 4f. gate wiring
+say "Step 4f — check_laws.py reaches the gate only through the file an attacker edits (D0131 item 4)"
+if grep -q 'scripts/check_laws.py' Makefile; then
+    note "already in the Makefile — skipped"
+else
+    note "scripts/check_laws.py has run at every commit since D0129 — but only as a"
+    note "SUBPROCESS launched from tests/test_law_validation.py:96-100. RT-M2-02 is why"
+    note "that is now the wrong shape: the attack on the supersession registry edits that"
+    note "very file, and a guard reachable only through the thing it guards is a guard"
+    note "with an off switch. Step 4e signed the registry's two pointers; this step gives"
+    note "the guard its own way in."
+    note ""
+    note "ONE LINE IN THE MAKEFILE IS THE WHOLE FUNCTIONAL CHANGE. .github/workflows/ci.yml"
+    note "runs 'make verify' and nothing else, so CI inherits it — the ci.yml edit below is"
+    note "its comment block, which enumerates what the gate covers and would otherwise"
+    note "start lying today. Both files are custody-set, which is the only reason this"
+    note "waited for you."
+    note ""
+    note "LIVENESS IS ALREADY PROVEN, so this does not add an unproven guard to the floor:"
+    note "tests/test_law_validation.py:150-215 builds five trees in tmp_path where"
+    note "check_laws MUST exit non-zero — an undeclared law, a supersession whose"
+    note "successor no law defines, a node that is not there, an entry both active and"
+    note "pending. That is the D0092 shape. What it does NOT have is a tests/poison/"
+    note "fixture and a custodian matrix line, so the custodian still cannot say this"
+    note "guard has teeth. Worth queueing for the M3 pass rather than inventing here."
+    note ""
+    note "AND THE DOCSTRING MOVES WITH IT. tests/test_law_validation.py's module docstring"
+    note "says check_laws 'is not yet in make verify ... wiring it in waits for the M2"
+    note "boundary sitting'. The moment the Makefile line lands that sentence is false, and"
+    note "a stale comment describing a state the code left behind is exactly D0108 again."
+    note "That file is neither frozen nor custody-set, so it needs no signature — but it"
+    note "must move in the same confirmation or nobody will remember it."
+    if python3 - <<'PY'
+import pathlib, sys
+
+mk = pathlib.Path("Makefile")
+src = mk.read_text(encoding="utf-8")
+# After check_receipts, before pytest: the cheap static guards run first so a structural
+# fault stops the gate in seconds rather than after a twenty-minute suite.
+anchor = "\t$(UNHATCH) $(PY) -I -P scripts/check_receipts.py\n"
+addition = "\t$(UNHATCH) $(PY) -I -P scripts/check_laws.py\n"
+if src.count(anchor) != 1:
+    sys.exit("the Makefile's check_receipts line is not the expected one — apply by hand")
+
+ci = pathlib.Path(".github/workflows/ci.yml")
+csrc = ci.read_text(encoding="utf-8")
+cold = """# This file has never actually run: the repo has no remote"""
+cnew = """# Since the M2 boundary the gate also runs scripts/check_laws.py directly: every frozen
+# law file declares how it was validated, and every retired law names a live successor
+# and a decision record (D0129, D0131 item 4). It ran before this from
+# tests/test_law_validation.py, which is the file RT-M2-02's attack on the supersession
+# registry edits — a guard reachable only through the thing it guards.
+#
+# This file has never actually run: the repo has no remote"""
+if csrc.count(cold) != 1:
+    sys.exit("ci.yml's comment block is not the expected one — apply by hand")
+
+test = pathlib.Path("tests/test_law_validation.py")
+tsrc = test.read_text(encoding="utf-8")
+told = """It also drives `scripts/check_laws.py`, which is not yet in `make verify` — the Makefile
+and the CI workflow are custody-set, so wiring it in waits for the M2 boundary sitting
+(D0131). Reaching a guard from pytest in the meantime is the D0070/D0123 pattern: the
+custodian is the floor, and pytest is the distance between weakening a guard and finding
+out.
+"""
+tnew = """It also drives `scripts/check_laws.py`, which since the M2 boundary sitting is a
+`make verify` step in its own right (D0131 item 4). Driving it from pytest as well is
+not redundant: the five trees below make it FAIL, which the gate's success path never
+does — the custodian is the floor, and pytest is the distance between weakening a guard
+and finding out.
+"""
+if tsrc.count(told) != 1:
+    sys.exit("test_law_validation.py's docstring is not the expected one — apply by hand")
+
+mk.write_text(src.replace(anchor, anchor + addition), encoding="utf-8")
+ci.write_text(csrc.replace(cold, cnew), encoding="utf-8")
+test.write_text(tsrc.replace(told, tnew), encoding="utf-8")
+PY
+    then
+        git --no-pager diff Makefile .github/workflows/ci.yml tests/test_law_validation.py
+        if confirm "Wire check_laws.py into the gate (all three edits)?"; then
+            # ci.yml ONLY. Custody membership and MANIFEST rows are independent sets and
+            # this is where that bites: the Makefile is in the custody set and has NO
+            # manifest row (nor do .pre-commit-config.yaml, governance/policy.yaml,
+            # scripts/_gov.py, check_decisions.py or gen_projections.py). Calling
+            # regen_manifest_row on it would not refresh a row — it would CREATE one,
+            # silently enlarging the frozen-path set at a sitting, which is a Tier-C-shaped
+            # change nobody asked for. Step 7's gen_custody.py is what covers the Makefile.
+            # tests/test_law_validation.py is in neither set, by design (D0131 item 3).
+            regen_manifest_row .github/workflows/ci.yml
+            note "wired. Step 9's gate is the first run that includes it; if check_laws"
+            note "goes red there it is reporting a real defect in the law registry, not a"
+            note "defect in this step."
+        else
+            git checkout -- Makefile .github/workflows/ci.yml tests/test_law_validation.py
+            note "reverted — all three. check_laws keeps reaching the gate only through"
+            note "the file RT-M2-02 attacks; leave D0131 item 4 open to match."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+    fi
+fi
+
+# ---------------------------------------------------------------- 4g. projection drift
+say "Step 4g — DECISIONS.md asserts the receipt is FRESH from a hash that cannot see the clock (RT-M2-05)"
+if grep -q "attention-receipt line is not what today computes" scripts/check_decisions.py; then
+    note "already applied — skipped"
+else
+    note "gen_decisions renders TWO things from the clock: the literal line"
+    note "'Attention receipt: **FRESH** — …' (DECISIONS.md:10) and every Tier-B record's"
+    note "effective status column. The freshness guard compares input_hash over"
+    note "decisions/*.yaml AND NOTHING ELSE (check_decisions.py:334-341). Neither \`today\`"
+    note "nor receipts/ is an input, and \`make verify\` never runs \`make projections\`."
+    note ""
+    note "SO ON 2026-09-08 THE FILE WILL STILL SAY 'FRESH — fresh until 2026-09-07' while"
+    note "check_decisions prints STALE, and no guard will disagree. D0018's own decision"
+    note "text promises the opposite: 'while stale … DECISIONS.md and the digest show the"
+    note "accumulating blocks.' Nothing makes that true. Reproduced both ways on"
+    note "2026-09-01: the shipped guard exits 0 at --today 2026-09-08 with the file"
+    note "asserting FRESH; the patch below exits 1 with four violations naming the header"
+    note "and D0006/D0014/D0020."
+    note ""
+    note "WHY THE FIX IS NOT A WIDER HASH. gen_digest already folds decisions/*.yaml.sig"
+    note "and receipts/*.md* into its own input list, with a comment saying digest CONTENT"
+    note "must be digest INPUT (gen_projections.py:196-202) — the same reasoning was simply"
+    note "never carried one file over. But it would not be enough here: the receipt's bytes"
+    note "do not change when it goes stale, only the date does, and \`today\` can never be a"
+    note "file. So the guard compares the CLAIM the projection makes against the one this"
+    note "run computes. It does not import gen_projections — a guard that re-renders through"
+    note "the generator it audits renders the same mistake into both sides."
+    note ""
+    note "DISTINCT FROM RT-07 (digests are not hash-checked at all). Here the hash IS"
+    note "checked and is simply blind to what varies. Why it stayed hidden: every session"
+    note "so far added a record, which moves the hash and forces a regeneration. The drift"
+    note "is only visible on a day when nothing lands."
+    if python3 - <<'PY'
+import pathlib, sys
+
+p = pathlib.Path("scripts/check_decisions.py")
+src = p.read_text(encoding="utf-8")
+
+old_import = "    binding_strengths,\n    input_hash,\n"
+new_import = "    binding_strengths,\n    effective_status,\n    input_hash,\n"
+if src.count(old_import) != 1:
+    sys.exit("check_decisions.py's _gov import block is not the expected shape — apply by hand")
+
+anchor = '''        elif actual != expected:
+            fail.add("DECISIONS.md is stale (input-hash mismatch) — run make projections; never hand-edit")
+'''
+addition = '''
+    # RT-M2-05 (D0141): the hash above covers decisions/*.yaml and NOTHING ELSE, so it is
+    # blind to the two things gen_decisions renders from the clock — the attention-receipt
+    # verdict and every Tier-B record's effective status. `today` can never be a file, so
+    # the fix is not a wider hash; it is to compare the CLAIM the projection makes against
+    # the one this run computes. Left alone, DECISIONS.md goes on asserting
+    # "Attention receipt: **FRESH**" after the receipt has gone stale, with every guard
+    # green — the precise opposite of what D0018's own text promises ("while stale …
+    # DECISIONS.md and the digest show the accumulating blocks").
+    #
+    # Compared, not re-rendered. Importing gen_projections here would make the guard depend
+    # on the generator it audits, and a generator that renders the wrong thing would then
+    # render it into both sides of the comparison.
+    if projection.exists():
+        body = projection.read_text(encoding="utf-8")
+        want = f"Attention receipt: **{'FRESH' if receipts_fresh else 'STALE'}** — {receipt_detail}"
+        if want not in body:
+            fail.add(f"DECISIONS.md's attention-receipt line is not what today computes "
+                     f"({want!r}) — run make projections")
+        # Only the records whose status CAN move with the date. Checking every row would
+        # duplicate the input hash for the ones that cannot, and would report one defect
+        # twice under two names.
+        for rec in valid_records:
+            if rec.get("veto_by") is None:
+                continue
+            status = effective_status(rec, args.today, receipts_fresh)
+            row = next((ln for ln in body.splitlines()
+                        if ln.startswith(f"| {rec['id']} |")), None)
+            if row is None:
+                fail.add(f"DECISIONS.md has no row for {rec['id']} — run make projections")
+            elif f"| {status} |" not in row:
+                fail.add(f"DECISIONS.md reports {rec['id']} as something other than "
+                         f"{status!r}, which is what today computes — run make projections")
+'''
+if src.count(anchor) != 1:
+    sys.exit("check_decisions.py's projection-freshness block is not the expected one — apply by hand")
+
+src = src.replace(old_import, new_import).replace(anchor, anchor + addition)
+p.write_text(src, encoding="utf-8")
+PY
+    then
+        git --no-pager diff scripts/check_decisions.py
+        if confirm "Make DECISIONS.md's date-dependent claims checkable?"; then
+            note "applied. scripts/check_decisions.py is custody-set and carries no manifest"
+            note "row, so there is nothing to re-manifest — step 7's gen_custody covers it."
+            note "Step 9 regenerates projections BEFORE running the gate, so the new check"
+            note "sees a freshly rendered file; if it fires there, read it as the projection"
+            note "being stale rather than as this patch being wrong."
+        else
+            git checkout -- scripts/check_decisions.py
+            note "reverted — DECISIONS.md keeps asserting a freshness no guard can check."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+    fi
+fi
+
+# ---------------------------------------------------------------- 4h. D0123's batch
+say "Step 4h — three signed Tier-C records now say something false in the present tense (D0123, D0131 item 7)"
+note "D0123 deferred 'any binding upgrade they want' on the thirteen signed Tier-C records"
+note "to this sitting, without naming which ones. Audited on 2026-09-01: THREE have an"
+note "upgrade that is honest, and ten do not. Ten is the useful half of that answer —"
+note "an upgrade is only real if the artifact now mechanically prevents or detects the"
+note "violation, and inventing eleven more would make 'enforced' mean nothing."
+note ""
+note "  D0110  file: src/tannen/kernel/rel.py — detail says 'where the check WOULD go'."
+note "         The check is there: _refuse_unwitnessed at rel.py:93, called from _init at"
+note "         :155. A pytest binding on frozen L2.2 is added beside it."
+note "  D0108  manifest: CLAUDE.md — detail says 'the text to correct'. It was corrected"
+note "         at the M1 sitting (c5d53c9) and CLAUDE.md's manifest row pins the CORRECTED"
+note "         bytes, so a regression turns check_manifest red."
+note "  D0095  config: tag-roles.yaml#required_tags — detail says 'nothing here is enforced"
+note "         yet ... upgrades when the owner applies either half'. Half (1) was applied"
+note "         at M1. Half (2) was not, and the new text says so rather than rounding up."
+note ""
+note "AND TEN WITH NOTHING TO UPGRADE, so you can see the audit was two-sided: D0049 and"
+note "D0063 were already upgraded at the M1 sitting (step 4c above will say 'skipped');"
+note "D0036 at the opening sitting; D0060, D0061, D0105 are documentary BY NATURE and their"
+note "own details say so; D0047 named no upgrade; D0106, D0115 and D0117 name mechanisms"
+note "that are still unbuilt — D0117's evidence schema has not changed since M0."
+note ""
+note "EACH IS EDIT-THEN-SIGN, ONE RECORD AT A TIME, like step 4c and step 8. Batch-editing"
+note "then batch-signing would leave every record edited and unsigned if one passphrase is"
+note "mistyped — a red gate with no builder-side fix, which is the state D0070 and D0123"
+note "exist to avoid. Each edit costs TWO failures until its signature lands: the record's"
+note "own, and DECISIONS.md going stale. Step 9 regenerates the projection; step 11 does"
+note "NOT, which is why this cannot be deferred to there."
+for rec_id in D0110 D0108 D0095; do
+    if ! out=$(python3 "$PROPOSALS_M2/upgrade_binding.py" "$rec_id" 2>&1); then
+        note "$rec_id: ${out##*: }"
+        continue
+    fi
+    rec="$out"
+    git --no-pager diff -- "$rec"
+    if confirm "Keep $rec_id's upgrade and re-sign it?"; then
+        sign_owner "$rec" tannen-decision
+        if verify_owner "$rec" tannen-decision; then
+            note "$rec_id verifies against its new bytes."
+        else
+            git checkout -- "$rec"
+            die "$rec_id does not verify after re-signing, and the edit has been reverted.
+  Its OLD signature is over the old bytes, so the restore should leave it valid — confirm
+  with: ssh-keygen -Y verify -f allowed_signers -I owner@tannen -n tannen-decision \\
+    -s $rec.sig < $rec
+  Do not continue until it does; a signed Tier-C record that fails to verify is read as
+  accepted-without-authority and is a red gate with no builder-side fix."
+        fi
+    else
+        git checkout -- "$rec"
+        note "reverted — $rec_id keeps a binding whose detail is false in the present tense."
+    fi
+done
+# REGENERATE NOW, not at step 9. Editing a decision record restales DECISIONS.md, and
+# step 5 — before step 7, where the rehearsal harness still reports every ": FAIL" line —
+# runs check_decisions to see whether moving the fixtures broke a binding. Without this the
+# step prints "DECISIONS.md is stale (input-hash mismatch)" and, since RT-M2-05's check
+# landed at 4g, three more lines about effective statuses. None of them stops the sitting
+# (step 5 greps only for "binding does not resolve"), but all of them surface in the
+# rehearsal's unexpected-failure list and in the owner's terminal as a red FAIL in the
+# middle of a working sitting. Step 9 regenerates again; this one is idempotent and costs a
+# second. Note that until M2 every record-editing step above was an already-applied skip,
+# which is why no earlier sitting met this.
+"$PY" -I -P scripts/gen_projections.py >/dev/null \
+    || note "projection regeneration failed — step 9 will try again"
+
+# ---------------------------------------------------------------- 4i. bindings_count
+say "Step 4i — a guard checks that a record is well-formed, never that it says what its author meant (D0131 item 8 = D0106 item 1)"
+if grep -q '"bindings_count"' governance/schemas/decision-record.schema.json; then
+    note "already applied — skipped"
+else
+    note "D0049 carried a bindings list whose third entry had been folded into the second's"
+    note "detail block. Schema-valid. Both remaining targets resolving. Every guard green."
+    note "Silently one binding short of what its author wrote. D0106 item (1)'s answer is a"
+    note "checksum over authorial intent: the author states the count, and the guard"
+    note "compares it with the list. Same class as RT-10 — a binding satisfied by a target"
+    note "that merely exists rather than one that enforces anything."
+    note ""
+    note "TWO HALVES, AND THEY MUST LAND TOGETHER. The schema has"
+    note "\"additionalProperties\": false, so a record carrying bindings_count is INVALID"
+    note "until the schema knows the field; and the field is inert decoration until"
+    note "check_decisions reads it. Applying one without the other is worse than neither."
+    note ""
+    note "THE FIELD IS OPTIONAL, which is stage one of D0106's own three-stage plan"
+    note "(optional -> backfill opportunistically -> tighten to required). All 142 existing"
+    note "records validate unchanged against the patched schema — measured, 0 failures."
+    note "DO NOT MASS-BACKFILL: a count computed as len(bindings) is a checksum of the"
+    note "bytes over themselves and proves nothing. It accrues to records a human re-reads."
+    note ""
+    note "SO THE SUMMARY LINE REPORTS 0/142 AT FIRST, and that is deliberate. A check that"
+    note "cannot fail is not a check (D0116); printing how many records the checksum"
+    note "actually covers states that as a number instead of a silence, which is the move"
+    note "D0129 made with check_laws.py's exempt count."
+    note ""
+    note "NO POISON FIXTURE THIS SITTING, said plainly rather than left to be noticed. Its"
+    note "liveness is proven from pytest — tests/test_governance_scripts.py gets a test that"
+    note "builds two records, one lying and one honest, and requires the guard to catch the"
+    note "first WITHOUT flagging the second (otherwise the check is a ban on the field"
+    note "rather than a comparison). A tests/poison/ fixture would also need a new tuned"
+    note "custodian copy, and manufacturing one days before a deadline for a check that"
+    note "currently covers zero records is the wrong trade. Queue it for M3."
+    if python3 - <<'PY'
+import pathlib, sys
+
+schema = pathlib.Path("governance/schemas/decision-record.schema.json")
+ssrc = schema.read_text(encoding="utf-8")
+# SELF-GUARDED, not merely guarded by the shell grep above. The anchor below is the
+# property this block inserts BEFORE, so it survives the first application unchanged and a
+# second run would insert a duplicate JSON key and a duplicate Python block — both of which
+# parse. Every other step's heredoc refuses on its own; this one must too, or the outer
+# grep is a single point of failure. Caught by applying it twice in a sandbox.
+if '"bindings_count"' in ssrc:
+    sys.exit("bindings_count is already in the decision schema — nothing to do")
+anchor = '''    "unenforced_reason": {'''
+addition = '''    "bindings_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional checksum over authorial intent (D0106 item 1): the number of bindings the author MEANT this record to carry. check_decisions.py fails when it disagrees with the actual length of `bindings`. Optional so records written before it existed stay valid; a new record states it. D0049 is the failure it is aimed at — a folded YAML list, still schema-valid, still resolving, silently one binding short."
+    },
+'''
+if ssrc.count(anchor) != 1:
+    sys.exit("the decision schema's unenforced_reason property is not where expected — apply by hand")
+
+checker = pathlib.Path("scripts/check_decisions.py")
+csrc = checker.read_text(encoding="utf-8")
+decl = "    tier_c_queued: list[str] = []\n"
+decl_new = decl + "    counted: list[str] = []\n"
+canchor = '''        if not record["bindings"]:
+            unenforced.append(f"{rid} ({record['title']}): {record['unenforced_reason']}")
+'''
+caddition = '''
+        # D0106 item (1). A guard verifies that a record is WELL-FORMED, never that it says
+        # what its author meant: D0049 carried a folded YAML list that was valid, resolved,
+        # and was silently one binding short. `bindings_count` is the author's own count of
+        # the same fact, so the two can be made to disagree out loud. Optional by design —
+        # absent means the record makes no claim and nothing is checked, which is why the
+        # summary reports the coverage rather than implying the checksum is universal.
+        declared = record.get("bindings_count")
+        if declared is not None:
+            counted.append(rid)
+            if declared != len(record["bindings"]):
+                fail.add(
+                    f"{rel}: bindings_count is {declared} but the record carries "
+                    f"{len(record['bindings'])} binding(s) — the author's count and the "
+                    "file's bytes disagree (D0106 item 1, the D0049 failure mode)."
+                )
+'''
+summary = '''        f"{len(unenforced)} unenforced (with reasons); "
+'''
+summary_new = summary + '''        f"{len(counted)}/{len(record_paths)} declare bindings_count; "
+'''
+for name, text, count in (("declaration", decl, csrc.count(decl)),
+                          ("unenforced block", canchor, csrc.count(canchor)),
+                          ("summary line", summary, csrc.count(summary))):
+    if count != 1:
+        sys.exit(f"check_decisions.py's {name} is not the expected shape ({count} matches) — apply by hand")
+
+# THE THIRD FILE MOVES WITH THE OTHER TWO. tests/test_governance_scripts.py is neither
+# frozen nor custody-set, so it needs no signature — but the test below cannot pass until
+# the schema knows the field, so landing it separately means landing it red. Same shape as
+# step 4d (CLAUDE.md and its tolerance map) and step 4f (the Makefile and its docstring).
+tests = pathlib.Path("tests/test_governance_scripts.py")
+tsrc = tests.read_text(encoding="utf-8")
+if "bindings_count that lies" in tsrc:
+    sys.exit("the bindings_count regression test is already present — apply by hand")
+tsrc += '''
+
+def test_a_bindings_count_that_disagrees_with_the_list_is_caught(tmp_path: Path) -> None:
+    """D0106 item (1). A guard verifies that a record is WELL-FORMED, never that it says
+    what its author meant. D0049 carried a `bindings` list whose third entry had been
+    folded into the second's `detail` block: schema-valid, both remaining targets
+    resolving, every guard green, and the record silently one binding short of what it
+    claimed. `bindings_count` is the author's own count of the same fact, so the two can
+    be made to disagree out loud.
+
+    Constructs its own tree (D0092: a regression test constructs the state that
+    distinguishes the fixed code from the broken code, never observes it) rather than
+    reading a tests/poison/ fixture — installing one there is the owner's act, and this
+    sitting deliberately did not manufacture a new custodian copy for a check that today
+    covers zero records.
+
+    TWO records, because "check_decisions exited non-zero" alone would also be satisfied
+    by a guard that rejects the FIELD rather than the DISAGREEMENT. The honest record must
+    pass with its count present, or the check is a ban on the field and not a checksum.
+    """
+    root = tmp_path / "tree"
+    (root / "decisions").mkdir(parents=True)
+    common = ('tier: A\\n'
+              'date: "2020-01-02"\\n'
+              "rationale: D0106 item 1 probe.\\n"
+              "reversibility: n/a (probe)\\n"
+              "status: accepted\\n")
+    (root / "decisions" / "0001-count-disagrees.yaml").write_text(
+        "id: D0001\\n"
+        "title: Probe -- the author counted three bindings and the file holds two\\n"
+        + common +
+        "decision: Claim three bindings and carry two, the way D0049 did.\\n"
+        "bindings_count: 3\\n"
+        "bindings:\\n"
+        "  - type: file\\n"
+        "    target: decisions\\n"
+        "  - type: file\\n"
+        "    target: decisions/0001-count-disagrees.yaml\\n"
+        "    detail: >-\\n"
+        "      and a third binding folded in here instead of written as its own list\\n"
+        "      entry -- still valid YAML, still resolving, still one short.\\n",
+        encoding="utf-8")
+    (root / "decisions" / "0002-count-agrees.yaml").write_text(
+        "id: D0002\\n"
+        "title: Probe -- an honest count is not a violation\\n"
+        + common +
+        "decision: State the count and carry exactly that many bindings.\\n"
+        "bindings_count: 1\\n"
+        "bindings:\\n"
+        "  - type: file\\n"
+        "    target: decisions/0002-count-agrees.yaml\\n",
+        encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    result = run([sys.executable, "scripts/check_decisions.py", "--root", str(root)], env=env)
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, f"a bindings_count that lies went undetected:\\n{out}"
+    assert "bindings_count is 3 but the record carries 2" in out, out
+    assert "0002-count-agrees" not in out, (
+        "the honest record was flagged too, so the check bans the field rather than "
+        f"comparing it:\\n{out}")
+'''
+
+schema.write_text(ssrc.replace(anchor, addition + anchor), encoding="utf-8")
+checker.write_text(
+    csrc.replace(decl, decl_new).replace(canchor, canchor + caddition).replace(summary, summary_new),
+    encoding="utf-8",
+)
+tests.write_text(tsrc, encoding="utf-8")
+PY
+    then
+        git --no-pager diff governance/schemas/decision-record.schema.json \
+            scripts/check_decisions.py tests/test_governance_scripts.py
+        if confirm "Land bindings_count — schema field, the check AND its test, together?"; then
+            regen_manifest_row governance/schemas/decision-record.schema.json
+            note "applied. The schema is frozen, sealed AND custody-set — three reasons only"
+            note "you could do this. The manifest row is refreshed; step 7 re-signs custody."
+        else
+            git checkout -- governance/schemas/decision-record.schema.json \
+                scripts/check_decisions.py tests/test_governance_scripts.py
+            note "reverted — all three. D0106 item 1 stays open; note it in the receipt."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+    fi
+fi
+
+# ---------------------------------------------------------------- 4j. D0117
+say "Step 4j — a verdict is one bit, and there is nowhere in an evidence record to put the rest (D0131 item 2 = D0117)"
+if grep -q '"examined"' governance/schemas/evidence-record.schema.json; then
+    note "already applied — skipped"
+else
+    note "D0117 is owner-accepted and unappliable by the builder on three counts:"
+    note "governance/schemas/evidence-record.schema.json is MANIFEST-frozen, inside the"
+    note "sealed governance/schemas, AND custody-set as governance/schemas/*.json."
+    note ""
+    note "THE SHAPE IS THE PART D0117 LEFT OPEN, so it is proposed here rather than assumed:"
+    note "an optional \`examined\` object with law_nodes and test_cases. law_nodes is how many"
+    note "of the law's test functions reported; test_cases counts INVOCATIONS, so"
+    note "parametrised cases count one apiece. Measured on the real suite: L2.9 reports"
+    note "{law_nodes: 1, test_cases: 34} — one node, thirty-four catalogue shapes — and L0.3"
+    note "reports {2, 19}. The verdict bit cannot tell those from a law that ran once."
+    note ""
+    note "WHAT IT IS NOT, said plainly so the number is not over-read. test_cases is one tier"
+    note "BELOW an example count: a single @given invocation is one test case here however"
+    note "many examples hypothesis drew. It does not close D0114 — L1.9 would read"
+    note "test_cases: 44 while D0114 records its effective evidence as exactly zero. D0117's"
+    note "own rationale ranks this tier: 'an example count is the cheapest and the weakest'."
+    note ""
+    note "AND WHY THE OBVIOUS BETTER ANSWER IS NOT HERE. D0130's event() counts are exactly"
+    note "what D0117 names third, and they are REACHABLE — but hypothesis writes its OWN"
+    note "internal retry notes into the same undifferentiated dict (control.py:294-311 and"
+    note "five internals sites). Wired in, M2's laws yield {'overlap: partial': 1700, ...}"
+    note "and M0's yield a wall of version-dependent strategy reprs. There is no marker"
+    note "separating a law's declared shape from hypothesis's bookkeeping. That is its own"
+    note "record, not a rider on this one."
+    note ""
+    note "THREE FILES, AND THE ORDER IS PROVEN, NOT ASSUMED. additionalProperties is false,"
+    note "so a record carrying \`examined\` is refused until the schema knows the field —"
+    note "verified by running the code half alone against the unmodified schema, where every"
+    note "write died with 'Additional properties are not allowed'. The schema CANNOT go"
+    note "second. src/ carries no manifest row and no custody entry, so the two code files"
+    note "need no signature; they ride along because a schema that permits a field nothing"
+    note "writes is the same false promise step 4 names for D0052's \`strength\`."
+    note ""
+    note "format_version STAYS 0. D0117 anticipated a bump, but the evidence store is"
+    note "gitignored and regenerated by make verify, and the five frozen conformance vectors"
+    note "under tests/laws/evidence-vectors/ still parse — 2/2 positives accepted, 3/3"
+    note "negatives rejected. A bump would force regenerating those for no reader's benefit."
+    if python3 - <<'PY'
+import pathlib, sys
+
+schema = pathlib.Path("governance/schemas/evidence-record.schema.json")
+ssrc = schema.read_text(encoding="utf-8")
+if '"examined"' in ssrc:
+    sys.exit("the evidence schema already carries `examined` — nothing to do")
+anchor = '''    "verdict": { "enum": ["pass", "fail"] },
+'''
+addition = '''    "examined": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["law_nodes", "test_cases"],
+      "properties": {
+        "law_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many of the law's test functions reported a result. A record is written only when every one the frozen law file defines did (BRIEF §5.11), so at a given descriptor this is the law's whole node count."
+        },
+        "test_cases": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many test INVOCATIONS reported a result: parametrised cases counted one apiece, so this exceeds law_nodes exactly where a law is parametrised. NOT a count of generated examples — one @given invocation is one test case here however many examples it drew."
+        }
+      },
+      "description": "What the run actually EXAMINED (D0117), beside the verdict of whether it passed. Optional: absent is read as 'this runner did not measure', so records written before this field existed keep their meaning, and absent stays distinct from a run that examined nothing. Present, it must be whole — a half-given measure is one a reader has to guess about."
+    },
+'''
+if ssrc.count(anchor) != 1:
+    sys.exit("the evidence schema's verdict property is not where expected — apply by hand")
+
+ev = pathlib.Path("src/tannen/laws/evidence.py")
+esrc = ev.read_text(encoding="utf-8")
+e_old = '''    run_at: str | None = None,
+) -> dict[str, Any]:
+    """One record for one law run. `run_at` is the runner's wall clock, never the
+    kernel's: the kernel has no clock (BRIEF P7)."""
+    return {
+'''
+e_new = '''    run_at: str | None = None,
+    examined: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """One record for one law run. `run_at` is the runner's wall clock, never the
+    kernel's: the kernel has no clock (BRIEF P7).
+
+    `examined` is WHAT THE RUN ACTUALLY EXAMINED (D0117). It is OMITTED when the caller
+    has nothing to say rather than written as a zero: a record whose measure is absent
+    and a record whose measure is nothing are different facts, and the first is what
+    every record written before this field existed attests.
+    """
+    record: dict[str, Any] = {
+'''
+e_tail_old = '''        "environment": environment(),
+    }
+'''
+e_tail_new = '''        "environment": environment(),
+    }
+    if examined is not None:
+        record["examined"] = examined
+    return record
+'''
+pl = pathlib.Path("src/tannen/laws/plugin.py")
+psrc = pl.read_text(encoding="utf-8")
+p_old = '''    observed: set[str] = field(default_factory=set)
+'''
+p_new = '''    observed: set[str] = field(default_factory=set)
+    #: The NODE IDS that reported a result, not merely the function names. A parametrised
+    #: law function is one entry in `observed` and one entry PER CASE here, and that gap is
+    #: what D0117 is about: `observed` says the law ran, this says how much of it ran. A
+    #: set and not a counter so a node reporting twice — a failure at setup and again at
+    #: teardown — counts once.
+    nodes: set[str] = field(default_factory=set)
+'''
+p_add_old = '''            run.observed.add(function)
+'''
+p_add_new = '''            run.observed.add(function)
+            run.nodes.add(report.nodeid)
+'''
+p_emit_old = '''                seed=seed if run.uses_hypothesis else None,
+'''
+p_emit_new = '''                seed=seed if run.uses_hypothesis else None,
+                examined={"law_nodes": len(run.observed), "test_cases": len(run.nodes)},
+'''
+for label, src, needle, want in (
+    ("evidence.py's build_record signature", esrc, e_old, 1),
+    ("evidence.py's return dict", esrc, e_tail_old, 1),
+    ("plugin.py's _LawRun.observed field", psrc, p_old, 1),
+    ("plugin.py's observed.add call sites", psrc, p_add_old, 2),
+    ("plugin.py's build_record call", psrc, p_emit_old, 1),
+):
+    if src.count(needle) != want:
+        sys.exit(f"{label} is not the expected shape ({src.count(needle)} of {want}) — apply by hand")
+
+# SCHEMA FIRST. Proven, not assumed: with the code half alone against the unmodified
+# schema every EvidenceStore.put raises "Additional properties are not allowed
+# ('examined' was unexpected)" and the whole law suite dies. Written in this order so a
+# half-applied step leaves the tree in the state that still runs.
+schema.write_text(ssrc.replace(anchor, anchor + addition), encoding="utf-8")
+ev.write_text(esrc.replace(e_old, e_new).replace(e_tail_old, e_tail_new), encoding="utf-8")
+pl.write_text(
+    psrc.replace(p_old, p_new).replace(p_add_old, p_add_new).replace(p_emit_old, p_emit_new),
+    encoding="utf-8",
+)
+PY
+    then
+        git --no-pager diff governance/schemas/evidence-record.schema.json \
+            src/tannen/laws/evidence.py src/tannen/laws/plugin.py
+        if confirm "Land \`examined\` — schema, build_record AND the plugin, together?"; then
+            regen_manifest_row governance/schemas/evidence-record.schema.json
+            note "applied. Step 9's gate rebuilds the evidence store from scratch"
+            note "(make verify rm -rf's it first), so the first gate run after this produces"
+            note "a store where every record carries the field."
+        else
+            git checkout -- governance/schemas/evidence-record.schema.json \
+                src/tannen/laws/evidence.py src/tannen/laws/plugin.py
+            note "reverted — all three. D0117 stays accepted and unappliable; the evidence"
+            note "record keeps saying only whether a law passed."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+    fi
+fi
+
 # ---------------------------------------------------------------- 5. poison fixtures
 say "Step 5 — install the red-team poison fixtures (author-key territory)"
-note "The nine fixtures below are all installed already — seven from the M0→M1 corpus,"
+note "Nine of the ten below are installed already — seven from the M0→M1 corpus,"
 note "oracle-shadow (RT-M1-01) and check-decisions-file-skip (RT-M1-05) from the M1"
-note "sitting — so this loop skips every one of them and the M2 pass's own findings are"
-note "what it is really here for. THAT LIST IS EMPTY UNTIL THE M2 RED TEAM RUNS: see this"
-note "directory's README, section 'Red-team findings'. A sitting that installs no new"
-note "fixture is a sitting whose boundary red team either found nothing exploitable or"
-note "was never run, and those are not the same state — the README says which."
+note "sitting — so the loop skips those nine. THE TENTH IS THIS MILESTONE'S: the M2"
+note "boundary red team ran on 2026-09-01 (docs/redteam/2026-09-01-m2-boundary.md, D0141)"
+note "and returned eight findings, one of them critical, and oracle-shadow-model is that"
+note "one. A sitting that installs no new fixture is a sitting whose boundary red team"
+note "either found nothing exploitable or was never run, and those are not the same"
+note "state; this one installs a fixture, and the report says what it is for."
 note ""
 note "Installing one is a git mv, a manifest row per file, and a poison line in the"
 note "custodian — the custodian replacement in step 6 already carries every line, so the"
@@ -627,13 +1330,23 @@ note "fixtures must land first or it will fail on missing paths. A fixture whose
 note "patch has NOT landed stays out of this list on purpose (D0104's note on"
 note "check-decisions-file-skip): installing it first leaves the custodian permanently red"
 note "against a guard that is not shipped, which is what the marking convention prevents."
-# M2 RED-TEAM SLOT — append this milestone's fixture names to the end of this list, and
-# add a readme_row_absent block below for each. Keep the installed nine: the loop is
-# idempotent and skipping them by name is how the sitting stays safe to re-run.
+# M3's pass appends its fixture names to the end of this list and adds a
+# readme_row_absent block below for each. Keep the installed ones: the loop is idempotent
+# and skipping them by name is how the sitting stays safe to re-run.
+#
+# oracle-shadow-model (RT-M2-01) is the M2 pass's, and it is here rather than in a
+# step-5b-style pairing because ITS GUARD PATCH IS ALREADY SHIPPED. D0142 widened
+# src/tannen/laws/plugin.py in a builder session on 2026-09-01 — src/ carries no manifest
+# row and no custody entry, so no signature was involved. That is the opposite of
+# check-decisions-file-skip, whose patch touched custody-set scripts/check_decisions.py and
+# therefore had to land in the same step as its fixture (D0103). Read the difference as the
+# rule it is: a fixture goes in this list when its guard already bites, and in a 5b-shaped
+# step when the patch needs the owner's key.
 FIXTURES="lint-imports-kernel check-decisions-ratchet check-decisions-nested-hatch
           check-manifest-sealed check-manifest-unsigned-policy
           check-decisions-unsigned-tier-c custodian-tag-signer
-          oracle-shadow check-decisions-file-skip"
+          oracle-shadow check-decisions-file-skip
+          oracle-shadow-model"
 if [ ! -d tests/poison/custodian-tag-signer ]; then
     note "The tag-signer fixture is a git bundle carrying a builder-signed close tag."
     note "It is generated HERE, at the sitting, and never shipped pre-built (conferral"
@@ -669,6 +1382,17 @@ if [ -d tests/poison/oracle-shadow ] && readme_row_absent oracle-shadow; then
         git --no-pager diff tests/poison/README.md
     fi
 fi
+# Guarded on the DIRECTORY as well as the row, like the block above it: the row must not
+# be appended for a fixture the owner declined to install one loop earlier, or the index
+# claims a fixture the corpus does not have — the mirror image of D0131 item (1), where the
+# corpus had a fixture the index did not claim.
+if [ -d tests/poison/oracle-shadow-model ] && readme_row_absent oracle-shadow-model; then
+    if confirm "Add oracle-shadow-model (RT-M2-01) to the tests/poison/README.md table?"; then
+        cat "$PROPOSALS_M2/poison-readme-rows.md" >> tests/poison/README.md
+        regen_manifest_row tests/poison/README.md
+        git --no-pager diff tests/poison/README.md
+    fi
+fi
 
 # Installing a fixture MOVES files, and a decision record whose binding names the candidate
 # path stops resolving the instant it does. Nothing surfaces that until a guard runs, and
@@ -682,13 +1406,25 @@ fi
 # custody drift until step 7 re-signs. Both are the sitting working, not the sitting broken.
 # A `git mv` produces exactly two messages, and these are they.
 # "Up to a minute" was M0's measurement, when check_decisions had a handful of bindings.
-# At M1 it re-runs 54 pytest bindings and takes about TEN minutes — and this line's stale
+# At M1 it re-ran 54 pytest bindings and took about TEN minutes — and that line's stale
 # ETA plus a captured-and-silent run got the driver killed right here at the real M1
 # sitting (2026-08-30, exit 130): the same still-terminal-reads-as-hung class as D0069,
 # one step further in. Same cure as step 0's gate, and for the same reason: tee streams
 # the run while the log keeps what the grep below needs. The rehearsal harness's silence
 # rule stays satisfied — a [waiting] line arms until the next step header.
-waiting "checking the decision bindings still resolve — about 10 minutes (54 pytest bindings; output streams below, with still stretches between batches)"
+#
+# THE COUNT IS DERIVED, and that is a fix, not a flourish. Written as the literal "54" it
+# was already wrong by M2 — the real number is over seventy — and a promise the owner
+# watches expire is the whole defect D0069 named. A number read off decisions/ at run time
+# cannot go stale, and it is the same move D0142 made on the oracle set for the same
+# reason: a hand-maintained constant in a governance script is a constant that is one
+# milestone behind at every boundary. `grep -A1` over the records counts UNIQUE targets,
+# which is what check_decisions batches — within one of its own reported figure, and an
+# ETA is not an assertion. Six bindings a minute is the M1 measurement (54 in ~10), and
+# the +5 rounds up rather than promising the owner the floor.
+binding_targets=$(grep -h -A1 'type: pytest' decisions/*.yaml \
+    | grep 'target:' | sed 's/.*target: *//' | tr -d '"' | sort -u | wc -l)
+waiting "checking the decision bindings still resolve — about $(( (binding_targets + 5) / 6 )) minutes ($binding_targets pytest bindings; output streams below, with still stretches between batches)"
 bindings_log=$(mktemp -t tannen-bindings.XXXXXX)
 "$PY" -I -P scripts/check_decisions.py 2>&1 | tee "$bindings_log"
 broken=$(grep -E 'binding does not resolve — (target does not exist|not listed in MANIFEST)' "$bindings_log" || true)
@@ -875,6 +1611,102 @@ for rec in "${queue[@]}"; do
     fi
 done
 sign_tier_c_records
+
+# ---------------------------------------------------------------- 8b. D0138 item 1
+say "Step 8b — a test node whose name asserts the opposite of what it does (D0138 item 1)"
+OLD_NODE=test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image
+NEW_NODE=test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed
+if ! grep -q "def $OLD_NODE" tests/test_provenance_homomorphism.py; then
+    note "already renamed — skipped"
+else
+    note "$OLD_NODE was THE ALARM: it fed anti_join a (2, 0_Why) left row and asserted the"
+    note "absence witness handed a row with no bag image an image of n copies. D0110 made"
+    note "that input unconstructible, so D0137 INVERTED the node in place — it now builds"
+    note "the same scenario and asserts the refusal. The name is the last thing still"
+    note "saying the old claim, and the docstring has been carrying the truth since."
+    note ""
+    note "WHY IT WAITED FOR YOU. D0110 is Tier C and owner-signed, and the signature is"
+    note "over the record's WHOLE BYTES (D0063 ruling 2). Retargeting its binding"
+    note "invalidates the signature, and a Tier-C record whose signature does not verify is"
+    note "a red guard — so the rename and the re-signature are ONE act or neither. D0137"
+    note "records this being discovered the direct way: the retarget was written, verify"
+    note "returned 'incorrect signature', and the file was restored."
+    note ""
+    note "THREE RECORDS BIND THIS NODE, not one. D0138 named D0110; D0137 and D0138 bind it"
+    note "too, and both are Tier A and unsigned, so those two retarget freely under D0045."
+    note "All three move together below or the sitting leaves a binding that does not"
+    note "collect. Verified by grep on 2026-09-01, not taken from D0138's own list."
+    note ""
+    note "AND ONE COST D0138 DID NOT ANTICIPATE — decide knowing it. docs/specs/m2.md:121"
+    note "names this node in prose, and that file is FROZEN (manifested at m2-laws-freeze)."
+    note "Frozen files are not edited outside a supersession (D0106 ruling 2), so after the"
+    note "rename the M2 spec cites a node that no longer exists. No guard notices: nothing"
+    note "checks spec prose against live node names — which is D0138 ITEM 2's shape, one"
+    note "file over. The sentence is narrative about what Session B was going to do, so it"
+    note "reads as history rather than as a wrong instruction. If you would rather not"
+    note "strand it, decline here: the name is a cosmetic defect and the docstring already"
+    note "carries the truth. Declining costs nothing but D0138 item 1 staying open."
+    if python3 - <<'PY'
+import pathlib, sys
+
+OLD = "test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image"
+NEW = "test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed"
+
+# The test file: the def, and the module docstring's reference to it (line ~35). Prose
+# INSIDE a decision's `decision:` field is history and is never touched (D0045) — only
+# `bindings` move, which is why the records below are edited by target line, not swept.
+test = pathlib.Path("tests/test_provenance_homomorphism.py")
+tsrc = test.read_text(encoding="utf-8")
+if tsrc.count(f"def {OLD}") != 1:
+    sys.exit(f"tests/test_provenance_homomorphism.py does not define {OLD} exactly once — apply by hand")
+
+records = {
+    "decisions/0110-nonzero-implies-witnessed-at-construction.yaml": 1,
+    "decisions/0137-the-d0110-alarm-was-read-and-what-replaced-it.yaml": 1,
+    "decisions/0138-two-more-items-for-the-m2-boundary-sitting.yaml": 1,
+}
+pending = {}
+for rel, expected in records.items():
+    p = pathlib.Path(rel)
+    src = p.read_text(encoding="utf-8")
+    # Only lines that are a binding TARGET. A `target:` line is the present tense; every
+    # other mention of the name is the record's history and stays as written.
+    lines = src.splitlines(keepends=True)
+    hits = [i for i, ln in enumerate(lines)
+            if ln.lstrip().startswith("target:") and OLD in ln]
+    if len(hits) != expected:
+        sys.exit(f"{rel}: expected {expected} binding target naming the node, found {len(hits)} — apply by hand")
+    for i in hits:
+        lines[i] = lines[i].replace(OLD, NEW)
+    pending[p] = "".join(lines)
+
+test.write_text(tsrc.replace(OLD, NEW), encoding="utf-8")
+for p, text in pending.items():
+    p.write_text(text, encoding="utf-8")
+PY
+    then
+        git --no-pager diff tests/test_provenance_homomorphism.py decisions/
+        note ""
+        note "D0110's signature no longer verifies — that is this step working, not broken."
+        if confirm "Keep the rename and re-sign D0110 now?"; then
+            sign_owner decisions/0110-nonzero-implies-witnessed-at-construction.yaml tannen-decision
+            if verify_owner decisions/0110-nonzero-implies-witnessed-at-construction.yaml tannen-decision; then
+                note "D0110 verifies again against its new bytes. D0137 and D0138 are Tier A"
+                note "and unsigned; nothing to re-sign there."
+            else
+                die "D0110 still does not verify after re-signing — do NOT continue. Restore
+  with 'git checkout -- tests/test_provenance_homomorphism.py decisions/' and rerun this
+  step; a signed Tier-C record that does not verify is a red gate at step 9."
+            fi
+        else
+            git checkout -- tests/test_provenance_homomorphism.py decisions/
+            note "reverted — all four files. The node keeps the name that lies and the"
+            note "docstring keeps carrying the truth; D0138 item 1 stays open."
+        fi
+    else
+        note "the edit did not apply cleanly (message above) — nothing was changed."
+    fi
+fi
 
 # ---------------------------------------------------------------- 9. gate + receipt
 say "Step 9 — regenerate, verify, and take the attention receipt"

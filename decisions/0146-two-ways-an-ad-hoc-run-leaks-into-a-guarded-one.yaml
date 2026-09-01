@@ -1,0 +1,99 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0146
+title: "Two ways an ad-hoc run leaks into a guarded one: an inherited TANNEN_ variable (fixed) and a .pyc in a sealed directory (queued, because the guard that catches it is the trust root)"
+tier: A
+date: "2026-09-01"
+risk_flags: [governance-paths]
+decision: >-
+  Both were found the same way — by running commands against this repo during the M2
+  sitting-materials pass and watching guards report failures that were mine rather than the
+  code's. Both are the same family: ambient process state reaching into a run that believes
+  it controls its own conditions. One is fixed here; one is queued, with its mitigation
+  written down.
+  .
+  (1) FIXED — `tests/test_laws_runner.py` inherited the environment it meant to override.
+  `run_pytest` built its child env as `dict(os.environ, TANNEN_EVIDENCE_ROOT=…)`: inherit
+  everything, override one. An ambient `TANNEN_NO_EVIDENCE=1` — exactly what someone sets so
+  an ad-hoc run does not dirty `evidence/` — rode into the child, the plugin wrote nothing,
+  and FOUR tests failed asserting records that were never going to exist. Every one of those
+  failures names the harness, so they read as a regression in it while the cause is outside
+  the process entirely. Observed, not hypothesised: it cost a round trip during this session.
+  .
+  The cure is the one this repo already owns for a different family. `scripts/_gov.py`'s
+  `git_env()` strips `GIT_LOCATION_VARS` because `GIT_DIR` beats `git -C`, and the rule it
+  encodes is: SCRUB THE FAMILY, THEN SET EXACTLY WHAT YOU MEAN. `child_env()` now does that
+  for `TANNEN_EVIDENCE_ROOT`, `TANNEN_NO_EVIDENCE` and `TANNEN_CHECK_DECISIONS_NESTED`, at
+  all three sites that spawn a pytest subprocess — including the two that deliberately SET
+  one of them, because a test that says what it needs must not also inherit the negation.
+  .
+  `test_the_harness_scrubs_an_ambient_tannen_variable` constructs the hostile state (D0092):
+  it sets the variable in its own process for the duration rather than trusting nobody will.
+  Watched failing against the inheriting spelling and passing against the scrub.
+  .
+  THE GATE WAS NEVER SILENTLY WEAKENED BY THIS, which is worth stating so the fix is not
+  read as larger than it is: with `TANNEN_NO_EVIDENCE=1` ambient, `make verify`'s pytest
+  writes nothing and the very next step, `tannen laws report`, fails on missing evidence.
+  It fails loudly. The damage was confined to spurious failures in one test file.
+  .
+  (2) QUEUED — `scripts/custodian.sh:66` and `scripts/check_manifest.py:113` disagree about
+  `__pycache__`. The custodian enumerates `$(find tests/poison -type f | sort)` and requires
+  a manifest row for every result, with no exclusion; `check_manifest.check_sealed_paths`
+  skips any path with `__pycache__` in its parts, by name. So a `.pyc` written into
+  `tests/poison/oracle-shadow/` — which happens on any import from that directory without
+  `-B` or `PYTHONDONTWRITEBYTECODE=1` — leaves `check_manifest` green and the custodian red.
+  Reproduced: this session's own manual runs of the oracle-shadow reproduction did exactly
+  that, and `make verify` failed at its LAST step after 37 minutes with
+  "custodian: FAIL — not manifested: …/bootstrap_shadow.cpython-313-pytest-9.1.1.pyc".
+  .
+  THE MESSAGE INVITES THE WRONG FIX, and that is what makes it worth recording rather than
+  just cleaning up. "not manifested: <path>" reads as "add a manifest row", and a manifest
+  row for a `.pyc` would be wrong twice over: the file is gitignored, and its name carries
+  the interpreter version, so the row would break on the next Python. The only correct
+  response is to delete the file, which the message does not say.
+  .
+  NOT FIXED HERE because `scripts/custodian.sh` is the trust root and author-key territory
+  (CLAUDE.md hard rules, BRIEF §9.1): only the owner edits it. Queued for M3 rather than
+  added to the M2 driver, which is already 1468 lines and whose step 6 would need a newly
+  tuned custodian copy for a one-line exclusion. THE MITIGATION IS FREE AND IS WRITTEN DOWN:
+  every in-repo runner already does the right thing — `tests/test_governance_scripts.py`'s
+  poison matrix sets `PYTHONDONTWRITEBYTECODE=1` and its oracle-shadow tests pass `-B` — so
+  the hazard is reachable only from ad-hoc commands. Do not import from `tests/poison/`
+  without `-B`.
+  .
+  ONE THING THE SITTING SHOULD KNOW: the driver's `unexpected_failures()` does NOT tolerate
+  a "not manifested:" line, so if this debris is present when the owner starts, step 0's
+  gate stops the sitting over a stray `.pyc`. `find tests/poison -name __pycache__ -type d`
+  before running is a five-second precaution.
+rationale: >-
+  Recorded rather than quietly cleaned because the two together describe a failure mode this
+  repo will keep meeting: a guard reporting a fault whose true cause is the shape of the
+  command that invoked it, not the tree it examined. Both cost real time this session, and
+  in both cases the message named the wrong thing. The first was fixable by the builder and
+  is fixed; the second is the owner's file, so what is owed is an accurate description and a
+  mitigation, not a workaround.
+reversibility: >-
+  Item (1) is reversible by restoring the inheriting spelling, at which point its regression
+  test goes red naming the cause. Item (2) changes nothing yet.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_the_harness_scrubs_an_ambient_tannen_variable"
+    strength: enforced
+    detail: >-
+      Sets TANNEN_NO_EVIDENCE=1 in its own environment and requires the record to be written
+      anyway. Fails against the inheriting spelling, which was checked before it was checked
+      green.
+  - type: file
+    target: tests/test_laws_runner.py
+    strength: enforced
+    detail: "`TANNEN_ENV_VARS` and `child_env()`, and the three call sites that use it."
+  - type: manifest
+    target: scripts/custodian.sh
+    strength: documentary
+    detail: >-
+      Item (2)'s file, named at the path that holds it. Documentary and it must stay so
+      until the owner applies the exclusion — the trust root is not builder-editable, and
+      claiming otherwise would be the false report D0122 is about.
+links:
+  - decisions/0092-the-receipt-clock-test-borrowed-its-boundary.yaml
+  - decisions/0143-the-m2-sitting-queue-drafted-into-the-driver.yaml

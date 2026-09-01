@@ -1,0 +1,98 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0145
+title: "D0106 item 3 is not written as a sitting step, and the measured series is why: the naive ratchet fires at every laws-freeze by construction"
+tier: A
+date: "2026-09-01"
+risk_flags: [governance-paths]
+decision: >-
+  D0131 item (8) carries D0106 items (1) and (3) to the M2 sitting. Item (1) is drafted as
+  step 4i (D0143). ITEM (3) — "governance-mechanics line count (guards + drivers + fixtures)
+  as a fraction of kernel line count" as a ratchet signal — IS DELIBERATELY NOT A STEP, and
+  the recommendation is to decline it at the sitting rather than script it.
+  .
+  (a) D0106 DISQUALIFIES IT ITSELF, in its own closing sentence: "Filed as a proposal, not a
+  ruling, because unlike (1) and (2) the reviewer offered it as a suspicion to test, not a
+  decided rule." D0116 is the governing precedent for what to do with that — adding a
+  ratcheted metric to a confirm-and-diff sequence "would present a decision as a formality".
+  .
+  (b) THE NUMBER IS NOT DEFINED. Faithful readings of the one sentence give 1.45, 2.48,
+  2.79, 3.52 and 4.06, depending on whether the denominator is `src/tannen/kernel` or the
+  whole package, whether governance TESTS and governance DATA join the numerator, and
+  whether lines are raw or non-comment-non-blank. One of the three named arms,
+  `tests/poison/`, contains a binary git bundle whose line count is 8 or 12 depending on
+  which of two obvious implementations you write.
+  .
+  (c) THE NAIVE RATCHET IS PROVABLY WRONG, and this is the part that settles it. Measured
+  across every boundary tag by reading blobs out of git — guards `scripts/*.py`, drivers
+  `scripts/*.sh`, fixtures `tests/poison/**`, kernel `src/tannen/kernel/*.py`:
+  .
+    brief-freeze    1538 / 4    = 384.50
+    m0-laws-freeze  1264 / 4    = 316.00
+    m0-close        3695 / 316  =  11.69
+    m1-laws-freeze  3700 / 316  =  11.71
+    m1-close        4218 / 1542 =   2.74
+    m2-laws-freeze  4453 / 1542 =   2.89
+    HEAD            4453 / 1598 =   2.79
+  .
+  TWO THINGS THAT SERIES SHOWS, and neither is what item (3) assumes. First, the ratio is
+  dominated by its DENOMINATOR: it fell from 384 to 2.79 while mechanism nearly TRIPLED, so
+  a falling ratio has so far meant "the kernel got written", not "mechanism was pruned".
+  Second, IT RISES AT EVERY SESSION A BY CONSTRUCTION — m1-close 2.74 → m2-laws-freeze 2.89
+  — because Session A adds guards while the kernel is frozen, which is the two-session
+  protocol working exactly as designed. A ratchet on this fires at every laws-freeze
+  commit, forever, unless "measure at *-close tags only" is decided first, and item (3)
+  does not say that.
+  .
+  (d) BRIEF §9.1's METRIC-CALIBRATION RULE FORBIDS ENFORCING IT AT THIS SITTING ANYWAY:
+  land the measurement, publish one digest carrying true values, and only then compare. So
+  even under the most favourable reading, step one is measurement, and measurement is not
+  an owner act.
+  .
+  ONE MECHANICAL TRAP RECORDED SO NOBODY REDISCOVERS IT THE EXPENSIVE WAY. If a third
+  metric is ever added to the digest, it must go on ITS OWN COMMENT LINE WITH ITS OWN REGEX,
+  never by extending `METRICS_RE` (`_gov.py:22`). Every existing digest carries two fields —
+  including `tests/poison/check-decisions-ratchet/digest/2020-01-01.md`, which is
+  MANIFEST.sha256 row 35 AND custody-set, so the builder can never regenerate it. Extending
+  the regex in place silently disarms the whole ratchet: the poison fixture stops emitting
+  RATCHET BREACH and three `tests/test_governance_ratchet.py` nodes go red.
+  .
+  WHAT WOULD MAKE IT A STEP, if the owner wants it: a decision answering six parameters —
+  the numerator's arms, the denominator, the counting rule (including what a binary fixture
+  counts as), the measurement point (any commit versus `*-close` only), what "sustained"
+  means across how many boundaries, and flag-versus-fail against what threshold. The series
+  above is that decision's evidence, which is why it is written here rather than left to be
+  re-measured.
+rationale: >-
+  Recorded rather than silently omitted because "the driver has no step for item 3" and "item
+  3 was considered and declined, with measurements" are different states, and only the second
+  survives into the next sitting. It is also the honest answer to a queued item: D0131 put it
+  on the sheet, and taking it off costs a reason. The measurement was re-derived in this
+  session directly from git blobs rather than taken on report, because the series is the
+  whole argument.
+reversibility: >-
+  Reversible in the cheapest possible way: nothing was built, so adopting item 3 later costs
+  only the decision this record says it needs. The series can be recomputed from any commit.
+status: accepted
+bindings:
+  - type: file
+    target: decisions/0106-post-sitting-review-rulings.yaml
+    strength: documentary
+    detail: >-
+      The record whose item (3) this declines, and whose own closing sentence — "a suspicion
+      to test, not a decided rule" — is the first of the four reasons.
+  - type: manifest
+    target: tests/poison/check-decisions-ratchet/digest/2020-01-01.md
+    strength: enforced
+    detail: >-
+      The frozen two-field baseline that makes extending METRICS_RE in place unsafe. It is
+      manifested and custody-set, so no builder can regenerate it — which is exactly why the
+      trap is worth recording rather than leaving to be discovered.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/README.md
+    strength: documentary
+    detail: The run sheet section stating the decline and its four reasons for the sitting.
+links:
+  - decisions/0106-post-sitting-review-rulings.yaml
+  - decisions/0131-the-m2-boundary-sitting-queue.yaml
+  - decisions/0116-a-check-that-cannot-fail-is-not-a-check.yaml
+  - decisions/0143-the-m2-sitting-queue-drafted-into-the-driver.yaml
