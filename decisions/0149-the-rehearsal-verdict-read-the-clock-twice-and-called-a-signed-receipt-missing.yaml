@@ -1,0 +1,87 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0149
+title: "The rehearsal verdict read the clock twice and called a signed receipt missing: a midnight-crossing defect in the harness, not the driver"
+tier: A
+date: "2026-09-02"
+risk_flags: [governance-paths]
+decision: >-
+  `scripts/rehearse_sitting.sh` asserted the sitting's attention receipt by recomputing the
+  date at verdict time — `test -f "$CLONE/receipts/$(date +%F).md"` and the matching `.sig`.
+  That is a SECOND reading of a clock the driver already read, hours earlier, inside
+  `custodian.sh`. Replaced both checks with a snapshot-and-difference: capture the clone's
+  receipts before the driver starts (`RECEIPTS_BEFORE`, taken beside `CLOSE_TAG_PREEXISTED`)
+  and let the verdict ask which receipt THIS RUN ADDED.
+  .
+  WHAT IT COST TO FIND. The `--from head --answers y` rehearsal began 2026-09-01 21:36 and
+  its custodian wrote and signed `receipts/2026-09-01.md` at 23:23. The verdict ran after
+  midnight, computed `2026-09-02`, and printed FAIL twice — "this sitting took a fresh
+  attention receipt" and "and signed it" — against a clone where both were true and the
+  files were sitting on disk, signed, committed, and covered by a green custodian run.
+  .
+  THIS IS THE HARNESS, NOT THE DRIVER, AND THE DISTINCTION IS THE POINT. The driver ran to
+  completion (exit 0), aborted no step, minted `m2-close` and verified it as owner@tannen,
+  signed the custody set, and left the custodian green with no tolerances. Nothing about
+  the sitting it rehearsed was wrong. So this defect does NOT invalidate the driver evidence
+  from runs 4 and 5, and does not trigger the "re-run all three paths" rule that a DRIVER
+  edit triggers — that rule exists because a run stops at its first failure, and no run
+  stopped here.
+  .
+  THE REAL SITTING WAS NEVER AT RISK, and it is worth saying why rather than assuming it.
+  `date +%F` appeared exactly twice in the harness and nowhere in the driver's assertions:
+  `custodian.sh` names the receipt once, and everything downstream — `check_receipts.py`,
+  `receipt_state` in `_gov.py` — reads the LATEST receipt off the directory rather than
+  recomputing a name. An owner sitting that crosses midnight therefore behaves correctly;
+  only the rehearsal's scorecard was wrong.
+  .
+  AND A SELF-INFLICTED ONE, RECORDED BECAUSE IT NEARLY COST THE EVIDENCE. This fix was
+  applied to `rehearse_sitting.sh` WHILE run 5 was still executing that same file. `bash`
+  reads a script incrementally by byte offset rather than parsing it whole, so inserting ten
+  lines shifted every offset after them and the running shell resumed mid-construct:
+  `rehearse_sitting.sh: line 326: syntax error near unexpected token '('`. The file was
+  never invalid — `bash -n` passes on it — but the run died after its last check and before
+  `say "Unexpected failure lines in the transcript"`, losing that section and the final
+  tally. Both were recoverable ONLY because `--keep` had preserved the transcript, and were
+  re-derived by running the harness's own awk program against it: one line, `check_decisions:
+  FAIL (2 violation(s))` at step 5, which is the expected mid-sitting pair D0147 already
+  documents as NOT a defect. THE RULE: never edit a shell script that is currently running.
+  Copy it, edit the copy, and swap it in after the run exits.
+
+rationale: >-
+  The harness already carries the general form of this lesson, four lines above the code
+  that broke it: "A post-condition whose answer does not depend on the run is not a
+  post-condition" (the comment guarding `CLOSE_TAG_PREEXISTED`, added after the verdict was
+  found to be reporting `m0-close exists` green off the tag the clone came with). The
+  receipt checks were the mirror image — their answer depended on the WALL CLOCK rather than
+  on the run — and the same sentence condemns them. Writing the fix in the shape of the
+  existing precedent, rather than by pinning `date +%F` at start-up, is what makes it hold:
+  pinning the date would have fixed this midnight and left the check still asserting a name
+  instead of an effect.
+  .
+  The fix was verified from the failing side before it was verified green (the
+  `produce-the-failure` discipline). Against the kept clone `/tmp/tannen-rehearsal-T2pSNm`:
+  the old expression fails, looking for `receipts/2026-09-02.md`; the new one passes and
+  names `2026-09-01.md` as what the run added, with its signature present. The first attempt
+  at that proof used the clone's `HEAD~1` as the baseline and reported FAIL — because the
+  sitting makes TWO commits (step 9's and step 11's), so `HEAD~1` already contained the
+  receipt. That wrong baseline is kept here as the negative control it accidentally became:
+  when nothing new appears, the new check does fail.
+reversibility: >-
+  Trivially reversible — two assertions in builder tooling that is neither frozen nor in the
+  custody set nor author-key territory. No guard, law or projection depends on it; the file's
+  only consumer is a human reading a rehearsal scorecard.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      Carries RECEIPTS_BEFORE and the two rewritten checks. Documentary: this file is
+      deliberately outside the custody set and the manifest, so no guard enforces its
+      content.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Named to record what was NOT changed: the driver is untouched by this defect, which is
+      why runs 4 and 5 still count as driver evidence.
+links: [D0147, D0148, D0068, D0069]

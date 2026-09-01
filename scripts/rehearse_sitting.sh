@@ -93,6 +93,16 @@ if [ "$CLOSE_TAG_PREEXISTED" = 1 ]; then
     }
 fi
 
+# The receipt a sitting takes is named for the day the CUSTODIAN runs, and the verdict
+# below used to look for `receipts/$(date +%F).md` — a SECOND, later reading of the same
+# clock. An accept-path rehearsal runs about two hours, so the two readings disagree
+# whenever a run crosses midnight, and the verdict then reports a receipt that was written
+# and signed as missing. Observed 2026-09-02: the receipt was `2026-09-01.md`, taken at
+# 23:23, and both receipt checks printed FAIL against a clone that had done nothing wrong.
+# Snapshot what the clone already had and let the verdict ask what this run ADDED — the
+# same shape as CLOSE_TAG_PREEXISTED above, and for the same reason.
+RECEIPTS_BEFORE=" $(cd "$CLONE" && ls receipts/ 2>/dev/null | tr '\n' ' ')"
+
 if [ "$MODE" = worktree ]; then
     # The owner's real re-run starts from an uncommitted tree, so the resume path is only
     # rehearsed if the rehearsal starts from one too. --binary carries the tag-signer
@@ -289,8 +299,14 @@ if [ "$ANSWER" = y ]; then
     check "$MILESTONE-close verifies as owner@tannen"    in_clone git -c gpg.format=ssh \
               -c gpg.ssh.allowedSignersFile="$CLONE/allowed_signers" verify-tag "$MILESTONE-close"
     check "the custody set is signed"                    test -f "$CLONE/governance/custody.sha256.sig"
-    check "this sitting took a fresh attention receipt" test -f "$CLONE/receipts/$(date +%F).md"
-    check "and signed it"                                test -f "$CLONE/receipts/$(date +%F).md.sig"
+    NEW_RECEIPT=""
+    for _r in "$CLONE"/receipts/*.md; do
+        [ -e "$_r" ] || continue
+        case "$RECEIPTS_BEFORE" in *" $(basename "$_r") "*) continue ;; esac
+        NEW_RECEIPT="$_r"; break
+    done
+    check "this sitting took a fresh attention receipt" test -n "$NEW_RECEIPT"
+    check "and signed it"                                test -f "$NEW_RECEIPT.sig"
     check "the custodian is green with no tolerances"    in_clone bash scripts/custodian.sh --check-only
     check "the gate is green end to end"                 in_clone make verify
     check "nothing was left uncommitted"                 test -z "$(in_clone git status --porcelain)"

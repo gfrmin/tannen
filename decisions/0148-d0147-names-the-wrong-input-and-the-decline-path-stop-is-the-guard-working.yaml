@@ -1,0 +1,117 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0148
+title: "D0147's item 3 names the wrong input, and the decline path's stop is the guard working: what rehearsing the M2 driver from a clean HEAD corrected"
+tier: A
+date: "2026-09-01"
+risk_flags: [governance-paths]
+decision: >-
+  The `--from head --answers n` rehearsal — the first run ever to enter the driver with a
+  clean tree — corrected one claim in D0147 and settled two questions about the decline path.
+  This is a NEW record rather than an edit to D0147 because D0045 makes a decision's fields
+  immutable and no guard enforces that; the record of the mistake is part of the record.
+  .
+  (1) THE CORRECTION. D0147 item 3 says the projection is stale at the closing gate because
+  "BOTH of the projection's clock-dependent inputs arrived after it", and that
+  `DECISIONS.md` "was last generated at the top of step 9". Both halves are wrong, and in
+  the same way: step 9 regenerates TWICE. `gen_projections.py` runs at its top
+  (`boundary_sitting.sh:1817`) and `make digest` runs at its end (`:1822`), after
+  `custodian.sh` has written and signed `receipts/<today>.md`. So the receipt IS accounted
+  for by the time step 9 ends. THE CLOSE TAG IS THE SOLE INPUT THAT ARRIVES AFTER THE LAST
+  REGENERATION, minted by step 10.
+  .
+  THE EVIDENCE IS A CLONE STOPPED IN EXACTLY THAT STATE. The decline run halted at step 10
+  with the receipt written and signed, `make digest` run, and no close tag; its
+  `DECISIONS.md:10` reads "receipt 2026-09-01.md fresh (no milestone boundary since)".
+  `_gov.py:300-306` takes that branch when no boundary tag is dated on or after the receipt,
+  and the "fresh until <d+7> (boundary <d> + 7d)" branch once one is — and the latter string,
+  naming 2026-09-01, is precisely what the third rehearsal's step-11 failure quoted as what
+  today computes. One input, not two.
+  .
+  THE FIX D0147 DESCRIBES IS UNCHANGED AND THIS SHARPENS ITS ARGUMENT rather than weakening
+  it. Step 11's regeneration is not merely the earliest convenient point; it is the first
+  opportunity after the only missing input exists, since the tag is minted at step 10 and
+  step 11 is the next step. What is now known to be unnecessary is any worry about the
+  receipt: D0147's "no earlier point where both inputs exist" reasoning arrives at the right
+  placement for a reason that is half wrong, and a future reader moving that regeneration
+  earlier on the strength of it would break the fix. Hence this record.
+  .
+  (2) THE COVERAGE GAP IS CLOSED. `--from worktree` can never reach `RESUMED=0` — the harness
+  dirties four tracked files before the driver starts — so until this run, step 0's
+  precondition gate and the RT-M2-06 D1 `else` branch had never executed in any rehearsal,
+  including the green one banked before the seven new steps. This run entered with a clean
+  tree: no "so this is a RESUMED sitting" note, no stray-dirt note, the gate offered and
+  declined. The branch that decides resumption from sitting-shaped artifacts only, rather
+  than from any dirt at all, is now exercised rather than reasoned about.
+  .
+  (3) THE DECLINE PATH IS NOT CHEAP, AND THE PLAN SAID IT WOULD BE. It took 3522 seconds —
+  59 minutes — because declining step 0's gate does not avoid step 9's, which is not behind
+  a `confirm` (`:1819`). Neither are the regeneration, the custodian, or the digest; only
+  the commit is. A decline run therefore costs about what an accept run costs, and the
+  reason to run one is coverage, never speed.
+  .
+  (4) ITS STOP IS THE GUARD WORKING, NOT A FOURTH DEFECT. Because step 9's writes are
+  unconditional and its commit is not, answering `n` throughout leaves a modified
+  `DECISIONS.md` and an untracked signed receipt and digest. Step 10 then refuses: "the tree
+  is not clean, so m2-close would attest a commit that does not contain this sitting's work
+  — and would quote working-tree hashes absent from it (D0051)". That is exactly the
+  property RT-M2-06 D2 was written to restore, firing correctly, before any tag was signed.
+  The harness's two failed checks — "ran to completion" and "no step aborted" — are
+  accept-path expectations that do not apply to a full decline, and the run is read as green
+  on the question it was launched to answer.
+  .
+  (5) OBSERVED AND DELIBERATELY NOT CHANGED BEFORE THE SITTING: a declined sitting is not a
+  no-op. `custodian.sh` writes and signs the receipt before the owner is asked to commit
+  anything, so abandoning a decline leaves a signed receipt untracked — and step 0 clause (b)
+  reads untracked `receipts/` as sitting artifacts, making the NEXT run `RESUMED=1` and
+  skipping the precondition gate. Every part of that is correct on its own terms: a receipt
+  does exist, and the resumed branch announces itself rather than acting silently. It is
+  recorded because "I ran it and declined everything" leaves state behind, which is not what
+  a reader would assume, and because moving the receipt behind a confirm is a change to the
+  order the receipt-then-tag argument depends on (D0071) — not something to attempt six days
+  before the deadline, on the strength of a path the owner will not take.
+rationale: >-
+  Recorded rather than fixed in place because D0147 is committed and D0045 makes its fields
+  immutable, with no guard to enforce it — the discipline holds only if it is kept when
+  keeping it is inconvenient, and a correction written an hour after the record is the
+  cheapest possible test of that. The substance is worth a record independently: D0147's
+  stated mechanism would mislead a reader into moving the step-11 regeneration earlier, and
+  the three decline-path facts are the kind that get rediscovered expensively — a builder who
+  believes the decline path is cheap will schedule it as a quick check and lose an hour, and
+  one who reads its non-zero exit as a defect will go looking for a fourth bug that is not
+  there.
+reversibility: >-
+  A record, not a change. Nothing in the repo behaves differently for its existence; it
+  corrects the reading of D0147 and states what the decline run established.
+status: accepted
+bindings:
+  - type: file
+    target: decisions/0147-three-defects-only-running-the-driver-could-find.yaml
+    strength: documentary
+    detail: >-
+      The record corrected. Item 3's mechanism, not its fix — the step-11 placement D0147
+      lands on is right, and this names the input that actually makes it right.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Step 9's two regenerations (its top, and `make digest` at its end), the unconditional
+      gate and custodian between them, and step 10's clean-tree refusal — the four facts this
+      record turns on. Documentary because a proposal document is enforced only by being run.
+  - type: file
+    target: scripts/_gov.py
+    strength: documentary
+    detail: >-
+      `receipt_state`'s two branches are what distinguish an end-of-step-9 projection from a
+      post-tag one, and the string each produces is the evidence quoted above.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      The harness whose `--from head` mode makes `RESUMED=0` reachable at all, and whose
+      accept-path verdict checks are the ones item (4) declines to read as failures.
+links:
+  - decisions/0147-three-defects-only-running-the-driver-could-find.yaml
+  - decisions/0045-bindings-are-mutable-decisions-are-not.yaml
+  - decisions/0071-receipt-clock-cannot-start-same-day.yaml
+  - decisions/0051-delegations-frozen-and-hash-quoted.yaml
+  - decisions/0143-the-m2-sitting-queue-drafted-into-the-driver.yaml
