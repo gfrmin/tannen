@@ -12,8 +12,9 @@ below them; installing those before the patch would leave the custodian permanen
 red, which is the opposite of what a poison fixture is for.
 
 Findings are `RT-nn` from `docs/redteam/2026-08-24-m0-boundary.md` (the M0→M1 pass) or
-`RT-M1-nn` from `docs/redteam/2026-08-26-m1-boundary.md` (the M1 boundary pass, added
-below the original table without renumbering the M0 rows).
+`RT-M1-nn` from `docs/redteam/2026-08-26-m1-boundary.md` (the M1 boundary pass), or
+`RT-M2-nn` from `docs/redteam/2026-09-01-m2-boundary.md` (the M2 boundary pass). Rows are
+appended without renumbering earlier ones.
 
 | Candidate | Guard poisoned | Closes | Bites today? |
 |---|---|---|---|
@@ -26,6 +27,7 @@ below the original table without renumbering the M0 rows).
 | `custodian-tag-signer/` | `scripts/check_tag_signers.py` | D0049's open ask **and** RT-15 | **yes** — one bundle, two teeth (renamed from `custodian-tag-signer/`, 2026-08-25) |
 | `check-decisions-file-skip/` | `scripts/check_decisions.py` (pytest bindings) | RT-M1-05 | **yes against the drafted fix** (`ALLOWED_SKIP_REASON_PREFIXES`) — drafted and verified this session, **not committed**: `scripts/check_decisions.py` is a custody-set member (`governance/tier-c.yaml`), so landing it reddens `check_manifest.py`'s custody check, which cascades into D0063's own file-level binding on `tests/test_governance_scripts.py` and blocks pre-commit's `check-decisions` hook on every commit thereafter. The patch is queued for the owner to apply together with the custody re-signature at the M1 boundary sitting; this pins the tooth against the drafted, not-yet-live guard |
 | `oracle-shadow/` | `src/tannen/laws/plugin.py`'s collection-time oracle check | RT-M1-01 | **yes** — the check already landed this session (`_oracle_shadow_problem`); this pins the tooth. Does not close the underlying naming hazard (queued) |
+| `oracle-shadow-model/` | `src/tannen/laws/plugin.py`'s oracle check, **as widened by RT-M2-01** | RT-M2-01 | **no — needs patch**: the shipped check pins the single name `_fragment` (plugin.py:50-51), so this fixture PASSES today, which is the finding. M2 added `_model` and `_subject`, bare-imported across seven frozen law files, and `tests/` is not a sealed dir. Verified 2026-09-01: 34 tests pass against the decoy; with `check_differential` stubbed, L2.9 is vacuous and all 113 M2 law tests still pass with `check_manifest` clean. The plugin patch is builder-landable (no manifest row, not custody-set); installation under `tests/poison/` is owner work |
 
 ---
 

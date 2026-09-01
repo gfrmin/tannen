@@ -30,7 +30,7 @@
 # be owner-signed is installed and its poison fixture proves the rule bites — so the
 # first owner-signed close this project mints is validated by the very rule it obeys.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1   # RT-M2-06 D5: no set -e here, so an unguarded cd would sign the wrong tree
 
 MILESTONE="${1:-m2}"
 # The milestone whose Session A the closing note points at. Derived, not hardcoded: the
@@ -212,17 +212,39 @@ grep -q '^owner@tannen ' allowed_signers || die "owner@tannen is not enrolled in
 # "before signing anything" goes red over the work they already did, and die() stops the
 # sitting they came back to finish. The gate that must be green is step 9's, after the
 # sitting's edits are complete; this one is a precondition on a clean tree and nothing more.
+# RT-M2-06 D1 CORRECTS THE FIRST SPELLING OF THIS TEST. It asked "is anything other than
+# this file dirty", which is not the same question: a single stray untracked file — an
+# editor backup, a leftover MANIFEST.tmp, the owner's own notes — set RESUMED=1, SKIPPED the
+# precondition gate entirely, and told the owner "this is a RESUMED sitting" on no evidence.
+# A fresh sitting could then begin over a red gate with the one check that exists to prevent
+# exactly that silently switched off. Resumption is now decided by artifacts only THIS
+# SITTING creates, and stray dirt is reported rather than acted on.
 RESUMED=0
-[ -n "$(git status --porcelain | grep -v ' scripts/boundary_sitting\.sh$')" ] && RESUMED=1
+# (a) a TRACKED modification other than this driver's own copy (the documented precondition
+#     for running it at all, tolerated by name in unexpected_failures until step 7 re-signs).
+[ -n "$(git status --porcelain --untracked-files=no | grep -v ' scripts/boundary_sitting\.sh$')" ] && RESUMED=1
+# (b) untracked artifacts nothing but a sitting produces: owner signatures and the receipt.
+[ -n "$(git ls-files --others --exclude-standard -- 'decisions/*.yaml.sig' 'governance/*.sig' 'receipts/')" ] && RESUMED=1
+# (c) and the last act of all, which leaves the tree clean behind it (RT-M2-06 D3).
+git rev-parse -q --verify "refs/tags/$MILESTONE-close" >/dev/null 2>&1 && RESUMED=1
 if [ "$RESUMED" = 1 ]; then
-    note "The tree already carries edits beyond this driver's own copy, so this is a"
-    note "RESUMED sitting and the precondition gate does not apply: half-applied sitting"
-    note "work is custody drift by construction, and this step would read it as a red gate."
-    note "Step 9 runs the gate that matters, once the edits are complete."
+    note "Sitting artifacts are already present — a signature, a receipt, or the close tag —"
+    note "so this is a RESUMED sitting. Half-applied sitting work is custody drift by"
+    note "construction, so the precondition gate would read red for this sitting's own doing."
+    note "Step 9 runs the gate that must be green, once the edits are complete."
     if confirm "Show what is already changed?"; then
         git status --short | page
     fi
-elif confirm "Run 'make verify' now (recommended — nothing should be signed over a red gate)?"; then
+else
+    # Dirt that is NOT sitting-shaped does not mean "resumed", and must never silently
+    # disable the gate — but the owner should know it is there before the gate reads red.
+    STRAY=$(git status --porcelain | grep -v ' scripts/boundary_sitting\.sh$')
+    if [ -n "$STRAY" ]; then
+        note "The tree is not clean, and none of it looks like sitting work:"
+        printf '%s\n' "$STRAY" | sed 's/^/    /'
+        note "The gate below may read red for reasons that are not this sitting's."
+    fi
+if confirm "Run 'make verify' now (recommended — nothing should be signed over a red gate)?"; then
     # Capturing output and DISPLAYING it are two different acts, and `$( )` only does the
     # first. The gate takes the better part of a minute — 174 tests, ten law suites and a
     # batched pytest run inside check_decisions — and this printed nothing at all until it
@@ -243,6 +265,7 @@ elif confirm "Run 'make verify' now (recommended — nothing should be signed ov
 $unexpected"
         note "green except the custody set, which is this sitting's step 7 — continuing"
     fi
+fi
 fi
 if confirm "Show the digest's owner queue (what this sitting is for)?"; then
     latest_digest=$(ls -1 digest/*.md 2>/dev/null | tail -1)
@@ -307,7 +330,10 @@ sign_tier_c_records
 
 # ---------------------------------------------------------------- 2. builder handoff
 say "Step 2 — the guard that makes step 1 mean something (builder work)"
-if grep -q "affirmative signature only" scripts/check_decisions.py; then
+# RT-M2-06 D4: this used to grep "affirmative signature only", whose ONLY match is the
+# module docstring at check_decisions.py:13 — so deleting the enforcement while leaving the
+# docstring made this step report "present". Anchor on the message the guard EMITS instead.
+if grep -q "Tier-C record accepted without an owner signature" scripts/check_decisions.py; then
     note "Tier-C signature check is present in scripts/check_decisions.py — skipped"
 else
     note "scripts/check_decisions.py does not yet REQUIRE those signatures (RT-06), so"
@@ -860,7 +886,13 @@ bash scripts/custodian.sh || die "custodian red — no receipt was signed"
 make digest
 if [ -n "$(git status --porcelain)" ]; then
     git status --short
-    confirm "Commit the sitting so far?" && commit_with_hook_retry "$MILESTONE boundary sitting: custody set, tag-signer rule, poison fixtures, receipt"
+    # RT-M2-06 D2: commit_with_hook_retry returns the SECOND attempt's status and nothing
+    # used to read it. With no `set -e`, a hook that stays red fell through to step 10 and
+    # tagged anyway.
+    if confirm "Commit the sitting so far?"; then
+        commit_with_hook_retry "$MILESTONE boundary sitting: custody set, tag-signer rule, poison fixtures, receipt" \
+            || die "the commit failed twice — fix the hook before tagging; $MILESTONE-close must attest a commit that CONTAINS this sitting"
+    fi
 fi
 
 # ---------------------------------------------------------------- 10. the close tag
@@ -868,6 +900,15 @@ say "Step 10 — sign $MILESTONE-close, LAST"
 if git rev-parse -q --verify "refs/tags/$MILESTONE-close" >/dev/null; then
     note "$MILESTONE-close already exists — skipped"
 else
+    # RT-M2-06 D2. A tag points at a COMMIT; step 9's commit was optional and unchecked, so
+    # declining it (or a hook that stayed red) left this step signing the PRE-SITTING head.
+    # `git tag -s` and `verify-tag` both succeed on it — nothing compares HEAD to the tree —
+    # and the message below quotes `sha256sum` of DELEGATIONS.md and governance/custody.sha256
+    # read from the WORKING TREE, so the tag would attest hashes that are not in the commit it
+    # names. That is precisely the D0051 property those two lines exist to provide, falsified
+    # by the artifact meant to carry it. This is the project's FIRST owner-signed close tag.
+    [ -z "$(git status --porcelain)" ] || die "the tree is not clean, so $MILESTONE-close would attest a commit that does not contain this sitting's work — and would quote working-tree hashes absent from it (D0051). Commit step 9 first, then re-run."
+
     note "This is the tag D0049 says only you may mint: the builder already signs the"
     note "*-laws-freeze tags that START the consent clock, so the close that anchors your"
     note "presence stays yours. The rule that says so is now installed and poisoned."

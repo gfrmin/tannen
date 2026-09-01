@@ -1,0 +1,114 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0141
+title: "M1→M2 boundary red team: eight findings, one critical, none closed in session; two prior findings got worse and one queued remedy does not work"
+tier: A
+date: "2026-09-01"
+risk_flags: [governance-paths]
+decision: >-
+  BRIEF §9.1 point 5, D0021 and D0059 mandate a red team at each milestone boundary, run in a
+  fresh context that did not write the milestone's implementation (D0104). This pass ran against
+  `~/git/worktrees/tannen/m2` at d0c5e34 (implementation a237a55). Full record:
+  docs/redteam/2026-09-01-m2-boundary.md.
+  .
+  METHOD DEVIATION, RECORDED RATHER THAN GLOSSED. M0's and M1's passes were each a single fresh
+  session. This one was six subagents dispatched from the planning session, each a fresh context
+  that never saw M2's implementation or the planning conversation. That satisfies D0104's
+  requirement — fresh context, did not write the implementation — and departs from its
+  precedent. Two things were done to compensate, and both are stated in the report: the six
+  probes were pre-registered, so coverage did not depend on any agent's curiosity; and no
+  finding entered the report on an agent's say-so — every exploit was re-run by the dispatching
+  author. One agent claim was corrected in the process, and one false lead (issued by the
+  author, not an agent) was retracted mid-probe and is recorded in RT-M2-06.
+  .
+  EIGHT FINDINGS: one critical, five high, one medium-high, one informational.
+  .
+  - RT-M2-01 (CRITICAL): the M1 fix for oracle shadowing hardcodes ONE module name,
+    `_fragment` (plugin.py:50-51). M2 added two more bare-imported oracle modules — `_model` and
+    `_subject` — across seven frozen law files, and `tests/` is not a sealed directory, so a
+    decoy needs no manifest row. L2.9's whole body is `M.check_differential(...)`, so a decoy
+    stubbing that to `return None` makes BRIEF §6's differential kill-criterion law VACUOUS
+    while all 113 M2 law tests pass and check_manifest reports seals unbroken. Reproduced.
+    This is not a new class of defect: it is RT-M1-01's partial closure coming due, on a hazard
+    M2 widened.
+  - RT-M2-02 (high): `governance/laws.yaml`, `conftest.py`, `tests/test_law_validation.py` and
+    `scripts/check_laws.py` are all four unfrozen AND uncustodied — check_laws.py is the only
+    guard in neither, while eight sibling scripts are custody-set. Two builder-editable files
+    convert any law node into an expected failure with all nine gate steps green and
+    `tannen laws report` printing `ok pass` over a violated law. 135 of 171 law functions (79%)
+    are reachable in one change. CRITICALLY, this corrects a remedy ALREADY QUEUED for this
+    sitting: D0131 item 3 proposes signing `governance/laws.yaml`, and `conftest.py:24` is what
+    decides which file is the registry — so a second registry beside it reproduces the whole
+    attack with laws.yaml byte-identical and the pin test passing unmodified.
+  - RT-M2-03 (high): `lineage` reports STRUCTURE, not AUTHENTICITY. `_cite` classifies on four
+    shape tests; `Store.put_value` is public; `Why.of` validates ref shape by regex; `Store.has`
+    is defined and never called in src/. A hand-built `srcrow/1` value yields a fully-resolved
+    citation naming a REAL, resolvable source document while asserting a row that document does
+    not contain. `ingest` writes rows with exactly the same call, so the two are byte-identical
+    and no store-side distinguisher can exist. The likelier path is accidental: any caller who
+    normalises or filters rows before `ingest` mints false provenance silently.
+  - RT-M2-04 (high): `why_slot` returns at most ONE location, so D0110's door inspects at most
+    one `Why` component. `product(Why, Why)` bypasses it at depth 1; three shapes return None
+    outright. `anti_join` then attaches no absence witness, so a row absent over R appears over
+    R\D with a witness set disjoint from everything D touched. The kill criterion did NOT fire —
+    L2.3 is exercised over the shipped ZxWhy and passes — but the frozen spec's claim to cover
+    "any semiring carrying a `Why`" is false.
+  - RT-M2-05 (high): generated projections render date- and custody-dependent facts
+    (`effective_status`, receipt freshness) while their input-hash covers only `decisions/*.yaml`
+    — and `make verify` never runs `make projections`. DECISIONS.md is wrong TODAY, understating
+    three accepted decisions, with the header hash byte-identical. D0018 promises in writing that
+    "DECISIONS.md and the digest show the accumulating blocks"; all three of its bindings
+    resolve, so it reports as ENFORCED while being documentary.
+  - RT-M2-06 (high, operational): the sitting driver has two defects that cost a sitting. Its
+    RESUMED test fires on ANY stray file and then SKIPS the make-verify precondition while
+    telling the owner the gate does not apply; and step 9's commit is optional and unchecked
+    while step 10 tags unconditionally, so a declined commit yields a signed close tag quoting
+    working-tree hashes absent from the commit it attests — falsifying the D0051 property those
+    lines exist to provide. The first defect is this author's own, from D0140.
+  - RT-M2-07 (medium-high): D0134 and D0136 overclaim. Neither is an exploit; under BRIEF §9 the
+    fold of the records is the truth, so a record asserting more than the code delivers is a
+    false statement in the project's own memory. Both need a NEW record narrowing the claim (fields
+    are immutable, D0045) — queued, not written here, for the same reason nothing else was
+    closed in this session.
+  - RT-M2-08 (informational): status audit. Nothing was closed silently. RT-07, RT-10, RT-11,
+    RT-12 and RT-M1-02/03/04 remain open; RT-M1-03's forgeable surface widened 27 laws to 36.
+  .
+  THREE FINDINGS FALSIFY FROZEN PROSE: docs/specs/m2.md:58 ("ingest reads bytes the store
+  already holds" — it reads no bytes), :97-100 and :116 ("any semiring carrying a Why", and
+  "(n, ∅) is now unconstructible" — both false), and :234 (a malformed atom "cannot reach a
+  Rel" — it reaches Rel, to_value and content_address). Per CLAUDE.md and D0106 ruling 2 none
+  may be edited: each needs a record and, where a claim must be carried forward, a superseding
+  law.
+  .
+  NOTHING WAS CLOSED IN THIS SESSION, deliberately. Several fixes are builder-landable —
+  MANIFEST.sha256 has zero `src/` rows and the custody set no `src/` path, so the entire
+  implementation surface is unobstructed. They are left for a session that is not also the one
+  that found them, with D0092 regression bindings written then. Everything that touches
+  `scripts/`, the Makefile, CI, `governance/tier-c.yaml` or `tests/poison/` is owner work at the
+  sitting.
+rationale: >-
+  One record for the pass, as D0059 and D0104 were, so the digest has a single entry to point at
+  and the sitting has one place to read the queue from. Recorded now rather than after the fixes
+  because the findings are the deliverable and the fixes are not this session's to land; and
+  because two of them change what the sitting must do — RT-M2-02 corrects D0131 item 3, and
+  RT-M2-06 says the driver must be repaired before the owner's key goes near it.
+reversibility: >-
+  A statement of findings; nothing to reverse. The fixes it recommends are individually
+  reversible and are not made here. The poison fixtures it proposes are the owner's to install
+  (BRIEF §9.1 point 5), and installing one whose guard patch has not landed would leave the
+  custodian permanently red — so the candidates are staged outside tests/poison/ by design.
+status: accepted
+bindings:
+  - type: file
+    target: docs/redteam/2026-09-01-m2-boundary.md
+    strength: documentary
+    detail: >-
+      The full pass — every probe, reproduction transcript with exact output, severity
+      rationale, the method deviation, and the section recording where the pass fell short of
+      its own read-only rule.
+  - type: file
+    target: docs/redteam/fixture-candidates/oracle-shadow-model/README.md
+    strength: documentary
+    detail: >-
+      RT-M2-01's fixture candidate — the `_model` decoy, staged outside tests/poison/ because
+      installing it before the guard is widened would leave the custodian permanently red.
+links: ["D0059", "D0104", "D0110", "D0128", "D0131", "D0134", "D0136", "D0140"]
