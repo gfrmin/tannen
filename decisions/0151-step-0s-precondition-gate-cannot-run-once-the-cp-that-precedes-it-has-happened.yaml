@@ -1,0 +1,78 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0151
+title: "Step 0's precondition gate cannot run once the cp that precedes it has happened: the sitting's founding assurance is established before the copy or not at all"
+tier: A
+date: "2026-09-02"
+risk_flags: [governance-paths]
+decision: >-
+  The owner must run `make verify` BEFORE copying the milestone's driver into `scripts/`,
+  not after. `docs/SITTING.md` and the M2 proposal README are corrected to put the gate
+  first and to say why step 0's own offer cannot substitute for it.
+  .
+  WHAT THE HEAD-MODE REHEARSAL SHOWED. With the harness fixed to reproduce the owner's real
+  starting state (D0150), step 0's gate ran for the first time against a drifted tree — and
+  finished in ZERO SECONDS. `check_manifest.py` is the first recipe line of the `verify`
+  target (`Makefile:35`); the cp is custody drift on `scripts/boundary_sitting.sh`; the
+  check fails, `make` stops, and `check_concepts`, `check_decisions`, `check_tag_signers`,
+  `check_receipts`, **the entire pytest suite**, `tannen laws report` and `lint-imports`
+  never execute. The driver then prints "green except the custody set, which is this
+  sitting's step 7 — continuing".
+  .
+  THAT SENTENCE IS TRUE AND READS AS SOMETHING STRONGER. `unexpected_failures()` correctly
+  found nothing but the tolerated drift, because nothing else got the chance to fail. The
+  owner sees a `waiting` line promising 35-40 minutes, an immediate return, and a
+  reassuring note — the shape of a gate that ran and was green apart from one expected
+  complaint. No gate ran. On the accept path the sitting then proceeds to step 9 before any
+  suite executes.
+  .
+  THE FIX IS ORDERING, NOT CODE, and that is not a concession. After the cp NO gate can be
+  green: the drift is real, `check_manifest` is right to fail, and make is right to stop.
+  There is no driver change that makes step 0's gate meaningful — the only moment the
+  precondition can be established is before the copy. Reordering the owner's own commands
+  is therefore the correct and complete fix, and it costs nothing.
+  .
+  NOT CHANGED, deliberately: step 0 still offers the gate, and the offer is still worth
+  taking. On a re-run after a builder fix, or any entry where the driver is already
+  installed and custody re-signed, the gate runs in full and means what it says. Removing
+  the offer would trade a sometimes-vacuous check for no check.
+rationale: >-
+  This is the fourth instance of one failure mode inside a week, and the first to reach the
+  sitting's founding premise rather than its scaffolding. A check whose answer does not
+  depend on what it claims to check: the verdict reporting `m0-close exists` off the cloned
+  tag; the receipt assertion reading the wall clock (D0149); the fixture erasing the drift it
+  existed to exercise (D0150); and now the precondition gate, which cannot fail for the
+  reason it is being run and cannot pass for it either.
+  .
+  It was findable only after D0150. Every earlier rehearsal either skipped step 0's gate as
+  RESUMED or ran it against a clone the fixture had made artificially consistent, so the
+  gate always ran in full and always meant something. Fixing the fixture to start where the
+  owner starts turned a passing check into a visibly empty one within a single run — which
+  is the argument for that fix, restated as evidence rather than as reasoning.
+  .
+  The generalisable rule, and the one worth carrying to M3: WHEN A GUARD SHORT-CIRCUITS,
+  ITS SILENCE IS NOT A PASS. `make` stopping at the first failing recipe line means every
+  later line reports nothing, and "no unexpected failures" over that output is a statement
+  about a truncated run, not about the tree. Any tolerance applied to a short-circuiting
+  pipeline must ask how far the pipeline actually got.
+reversibility: >-
+  Fully reversible: prose in two documents, and a change to the order in which the owner
+  types two commands. No code, no schema, no frozen or custody-set path.
+status: accepted
+bindings:
+  - type: file
+    target: docs/SITTING.md
+    strength: documentary
+    detail: >-
+      Carries the corrected order — gate, then cp, then run — and the explanation of why
+      step 0's offer cannot establish the precondition once the cp has happened.
+  - type: file
+    target: docs/proposals/2026-08-31-m2-boundary-sitting/README.md
+    strength: documentary
+    detail: The same correction in the M2 sitting's own instructions.
+  - type: file
+    target: Makefile
+    strength: documentary
+    detail: >-
+      verify's recipe order is the mechanism: check_manifest.py is its first line, so a
+      custody-drift failure there stops every later check including the pytest suite.
+links: [D0150, D0149, D0148, D0068]

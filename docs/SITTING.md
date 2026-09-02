@@ -20,9 +20,20 @@ driver from the LAST sitting, not this one. Each milestone drafts its own copy u
 it:
 
 ```
+make verify        # FIRST — see below; after the cp this can no longer be established
 cp docs/proposals/<date>-<milestone>-boundary-sitting/boundary_sitting.sh scripts/boundary_sitting.sh
 bash scripts/boundary_sitting.sh <milestone>
 ```
+
+**`make verify` goes first, and step 0's offer does not replace it** (D0151).
+`scripts/boundary_sitting.sh` is a custody-set member, so the `cp` is custody drift, and
+`check_manifest.py` is the FIRST recipe line of the `verify` target — it fails, `make` stops,
+and `check_decisions`, the whole pytest suite, the laws report and `lint-imports` never run.
+Step 0 then prints *"green except the custody set, which is this sitting's step 7 —
+continuing"*, which is true and reads like something stronger: it means no unexpected
+failure appeared in a run that got three lines in. Measured at rehearsal, step 0's gate —
+advertised as 35-40 minutes — completed in **zero seconds**. The precondition can be
+established before the copy or not at all.
 
 **Running `bash scripts/boundary_sitting.sh <milestone>` without that `cp` runs the previous
 milestone's driver against this milestone** — for M2 that is a 1216-line divergence — and it

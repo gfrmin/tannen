@@ -58,6 +58,23 @@ unchanged from `docs/SITTING.md`.
 > never exercise the `RESUMED=0` branch, which is precisely the RT-M2-06 D1 fix; only
 > `--from head`, which commits the fixture's edits, leaves a clean tree. Both were run.
 
+## Run the gate BEFORE you copy the driver in
+
+```
+make verify
+cp docs/proposals/2026-08-31-m2-boundary-sitting/boundary_sitting.sh scripts/boundary_sitting.sh
+bash scripts/boundary_sitting.sh m2
+```
+
+The `cp` is custody drift on a custody-set path, and `check_manifest.py` is the first recipe
+line of `make verify` — so after the copy the gate fails at line one and `make` stops before
+`check_decisions`, the pytest suite, the laws report or `lint-imports` ever run. Step 0's own
+gate offer therefore cannot establish the precondition it exists for: at rehearsal it
+advertised 35-40 minutes and returned in **zero seconds**, then correctly reported no
+unexpected failures — over a run that had executed three lines. Take the offer anyway (on a
+re-run with the driver already installed it runs in full and means what it says), but the
+green gate this sitting rests on is the one you take BEFORE the copy. (D0151)
+
 ## The clock
 
 `scripts/_gov.py:303` computes receipt freshness as *the first boundary tag on or after the
