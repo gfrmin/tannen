@@ -130,7 +130,8 @@ fi
 # that applies to the harness as much as to the floor it rehearses.
 DRIVER="${TANNEN_REHEARSE_DRIVER:-$ROOT/scripts/boundary_sitting.sh}"
 [ -f "$DRIVER" ] || { echo "no driver at $DRIVER" >&2; exit 1; }
-cp -a "$DRIVER" "$CLONE/scripts/boundary_sitting.sh"
+# The cp itself is DELIBERATELY DEFERRED to after the custody set is regenerated and
+# re-signed below. See the comment there — the order is the whole point.
 if [ -n "${TANNEN_REHEARSE_DRIVER:-}" ]; then
     note "driver under test: $DRIVER (OVERRIDDEN — not the working tree)"
 elif git -C "$ROOT" diff --quiet HEAD -- scripts/boundary_sitting.sh; then
@@ -169,6 +170,27 @@ say "Syncing the clone's venv (the gate runs .venv/bin/python at a literal path)
 # fixture's own setup does not manufacture a failure indistinguishable from a real one.
 ( cd "$CLONE" && rm -f governance/custody.sha256.sig
   ssh-keygen -Y sign -f "$KEY" -n tannen-custody governance/custody.sha256 >/dev/null )
+
+# NOW copy the driver under test in — AFTER the custody set has been generated and signed
+# over the driver the clone came with, never before.
+#
+# The owner's real sequence is `cp <proposal>/boundary_sitting.sh scripts/` and then run it,
+# against a custody set the owner signed at the LAST sitting, over the PREVIOUS milestone's
+# driver. scripts/boundary_sitting.sh is a custody-set member (governance/tier-c.yaml), so
+# that cp is custody drift, the gate is red from the owner's very first command, and step 0
+# survives only because unexpected_failures() tolerates that one drift BY NAME until step 7
+# re-signs.
+#
+# Copying before gen_custody.py — which is what this harness did until 2026-09-02 — makes
+# the clone's custody set cover the NEW driver, so there is no drift, so step 0's gate is
+# green and the tolerance branch never executes. Six rehearsals passed without once running
+# it: `grep -c "green except the custody set"` over all four kept transcripts returns 0.
+# The branch that carries the owner's first command was the one branch never rehearsed.
+#
+# Deferring the cp to here reproduces the owner's actual starting state in BOTH modes. In
+# head mode the fixture commit below still picks it up, so the tree is clean and RESUMED=0
+# is unaffected; in worktree mode it rides along uncommitted, as it already did. (D0150)
+cp -a "$DRIVER" "$CLONE/scripts/boundary_sitting.sh"
 # allowed_signers is an INPUT to the DECISIONS.md freshness hash as well as a custody-set
 # member, so enrolling the throwaway key restales the projection. A fixture that starts
 # inconsistent produces failures that belong to the fixture, and they are indistinguishable

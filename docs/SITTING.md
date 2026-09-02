@@ -14,9 +14,28 @@ each milestone boundary (BRIEF §9.1 point 3) and does four kinds of work, in th
 4. **Takes an attention receipt and mints the close tag** — in that order, so the
    receipt's consent clock starts running against a boundary tag rather than stopping.
 
-**Driver:** `bash scripts/boundary_sitting.sh [milestone]` walks every step, pauses for
-each confirmation, shows the diff of every author-territory edit before it lands, and
-signs nothing itself. It is safe to re-run — completed steps are detected and skipped —
+**Driver — and READ THIS BEFORE RUNNING IT.** `scripts/boundary_sitting.sh` holds the
+driver from the LAST sitting, not this one. Each milestone drafts its own copy under
+`docs/proposals/<date>-<milestone>-boundary-sitting/`, and the sitting begins by installing
+it:
+
+```
+cp docs/proposals/<date>-<milestone>-boundary-sitting/boundary_sitting.sh scripts/boundary_sitting.sh
+bash scripts/boundary_sitting.sh <milestone>
+```
+
+**Running `bash scripts/boundary_sitting.sh <milestone>` without that `cp` runs the previous
+milestone's driver against this milestone** — for M2 that is a 1216-line divergence — and it
+will not announce itself, because a driver takes its milestone from the argument you pass.
+The `cp` is not a convenience step.
+
+That `cp` also puts the tree in custody drift on purpose: `scripts/boundary_sitting.sh` is a
+custody-set member, so the gate is red from your first command and stays red until step 7
+re-signs. Step 0 expects exactly that and tolerates it by name; anything else red there is
+builder work and the driver will stop.
+
+The driver walks every step, pauses for each confirmation, shows the diff of every
+author-territory edit before it lands, and signs nothing itself. It is safe to re-run — completed steps are detected and skipped —
 and it is *designed* to be stopped: one step hands back to a builder session and waits.
 
 Read the script before running it. Its own bytes are in the custody set, so a change to

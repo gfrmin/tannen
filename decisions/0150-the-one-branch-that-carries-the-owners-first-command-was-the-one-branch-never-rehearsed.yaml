@@ -1,0 +1,85 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0150
+title: "The branch that carries the owner's first command was the one branch never rehearsed: the harness erased the custody drift it was supposed to reproduce"
+tier: A
+date: "2026-09-02"
+risk_flags: [governance-paths]
+decision: >-
+  `scripts/rehearse_sitting.sh` copied the driver under test into the clone's
+  `scripts/boundary_sitting.sh` and only AFTERWARDS ran `gen_custody.py` and re-signed
+  `governance/custody.sha256`. Because that path is a custody-set member, regenerating after
+  the copy folded the new driver's bytes into the custody set — so the clone had no drift,
+  step 0's gate was green, and the branch that tolerates the drift never executed. The `cp`
+  is now DEFERRED until after the custody set is generated and signed, which reproduces the
+  owner's real starting state in both modes.
+  .
+  WHAT THE OWNER ACTUALLY DOES, AND WHY IT WAS UNTESTED. The sitting begins
+  `cp docs/proposals/<…>/boundary_sitting.sh scripts/` against a custody set the owner signed
+  at the LAST sitting, over the PREVIOUS milestone's driver. That copy is custody drift by
+  construction: the gate is red from the owner's first command, and step 0 continues only
+  because `unexpected_failures()` tolerates that one drift by name until step 7 re-signs.
+  Six rehearsals passed without once running it — `grep -c "green except the custody set"`
+  over all four kept transcripts returns 0.
+  .
+  THE TOLERANCE WAS THEN VERIFIED DIRECTLY, because a fix that assumes the branch works is
+  the same mistake one layer up. The drift state was reproduced in the kept run-6 clone and
+  the real guards were run against it: `check_manifest` emits `custody drift:
+  scripts/boundary_sitting.sh changed since the custody file was written` under a
+  `check_manifest: FAIL (1 violation(s))` header, and the custodian emits `custody set hashes
+  do not verify` and `custody floor violated`. Feeding that captured output to the driver's
+  own `unexpected_failures()` returns EMPTY, so step 0 prints "green except the custody set,
+  which is this sitting's step 7 — continuing". The branch is correct. It had simply never
+  been executed, which is a different fact and the one worth fixing.
+  .
+  ORDERING CONSTRAINT, since two properties compete. The copy must land AFTER the custody
+  signing (or there is no drift to rehearse) and BEFORE head mode's fixture commit (or the
+  copy is uncommitted, the tree is dirty, and `RESUMED=0` — the branch D0148 bought — is lost
+  again). The single insertion point that satisfies both is between them.
+  .
+  `docs/SITTING.md` carried the matching documentation defect and is corrected in the same
+  pass: its driver line read `bash scripts/boundary_sitting.sh [milestone]` with no `cp`,
+  while `scripts/boundary_sitting.sh` holds the M1 driver — a 1216-line divergence that a
+  driver would not announce, because it takes its milestone from the argument.
+  .
+  AND THE FIX IS VERIFIABLE FROM ONLY ONE MODE, which is worth stating because getting it
+  wrong cost a run. On a RESUMED sitting step 0 does not run the gate at all — it says the
+  precondition gate "would read red for this sitting's own doing" and defers to step 9 — so
+  the tolerance branch is unreachable there. `--from worktree` ALWAYS reports RESUMED,
+  because the harness's own fixture edits dirty the tree before the driver starts (D0148).
+  The drift-tolerance branch is therefore reachable ONLY from `--from head`. A worktree run
+  launched to confirm this fix is a test whose outcome cannot depend on the fix — the exact
+  error this record names, committed while recording it.
+
+rationale: >-
+  This is the third instance of one failure mode, and naming the mode is the point of the
+  record. A check whose answer does not depend on the run it is checking: the verdict
+  reporting `m0-close exists` off the tag the clone came with; the receipt assertion
+  recomputing `date +%F` instead of asking what the run added (D0149); and now a fixture that
+  removes the very condition the run is supposed to exercise. Each was green, and each was
+  green for a reason unrelated to the driver being correct.
+  .
+  The generalisation worth carrying to M3 and beyond: A REHEARSAL MUST START FROM THE STATE
+  THE REAL RUN STARTS FROM, and every deviation the fixture introduces for its own
+  convenience is a branch that will first execute in production. Here the deviation was
+  invisible because it made the clone MORE consistent than reality, and a fixture that
+  manufactures a cleaner world than the one it models does not fail — it silently narrows
+  coverage, which is worse, because the verdict still says thirteen of thirteen.
+reversibility: >-
+  Reversible: one relocated `cp` in builder tooling that is neither frozen, nor in the
+  custody set, nor author-key territory, plus prose in `docs/SITTING.md`. Restoring the old
+  order would restore the old blind spot, which is the only reason not to.
+status: accepted
+bindings:
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      Carries the deferred cp and the comment explaining why the order is load-bearing.
+      Documentary: this file is deliberately outside the custody set and the manifest.
+  - type: file
+    target: docs/SITTING.md
+    strength: documentary
+    detail: >-
+      The corrected driver-installation instructions, including why the cp is not optional
+      and why the gate is expected to be red until step 7.
+links: [D0149, D0148, D0147, D0068, D0069]
