@@ -106,9 +106,12 @@ bindings:
       rationale, the method deviation, and the section recording where the pass fell short of
       its own read-only rule.
   - type: file
-    target: docs/redteam/fixture-candidates/oracle-shadow-model/README.md
+    target: tests/poison/oracle-shadow-model/README.md
     strength: documentary
     detail: >-
-      RT-M2-01's fixture candidate — the `_model` decoy, staged outside tests/poison/ because
-      installing it before the guard is widened would leave the custodian permanently red.
+      RT-M2-01's poison fixture — the `_model` decoy. INSTALLED at the M2 boundary sitting,
+      step 5, and retargeted from docs/redteam/fixture-candidates/oracle-shadow-model/ by
+      that same step. It was staged outside tests/poison/ until then because installing it
+      before D0142 widened the guard would have left the custodian permanently red against
+      a check that did not yet exist; D0142 shipped first, so the fixture bites.
 links: ["D0059", "D0104", "D0110", "D0128", "D0131", "D0134", "D0136", "D0140"]

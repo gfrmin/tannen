@@ -370,3 +370,63 @@ def test_same_day_boundary_starts_the_receipt_clock(monkeypatch: pytest.MonkeyPa
                         lambda root: [rdate - dt.timedelta(days=1)])
     fresh, detail = _gov.receipt_state(REPO_ROOT, long_after)
     assert fresh, f"an earlier boundary wrongly started the clock: {detail}"
+
+
+def test_a_bindings_count_that_disagrees_with_the_list_is_caught(tmp_path: Path) -> None:
+    """D0106 item (1). A guard verifies that a record is WELL-FORMED, never that it says
+    what its author meant. D0049 carried a `bindings` list whose third entry had been
+    folded into the second's `detail` block: schema-valid, both remaining targets
+    resolving, every guard green, and the record silently one binding short of what it
+    claimed. `bindings_count` is the author's own count of the same fact, so the two can
+    be made to disagree out loud.
+
+    Constructs its own tree (D0092: a regression test constructs the state that
+    distinguishes the fixed code from the broken code, never observes it) rather than
+    reading a tests/poison/ fixture — installing one there is the owner's act, and this
+    sitting deliberately did not manufacture a new custodian copy for a check that today
+    covers zero records.
+
+    TWO records, because "check_decisions exited non-zero" alone would also be satisfied
+    by a guard that rejects the FIELD rather than the DISAGREEMENT. The honest record must
+    pass with its count present, or the check is a ban on the field and not a checksum.
+    """
+    root = tmp_path / "tree"
+    (root / "decisions").mkdir(parents=True)
+    common = ('tier: A\n'
+              'date: "2020-01-02"\n'
+              "rationale: D0106 item 1 probe.\n"
+              "reversibility: n/a (probe)\n"
+              "status: accepted\n")
+    (root / "decisions" / "0001-count-disagrees.yaml").write_text(
+        "id: D0001\n"
+        "title: Probe -- the author counted three bindings and the file holds two\n"
+        + common +
+        "decision: Claim three bindings and carry two, the way D0049 did.\n"
+        "bindings_count: 3\n"
+        "bindings:\n"
+        "  - type: file\n"
+        "    target: decisions\n"
+        "  - type: file\n"
+        "    target: decisions/0001-count-disagrees.yaml\n"
+        "    detail: >-\n"
+        "      and a third binding folded in here instead of written as its own list\n"
+        "      entry -- still valid YAML, still resolving, still one short.\n",
+        encoding="utf-8")
+    (root / "decisions" / "0002-count-agrees.yaml").write_text(
+        "id: D0002\n"
+        "title: Probe -- an honest count is not a violation\n"
+        + common +
+        "decision: State the count and carry exactly that many bindings.\n"
+        "bindings_count: 1\n"
+        "bindings:\n"
+        "  - type: file\n"
+        "    target: decisions/0002-count-agrees.yaml\n",
+        encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    result = run([sys.executable, "scripts/check_decisions.py", "--root", str(root)], env=env)
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, f"a bindings_count that lies went undetected:\n{out}"
+    assert "bindings_count is 3 but the record carries 2" in out, out
+    assert "0002-count-agrees" not in out, (
+        "the honest record was flagged too, so the check bans the field rather than "
+        f"comparing it:\n{out}")

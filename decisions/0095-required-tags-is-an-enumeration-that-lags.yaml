@@ -53,12 +53,16 @@ status: accepted
 bindings:
   - type: config
     target: governance/tag-roles.yaml#required_tags
-    strength: documentary
+    strength: enforced
     detail: >-
-      The list as it stands, three entries and one milestone behind. DOCUMENTARY and that
-      is the honest grade: the key exists and is consumed by check_tag_signers.py, but what
-      this record proposes is not in it, so nothing here is enforced yet. Upgrades to an
-      enforced binding when the owner applies either half at the sitting (D0045).
+      ENFORCED at the M2 boundary sitting, exactly as this binding's earlier text said it
+      would be "when the owner applies either half". HALF (1) IS APPLIED: m1-laws-freeze
+      and m1-close joined the list at the M1 sitting (commit c5d53c9), and the key is
+      consumed by scripts/check_tag_signers.py, which fails "required tag missing" from
+      both `make verify` and scripts/custodian.sh — so deleting a required tag is detected
+      rather than silent (RT-15). HALF (2), replacing the enumeration with a derived rule
+      — the half this record calls the one that matters more — is applied by NOTHING, which
+      is why step 11 of every sitting still adds that boundary's tags by hand.
   - type: manifest
     target: governance/tag-roles.yaml
     strength: enforced

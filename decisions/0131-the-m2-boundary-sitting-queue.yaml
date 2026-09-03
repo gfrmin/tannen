@@ -92,7 +92,7 @@ reversibility: >-
   sitting costs only this record's accuracy. Item (1) is the one with a cost to leaving
   undone, and the cost is an index that misdescribes the corpus it indexes — an accuracy
   defect rather than a breakage, which is why it has survived one sitting already.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-08-27-m1-boundary-sitting/poison-readme-row-file-skip.md

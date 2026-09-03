@@ -54,7 +54,7 @@ reversibility: >-
 status: accepted
 bindings:
   - type: pytest
-    target: "tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image"
+    target: "tests/test_provenance_homomorphism.py::test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed"
     strength: documentary
     detail: >-
       The node whose name item 1 is about. Documentary: it records the intent to rename and

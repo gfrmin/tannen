@@ -45,6 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _gov import (  # noqa: E402
     Failures,
     binding_strengths,
+    effective_status,
     input_hash,
     load_schema,
     load_yaml,
@@ -255,6 +256,7 @@ def main() -> int:
     clocks: list[str] = []
     tier_c_signed: list[str] = []
     tier_c_queued: list[str] = []
+    counted: list[str] = []
     valid_records: list[dict] = []
     pytest_bindings: dict[str, list[str]] = {}
 
@@ -288,6 +290,22 @@ def main() -> int:
                 fail.add(f"{rel}: binding does not resolve — {problem}")
         if not record["bindings"]:
             unenforced.append(f"{rid} ({record['title']}): {record['unenforced_reason']}")
+
+        # D0106 item (1). A guard verifies that a record is WELL-FORMED, never that it says
+        # what its author meant: D0049 carried a folded YAML list that was valid, resolved,
+        # and was silently one binding short. `bindings_count` is the author's own count of
+        # the same fact, so the two can be made to disagree out loud. Optional by design —
+        # absent means the record makes no claim and nothing is checked, which is why the
+        # summary reports the coverage rather than implying the checksum is universal.
+        declared = record.get("bindings_count")
+        if declared is not None:
+            counted.append(rid)
+            if declared != len(record["bindings"]):
+                fail.add(
+                    f"{rel}: bindings_count is {declared} but the record carries "
+                    f"{len(record['bindings'])} binding(s) — the author's count and the "
+                    "file's bytes disagree (D0106 item 1, the D0049 failure mode)."
+                )
 
         if record["tier"] == "C":
             # RT-06. Nothing used to stop a record granting itself a one-way door by
@@ -340,6 +358,39 @@ def main() -> int:
         elif actual != expected:
             fail.add("DECISIONS.md is stale (input-hash mismatch) — run make projections; never hand-edit")
 
+    # RT-M2-05 (D0141): the hash above covers decisions/*.yaml and NOTHING ELSE, so it is
+    # blind to the two things gen_decisions renders from the clock — the attention-receipt
+    # verdict and every Tier-B record's effective status. `today` can never be a file, so
+    # the fix is not a wider hash; it is to compare the CLAIM the projection makes against
+    # the one this run computes. Left alone, DECISIONS.md goes on asserting
+    # "Attention receipt: **FRESH**" after the receipt has gone stale, with every guard
+    # green — the precise opposite of what D0018's own text promises ("while stale …
+    # DECISIONS.md and the digest show the accumulating blocks").
+    #
+    # Compared, not re-rendered. Importing gen_projections here would make the guard depend
+    # on the generator it audits, and a generator that renders the wrong thing would then
+    # render it into both sides of the comparison.
+    if projection.exists():
+        body = projection.read_text(encoding="utf-8")
+        want = f"Attention receipt: **{'FRESH' if receipts_fresh else 'STALE'}** — {receipt_detail}"
+        if want not in body:
+            fail.add(f"DECISIONS.md's attention-receipt line is not what today computes "
+                     f"({want!r}) — run make projections")
+        # Only the records whose status CAN move with the date. Checking every row would
+        # duplicate the input hash for the ones that cannot, and would report one defect
+        # twice under two names.
+        for rec in valid_records:
+            if rec.get("veto_by") is None:
+                continue
+            status = effective_status(rec, args.today, receipts_fresh)
+            row = next((ln for ln in body.splitlines()
+                        if ln.startswith(f"| {rec['id']} |")), None)
+            if row is None:
+                fail.add(f"DECISIONS.md has no row for {rec['id']} — run make projections")
+            elif f"| {status} |" not in row:
+                fail.add(f"DECISIONS.md reports {rec['id']} as something other than "
+                         f"{status!r}, which is what today computes — run make projections")
+
     for line in clocks:
         print(f"  veto clock: {line}")
     for line in unenforced:
@@ -355,6 +406,7 @@ def main() -> int:
     return fail.finish(
         f"{len(record_paths)} records valid; {pytest_verdict}; "
         f"{len(unenforced)} unenforced (with reasons); "
+        f"{len(counted)}/{len(record_paths)} declare bindings_count; "
         f"{enforced_n} enforced / {documentary_n} documentary binding(s); "
         f"{len(clocks)} Tier-B clock(s) computed; "
         f"{len(tier_c_signed)} Tier-C door(s) owner-signed, {len(tier_c_queued)} queued; "

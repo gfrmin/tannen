@@ -81,7 +81,7 @@ reversibility: >-
 status: accepted
 bindings:
   - type: pytest
-    target: "tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image"
+    target: "tests/test_provenance_homomorphism.py::test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed"
     strength: enforced
     detail: >-
       The alarm, inverted in place and keeping its (now stale) name because D0110 is

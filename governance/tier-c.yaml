@@ -113,6 +113,7 @@ custody:
     - DELEGATIONS.md
     - Makefile
     - .pre-commit-config.yaml
+    - conftest.py
     - .github/workflows/ci.yml
     - allowed_signers
     - governance/policy.yaml
@@ -127,6 +128,7 @@ custody:
     - scripts/check_decisions.py
     - scripts/check_tag_signers.py
     - scripts/check_receipts.py
+    - scripts/check_laws.py
     - scripts/gen_projections.py
     - scripts/gen_custody.py
     - scripts/opening_sitting.sh

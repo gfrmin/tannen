@@ -12,11 +12,11 @@ mutant. It therefore runs at EVERY commit, including the freeze commit at which 
 law is a skip, which is the whole point: the assertions are exercised before the code they
 are about exists.
 
-It also drives `scripts/check_laws.py`, which is not yet in `make verify` — the Makefile
-and the CI workflow are custody-set, so wiring it in waits for the M2 boundary sitting
-(D0131). Reaching a guard from pytest in the meantime is the D0070/D0123 pattern: the
-custodian is the floor, and pytest is the distance between weakening a guard and finding
-out.
+It also drives `scripts/check_laws.py`, which since the M2 boundary sitting is a
+`make verify` step in its own right (D0131 item 4). Driving it from pytest as well is
+not redundant: the five trees below make it FAIL, which the gate's success path never
+does — the custodian is the floor, and pytest is the distance between weakening a guard
+and finding out.
 """
 
 from __future__ import annotations

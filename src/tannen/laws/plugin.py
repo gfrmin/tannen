@@ -111,6 +111,12 @@ def _oracle_shadow_problem(root: Path) -> str | None:
 class _LawRun:
     milestone: str
     observed: set[str] = field(default_factory=set)
+    #: The NODE IDS that reported a result, not merely the function names. A parametrised
+    #: law function is one entry in `observed` and one entry PER CASE here, and that gap is
+    #: what D0117 is about: `observed` says the law ran, this says how much of it ran. A
+    #: set and not a counter so a node reporting twice — a failure at setup and again at
+    #: teardown — counts once.
+    nodes: set[str] = field(default_factory=set)
     failed: bool = False
     skipped: bool = False
     uses_hypothesis: bool = False
@@ -176,8 +182,10 @@ class LawEvidencePlugin:
         elif report.failed:
             run.failed = True
             run.observed.add(function)
+            run.nodes.add(report.nodeid)
         elif report.when == "call":
             run.observed.add(function)
+            run.nodes.add(report.nodeid)
 
     def pytest_sessionfinish(self, session: Any, exitstatus: object) -> None:
         if not self.enabled or not self._runs:
@@ -232,6 +240,7 @@ class LawEvidencePlugin:
                 verdict="fail" if run.failed else "pass",
                 descriptors=[law_descriptor(self.root, law, modules, subject=subject)],
                 seed=seed if run.uses_hypothesis else None,
+                examined={"law_nodes": len(run.observed), "test_cases": len(run.nodes)},
             )
             evidence.put(record)
             written += 1

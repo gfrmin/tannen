@@ -15,6 +15,24 @@
     },
     "milestone": { "type": "string", "pattern": "^M[0-9]b?$" },
     "verdict": { "enum": ["pass", "fail"] },
+    "examined": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["law_nodes", "test_cases"],
+      "properties": {
+        "law_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many of the law's test functions reported a result. A record is written only when every one the frozen law file defines did (BRIEF §5.11), so at a given descriptor this is the law's whole node count."
+        },
+        "test_cases": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many test INVOCATIONS reported a result: parametrised cases counted one apiece, so this exceeds law_nodes exactly where a law is parametrised. NOT a count of generated examples — one @given invocation is one test case here however many examples it drew."
+        }
+      },
+      "description": "What the run actually EXAMINED (D0117), beside the verdict of whether it passed. Optional: absent is read as 'this runner did not measure', so records written before this field existed keep their meaning, and absent stays distinct from a run that examined nothing. Present, it must be whole — a half-given measure is one a reader has to guess about."
+    },
     "run_at": {
       "type": "string",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$",

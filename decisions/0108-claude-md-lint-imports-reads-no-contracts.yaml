@@ -52,10 +52,14 @@ status: accepted
 bindings:
   - type: manifest
     target: CLAUDE.md
-    strength: documentary
+    strength: enforced
     detail: >-
-      The frozen document carrying the stale command. Its "Verification" block is the
-      text to correct; the Makefile `verify` target already holds the correct spelling.
+      ENFORCED at the M2 boundary sitting. The one-line fix landed at the M1 sitting
+      (driver step 4d, D0113): CLAUDE.md:91 now spells the command
+      `uv run lint-imports --config governance/importlinter.toml`, and CLAUDE.md carries a
+      MANIFEST.sha256 row, so the CORRECTED bytes are what the seal pins — a regression to
+      the vacuous spelling turns check_manifest red. tests/test_operating_manual.py (D0111)
+      is the second detector and no longer tolerates this divergence by name.
   - type: file
     target: governance/importlinter.toml
     strength: documentary

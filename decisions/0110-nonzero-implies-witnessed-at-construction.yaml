@@ -78,7 +78,7 @@ reversibility: >-
 status: accepted
 bindings:
   - type: pytest
-    target: tests/test_provenance_homomorphism.py::test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image
+    target: tests/test_provenance_homomorphism.py::test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed
     strength: enforced
     detail: >-
       The alarm. Pins the live consequence of admitting `(n, 0_Why)`: anti_join adds its
@@ -94,8 +94,22 @@ bindings:
       the frozen corpus.
   - type: file
     target: src/tannen/kernel/rel.py
-    strength: documentary
+    strength: enforced
     detail: >-
-      Where the check would go: beside the existing zero-annotation drop, which is already
-      the place that decides what a retained row may be.
+      ENFORCED at the M2 boundary sitting: the check is there. `_refuse_unwitnessed`
+      (rel.py:93) sits beside the zero-annotation drop and is called from `Rel._init`
+      (rel.py:155), so `__init__`, `_build`, `_from_pairs`, `from_value` and every
+      operator's output are covered at once. Located structurally by `why_slot` (D0109),
+      so Z and B are untouched. The earlier text — "where the check WOULD go" — was a
+      true future tense and is now a false present one.
+  - type: pytest
+    target: "tests/laws/m2/test_l2_sources.py::test_l2_2_an_annotation_claiming_copies_it_cannot_derive_is_refused"
+    strength: enforced
+    detail: >-
+      ENFORCED at the M2 boundary sitting: L2.2 is the FROZEN M2 law carrying this claim,
+      and tests/laws/m2/test_l2_sources.py has a MANIFEST.sha256 row, so the assertion
+      cannot be softened without breaking a seal. The M1 law this record named as its
+      blocker — test_l1_5_mixing_semirings_is_refused_by_name, which built `(2, Why.zero)`
+      as incidental filler — was retired forward by D0128 in the same change that landed
+      the check, which is that mechanism's first real use.
 links: ["D0107", "D0109", "D0103", "D0056"]

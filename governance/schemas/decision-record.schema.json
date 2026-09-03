@@ -54,6 +54,11 @@
         }
       }
     },
+    "bindings_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional checksum over authorial intent (D0106 item 1): the number of bindings the author MEANT this record to carry. check_decisions.py fails when it disagrees with the actual length of `bindings`. Optional so records written before it existed stay valid; a new record states it. D0049 is the failure it is aimed at — a folded YAML list, still schema-valid, still resolving, silently one binding short."
+    },
     "unenforced_reason": {
       "type": "string",
       "minLength": 1,

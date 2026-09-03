@@ -37,6 +37,7 @@ verify:
 	$(UNHATCH) $(PY) -I -P scripts/check_decisions.py
 	$(UNHATCH) $(PY) -I -P scripts/check_tag_signers.py
 	$(UNHATCH) $(PY) -I -P scripts/check_receipts.py
+	$(UNHATCH) $(PY) -I -P scripts/check_laws.py
 	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run pytest -q
 	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run tannen laws report
 	$(UNHATCH) $(PY) -I -P -c 'import sys; from importlinter.cli import lint_imports_command; sys.exit(lint_imports_command())' --config governance/importlinter.toml

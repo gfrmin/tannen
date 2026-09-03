@@ -32,7 +32,7 @@ What survives the collapse, and is pinned below rather than asserted in a commen
   touch, and which is the one annotation `anti_join` must still not let block a left row.
 
 THE ALARM, AND WHY ITS NAME IS NOW WRONG ON PURPOSE.
-`test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image` fed `anti_join` a
+`test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed` fed `anti_join` a
 `(2, 0_Why)` left row and watched the absence witness hand it a bag image it did not have
 going in. D0110 said it was "the test that should be read the day an ingest path lands";
 docs/specs/m2.md §3 says this is that day. It has been READ, and what it reported is that
@@ -209,7 +209,7 @@ def test_the_bag_image_is_not_a_homomorphism() -> None:
     assert ZxWhy.multiplicity(ZxWhy.add(a, b)) == 1  # ... and 1 != 0 + 0
 
 
-def test_a_survivors_witness_can_give_an_unwitnessed_row_a_bag_image() -> None:
+def test_the_alarm_is_closed_an_unwitnessed_row_cannot_be_constructed() -> None:
     """THE ALARM, READ — and now the opposite claim, under a name kept stale on purpose
     (see the module docstring: D0110 is owner-signed and binds this node id).
 

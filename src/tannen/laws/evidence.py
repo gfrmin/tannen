@@ -77,10 +77,17 @@ def build_record(
     descriptors: Iterable[str],
     seed: str | None,
     run_at: str | None = None,
+    examined: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One record for one law run. `run_at` is the runner's wall clock, never the
-    kernel's: the kernel has no clock (BRIEF P7)."""
-    return {
+    kernel's: the kernel has no clock (BRIEF P7).
+
+    `examined` is WHAT THE RUN ACTUALLY EXAMINED (D0117). It is OMITTED when the caller
+    has nothing to say rather than written as a zero: a record whose measure is absent
+    and a record whose measure is nothing are different facts, and the first is what
+    every record written before this field existed attests.
+    """
+    record: dict[str, Any] = {
         "format_version": FORMAT_VERSION,
         "law_id": law_id,
         "milestone": milestone,
@@ -90,6 +97,9 @@ def build_record(
         "descriptors": sorted(descriptors),
         "environment": environment(),
     }
+    if examined is not None:
+        record["examined"] = examined
+    return record
 
 
 def validate_record(record: Any, schema: dict) -> None:
