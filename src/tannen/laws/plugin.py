@@ -23,7 +23,7 @@ from tannen.laws.discovery import (
     discover_laws,
     implementation_subject,
     law_descriptor,
-    law_id_of,
+    law_ids_of,
     milestone_label,
 )
 from tannen.laws.evidence import EvidenceStore, build_record
@@ -160,14 +160,15 @@ class LawEvidencePlugin:
             located = self._locate(item.nodeid)
             if located is None:
                 continue
-            milestone, law, function = located
+            milestone, laws, function = located
             path = item.nodeid.partition("::")[0]
             if function in self._superseded.get(path, ()):
                 continue
-            self._functions[item.nodeid] = (law, function)
-            run = self._runs.setdefault(law, _LawRun(milestone=milestone))
-            if getattr(getattr(item, "function", None), "is_hypothesis_test", False):
-                run.uses_hypothesis = True
+            self._functions[item.nodeid] = (laws, function)
+            for law in laws:
+                run = self._runs.setdefault(law, _LawRun(milestone=milestone))
+                if getattr(getattr(item, "function", None), "is_hypothesis_test", False):
+                    run.uses_hypothesis = True
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         if not self.enabled:
@@ -175,17 +176,18 @@ class LawEvidencePlugin:
         located = self._functions.get(report.nodeid)
         if located is None:
             return
-        law, function = located
-        run = self._runs[law]
-        if report.skipped:
-            run.skipped = True
-        elif report.failed:
-            run.failed = True
-            run.observed.add(function)
-            run.nodes.add(report.nodeid)
-        elif report.when == "call":
-            run.observed.add(function)
-            run.nodes.add(report.nodeid)
+        laws, function = located
+        for law in laws:
+            run = self._runs[law]
+            if report.skipped:
+                run.skipped = True
+            elif report.failed:
+                run.failed = True
+                run.observed.add(function)
+                run.nodes.add(report.nodeid)
+            elif report.when == "call":
+                run.observed.add(function)
+                run.nodes.add(report.nodeid)
 
     def pytest_sessionfinish(self, session: Any, exitstatus: object) -> None:
         if not self.enabled or not self._runs:
@@ -202,16 +204,22 @@ class LawEvidencePlugin:
 
     # ------------------------------------------------------------------ internals
 
-    def _locate(self, nodeid: str) -> tuple[str, str, str] | None:
-        """(milestone dir, law id, function name) for a law node, else None."""
+    def _locate(self, nodeid: str) -> tuple[str, tuple[str, ...], str] | None:
+        """(milestone dir, EVERY law id the node states, function name), else None.
+
+        A node may state a range — `test_l3_1_through_4_…` is four of the frozen m3 §10
+        table's rows — and each one gets its own run and its own record. Reading only the
+        first would attest to L3.1 while leaving L3.2-L3.4 permanently evidence-less, and
+        `tannen laws report` would say so for as long as the milestone existed.
+        """
         path, _, rest = nodeid.partition("::")
         parts = Path(path).parts
         laws_parts = LAWS_DIR.parts
         if len(parts) < len(laws_parts) + 2 or parts[: len(laws_parts)] != laws_parts:
             return None
         function = rest.split("[", 1)[0]
-        law = law_id_of(function)
-        return (parts[len(laws_parts)], law, function) if law else None
+        laws = law_ids_of(function)
+        return (parts[len(laws_parts)], laws, function) if laws else None
 
     def _emit(self) -> tuple[int, list[str]]:
         evidence = EvidenceStore(self.root)

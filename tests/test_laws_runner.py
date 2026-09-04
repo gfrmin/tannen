@@ -56,7 +56,15 @@ def spec_law_table(milestone: str = "m0") -> dict[str, str]:
     return {law: file for law, file in rows}
 
 
-@pytest.mark.parametrize("milestone", ["m0", "m1", "m2"])
+#: DERIVED, never enumerated. A hand-written list here lags by exactly one milestone
+#: at every boundary — the shape D0095 argued about `required_tags` and D0142 about
+#: the oracle map, met here for the third time: this list still read ["m0","m1","m2"]
+#: after m3 was frozen, so the one milestone whose laws were newest was the one
+#: milestone nothing below checked (D0169).
+MILESTONES = discovery.milestones(REPO_ROOT)
+
+
+@pytest.mark.parametrize("milestone", MILESTONES)
 def test_discovery_matches_the_frozen_spec_table(milestone: str) -> None:
     """The runner's law set is the spec's law set — checked, not assumed.
 
@@ -79,10 +87,17 @@ def test_law_ids_sort_numerically() -> None:
 
 
 def test_milestone_labels() -> None:
-    assert discovery.milestones(REPO_ROOT) == ["m0", "m1", "m2"]
-    assert discovery.milestone_label("m0") == "M0"
-    assert discovery.milestone_label("m1") == "M1"
-    assert discovery.milestone_label("m2") == "M2"
+    """Every milestone directory the repo actually has is discovered, in order, and
+    labelled the way the evidence-record schema spells it. The set is read off the
+    filesystem rather than listed here, so the assertion cannot go stale at a boundary;
+    what is pinned is the SHAPE — sorted, starting at m0, one label per directory."""
+    assert MILESTONES == sorted(MILESTONES)
+    assert MILESTONES[0] == "m0"
+    assert MILESTONES == [f"m{n}" for n in range(len(MILESTONES))], (
+        "milestone directories are consecutive from m0; a gap means one was renamed or lost"
+    )
+    for milestone in MILESTONES:
+        assert discovery.milestone_label(milestone) == f"M{milestone[1:]}"
     assert discovery.milestone_label("m5b") == "M5b"
     with pytest.raises(ValueError):
         discovery.milestone_label("laws")

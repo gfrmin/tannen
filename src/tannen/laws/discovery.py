@@ -30,6 +30,7 @@ __all__ = [
     "implementation_subject",
     "law_descriptor",
     "law_id_of",
+    "law_ids_of",
     "law_sort_key",
     "milestone_label",
     "milestones",
@@ -38,9 +39,20 @@ __all__ = [
 LAWS_DIR = Path("tests") / "laws"
 IMPLEMENTATION_DIR = Path("src") / "tannen"
 
-#: `test_l0_10_...` → L0.10. The law id is part of the frozen test's name, so the
-#: mapping needs no registry to fall out of date.
-LAW_TEST_RE = re.compile(r"^test_l(\d+)_(\d+)(?:_|$)")
+#: `test_l0_10_...` → L0.10, and `test_l3_1_through_4_...` → L3.1–L3.4. The law id is
+#: part of the frozen test's name, so the mapping needs no registry to fall out of date.
+#:
+#: THE RANGE IS READ, NOT DROPPED. M3 is the first milestone whose law files state
+#: several table rows in one node — `test_l3_1_through_4_the_delta_calculus`,
+#: `test_l3_7_and_8_...`, `test_l3_13_and_14_...` — which the frozen m3 §10 table agrees
+#: with (it maps all four of L3.1-L3.4 to `test_l3_delta.py`). The first spelling of this
+#: pattern matched only the leading number, so seven laws the frozen spec declares were
+#: invisible to discovery, to the report and to the evidence stream: `tannen laws report`
+#: showed nine M3 rows for sixteen laws and could not have shown the others however green
+#: the run. The range suffix is anchored to the law number, so a name like
+#: `test_l3_15_one_derivation_one_output_and_a_replay_hits_the_trace` — whose `_and_` is
+#: prose, not a range — is unaffected.
+LAW_TEST_RE = re.compile(r"^test_l(\d+)_(\d+)(?:_(?:and|through)_(\d+))?(?:_|$)")
 MILESTONE_DIR_RE = re.compile(r"^m(\d+)(b?)$")
 DESCRIPTOR_KIND = "law"
 
@@ -54,9 +66,33 @@ def find_root(start: Path | None = None) -> Path:
     return current
 
 
-def law_id_of(function_name: str) -> str | None:
+def law_ids_of(function_name: str) -> tuple[str, ...]:
+    """EVERY law id a test function's name states — one, or the whole inclusive range.
+
+    `()` when the name is not a law node's. A descending range is refused by name rather
+    than silently read as empty: `test_l3_4_through_1_…` is a mistake in a frozen file,
+    and a locator that answered "no laws here" would hide it exactly the way the
+    single-number spelling hid seven.
+    """
     match = LAW_TEST_RE.match(function_name)
-    return f"L{match.group(1)}.{match.group(2)}" if match else None
+    if match is None:
+        return ()
+    milestone, first = int(match.group(1)), int(match.group(2))
+    last = int(match.group(3)) if match.group(3) is not None else first
+    if last < first:
+        raise ValueError(
+            f"{function_name!r} names a descending law range L{milestone}.{first}"
+            f"-L{milestone}.{last}"
+        )
+    return tuple(f"L{milestone}.{number}" for number in range(first, last + 1))
+
+
+def law_id_of(function_name: str) -> str | None:
+    """The FIRST law id the name states, or `None` — the single-id accessor, defined over
+    `law_ids_of`. Callers that must be honest about a node stating several laws iterate
+    `law_ids_of` instead."""
+    ids = law_ids_of(function_name)
+    return ids[0] if ids else None
 
 
 def law_sort_key(law: str) -> tuple[int, int]:
@@ -95,8 +131,7 @@ def discover_laws(root: Path, milestone: str) -> dict[str, dict[str, frozenset[s
         for node in tree.body:
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
-            law = law_id_of(node.name)
-            if law is not None:
+            for law in law_ids_of(node.name):
                 found.setdefault(law, {}).setdefault(rel, set()).add(node.name)
     return {
         law: {rel: frozenset(names) for rel, names in sorted(modules.items())}

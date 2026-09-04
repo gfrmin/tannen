@@ -1,0 +1,93 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0169
+title: "The law locator read only the first number in a node's name, so seven laws the frozen M3 spec declares were invisible to discovery, the report and the evidence stream — and the runner's milestone list had lagged a milestone behind for the third time"
+tier: A
+date: "2026-09-04"
+risk_flags: ["governance-paths"]
+decision: >-
+  FOUND AT SESSION B, PRESENT SINCE SESSION A: `make verify` could not have been green at
+  `d7dd372`. Measured by running `tests/test_laws_runner.py` in a throwaway worktree at
+  that commit — two failures, identical to the ones this session hit, neither caused by
+  any Session B change.
+  .
+  (1) THE LOCATOR WAS NARROWER THAN THE NAMING CONVENTION. `discovery.LAW_TEST_RE` read
+  `^test_l(\d+)_(\d+)`, so `test_l3_1_through_4_the_delta_calculus` resolved to L3.1 and
+  nothing else. M3 is the first milestone whose law files state several table rows per
+  node — `_through_4`, `_7_and_8`, `_9_and_10`, `_11_and_12`, `_13_and_14` — and frozen
+  m3 §10 AGREES with them, mapping all four of L3.1-L3.4 to `test_l3_delta.py`. So seven
+  laws the frozen spec declares — L3.2, L3.3, L3.4, L3.8, L3.10, L3.12, L3.14 — were
+  invisible to `discover_laws`, absent from `tannen laws report`, and unable to receive an
+  evidence record however green the run. The spec's own §11 completion criterion ("fresh
+  evidence for L3.1-L3.16") was therefore not merely unmet but UNMEETABLE.
+  .
+  THE FIX, in unfrozen code: `discovery.law_ids_of(name)` returns EVERY law id a node's
+  name states — the single id, or the whole inclusive range — and `law_id_of` survives as
+  the first-id accessor defined over it. `discover_laws` and the evidence plugin iterate
+  it, so each law in a range gets its own run and its own record. The range suffix is
+  anchored to the law number, so `test_l3_15_one_derivation_one_output_and_a_replay_hits_
+  the_trace` — whose `_and_` is prose — is untouched. A DESCENDING range raises rather
+  than returning nothing: the failure mode being fixed is precisely a locator answering
+  "no laws here" about laws that are there. The report now carries all sixteen M3 rows,
+  each with fresh passing evidence (measured, not asserted).
+  .
+  This is `why_slot` again, one layer out (D0161/D0168): a locator that answered its own
+  question correctly while a caller needed a universal answer. The shape is worth naming
+  twice in one milestone.
+  .
+  (2) THE MILESTONE LIST WAS ENUMERATED BY HAND, AND LAGGED. `tests/test_laws_runner.py`
+  carried `["m0", "m1", "m2"]` in two places — a parametrize and an equality assertion.
+  So `test_discovery_matches_the_frozen_spec_table`, the very test whose job is to catch
+  discovery drifting from a frozen spec table, DID NOT RUN FOR M3 — the one milestone
+  whose laws were newest was the one milestone it did not check, which is why defect (1)
+  reached Session B alive. Both sites now derive the list from
+  `discovery.milestones(REPO_ROOT)`, and `test_milestone_labels` pins the SHAPE (sorted,
+  consecutive from m0, one label per directory) instead of the contents.
+  .
+  That is the third occurrence of one shape: an enumeration extended by hand at every
+  boundary is a milestone behind at every boundary (D0095 on `required_tags`, D0142 on the
+  oracle map, this). `governance/tag-roles.yaml` `required_tags` is the fourth and is
+  still enumerated — it is owner territory and already queued (D0154 item 6).
+rationale: >-
+  Filed with `governance-paths` because it is a defect in the machinery that RECORDS
+  proof rather than in the kernel, and D0094's whole argument is that such defects read as
+  green. Nothing failed loudly: the M3 laws passed, `check_laws` passed, the report printed
+  nine cheerful M3 rows, and only a test comparing the report against the frozen spec
+  table could tell that seven laws were missing — the test that had been silently
+  descoped. Recorded rather than fixed quietly because the fix moves `src/tannen/laws/`,
+  which is `implementation_subject` and therefore part of every law's descriptor: every
+  evidence record written before this change is now stale by design, and a reader who
+  finds a re-run in the history deserves to know it was not flailing.
+reversibility: >-
+  Cheap in code — three unfrozen files (`discovery.py`, `plugin.py`, the runner test) —
+  but not free in evidence: because `src/tannen/laws/` is inside the harness subject, this
+  change moves every law descriptor, so the whole suite must be re-run against a fresh
+  evidence root before the report can be green. That is the freshness mechanism working,
+  not a cost to avoid.
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/laws/discovery.py
+    strength: enforced
+    detail: "`law_ids_of` reads the whole range; `law_id_of` is the first-id accessor over it."
+  - type: file
+    target: src/tannen/laws/plugin.py
+    strength: enforced
+    detail: "`_locate` returns every law a node states, so each gets its own run and record."
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_the_report_over_the_real_repo_is_well_formed"
+    strength: enforced
+    detail: the report's law ids equal the frozen spec tables' law ids, for every milestone
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_milestone_labels"
+    strength: enforced
+    detail: the milestone set is derived and its shape pinned, so it cannot lag at a boundary again
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: documentary
+    detail: >-
+      §10's table is what defect (1) contradicted — it maps four law rows to one file, a
+      shape the locator could not express — and §11's "fresh evidence for L3.1-L3.16" is
+      the criterion that was unmeetable. Documentary because the spec is frozen and correct;
+      it was the reader of it that was narrow.
+bindings_count: 5
+links: [D0094, D0095, D0129, D0142, D0161, D0168]

@@ -23,7 +23,7 @@ from tannen.kernel.algebra import Monoid
 from tannen.kernel.encoding import decode_canonical, encode_canonical
 from tannen.kernel.outcome import QUARANTINE_SCHEMA, Ok, OperatorError, Outcome, Quarantine
 from tannen.kernel.rel import Rel
-from tannen.kernel.semiring import Why, is_bag_semiring, why_slot
+from tannen.kernel.semiring import Why, is_bag_semiring, why_slots
 
 __all__ = [
     "OPERATORS",
@@ -147,8 +147,8 @@ def _key_of(row: dict, keys: tuple[str, ...]) -> tuple[bytes, ...]:
     return tuple(encode_canonical(row[k]) for k in keys)
 
 
-def _conjoin_witness(semiring: Any, slot: str, annotation: Any, witness: Any) -> Any:
-    """MULTIPLY `witness` into the `Why` component `slot` names, so every support set
+def _conjoin_witness(semiring: Any, path: tuple[str, ...], annotation: Any, witness: Any) -> Any:
+    """MULTIPLY `witness` into the `Why` component `path` names, so every support set
     gains it (docs/specs/m2.md §6, D0132).
 
     `mul` and not `add`: the claim an absence witness makes is a CONJUNCTION — this row's
@@ -157,14 +157,17 @@ def _conjoin_witness(semiring: Any, slot: str, annotation: Any, witness: Any) ->
     row it cannot derive, and then §5 predicts a row survives the deletion of the very
     source row it came from.
 
-    It ENRICHES an annotation and never decides whether a row is there — presence is the
-    bag image, a separate question with a separate answer (see `anti_join`).
+    The slot is a `why_slots` path (docs/specs/m3.md §2.2), walked recursively, so a
+    `Why` nested anywhere in a single-slot product is reached — the M2 spelling only knew
+    depth-one slots. It ENRICHES an annotation and never decides whether a row is there —
+    presence is the bag image, a separate question with a separate answer (see
+    `anti_join`).
     """
-    if slot == "self":
+    if not path:
         return semiring.mul(annotation, witness)
-    if slot == "left":
-        return (semiring.left.mul(annotation[0], witness), annotation[1])
-    return (annotation[0], semiring.right.mul(annotation[1], witness))
+    if path[0] == "left":
+        return (_conjoin_witness(semiring.left, path[1:], annotation[0], witness), annotation[1])
+    return (annotation[0], _conjoin_witness(semiring.right, path[1:], annotation[1], witness))
 
 
 def _callable(name: str, fn: Any, what: str) -> None:
@@ -333,6 +336,14 @@ def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
     _in_schema("anti_join", keys, left, "the left schema")
     _in_schema("anti_join", keys, right, "the right schema")
     S = left.annotations
+    slots = why_slots(S)
+    if len(slots) > 1:
+        raise OperatorError(
+            f"anti_join: {S.name} carries {len(slots)} Why slots, and the absence witness "
+            "conjoins one address into THE Why — a semiring with two gives that convention "
+            "two inequivalent readings. Refused until a law, not an accident of slot order, "
+            "decides (docs/specs/m3.md §2.2, D0161; L3.13)"
+        )
     # Presence is the BAG image — the same notion `to_bag` (§3.3) and `aggregate` already
     # use — and NOT `annotation != zero`, which was the bug. L1.2 as amended by D0093 is
     # explicit that BOTH `(0, w)` and `(n, ∅)` are non-zero annotations with no bag image,
@@ -341,16 +352,19 @@ def anti_join(a: Any, b: Any, on: Iterable[str]) -> Outcome:
     # rule — anti_join needs only a `Semiring`, and L1.7 enumerates the bag-requiring
     # operators as distinct/aggregate/to_bag. Under `Z` a negative annotation has no bag
     # image and is refused by name here exactly as `to_bag` refuses it (the cone law).
-    # THAT LAST PART EXPIRES AT M3 (D0109). It is safe only while L1.9 holds — no M1
-    # operator can produce a negative — and deltas are precisely the thing that produces
-    # negative counts. The delta executor must decide what absence means against a
-    # retraction before it runs anti_join over one; today it would raise, which is honest
-    # but is not an answer.
+    # THAT REFUSAL DOES NOT EXPIRE — it is RE-COMMISSIONED (docs/specs/m3.md §3.4, the
+    # D0109 answer, D0158): a raw delta never takes operand position at an integrated
+    # operator. The delta rule for a non-monotone operator is replacement over INTEGRALS
+    # (m3 §4), retractions are applied to the right integral BEFORE absence is judged,
+    # and the executor keeps every integral inside the cone at every prefix (L3.4) — so
+    # a negative reaching this raise marks an executor bug, and the raise is the tripwire
+    # proving the executor kept its promise. The question M1 could not answer is not
+    # given a meaning; it is made unaskable, and this is the alarm if it is asked anyway.
     is_present = (
         (lambda a: S.multiplicity(a) > 0) if is_bag_semiring(S) else (lambda a: a != S.zero)
     )
     present = {_key_of(row, keys) for _, row, annotation in right._items() if is_present(annotation)}
-    slot = why_slot(S)
+    slot = slots[0] if slots else None
     witness = Why.of([right.content_address()]) if slot is not None and len(right) > 0 else None
     acc: Merged = {}
     for key, row, annotation in left._items():

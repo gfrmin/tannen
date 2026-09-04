@@ -25,7 +25,7 @@ from typing import Any
 
 from tannen.kernel.encoding import content_address, decode_canonical, encode_canonical
 from tannen.kernel.outcome import OperatorError
-from tannen.kernel.semiring import SEMIRINGS, ZxWhy, is_bag_semiring, why_slot
+from tannen.kernel.semiring import SEMIRINGS, ZxWhy, is_bag_semiring, why_slots
 
 __all__ = ["DEFAULT_ANNOTATIONS", "REL_TAG", "Rel", "RelError"]
 
@@ -99,23 +99,29 @@ def _refuse_unwitnessed(semiring: Any, entries: tuple[tuple[bytes, dict, Any], .
     have already been dropped when this runs, so the rule needs no second clause: what is
     left with an empty `Why` necessarily has a nonzero count.
 
-    Located structurally by `semiring.why_slot` (D0109), so `Z` and `B` — which make no
-    provenance claim — are untouched. `(0, {{r}})` is still retained: it is witnessed and
-    it is not the product zero, and having no bag image is L1.2 as amended by D0093.
+    Located structurally by `semiring.why_slots` (D0109; docs/specs/m3.md §2.2, D0161):
+    EVERY `Why` the structure carries is checked, so the rule holds at m2 §3's stated
+    strength — "any semiring carrying a `Why`" — multi-`Why` products included. `Z` and
+    `B` — which make no provenance claim — are untouched. `(0, {{r}})` is still retained:
+    it is witnessed and it is not the product zero, and having no bag image is L1.2 as
+    amended by D0093.
     """
-    slot = why_slot(semiring)
-    if slot is None:
+    slots = why_slots(semiring)
+    if not slots:
         return
     for _, row, annotation in entries:
-        why = annotation if slot == "self" else annotation[0] if slot == "left" else annotation[1]
-        if not why:
-            raise RelError(
-                f"unwitnessed annotation {annotation!r} for row {row!r}: nonzero with an empty "
-                f"Why claims copies of a row {semiring.name} has no derivation for. A retained "
-                "row is a witnessed row (docs/specs/m2.md §3, D0110); mint the row's ref with "
-                "tannen.sources.ingest, or annotate with a semiring that makes no provenance "
-                "claim and say why (BRIEF §5.5)"
-            )
+        for path in slots:
+            why = annotation
+            for step in path:
+                why = why[0] if step == "left" else why[1]
+            if not why:
+                raise RelError(
+                    f"unwitnessed annotation {annotation!r} for row {row!r}: nonzero with an "
+                    f"empty Why claims copies of a row {semiring.name} has no derivation for. "
+                    "A retained row is a witnessed row (docs/specs/m2.md §3, D0110); mint the "
+                    "row's ref with tannen.sources.ingest, or annotate with a semiring that "
+                    "makes no provenance claim and say why (BRIEF §5.5)"
+                )
 
 
 class Rel:

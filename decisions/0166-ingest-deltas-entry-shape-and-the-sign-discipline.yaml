@@ -1,0 +1,66 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0166
+title: "ingest_delta's entry shape: the sign is the argument's job, and the frozen laws' third element is checked and then superseded by the minted ref"
+tier: A
+date: "2026-09-04"
+decision: >-
+  `ingest_delta(store, source, schema, arrivals, retractions)` (docs/specs/m3.md §1, §3.1)
+  is implemented at Session B with the following three pins, none of which the spec fixed.
+  .
+  (1) THE SIGN IS THE ARGUMENT'S JOB, NEVER THE NUMBER'S. An entry's `occurrences` is a
+  POSITIVE int in both lists; the list it appears in supplies the sign. A zero or negative
+  count is refused by name rather than reinterpreted. The alternative — one signed
+  `entries` list, mirroring the frozen model's `source_delta` — makes the shortest
+  spelling of an arrival able to retract, which is exactly the shape BRIEF §5 says is the
+  API's fault and not the caller's. The model keeps its signed list because it is a
+  transcription of the spec's stream vocabulary, not a shipped surface.
+  .
+  (2) AN ENTRY IS `(row, occurrences)` OR `(row, occurrences, ref)`. The three-element
+  form is the M3 stream vocabulary the FROZEN law file writes in — `test_l3_executor.py`'s
+  `_feed` passes `(row, row["x"], SOURCE)` triples — so the shipped function must accept
+  it. Its third element names an atom, and tannen does not consult it: the ref is DERIVED
+  from `(source, row)` by `source_row_ref`, which is what content addressing is for. The
+  given atom is checked against the pinned ref grammar and then SUPERSEDED by the minted
+  one. Naming a different ref there changes nothing and is not an error, because it names
+  the same row by a coarser identity rather than a competing one; naming a non-ref IS an
+  error, because the third position is a citation slot and a citation slot has a grammar.
+  .
+  (3) NOTHING IS WRITTEN FOR A BATCH THAT WAS REFUSED, and a retraction of a row that was
+  never ingested is NOT detected here. `ingest_delta` is deterministic, store-write-only
+  and reads no prior state — it cannot know what the integral holds. That case is an
+  over-retraction and is caught at `kernel.delta.apply`, by name, with the row and the
+  shortfall (§3.3 step 1; L3.4). Detecting it here would require reading state into a
+  function whose whole value is that it does not.
+rationale: >-
+  Recorded rather than left to the code because (2) is the one place where a frozen law's
+  vocabulary and the shipped package's identity model disagree, and the disagreement has
+  to be resolved in writing rather than by whichever the reader happens to open first. A
+  future reader seeing `(row, count, atom)` in a frozen test could reasonably conclude
+  that tannen accepts caller-supplied atoms; it does not, and the reason is D0126's — one
+  ref per row, derived, so that L5 keeps discriminating.
+reversibility: >-
+  Cheap. All three pins are in unfrozen shell code (`src/tannen/sources.py`) and no frozen
+  law asserts any of them: the frozen executor law only requires that the triple be
+  ACCEPTED. Widening the entry shape later is additive; narrowing it would break callers.
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/sources.py
+    strength: enforced
+    detail: "`ingest_delta` and `_delta_entry` — the sign discipline, the grammar check on the superseded atom, and mint-before-write."
+  - type: manifest
+    target: tests/laws/m3/test_l3_executor.py
+    strength: enforced
+    detail: >-
+      The frozen `_feed` helper passes three-element entries, which is what forces pin (2):
+      L3.15 does not run at all unless `ingest_delta` accepts the triple.
+  - type: pytest
+    target: "tests/test_incremental.py::test_the_three_element_entry_is_accepted_and_its_atom_is_superseded"
+    strength: enforced
+    detail: the triple and the pair build the same relation, and the witness is the minted ref
+  - type: pytest
+    target: "tests/test_incremental.py::test_ingest_delta_refuses_a_malformed_entry_by_name"
+    strength: enforced
+    detail: zero, negative, bool and non-ref-atom entries each refused by name
+bindings_count: 4
+links: [D0126, D0156]

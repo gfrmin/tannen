@@ -34,6 +34,7 @@ __all__ = [
     "is_bag_semiring",
     "product",
     "why_slot",
+    "why_slots",
 ]
 
 
@@ -90,6 +91,10 @@ class _Z(_Base):
 
     def mul(self, a: Any, b: Any) -> int:
         return self._check(a) * self._check(b)
+
+    def negate(self, a: Any) -> int:
+        """The group inverse — `add(a, negate(a)) == zero` (docs/specs/m3.md §2.1)."""
+        return -self._check(a)
 
     def encode(self, a: Any) -> int:
         return self._check(a)
@@ -178,10 +183,30 @@ class _Why(_Base):
     def mul(self, a: Any, b: Any) -> frozenset[frozenset[str]]:
         return _antichain(x | y for x in self._check(a) for y in self._check(b))
 
+    def negate(self, w: Any) -> frozenset[frozenset[str]]:
+        """A fixed point (docs/specs/m3.md §2.1): `Why` is a join-semilattice under `add`
+        — idempotent, no inverse — so counts move by the group and witnesses never move
+        backwards; they are *filtered* by the valuation instead (§3.3, §6)."""
+        return self._check(w)
+
     def encode(self, w: Any) -> list[list[str]]:
         # Each support sorted by code point; the outer list by the canonical bytes of the
         # inner (§2). Nothing here depends on set iteration order (L1.15).
-        return sorted((sorted(s) for s in self._check(w)), key=encode_canonical)
+        #
+        # THE REF GATE (docs/specs/m3.md §2.3, closing RT-M2-07; L3.14): `Why.of` refuses
+        # a non-ref atom by name, but an element built by operator arithmetic on a
+        # hand-crafted frozenset — or any future path that skips `of` — reaches its
+        # canonical form HERE. Every atom is re-checked against the pinned grammar, so no
+        # spelling puts a non-grammar atom into a `rel/1` value or a content address.
+        checked = self._check(w)
+        for support in checked:
+            for atom in support:
+                if not is_ref(atom):
+                    raise SemiringError(
+                        f"Why: {atom!r} is not a ref in the pinned grammar — refusing to "
+                        "encode it into a canonical form (docs/specs/m3.md §2.3, RT-M2-07)"
+                    )
+        return sorted((sorted(s) for s in checked), key=encode_canonical)
 
     def decode(self, value: Any) -> frozenset[frozenset[str]]:
         if not isinstance(value, list) or not all(isinstance(s, list) for s in value):
@@ -220,6 +245,19 @@ class _Product(_Base):
         a, b = self._check(a), self._check(b)
         return (self.left.mul(a[0], b[0]), self.right.mul(a[1], b[1]))
 
+    def negate(self, a: Any) -> tuple[Any, Any]:
+        """Componentwise (docs/specs/m3.md §2.1). Refused BY NAME when a component
+        declares no `negate` — `B` has no retractions, and inventing symmetric
+        difference for it would be the silent coercion the door forbids."""
+        a = self._check(a)
+        for side, component in (("left", self.left), ("right", self.right)):
+            if not callable(getattr(component, "negate", None)):
+                raise SemiringError(
+                    f"{self.name}: component {component.name!r} ({side}) declares no "
+                    "negate, so this product is not delta-capable (docs/specs/m3.md §2.1)"
+                )
+        return (self.left.negate(a[0]), self.right.negate(a[1]))
+
     def encode(self, a: Any) -> list[Any]:
         a = self._check(a)
         return [self.left.encode(a[0]), self.right.encode(a[1])]
@@ -247,22 +285,50 @@ def is_bag_semiring(semiring: Any) -> bool:
     )
 
 
-def why_slot(semiring: Any) -> str | None:
-    """Where a `Why` component lives in `semiring`, structurally, by name (§2): `"self"`,
-    `"left"`, `"right"`, or `None` if there isn't one. `ZxWhy` (`product(Z, Why)`) resolves
-    to `"right"`; a bare `Why` resolves to `"self"`; `Z` or `B` alone resolve to `None`.
+def why_slots(semiring: Any) -> tuple[tuple[str, ...], ...]:
+    """EVERY `Why` location in `semiring`, by recursive descent over the product
+    structure (docs/specs/m3.md §2.2, closing RT-M2-04; L3.13).
 
-    A fact about the semiring, not about any operator — which is why it lives here and not
-    beside its first caller. Two things want it: enriching an annotation with a witness
-    (`ops.anti_join`), and asking whether an annotation claims copies of a row it has no
-    derivation for (D0110, if the owner takes it)."""
+    A slot is a path — a tuple of `"left"`/`"right"` steps — and `()` names a bare
+    `Why`. `ZxWhy` holds `(("right",),)`; `product(ZxWhy, ZxWhy)` holds
+    `(("left", "right"), ("right", "right"))`; `Z` and `B` hold `()`.
+
+    The M2 locator (`why_slot`) answered with AT MOST ONE location in a fixed check
+    order, so a multi-`Why` product carried a `Why` the witnessed-row door never looked
+    at — the frozen m2 §3 claim ("any semiring carrying a Why") was stronger than the
+    shipped check. This is the honest answer; `why_slot` survives as the single-slot
+    accessor defined over it."""
     if semiring.name == "Why":
-        return "self"
+        return ((),)
     left = getattr(semiring, "left", None)
-    if left is not None and left.name == "Why":
-        return "left"
     right = getattr(semiring, "right", None)
-    if right is not None and right.name == "Why":
+    if left is None or right is None:
+        return ()
+    return tuple(("left",) + path for path in why_slots(left)) + tuple(
+        ("right",) + path for path in why_slots(right)
+    )
+
+
+def why_slot(semiring: Any) -> str | None:
+    """Where THE `Why` component lives in `semiring`, when it has exactly one at the top
+    level of its structure: `"self"`, `"left"`, `"right"`, or `None` if there isn't one.
+    `ZxWhy` (`product(Z, Why)`) resolves to `"right"`; a bare `Why` resolves to
+    `"self"`; `Z` or `B` alone resolve to `None`.
+
+    Since M3 this is the single-slot accessor DEFINED OVER `why_slots` (docs/specs/m3.md
+    §2.2): it answers only when the structure holds exactly one `Why` and that `Why` sits
+    at depth ≤ 1 — the shapes the M1/M2 callers were written against — and `None`
+    otherwise. Callers that must be honest about arbitrary products (the witnessed-row
+    door, `anti_join`'s witness) iterate `why_slots` instead."""
+    slots = why_slots(semiring)
+    if len(slots) != 1:
+        return None
+    path = slots[0]
+    if path == ():
+        return "self"
+    if path == ("left",):
+        return "left"
+    if path == ("right",):
         return "right"
     return None
 

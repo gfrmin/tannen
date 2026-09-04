@@ -1,0 +1,78 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0168
+title: "group_slots is why_slots' counterpart, the two locators are the only place that knows a product's shape, and why_slot survives as the single-slot accessor"
+tier: A
+date: "2026-09-04"
+decision: >-
+  D0161 pinned `why_slots` and left three implementation choices to Session B. All three
+  are decided the same way: NOTHING ELSE KNOWS THE SHAPE OF AN ANNOTATION.
+  .
+  (1) `kernel.delta.group_slots(S)` is `why_slots`' counterpart: every location that can
+  SUBTRACT, by the same recursive descent, in the same path vocabulary. A leaf is a group
+  component when it declares `negate` and is not a `Why` — `Why` declares `negate` too,
+  but as a fixed point (§2.1), so it is filtered by the valuation rather than subtracted.
+  `apply`'s cone check and its group-zero drop read that locator, and `diff` composes its
+  answer per leaf, so no function in `kernel.delta` contains the fact that `ZxWhy` is a
+  pair. `product(Z, product(Z, Why))` works because of this and for no other reason.
+  `at_slot` is the shared read half, public because `tannen.incremental` needs the same
+  question answered ("how many copies did this delta move") and a second spelling in the
+  shell would be the duplication that becomes drift (BRIEF §2).
+  .
+  (2) `why_slot` SURVIVES, redefined over `why_slots` as the single-slot accessor: it
+  answers `"self"`/`"left"`/`"right"` when the structure holds exactly one `Why` at depth
+  <= 1 — the shapes its M1/M2 callers were written against — and `None` otherwise. It is
+  not deleted, because the honest fix for RT-M2-04 is that callers who must be truthful
+  about arbitrary products iterate `why_slots`; a caller that genuinely wants "the one
+  `Why`, or nothing" is asking a different, well-posed question.
+  .
+  (3) `anti_join`'s witness is conjoined along a PATH, not at a fixed depth.
+  `_conjoin_witness` walks the semiring and the annotation together, so a `Why` nested
+  anywhere inside a single-slot product is reached; M2's spelling only knew depth-one
+  slots and would have silently missed `product(Z, product(Z, Why))`. The multi-slot case
+  is refused by name before this runs (D0161), so "the" `Why` is well defined wherever the
+  conjunction happens.
+  .
+  (4) THE CONE CHECK IS READ THROUGH THE BAG IMAGE, not through a sign test. A group
+  component leaves the non-negative cone exactly when it has no bag image, so `apply` asks
+  `multiplicity` and re-raises with the row and the shortfall. That reuses M1's own cone
+  machinery instead of writing a second definition of "really there" — which is §3.4's
+  re-commissioning taken literally: the raise that M1 made is the alarm M3 relies on.
+rationale: >-
+  Recorded because "iterate the locator" is the difference between the RT-M2-04 fix and a
+  fix that merely moves the blind spot one level deeper. The M2 defect was not that
+  `why_slot` was wrong — it answered its own question correctly — but that a caller needing
+  a universal answer used a locator that returns at most one. Writing down that the
+  locators are the ONLY shape knowledge is what stops the next caller repeating it, and it
+  is why (1) and (3) are one decision rather than two.
+reversibility: >-
+  All of it is unfrozen kernel code. The CLAIMS are frozen at L3.13 (`why_slots` finds
+  every `Why`; the door fires at every position; multi-`Why` `anti_join` refused), so a
+  future change may reorganise the mechanism but cannot narrow what it guarantees.
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/kernel/delta.py
+    strength: enforced
+    detail: "`group_slots`, `at_slot`, and the cone check / group-zero drop / diff written over them."
+  - type: file
+    target: src/tannen/kernel/semiring.py
+    strength: enforced
+    detail: "`why_slots` by recursive descent and `why_slot` redefined over it."
+  - type: file
+    target: src/tannen/kernel/ops.py
+    strength: enforced
+    detail: "`_conjoin_witness` walking a slot path, and `anti_join`'s multi-Why refusal."
+  - type: manifest
+    target: tests/laws/m3/test_l3_door.py
+    strength: enforced
+    detail: "L3.13 over `_delta_model.SEMIRING_SPECS`, which kills the mutant `why-slot-first-match`."
+  - type: pytest
+    target: "tests/test_delta_kernel.py::test_the_two_locators_partition_a_product"
+    strength: enforced
+    detail: the two locators between them leave no component of a shipped product unlooked-at
+  - type: pytest
+    target: "tests/test_delta_kernel.py::test_delta_capability_is_declared_per_component_and_recursive"
+    strength: enforced
+    detail: "`B` at any depth makes a product non-delta-capable; `product(Z, product(Z, Why))` is"
+bindings_count: 6
+links: [D0161, D0162, D0158]

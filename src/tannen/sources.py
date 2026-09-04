@@ -45,6 +45,7 @@ __all__ = [
     "SOURCE_ROW_TAG",
     "Citation",
     "ingest",
+    "ingest_delta",
     "lineage",
     "source_row_ref",
     "source_row_value",
@@ -116,6 +117,83 @@ def ingest(store: Store, source: str, schema: Iterable[str], rows: Iterable[Mapp
     for _, value in minted:
         store.put_value(value)
     return rel
+
+
+def ingest_delta(
+    store: Store,
+    source: str,
+    schema: Iterable[str],
+    arrivals: Iterable[Any] = (),
+    retractions: Iterable[Any] = (),
+) -> Rel:
+    """One tick of `source` as a delta `Rel` — arrivals positive, retractions negative,
+    every row witnessed by its own `srcrow/1` ref (docs/specs/m3.md §3.1).
+
+    A delta is a `Rel` over the same semiring as the relation it changes (§3.1, D0156),
+    so this is `ingest` with a sign and nothing else new: arrivals are annotated
+    `(+occurrences, Why.of({own ref}))` and retractions `(-occurrences,
+    Why.of({own ref}))` — **the ref of the very row being retracted**, minted from
+    `(source, row)` and written to the store exactly as `ingest` writes it. A retraction's
+    witness therefore dereferences to the row it removes [cites: pkm-event-identity],
+    which is what lets the ledger (§6) name what died and what makes D0110's rule mean
+    something under negation: `(-1, {{r}})` is a value and `(-1, ∅)` is not.
+
+    **The sign is the argument's job, not the number's.** An entry's `occurrences` is a
+    positive int in both lists; a negative or zero count is refused by name rather than
+    reinterpreted, because the shortest spelling of an arrival must not be able to
+    retract (BRIEF §5).
+
+    An entry is `(row, occurrences)` or `(row, occurrences, ref)`. The three-element form
+    is the M3 stream vocabulary the frozen laws are written in, where the third element
+    names the atom; tannen does not consult it — the ref is *derived* from `(source,
+    row)`, which is the whole point of content addressing, so the given one is checked
+    against the pinned grammar and then superseded by the minted one (D0166). Passing a
+    different ref there changes nothing and is not an error, because it names the same
+    row by a coarser identity, not a competing one.
+
+    **Retracting a row whose bytes were never ingested is not detectable here** — this
+    function is deterministic, store-write-only, and reads no prior state. It is caught
+    at `tannen.kernel.delta.apply`, where it is an over-retraction and refused by name
+    (m3 §3.3, L3.4).
+
+    Like `ingest`: identical rows in one batch are one row (their counts add, their
+    witness does not), it is idempotent, and **nothing is written for a batch that was
+    refused** — every value is minted and the relation built before the first write.
+    """
+    ref_hex(source)  # up front, so empty batches cannot let a bad source through unlooked-at
+    minted: list[tuple[Mapping[str, Any], int, dict[str, Any]]] = []
+    for sign, entries, label in ((1, arrivals, "arrivals"), (-1, retractions, "retractions")):
+        for entry in entries:
+            row, occurrences = _delta_entry(label, entry)
+            minted.append((row, sign * occurrences, source_row_value(source, row)))
+    pairs = [
+        (row, (count, Why.of({content_address(value)}))) for row, count, value in minted
+    ]
+    rel = Rel(schema, pairs)
+    for _, _, value in minted:
+        store.put_value(value)
+    return rel
+
+
+def _delta_entry(label: str, entry: Any) -> tuple[Mapping[str, Any], int]:
+    """`(row, occurrences)` out of one `ingest_delta` entry, refusing by name."""
+    if not isinstance(entry, (tuple, list)) or not 2 <= len(entry) <= 3:
+        raise RelError(
+            f"{label} entries are (row, occurrences) or (row, occurrences, ref), "
+            f"not {entry!r} (docs/specs/m3.md §3.1)"
+        )
+    row, occurrences = entry[0], entry[1]
+    if len(entry) == 3 and not is_ref(entry[2]):
+        raise RelError(
+            f"{label}: {entry[2]!r} is not a ref in the pinned grammar — the third "
+            "element names an atom, and tannen mints its own from (source, row)"
+        )
+    if type(occurrences) is not int or occurrences <= 0:
+        raise RelError(
+            f"{label}: occurrences is a positive int, not {occurrences!r} — the sign is "
+            "the argument's job (arrivals add, retractions subtract), never the number's"
+        )
+    return row, occurrences
 
 
 # ------------------------------------------------------------------------- the lineage read

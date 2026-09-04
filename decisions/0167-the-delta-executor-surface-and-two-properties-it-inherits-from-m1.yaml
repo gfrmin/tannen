@@ -1,0 +1,113 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0167
+title: "The delta executor's surface: code referenced by name, replay as a declared parameter, and the two trace properties advance INHERITS from M1 rather than invents"
+tier: A
+date: "2026-09-04"
+risk_flags: ["public-surface"]
+decision: >-
+  `tannen.incremental` is implemented at Session B against the surface frozen L3.15 pins
+  (`DeltaNode`, `Ledger`/`Ledger.EMPTY`, `advance(...) -> .state_ref/.delta_ref/
+  .ledger_ref/.step_id/.rebuilt`). Five choices the spec left open, and two properties
+  that need saying out loud because a reader will otherwise read them as bugs.
+  .
+  (1) CODE IS REFERENCED BY NAME. A `DeltaNode`'s descriptor is the content address of its
+  declared form, and a lambda has no content address — a descriptor over one would be a
+  lie. So `select` declares `predicate_id`, `map_rows` declares `map_id`, and `aggregate`
+  declares `monoid_id` XOR `group_id`, each resolved out of a module-level registry
+  (`PREDICATES`, `MAPS`, `MONOIDS`, `GROUPS`) with `register_*` for callers. The shipped
+  registries are SEEDED with the M3 catalogue (`x-positive`, `k-only`, `sum`) because the
+  frozen law files name those ids and the shipped package must resolve them. Re-registering
+  a name with a different object is refused: a name a descriptor carries may not change
+  meaning. Parameters are validated and the code they name resolved AT DECLARATION, not at
+  the tick — a plan's mistakes should not wait for data to arrive to be found.
+  .
+  (2) `replay` IS A DECLARED PARAMETER, hence part of the descriptor. §4's contagion rule
+  is a property of the caller's PLAN ("no `anti_join` at or below this node"), and the
+  executor has no graph to compute it from (§7 declined one). So the caller declares it,
+  and `distinct`/`aggregate`/`anti_join` replay whatever the caller says, because their
+  rule is replacement regardless.
+  .
+  (3) FOUR VALUE TAGS: `deltaop/1` (the declared node), `incstate/1` (the node's integral
+  refs — output always, inputs where the rule needs them: a `join` keeps both children's,
+  a subtractive `aggregate` keeps its input's), `incstep/1` (what one step produced) and
+  `ledger/1` (§6, spec-given). A column-set parameter is SORTED into the declared form, so
+  two spellings of the same node are the same descriptor.
+  .
+  (4) THE TRACE IS CONSULTED, AND BY DEFAULT NOT WRITTEN; `record=True` is the caller's
+  act. This is forced, and the force is worth recording: frozen
+  `test_l3_15_a_tampered_trace_raises` calls `traces.record(done.step_id, <garbage>)`
+  AFTER a successful `advance` and outside its `pytest.raises` block. `TraceStore.record`
+  raises on a conflicting re-record, so if `advance` had recorded under `step_id` that
+  line would raise and the frozen law would error rather than pass. The honest reading is
+  that recording is a policy, exactly as M1 already makes it one between `AlwaysRebuild`
+  and `VerifyingTrace`; `advance` takes the same choice as a flag, defaulting off.
+  Consequently `rebuilt` reports whether this step's output was NEW TO THE STORE, not
+  whether a function was called: everything a step produces is content-addressed, so a
+  replay writes nothing and reports `rebuilt=False` whether or not a trace entry served
+  it. §7's "replaying a stream hits traces" is therefore available (`record=True`) rather
+  than automatic, which is a narrowing of the spec's prose and is queued for the M3
+  boundary sitting (D0154) as such.
+  .
+  (5) A NODE-LEVEL QUARANTINE IS UNREACHABLE FROM `advance`, and the guard stays. Its
+  inputs are relations loaded from the store, never an upstream `Quarantine`, so only
+  ROW-level quarantine can arise; those rows are stored and named by `quarantined_ref` —
+  reports about a tick, never state (BRIEF P3) — and the integral simply lacks them.
+  `Advanced.quarantine` is the P3 rule stated where it belongs, not a path this suite
+  reaches.
+  .
+  INHERITED, NOT INVENTED: `step_id` is `derivation_id(descriptor, inputs)`, which m1 §8
+  defines as ORDER-INSENSITIVE in the inputs, and §7 pins that formula ("sorted delta
+  refs"). So a binary node's operand order is not part of its step id, and
+  `advance(node, None, [a, b])` and `advance(node, None, [b, a])` share a step id while
+  computing different things. This is M1's own property — `Node(transform, inputs)` has it
+  identically, since `f(a, b)` and `f(b, a)` share a derivation id there too — carried
+  forward rather than quietly diverged from. It is pinned by a test that says so, it is
+  the second reason `advance` does not record by default, and it is queued for the
+  sitting alongside (4).
+rationale: >-
+  Filed with `public-surface` because `tannen.incremental` is new API and because (4) and
+  the inherited ordering property are places where the implementation is NARROWER than
+  frozen prose. Both are the kind of thing that reads as a defect to a later reader and as
+  an oversight to a reviewer, and the difference between "we noticed and priced it" and
+  "we did not notice" is exactly what a record is for. Neither is repairable by the
+  builder: (4) is forced by a frozen law's bytes, and the ordering property is frozen at
+  L1.13. Both therefore belong in the sitting queue, not in a patch.
+reversibility: >-
+  (1)-(3) and (5) are unfrozen shell code and cost a session to change; widening the
+  registry surface is additive. (4) cannot be reversed without contradicting the frozen
+  tamper law — changing it means superseding a frozen node (the D0128 mechanism), which is
+  the owner's call. The inherited ordering property cannot be changed at all without
+  changing frozen `derivation_id` semantics (m1 §8, L1.13).
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/incremental.py
+    strength: enforced
+    detail: "the registries, `DeltaNode`'s declaration-time validation, the four value tags, and `advance`'s consult-then-compute path."
+  - type: manifest
+    target: tests/laws/m3/test_l3_executor.py
+    strength: enforced
+    detail: >-
+      L3.15: the descriptor law, one-derivation-one-output, the empty tick, and the
+      tampered trace whose frozen shape is what forces choice (4).
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_replayed_step_is_served_from_the_trace_when_the_caller_records"
+    strength: enforced
+    detail: "`record=True` writes the entry and the next advance is served from it; the default writes nothing"
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_binary_step_id_inherits_derivation_ids_order_insensitivity"
+    strength: enforced
+    detail: the pin that says a decision is being reversed if the step-id formula ever changes
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_node_is_refused_at_declaration_not_at_the_tick"
+    strength: enforced
+    detail: unknown ids, missing and unknown parameters, and the aggregate XOR each refused when the node is declared
+  - type: pytest
+    target: "tests/test_incremental.py::test_the_contagion_rule_sheds_a_superseded_anti_join_address"
+    strength: enforced
+    detail: >-
+      choice (2) doing its work: with `replay=True` dropped from the node above the
+      anti_join, the superseded citation survives and byte identity against the reference
+      fails (measured, not asserted)
+bindings_count: 6
+links: [D0154, D0158, D0163]
