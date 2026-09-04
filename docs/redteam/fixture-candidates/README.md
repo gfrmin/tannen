@@ -16,6 +16,33 @@ Findings are `RT-nn` from `docs/redteam/2026-08-24-m0-boundary.md` (the M0→M1 
 `RT-M2-nn` from `docs/redteam/2026-09-01-m2-boundary.md` (the M2 boundary pass). Rows are
 appended without renumbering earlier ones.
 
+---
+
+## Status, 2026-09-04 — **this staging area is spent**
+
+Every candidate below has been installed. The table is kept as the record of what each one
+was drafted to prove and what was believed about it at drafting time; it is no longer a
+queue, and its "Bites today?" column is answered in the past tense from here on. Where a
+row's claim was falsified by the guard work that followed, the retraction is written into
+the row rather than the row deleted — the wrong belief is part of what the fixture cost.
+
+- **m0 boundary sitting** (`c64a5ba`, 2026-08-25): `check-decisions-nested-hatch/`,
+  `check-decisions-ratchet/`, `check-decisions-unsigned-tier-c/`, `check-manifest-sealed/`,
+  `check-manifest-unsigned-policy/`, `custodian-tag-signer/`, `lint-imports-kernel/`.
+- **m1 boundary sitting** (`65b68a3`, 2026-08-31): `oracle-shadow/`,
+  `check-decisions-file-skip/`.
+- **m2 boundary sitting** (`25523a4`, 2026-09-03): `oracle-shadow-model/`.
+
+What is left in this directory: `check-decisions-file-skip/rt-m1-05-check-decisions.patch`,
+the drafted guard change whose fixture went ahead of it. The fixture directories themselves
+are gone — `git mv`d into `tests/poison/`, where they are custody-set and author-key
+territory. **Do not re-stage a fixture here that is already installed**; the copy would be
+unsealed, unmanifested, and indistinguishable from a decoy.
+
+The next pass's candidates append below the table as usual.
+
+---
+
 | Candidate | Guard poisoned | Closes | Bites today? |
 |---|---|---|---|
 | `lint-imports-kernel/` | `lint-imports` against the **repo's own** contracts | RT-02 | **yes** |
@@ -25,9 +52,9 @@ appended without renumbering earlier ones.
 | `check-manifest-unsigned-policy/` | `scripts/check_manifest.py` (required-signature check) | RT-04 | **yes** (patch landed, D0056) |
 | `check-decisions-unsigned-tier-c/` | `scripts/check_decisions.py` (Tier-C signature check) | RT-06 | **yes** — the guard landed 2026-08-25 (D0064); a `git mv` plus one manifest row |
 | `custodian-tag-signer/` | `scripts/check_tag_signers.py` | D0049's open ask **and** RT-15 | **yes** — one bundle, two teeth (renamed from `custodian-tag-signer/`, 2026-08-25) |
-| `check-decisions-file-skip/` | `scripts/check_decisions.py` (pytest bindings) | RT-M1-05 | **yes against the drafted fix** (`ALLOWED_SKIP_REASON_PREFIXES`) — drafted and verified this session, **not committed**: `scripts/check_decisions.py` is a custody-set member (`governance/tier-c.yaml`), so landing it reddens `check_manifest.py`'s custody check, which cascades into D0063's own file-level binding on `tests/test_governance_scripts.py` and blocks pre-commit's `check-decisions` hook on every commit thereafter. The patch is queued for the owner to apply together with the custody re-signature at the M1 boundary sitting; this pins the tooth against the drafted, not-yet-live guard |
+| `check-decisions-file-skip/` | `scripts/check_decisions.py` (pytest bindings) | RT-M1-05 | **INSTALLED** 2026-08-31 → `tests/poison/check-decisions-file-skip/`; the guard patch landed with it at that sitting, so the qualifier below is spent and only `rt-m1-05-check-decisions.patch` remains staged here. As drafted: **yes against the drafted fix** (`ALLOWED_SKIP_REASON_PREFIXES`) — drafted and verified this session, **not committed**: `scripts/check_decisions.py` is a custody-set member (`governance/tier-c.yaml`), so landing it reddens `check_manifest.py`'s custody check, which cascades into D0063's own file-level binding on `tests/test_governance_scripts.py` and blocks pre-commit's `check-decisions` hook on every commit thereafter. The patch is queued for the owner to apply together with the custody re-signature at the M1 boundary sitting; this pins the tooth against the drafted, not-yet-live guard |
 | `oracle-shadow/` | `src/tannen/laws/plugin.py`'s collection-time oracle check | RT-M1-01 | **yes** — the check already landed this session (`_oracle_shadow_problem`); this pins the tooth. Does not close the underlying naming hazard (queued) |
-| `oracle-shadow-model/` | `src/tannen/laws/plugin.py`'s oracle check, **as widened by RT-M2-01** | RT-M2-01 | **no — needs patch**: the shipped check pins the single name `_fragment` (plugin.py:50-51), so this fixture PASSES today, which is the finding. M2 added `_model` and `_subject`, bare-imported across seven frozen law files, and `tests/` is not a sealed dir. Verified 2026-09-01: 34 tests pass against the decoy; with `check_differential` stubbed, L2.9 is vacuous and all 113 M2 law tests still pass with `check_manifest` clean. The plugin patch is builder-landable (no manifest row, not custody-set); installation under `tests/poison/` is owner work |
+| `oracle-shadow-model/` | `src/tannen/laws/plugin.py`'s oracle check, **as widened by RT-M2-01** | RT-M2-01 | **INSTALLED** 2026-09-03 → `tests/poison/oracle-shadow-model/`, and it bites: exit 1 at collection, naming RT-M2-01 and `shadowed`. Exercised by `tests/test_governance_scripts.py::test_oracle_shadow_model_fails_its_poison` (D0141's binding, upgraded to *enforced* 2026-09-04). ~~needs patch: the shipped check pins the single name `_fragment` (plugin.py:50-51), so this fixture PASSES today~~ — **retracted**: D0142 replaced those two constants with `_frozen_oracles()`, which derives the map from `tests/laws/m*/_*.py` off the filesystem rather than enumerating names, so the widening cannot lag a milestone again. What remains true: M2 added `_model` and `_subject`, bare-imported across seven frozen law files, and `tests/` is not a sealed dir. Verified 2026-09-01: 34 tests pass against the decoy; with `check_differential` stubbed, L2.9 is vacuous and all 113 M2 law tests still pass with `check_manifest` clean. The plugin patch is builder-landable (no manifest row, not custody-set); installation under `tests/poison/` is owner work |
 
 ---
 

@@ -1,0 +1,200 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0152
+title: "Everything the M2 sitting's machinery got wrong, and why every fix is the owner's"
+tier: A
+date: "2026-09-04"
+risk_flags: [governance-paths]
+decision: >-
+  The M2 boundary sitting completed on 2026-09-03 and exposed six defects in the machinery
+  that ran it. The title does not count them because the count kept moving while this record
+  was being written; item 6 is the one that matters most and was found last, by reading the
+  gate's own passing output. None is fixed here, and that is not caution: every target is custody-set or
+  author-key territory. `governance/tier-c.yaml`'s `custody.set` (:108-136) carries
+  `.github/workflows/ci.yml` at :117, `scripts/custodian.sh` at :125,
+  `scripts/boundary_sitting.sh` at :135 and `tests/poison/**/*` at :136; `ci.yml` and the
+  fixture files additionally carry `MANIFEST.sha256` rows. Editing any of them breaks the
+  owner's signature over `governance/custody.sha256`, so each fix is a Tier-C door the
+  builder may not open. They are recorded and queued to the M3 boundary sitting, which is
+  what the queue is for — no Tier-C request halts work (BRIEF §9.2). A sixth, in the same
+  file as item 3, is recorded in D0153 because it is the collision's fingerprint rather than
+  a defect the sitting's design invited.
+  .
+  ITEM 1 — THE D0141 RETARGET GUARD GREPS FOR A STRING ITS OWN REPLACEMENT WRITES.
+  `boundary_sitting.sh:1461-1462` fires when `tests/poison/oracle-shadow-model/` exists AND
+  `decisions/0141-*.yaml` still matches `fixture-candidates/oracle-shadow-model`. The
+  replacement text the step writes contains the sentence "retargeted from
+  docs/redteam/fixture-candidates/oracle-shadow-model/ by that same step" — so the guard's
+  own success re-arms it, and it fires on a FINISHED sitting. Answering `y` then re-runs the
+  replacement, whose `src.count(old) != 1` assertion cannot hold against already-retargeted
+  bytes, and `die` stops the run. This is where both concurrent runs stopped.
+  .
+  The correct answer on a resumed sitting is `n`, and the `else` branch actively argues
+  against it: "the check below will stop the sitting on this binding, and the message it
+  prints tells you the retarget to make." That warning is written for a FRESH sitting, where
+  the binding really is unresolved. On a resumed one the binding already resolves —
+  `check_decisions` reported `0 unenforced` throughout — so declining is correct and nothing
+  downstream stops. The fix is to test the POST-state (does the record name the installed
+  path?) rather than the pre-state, which is the shape the step's own neighbours use.
+  .
+  AND THE TRIGGER PHRASE IS DELIBERATELY LEFT IN PLACE. D0141's binding detail is
+  builder-landable, so rewording "retargeted from docs/redteam/fixture-candidates/…" would
+  disarm this guard today at no cost. It is not reworded, for two reasons: the sentence is
+  true and is the only surviving record of where that fixture came from, and removing it
+  would falsify this record's own evidence while leaving the defect exactly where it is. A
+  workaround that makes the bug unreproducible is worse than the bug.
+  .
+  ITEM 2 — STEP 4f'S SKIP-GUARD TESTS ONE OF THE THREE FILES ITS DECLINE BRANCH REVERTS.
+  The guard is `boundary_sitting.sh:694`, `grep -q 'scripts/check_laws.py' Makefile`. The
+  decline branch is `:786`, `git checkout -- Makefile .github/workflows/ci.yml
+  tests/test_law_validation.py`. The set the guard reads is a strict subset of the set the
+  revert writes, so any state where the Makefile is edited and the other two are not reads
+  as "already in the Makefile — skipped" and the step never runs again. That state is
+  reachable, and was reached (D0153): `.github/workflows/ci.yml` is today byte-identical to
+  `docs/proposals/2026-08-25-boundary-sitting/ci.yml`, so step 4b's `diff -q` guard skips it
+  too and no gate anywhere can see the gap.
+  .
+  What was actually lost is a comment. `ci.yml`'s whole job is `- run: make verify`, and the
+  file has never executed — the repo has no remote, as its own header says. The effect is
+  cosmetic; the shape is not. A guard that reads a subset of what it writes is the same
+  class this project has now filed four times (D0071, D0091, D0149, and item 1 above): a
+  check whose answer cannot depend on what it claims to check.
+  .
+  ITEM 3 — `custodian.sh:283-284` SIGNS THE ATTENTION RECEIPT WITHOUT CHECKING THE EXIT
+  STATUS, and `:285` then prints "attention receipt written and author-signed" regardless. A
+  failed `ssh-keygen -Y sign` — a locked agent, a missing key file, a declined touch on the
+  hardware-backed owner key — produces a receipt with no `.sig` and a success line saying
+  otherwise. The next `make verify` would catch it at `check_receipts` ("latest receipt is
+  unsigned"), so this is not silent for ever; it is silent at the one moment the owner is
+  standing there able to retry, and it fails in the direction of appearing to have worked.
+  The receipt is the sole artifact the Tier-B silence-as-consent clock rests on
+  (`_gov.py` `receipt_state`), which is why this is filed rather than shrugged at. Queue it
+  beside D0146 item 2's missing `__pycache__` exclusion — same file, same sitting.
+  .
+  ITEM 4 — THE DRIVER HAS NO LOCK. The sitting is a single-run ceremony by construction and
+  nothing in the driver says so. Two concurrent runs against one worktree produced item 2
+  and a duplicate attention receipt (D0153). A `flock` on a lockfile beside the transcript,
+  refusing to start while another run holds it, is a few lines and removes the entire class.
+  .
+  ITEM 5 — THE INSTALLED FIXTURE'S OWN README STILL DESCRIBES IT AS STAGED AND UNPATCHED.
+  `tests/poison/oracle-shadow-model/README.md` opens "**needs patch** — … Against the
+  shipped check this fixture does not bite, which is why it is staged here and not in
+  `tests/poison/`", and its reproduction command still names
+  `PYTHONPATH=docs/redteam/fixture-candidates/oracle-shadow-model`, a path the sitting's own
+  `git mv` deleted. Every clause is now false: D0142 replaced the two hardcoded name
+  constants with `_frozen_oracles()`, which derives the map from `tests/laws/m*/_*.py` off
+  the filesystem, and the fixture bites (see D0141's upgraded binding). The file is custody
+  set, so the correction is the owner's; the staging-side copy at
+  `docs/redteam/fixture-candidates/README.md`, which is neither frozen nor custody, is
+  corrected by the builder in the same change as this record.
+  .
+  ITEM 6 — THE CUSTODIAN NEVER RUNS THE FIXTURE THIS SITTING INSTALLED, AND THE REASON IS
+  STRUCTURAL. `tests/poison/oracle-shadow-model/` closes RT-M2-01, the M1->M2 pass's single
+  CRITICAL finding. The sitting `git mv`d it into the sealed corpus, wrote its three
+  `MANIFEST.sha256` rows, wrote its three `governance/custody.sha256` rows, and added its row
+  to `tests/poison/README.md`'s table. It did NOT add the fourth thing the corpus's own
+  installation recipe requires — a `poison` line in `scripts/custodian.sh`. Verified from the
+  gate's passing output: the custodian prints sixteen "fails its poison as required" lines
+  and none names oracle-shadow-model; `grep -c oracle-shadow-model scripts/custodian.sh` is
+  0. All thirteen other installed fixtures have their line. This one is the only gap.
+  .
+  WHY IT HAPPENED, WHICH IS THE PART WORTH KEEPING. Step 6 installs the custodian by
+  comparing the live file against `$PROPOSALS_M1/custodian.sh` — the PREVIOUS milestone's
+  draft — and its comment (`boundary_sitting.sh:1591-1592`) still reads "This sitting's own
+  draft is the LIVE custodian.sh plus one new poison line for oracle-shadow (RT-M1-01)".
+  That sentence was true at M1 and was carried into the M2 driver unchanged.
+  `docs/proposals/2026-08-31-m2-boundary-sitting/` contains no `custodian.sh` at all, so
+  there was no M2 draft to install: the comparison found the M1 draft already applied,
+  printed "already applied — skipped", and the sitting proceeded. Nothing was declined and
+  nothing failed; the step simply had nothing to offer.
+  .
+  THIS IS D0095'S SHAPE EXACTLY, ONE FILE OVER. `required_tags` lags because the session that
+  mints a boundary tag may not edit the frozen file naming it required; the poison list lags
+  because the sitting that installs a fixture installs a custodian drafted before that
+  fixture existed. Both are hand-kept enumerations extended only at the moment their extender
+  is least able to edit them. D0095's half (2) — "replace the enumeration with a rule that
+  derives the required set" — is the fix both need, and the guard this sitting shipped shows
+  it is achievable: D0142 replaced the oracle map's two hardcoded names with
+  `_frozen_oracles()`, which reads `tests/laws/m*/_*.py` off the filesystem. A `poison` loop
+  over `tests/poison/*/` that REFUSES a directory with no invocation would close this one the
+  same way, and would have failed loudly on 2026-09-03 instead of finishing sooner.
+  .
+  WHAT IS AND IS NOT EXPOSED. The fixture is not unexercised: this change adds
+  `tests/test_governance_scripts.py::test_oracle_shadow_model_fails_its_poison`, which runs
+  it, and D0141's binding now points at that test. But `tests/test_governance_scripts.py` is
+  neither frozen nor custody-set, so a builder may delete it and `custodian.sh` will still
+  print "custody floor intact". The custody floor is the thing meant to hold when the builder
+  is the adversary, and for this one fixture it currently does not. That is why this is item 6
+  and not a footnote to item 5.
+rationale: >-
+  FIVE OF THE SIX WERE FOUND BY READING A PASSING OUTPUT against the document saying what it
+  should mean, which is the only method that has ever worked on this class here — the same
+  sentence D0095 used, and the reason that record exists at all. Item 2 came from auditing
+  every step's skip-guard against its own revert line; item 6 came from counting the
+  custodian's "fails its poison as required" lines in a GREEN gate and noticing the corpus
+  has fourteen directories and sixteen lines naming thirteen of them. Neither is visible to
+  any check, which in both cases is the finding.
+  .
+  Item 6 arrived after this record had already been written and titled twice, which is worth
+  saying rather than hiding behind a tidy final draft: the first pass recorded four defects,
+  the second five, and the sixth — the only one touching the custody floor itself — surfaced
+  from output that had just been declared green. A record that reads as though its author saw
+  everything at once teaches the wrong method.
+  .
+  Recording them together, split by who may act rather than by when they were found, is the
+  useful grain. The builder's half of this sitting's tail is small and lands beside this
+  record; the owner's half is six items that must survive until a sitting, and a list they
+  can read in one sitting-preparation pass is worth more than six records they must
+  correlate. D0147 (three defects) and D0148 (five items) set that precedent.
+  .
+  On not fixing them: `scripts/boundary_sitting.sh` was NOT custody-set while it was being
+  rehearsed — it lived under `docs/proposals/` and was copied in as the sitting's first act.
+  It is custody-set now, `governance/custody.sha256:17`, because the sitting installed it.
+  So the same file that seven rehearsals edited freely is, from 2026-09-03, a trust-root
+  change. That is the design working, not an obstacle: the driver is now an artifact the
+  owner has signed for, and the next edit to it should cost a signature.
+reversibility: >-
+  Nothing is changed by this record; it queues five proposals. Items 1, 2 and 4 are small
+  edits to a shell script and trivially reversible once the custody signature is re-taken.
+  Item 3 adds an exit-status check to the trust root's own script — reversible, but it is
+  `custodian.sh`, so the cost is a re-sign of the custody set either way. Item 5 is prose.
+  What is NOT reversible is the queue skipping them: the M1 sitting's carry list is how
+  RT-M2-01 reached M2 still open.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Carries items 1, 2 and 4 at the lines cited above. Documentary because the defects are
+      IN this file and nothing detects them: item 1's guard reports "skipped" on the state it
+      should refuse, item 2's guard reports "skipped" on a state it never wrote, and item 4
+      is an absence. The file is custody-set (governance/custody.sha256:17), which is what
+      makes all three the owner's to fix and this record's only available strength.
+  - type: file
+    target: scripts/custodian.sh
+    strength: documentary
+    detail: >-
+      Carries item 3 at :283-285 and item 6's absence — the `poison` line for
+      oracle-shadow-model that no draft ever contained. Documentary twice over: an unchecked
+      exit status cannot be detected by the script that ignores it, and a poison list that
+      omits a fixture is silent by construction, since the omission's only symptom is a run
+      that finishes sooner. Author-key territory (CLAUDE.md, BRIEF §9.1) bars the builder
+      from adding either.
+  - type: manifest
+    target: .github/workflows/ci.yml
+    strength: documentary
+    detail: >-
+      The artifact item 2's loss is visible in. Named as `manifest` because the row is
+      precisely why the builder cannot re-apply the lost comment: the file is frozen AND
+      custody-set. Documentary rather than enforced — the row pins the CURRENT bytes, so it
+      detects a future change but is indifferent to the edit that never landed.
+  - type: file
+    target: tests/poison/oracle-shadow-model/README.md
+    strength: documentary
+    detail: >-
+      Item 5's subject. Documentary: the file's prose is wrong and no guard reads prose. Note
+      that D0141 binds this same path as `enforced` for a different claim — that the fixture
+      it documents is exercised by tests/test_governance_scripts.py. Both are true; the
+      fixture bites while its README says it cannot.
+links: [D0141, D0142, D0146, D0147, D0148, D0149, D0151, D0153]

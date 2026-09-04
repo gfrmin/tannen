@@ -136,6 +136,43 @@ def test_oracle_shadow_fails_its_poison() -> None:
     assert "shadowed" in combined, combined
 
 
+def test_oracle_shadow_model_fails_its_poison() -> None:
+    """RT-M2-01 (D0141, D0142): the same guard, one milestone on, against the fixture the
+    owner installed at the 2026-09-03 boundary sitting. tests/poison/oracle-shadow-model/
+    primes a decoy `_model` into sys.modules via a `-p`-loaded bootstrap plugin, ahead of
+    the frozen tests/laws/m2/test_l2_differential.py's bare `import _model as M`. Without
+    the widening D0142 made, that decoy answers for L2.9 — BRIEF §6's kill criterion.
+
+    Every deviation from POISON above is the one the sibling test documents, for the same
+    reasons: no `-I -P` (the attack IS PYTHONPATH, and isolated mode ignores it, so under
+    `-I` the fixture's own setup could never run and this test would report green having
+    never been challenged), `-B` (the fixture is imported from inside tests/poison/, a
+    sealed directory an unmanifested __pycache__ would break), no --root because it is a
+    pytest run, and the venv interpreter at a literal path (D0063 ruling 3). No `-k`
+    either: the guard aborts at collection, so there is nothing to select.
+
+    THE NEGATIVE CONTROL, run before this test was written (2026-09-04). With the guard
+    disabled by `-p no:tannen-law-evidence` and the decoy primed exactly as below, the
+    suite reports `34 passed`. So the decoy is FAITHFUL — it answers to the name with the
+    real module's API and the laws genuinely run against it — and the non-zero exit
+    asserted here is the guard biting, not an import error wearing its clothes. That
+    control is the difference between this test and one that merely observes a red run.
+    """
+    env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    env["PYTHONPATH"] = str(REPO_ROOT / "tests" / "poison" / "oracle-shadow-model")
+    result = run(
+        [str(REPO_ROOT / ".venv" / "bin" / "python"), "-B", "-m", "pytest",
+         "-p", "bootstrap_shadow_model", "tests/laws/m2/test_l2_differential.py", "-q"],
+        env=env,
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, (
+        f"oracle-shadow-model PASSED its poison — weakened:\n{combined}"
+    )
+    assert "RT-M2-01" in combined, combined
+    assert "shadowed" in combined, combined
+
+
 def test_oracle_shadow_covers_every_frozen_oracle_not_just_fragment(tmp_path: Path) -> None:
     """RT-M2-01 (D0141), the M1->M2 boundary red team's one critical finding: the check
     above pinned the single name `_fragment`, so M2's `_model` — bare-imported by five
@@ -145,9 +182,12 @@ def test_oracle_shadow_covers_every_frozen_oracle_not_just_fragment(tmp_path: Pa
 
     This test CONSTRUCTS THE VIOLATING STATE ITSELF (D0092) rather than reading a
     tests/poison/ fixture: installing one there is the owner's act at a boundary sitting,
-    and a regression test that waits for a sitting is not a regression test. The poison
-    fixture is queued separately (docs/redteam/fixture-candidates/oracle-shadow-model/)
-    and proves the same thing from the custodian's floor.
+    and a regression test that waits for a sitting is not a regression test. That sitting
+    has now happened — the fixture was installed on 2026-09-03 and is exercised by
+    test_oracle_shadow_model_fails_its_poison above — and the pair is kept deliberately.
+    The two are complementary, not redundant: that one proves the guard from the
+    custodian's floor, against the frozen law file, and would go quiet if the fixture were
+    ever removed; this one is position-independent and needed no sitting to exist.
 
     Two runs, because "pytest exited non-zero" alone would be satisfied by a decoy that
     merely fails to import. The second run establishes that the decoy is FAITHFUL — it

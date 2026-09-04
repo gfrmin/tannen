@@ -107,11 +107,36 @@ bindings:
       its own read-only rule.
   - type: file
     target: tests/poison/oracle-shadow-model/README.md
-    strength: documentary
+    strength: enforced
     detail: >-
       RT-M2-01's poison fixture — the `_model` decoy. INSTALLED at the M2 boundary sitting,
       step 5, and retargeted from docs/redteam/fixture-candidates/oracle-shadow-model/ by
       that same step. It was staged outside tests/poison/ until then because installing it
       before D0142 widened the guard would have left the custodian permanently red against
       a check that did not yet exist; D0142 shipped first, so the fixture bites.
+      .
+      UPGRADED documentary -> enforced on 2026-09-04, which is the follow-up the sitting's
+      closing note asked for. Installation alone did not enforce anything: for a day the
+      fixture sat in the custody set with nothing running it, so a guard that lost its
+      tooth would have left the fixture green by never being asked. The binding on the next
+      line is what changed that. Note the fixture's README prose is separately WRONG — it
+      still calls itself unpatched and staged — which is D0152 item 5, owner territory; the
+      fixture works while its own documentation denies it.
+  - type: pytest
+    target: tests/test_governance_scripts.py::test_oracle_shadow_model_fails_its_poison
+    strength: enforced
+    detail: >-
+      The mechanism. Runs the frozen tests/laws/m2/test_l2_differential.py with the fixture's
+      bootstrap plugin loaded and PYTHONPATH pointed at the fixture, and requires a non-zero
+      exit carrying both RT-M2-01 and "shadowed". Its negative control — the same run with
+      `-p no:tannen-law-evidence`, which reports 34 passed — establishes that the decoy is
+      faithful, so the red is the guard biting rather than a broken import. A weakening of
+      _frozen_oracles() in src/tannen/laws/plugin.py turns this test red.
+      .
+      AND THE LIMIT OF IT, STATED RATHER THAN LEFT TO BE DISCOVERED: this file is neither
+      frozen nor custody-set, so deleting this test silences the fixture and
+      scripts/custodian.sh still reports "custody floor intact". The custodian carries no
+      poison line for oracle-shadow-model — it is the only installed fixture without one —
+      which is D0152 item 6, owner territory. Until that lands, the enforcement recorded here
+      sits ABOVE the custody floor, not in it.
 links: ["D0059", "D0104", "D0110", "D0128", "D0131", "D0134", "D0136", "D0140"]

@@ -1,0 +1,118 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0153
+title: "Two runs of a one-run ceremony, and an evidence root outside .gitignore"
+tier: A
+date: "2026-09-04"
+risk_flags: [governance-paths]
+decision: >-
+  How the M2 boundary sitting was actually run, recorded because the transcript is not a
+  record and this is the only place it will survive. The sitting closed correctly — `m2-close`
+  verifies as owner@tannen over `25523a4`, closing commit `f089756`, tree clean — but it took
+  three attempts, two of them concurrent, and the recovery method is worth more than the
+  incident.
+  .
+  WHAT HAPPENED. Two invocations of `scripts/boundary_sitting.sh m2` were running against the
+  same worktree at the same time, by accident. Both stopped at the same place — the D0141
+  retarget guard, D0152 item 1 — and both were killed by hand. The third run completed.
+  .
+  ARTIFACT 1 — A REVERTED FILE NO GATE CAN SEE. One run applied step 4f's edit to `Makefile`,
+  `.github/workflows/ci.yml` and `tests/test_law_validation.py`; the other was already past
+  step 4f's guard, took a decline, and ran `git checkout --` over all three. Two were
+  re-applied by the run that owned them; `ci.yml` was not, because the guard reads only the
+  Makefile and now says "already — skipped". The lost bytes are a comment. The mechanism is
+  D0152 item 2.
+  .
+  ARTIFACT 2 — TWO RECEIPTS AT ONE HEAD, AND A CHAIN LINE THAT VANISHED. `receipts/2026-09-02.md`
+  and `receipts/2026-09-03.md` both record `HEAD: 14647976e9b447775f10049614898b764158d8ee`.
+  Both are owner-signed and `check_receipts` accepts the pair, correctly: it requires each
+  receipt's HEAD to be an ancestor of the next, and a commit is its own ancestor. The
+  custodian overwrites `receipts/$(date +%F).md` unconditionally, so a re-run on a new day
+  simply adds one.
+  .
+  The interesting half is what the second one is MISSING. `2026-09-02.md` carries
+  "- previous receipt: 2026-08-31 at 64e0b155…"; `2026-09-03.md` carries no such line at all.
+  `custodian.sh:268` computes `prev=$(ls -1 receipts/*.md | sort | tail -1)` and `:273` emits
+  the line only `if [ "$prev" != "$receipt" ]`. The first run had already written
+  `receipts/2026-09-03.md`, so the second run's `tail -1` returned the very file it was about
+  to overwrite, the condition went false, and the chain line was dropped. THIS IS NOT
+  COLLISION-SPECIFIC: any second custodian run on the same day loses that line, and
+  `check_receipts` parses only `- HEAD:` so nothing anywhere notices. Filed as a sixth item
+  against `custodian.sh` — author-key territory, so it queues to the M3 sitting beside D0152
+  item 3 and D0146 item 2, all three in the same file.
+  .
+  ARTIFACT 3 — AN EVIDENCE ROOT OUTSIDE `.gitignore`, WHICH WAS MINE. A hand pytest run
+  during the assessment used `TANNEN_EVIDENCE_ROOT=.tannen-verify-evidence` — an invented
+  name. `.gitignore:23` covers `.verify-evidence/` and nothing else, and step 9's
+  `commit_with_hook_retry` does `git add -A`, so thirty-six evidence records rode into the
+  sitting commit. Caught before any tag attested it, and removed at step 10's signing prompt
+  — a moment when the driver is provably idle, blocked on `read` — with `git rm -r --cached`
+  followed by `git commit --amend --no-verify`. Safe for four reasons, each checked rather
+  than assumed: step 10 reads its DELEGATIONS and custody hashes from the WORKING TREE, which
+  the amend does not touch; `git tag -s` resolves HEAD at signing time, after the amend; the
+  attention receipt's recorded HEAD stayed an ancestor of the new commit; and no tag yet
+  attested the old one. `git ls-tree -r HEAD` now returns zero such paths.
+  .
+  The `.gitignore` stanza above that line already argues this exact hazard — "a red gate
+  leaves it behind, and the boundary sitting commits with `git add -A`". It names one path
+  where the hazard is the pattern. The builder-side rule that follows: when running the suite
+  by hand in this repo, use `.verify-evidence`, never an invented root.
+rationale: >-
+  THE METHOD IS THE TRANSFERABLE PART. After a manual kill, transcripts cannot establish
+  consistency. A `die()` leaves a known state — the driver's whole shape is
+  say/note/diff/confirm/apply, and `die` fires between steps. A `Ctrl-C` can land inside the
+  apply, between a `git mv` and the manifest row that legitimises it. So nothing was inferred
+  from what the two runs printed; state was re-derived from the tree. That sweep was: the six
+  governance checks and `lint-imports` and `pytest` run individually rather than through
+  `make verify`, so a failure names its own layer; `ssh-keygen -Y verify` against
+  `allowed_signers` over all four newly signed artifacts; an audit of every step's skip-guard
+  against the file list in that step's own revert line, which is what found D0152 item 2; and
+  a sweep for the classes signatures cannot see — zero-byte tracked files (three, all
+  intentional `.gitkeep`), stray `.orig`/`.rej`/`.tmp`/`~` (none), `.sig` files with no
+  subject (none), and a truncated-final-write check on the generated digest.
+  .
+  A signature proves bytes were attested, not that they are the bytes anyone meant. The last
+  two sweeps exist because every check in this repo verifies content against a recorded hash,
+  and a half-written file hashed at the moment it was half-written passes every one of them.
+  .
+  On recording my own mistake at the same grain as the machinery's: artifact 3 is the only one
+  of the three that a future reader could dismiss as operator error and skip. It is the one
+  most likely to recur, because the hazard is not "do not typo a path" — it is that an
+  evidence store is structurally invisible to a `.gitignore` entry that names one instance of
+  it, and the sitting's one commit command sweeps everything untracked. The near-miss is the
+  finding; the amend is only the recovery.
+reversibility: >-
+  Nothing is changed by this record. The amend it describes is already done and is itself
+  irreversible in the only sense that matters — `25523a4` is the commit `m2-close` attests,
+  and the pre-amend object is unreferenced. That is the correct outcome: the alternative was
+  a signed close tag over a tree containing an evidence store.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: .gitignore
+    strength: documentary
+    detail: >-
+      The artifact whose scope artifact 3 escaped. Documentary, and deliberately so: widening
+      the pattern to `*evidence*/` would be a guard that passes because it is broad rather
+      than because it is right, and would silently cover paths a future reader means to
+      commit. The enforcing change, if one is wanted, belongs in the driver — refusing to
+      commit an untracked directory the sitting did not create — and that is Tier C
+      (D0152 item 4's neighbourhood).
+  - type: file
+    target: scripts/custodian.sh
+    strength: documentary
+    detail: >-
+      Artifact 2's sixth item, at :268 and :273. Documentary: the dropped line is invisible to
+      every guard, including check_receipts, which parses only `- HEAD:`. Author-key
+      territory, so queued rather than fixed.
+  - type: file
+    target: scripts/check_receipts.py
+    strength: documentary
+    detail: >-
+      NAMED FOR WHAT IT DOES NOT READ. Its HEAD_RE parses `- HEAD:` and nothing else, so the
+      chain sentence, the previous-receipt line and every other claim a receipt makes in prose
+      are outside its reach — which is why artifact 2 is invisible rather than merely
+      unreported. Documentary: widening it to parse prose is not obviously right (the receipt
+      is a human attestation, not a data format), so this binding records where the blind spot
+      is rather than pretending a guard covers it.
+links: [D0063, D0071, D0141, D0146, D0147, D0149, D0151, D0152]
