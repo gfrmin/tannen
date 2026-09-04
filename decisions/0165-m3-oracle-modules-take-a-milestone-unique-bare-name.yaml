@@ -1,0 +1,63 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0165
+title: "M3's frozen oracle modules are named _delta_model / _delta_subject, not _model / _subject — a milestone-unique bare name is the interim answer to the import-shadow hazard"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  M3's frozen oracle modules are `tests/laws/m3/_delta_model.py` and
+  `tests/laws/m3/_delta_subject.py`, NOT `_model.py`/`_subject.py`. The law files
+  bare-import them as `import _delta_model as M` and `from _delta_subject import TANNEN`.
+  .
+  WHY, and it is the lesson RT-M1-01/RT-M2-01 left rather than a style choice. Python caches
+  imports by NAME in `sys.modules`, and `tests/laws` carries no `__init__.py`, so a bare
+  `import _model` in an m3 law would receive whichever `_model` was imported first this
+  run — m2's, cached under the same name. `src/tannen/laws/plugin.py`'s oracle-shadow guard
+  (D0142) derives its map from every `tests/laws/m*/_*.py` keyed by stem, and on a stem
+  defined in two milestone directories it does not choose — it `Exit`s the whole pytest
+  run, reporting the collision as the shadow hazard it is. Confirmed live before the rename:
+  m3 named `_model`/`_subject` aborted `pytest tests/laws/m3` with exactly that message.
+  m1 avoided it by naming its oracle `_fragment`; m2 introduced `_model`/`_subject` fresh;
+  m3 continues the pattern with `_delta_model`/`_delta_subject`.
+  .
+  THE REAL FIX IS STILL QUEUED. The red team named it twice: package-qualified imports in
+  the frozen law files, which needs `tests/laws` to become a package — new `__init__.py`
+  files with manifest rows, under the do-not-edit-a-frozen-law rule, so owner-adjacent
+  work. A milestone-unique bare name is the cheap, sound INTERIM: it sidesteps the
+  `sys.modules` collision entirely, and because the guard derives from `m*/_*.py`, the new
+  names are covered by it from the moment they are frozen (D0142's whole point), so nothing
+  is weakened by the workaround.
+rationale: >-
+  Recorded because a reader will otherwise "fix the inconsistency" by renaming m3's oracle
+  to `_model` to match m2, and reintroduce the abort. The naming looks like drift and is
+  load-bearing. It also states, in one place, the standing convention for every future
+  milestone — the oracle's bare stem must be unique across `tests/laws/m*/` until
+  package-qualified imports land — so the next Session A does not rediscover the collision
+  the hard way. The interim-versus-real-fix framing keeps the queued work (package imports)
+  from being quietly considered done because the symptom is gone.
+reversibility: >-
+  Reversible when the real fix lands: once the frozen law files import package-qualified,
+  the bare-name uniqueness requirement dissolves and the modules could be renamed back —
+  a change to frozen paths, hence a coordinated re-freeze, not a casual edit. Until then the
+  names are frozen with the m3 suite.
+status: accepted
+bindings:
+  - type: manifest
+    target: tests/laws/m3/_delta_model.py
+    strength: enforced
+    detail: >-
+      The frozen model under its milestone-unique name; its header states the naming
+      rationale so it travels with the file.
+  - type: manifest
+    target: tests/laws/m3/_delta_subject.py
+    strength: enforced
+    detail: "The frozen adapter under its milestone-unique name."
+  - type: file
+    target: tests/test_law_validation.py
+    strength: enforced
+    detail: >-
+      Loads each milestone's model by its unique module name (`MODEL_PATHS`), and its
+      comment records why m2 is `_model` and m3 is `_delta_model`. Unfrozen, so it is
+      `enforced` here rather than documentary: it imports the file this record names, and
+      breaks if the name is wrong.
+links: [D0089, D0142]

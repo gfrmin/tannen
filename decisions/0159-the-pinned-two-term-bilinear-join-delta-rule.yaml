@@ -1,0 +1,49 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0159
+title: "join's delta rule is pinned as the two-term bilinear form, and its equivalence to the three-term expansion is a law clause"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  `join`'s delta rule is PINNED (docs/specs/m3.md §4) as the two-term bilinear form
+  `join(ΔA, B_old) ⊎ join(A_new, ΔB)`. On the group components this equals
+  `A_new ⋈ B_new − A_old ⋈ B_old` outright, and its equivalence to the three-term DBSP
+  expansion `ΔA⋈B_old ⊎ A_old⋈ΔB ⊎ ΔA⋈ΔB` is asserted as a clause of L3.6, not assumed.
+  .
+  Pinned by a property test because DBSP's reference is silent on the SPELLING (both forms
+  are correct against the paper; the paper writes the three-term one), and the choice
+  matters: the classic off-by-one is `ΔA⋈B_old ⊎ A_old⋈ΔB`, which drops the same-tick
+  co-arrival term `ΔA⋈ΔB` and is wrong exactly when both operands move in one tick. That
+  wrong form is kept as the mutant `join-both-sides-old`, and the `same-tick-co-arrival`
+  perturbation stream exists to feed it the case it fails on (D0118's rule: draw the
+  interesting case on purpose).
+  .
+  The two-term form is preferred over the three-term for one concrete reason: it names
+  `B_old` and `A_new` — one integral from each side, in the states the executor already
+  holds at the moment it advances — so it reads off available state without the executor
+  having to retain `A_old` and `B_old` both. The three-term form is the one proved
+  equivalent, so nothing is lost by pinning the cheaper spelling.
+rationale: >-
+  BRIEF §4 makes DBSP normative and says a silence is pinned by a property test with a
+  bound record; this is that pin for the one operator whose delta rule has a genuine choice
+  of spelling. Recording it as the two-term form with the three-term equivalence frozen
+  means a future reader who knows only the paper's three-term rule can see both that the
+  shipped rule is correct and why it was written the shorter way.
+reversibility: >-
+  Frozen into L3.6. The equivalence clause means either spelling could be adopted later
+  without changing the law's truth, but the pinned two-term form is what the executor is
+  written against; changing it is a supersession.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§4's join row."
+  - type: manifest
+    target: tests/laws/m3/test_l3_join.py
+    strength: enforced
+    detail: >-
+      L3.6 asserts the two-term form ≡ the three-term form ≡ the reference, byte-identical,
+      co-arrival included; drives `_delta_model.py::check_bilinear_join`, which kills
+      `join-both-sides-old`.
+links: [D0118, D0158]

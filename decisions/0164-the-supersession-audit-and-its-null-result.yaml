@@ -1,0 +1,69 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0164
+title: "The supersession audit: M3 changes kernel semantics that frozen suites exercise, and the pending list stays empty — a decision, not an omission"
+tier: A
+date: "2026-09-04"
+risk_flags: [governance-paths]
+decision: >-
+  M3 alters kernel behaviour that frozen M0/M1/M2 law nodes exercise — negatives become
+  constructible in delta position, `why_slots` replaces `why_slot`, `Why.encode` gains a
+  gate — so before m3-laws-freeze every plausibly-falsified frozen node was audited
+  against docs/specs/m3.md, per node. The result is that `governance/laws.yaml`'s
+  `pending` list stays EMPTY, and that is recorded as a decision so the empty list is not
+  read as an audit not done.
+  .
+  THE AUDIT, per node:
+  .
+  (a) `test_l1_ops.py::test_l1_9_the_fragment_preserves_the_non_negative_cone` quantifies
+  over M1 fragment plans whose generators draw `min_value=1` (D0114); M3 changes no
+  operator's behaviour on non-negative inputs, and no M1 operator produces a negative. Still
+  true.
+  .
+  (b) `test_l1_semiring.py`'s L1.2 negative-multiplicity refusals: `Z.multiplicity` and
+  `Z.collapse` STILL raise on a negative — the delta calculus never asks a delta for its
+  bag image (D0158), and D0156 keeps the refusals deliberately, partly to keep this node
+  true. Still true.
+  .
+  (c) L1.1/L1.7's product nodes: the new multi-`Why` refusals (D0161) bite only on
+  semirings no frozen node constructs — the frozen corpus builds only `product(Z, Why)`
+  and `product(Z, Z)`, verified by grep before this freeze — and products still compose as
+  semirings. Still true.
+  .
+  (d) L2.2–L2.6: all stated over one-shot ingest and the shipped `Z*Why`. The incremental
+  path STRENGTHENS them rather than falsifying them — L2.6 clause 3 ("an anti-join's rows
+  are recomputed, never inherited") is exactly what D0163's contagion rule implements — and
+  RT-M2-07's encode gate was probed against the whole frozen suite green (D0162). Still
+  true.
+  .
+  What WAS falsified is frozen PROSE, not nodes: m2.md §3/§7's universal phrasings, handled
+  by D0161 and D0162 with new frozen laws and documentary records. Supersession (D0128)
+  retires nodes; there are none to retire, so `pending` and `superseded` gain nothing from
+  M3. If Session B discovers this audit wrong, the mechanism is D0128's — record, supersede
+  forward, never edit — and this record is what that supersession would cite as the audit
+  it corrects.
+rationale: >-
+  An empty `pending` list at a milestone that changes kernel semantics looks like a step
+  skipped, so the audit that produced it is written down. The grep result (only
+  `product(Z, Why)` and `product(Z, Z)` in the frozen corpus) is the single load-bearing
+  fact that lets D0161's stronger refusals land without a supersession, so it is stated
+  here where a future reader auditing THIS record can re-run it. Recording a null result is
+  the produce-the-failure discipline inverted: the claim "nothing needs superseding" is
+  only trustworthy if the search for something that does is shown.
+reversibility: >-
+  A record of an audit, changing nothing. If wrong, it is corrected by a Session B
+  supersession that cites it, exactly as D0128 prescribes; the empty `pending` list is the
+  most reversible possible state.
+status: accepted
+bindings:
+  - type: file
+    target: governance/laws.yaml
+    strength: documentary
+    detail: >-
+      The registry whose `pending` list this audit leaves empty. Documentary: the emptiness
+      is the audit's result, and no guard can tell an empty list that is correct from one
+      that is an oversight — this record is the difference.
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: documentary
+    detail: "§9.1 (the supersession audit and its null result)."
+links: [D0114, D0128, D0156, D0161, D0162]

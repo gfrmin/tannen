@@ -1,0 +1,58 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0156
+title: "A delta is a Rel over the same semiring — no Delta type — and delta-capability is declared per component, with B refused by name"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  A delta is a `Rel` over the same semiring as the relation it changes (docs/specs/m3.md
+  §3.1). There is NO `Delta[K, S]` wrapper type. `Rel` already constructs negative ℤ
+  counts — nothing in it inspects sign — the `rel/1` canonical form already encodes them,
+  and the witnessed-row invariant (frozen L2.2/D0110) already does the right thing
+  unprompted: `(-1, {{r}})` is accepted, `(-1, ∅)` refused. A retraction therefore owes
+  provenance exactly as an arrival does, by a rule that already exists.
+  .
+  Delta-capability is DECLARED per component. A semiring is delta-capable when every
+  component of its (possibly product) structure is either a GROUP component declaring
+  `negate` with `add(a, negate(a)) == zero` law-checked where the other axioms are, or a
+  `Why` component, for which `negate(w) = w` — `Why` is a join-semilattice under `add`,
+  idempotent, no inverse. `Z` and `Z*Why` qualify; `B` declares no `negate` and every
+  delta operation refuses it BY NAME. No M1 refusal lifts: `Z.multiplicity`/`collapse`
+  still raise on a negative (§3.4 re-commissions those raises, D0158), so frozen L1.2 stays
+  true by design.
+  .
+  REJECTED: a distinct `Delta[K, S]` type. It would double the operator surface — every
+  bilinear rule would need `Rel × Δ`, `Δ × Rel` and `Δ × Δ` signatures — fork the store
+  format, and contradict P4's one-annotated-relation-type principle. DBSP itself draws no
+  such distinction: a delta is an element of the same abelian group as the state. The
+  witnessed-row invariant already giving a retraction a provenance obligation is the
+  tell that `Rel` was the right carrier all along.
+  .
+  REJECTED: guessing symmetric difference for `B` so it too could be delta-capable. A set
+  semiring has no retractions; inventing one would be the silent coercion the door forbids
+  (exactness-and-the-door). Refusing by name is the door working.
+rationale: >-
+  The alternative — a Delta wrapper — is what a reader who knows DBSP's Z-set streams but
+  not tannen's `Rel` would reach for first, so the rejection is stated at length. The
+  deciding fact is local and checkable: `Rel(("k",), [({"k": 1}, (-1, Why.of({r})))])`
+  constructs today, and refusing `(-1, ∅)` is the SAME door that refuses `(3, ∅)` —
+  "empty Why", not "negative count" — so retractions inherit D0110's discipline for free.
+  A wrapper would have to re-derive that discipline in a second place.
+reversibility: >-
+  Reversible in principle — a wrapper could be introduced later — but the frozen laws are
+  written against same-semiring deltas (L3.1–L3.4 construct them as `Rel`s), so reversing
+  it after m3-laws-freeze is a supersession, not an edit.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§2.1 (delta-capability, B refused) and §3.1 (a delta is a Rel)."
+  - type: manifest
+    target: tests/laws/m3/test_l3_delta.py
+    strength: enforced
+    detail: >-
+      L3.1 asserts delta-capability is declared and `B` refused by name; L3.3 asserts a
+      retraction is witnessed and an unwitnessed one refused at construction. Both drive
+      `_delta_model.py::check_delta_algebra`.
+links: [D0110, D0109, D0158]

@@ -1,0 +1,73 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0163
+title: "The executor is per-node with a dead-only ledger and an anti_join contagion rule — the pre-freeze validation finding that replaced a drafted retired-address mechanism"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  The incremental executor (docs/specs/m3.md §7) is PER-NODE, caller-composed — no graph
+  object. `DeltaNode` is a declared operator application whose descriptor is the content
+  address of its declared form; state is a content-addressed `incstate/1` value holding
+  the node's integral refs; every step is its own derivation via the existing
+  `derivation_id` over `(step descriptor, state ref, ledger ref, sorted delta refs)`, so
+  `TraceStore`/`AlwaysRebuild`/`VerifyingTrace` are reused unchanged — one derivation, one
+  output; a replayed stream hits traces; a reordered stream is a different (correct)
+  sequence of derivations. L4's "random composite graphs" live in the frozen model's plan
+  interpreter, not in a runtime graph object.
+  .
+  THE LEDGER carries ONE list, `dead`: srcrow refs whose net count is zero. An arrival
+  removes its ref BEFORE the source's `apply` (resurrection); a retraction that empties a
+  row adds its ref after. The pre-implementation ordering — apply first, then update
+  `dead` — was WRONG, and the model's own `retract-rearrive` stream caught it during
+  pre-freeze validation: applying first let the valuation kill the very witness the
+  re-arrival carried, and the witnessed-row alarm fired on a lawful stream.
+  .
+  THE CONTAGION RULE. A node is delta-maintained iff no `anti_join` lies at or below it;
+  `anti_join` and every node above it REPLAY over their children's integrals each tick
+  (emitting Δout as a `diff` for the record). This too was found rather than designed: the
+  spec's first draft carried a second ledger list, `retired` anti_join citation addresses,
+  and maintained `anti_join` by diff-and-apply like `distinct`. The model refuted it — an
+  `interleave` stream over `join-then-anti` — because the conjunction is the one operation
+  that EXTENDS a support set: its empty→non-empty transition mints a witness that strictly
+  contains the empty-era witness (frozen L2.6 clause 2: an empty right is cited by
+  nothing), the dominated stale set carries no dead atom to filter on, and antichain
+  normalisation silently keeps the stale claim. A semilattice cannot subtract, so
+  apply-maintenance through `anti_join` is unsound; replaying is the honest rule, priced by
+  BRIEF §10. The unsound variant is kept as the mutant `antijoin-delta-maintained`, and
+  the `right-moves` perturbation stream draws the superseding-address case on purpose
+  (D0118's rule paying for itself a second time). With replay, a superseded address never
+  reaches an integral, so the `retired` list has nothing to do and is gone.
+rationale: >-
+  Recorded as much for HOW it was found as for what it says. Two of this milestone's
+  load-bearing decisions — the ledger's write order and the anti_join contagion rule — were
+  wrong in the spec's first draft and were corrected by running the model against its own
+  streams before the freeze, not by rereading the DBSP paper. That is the method D0095 and
+  the produce-the-failure discipline name, applied to a spec instead of a green gate: the
+  model exists so a design error has somewhere smaller to be found than a random pipeline,
+  and here it found two. A record that presented the final design as if it were the first
+  draft would teach the wrong method.
+reversibility: >-
+  The executor surface (`DeltaNode`, `advance`, `Ledger`) is pinned by L3.15 and the
+  contagion rule by L3.12; both are frozen. The per-node choice is reversible only by
+  superseding those laws. The corrections this record describes are already in the frozen
+  model and spec — they are history, not pending work.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§6 (the dead-only ledger, the write order) and §7 (per-node executor, the contagion rule)."
+  - type: manifest
+    target: tests/laws/m3/test_l3_executor.py
+    strength: enforced
+    detail: >-
+      L3.15 pins `DeltaNode`/`advance`/`Ledger` and the one-derivation-one-output,
+      replay-deterministic, tampered-trace-raises behaviours (VALIDATION_REASON: machinery).
+  - type: manifest
+    target: tests/laws/m3/test_l3_graph.py
+    strength: enforced
+    detail: >-
+      L3.12 exercises the contagion rule end to end and L3.10 the ledger's `dead` set;
+      drives `_delta_model.py::check_graph_convergence`/`check_convergence`, which kill
+      `antijoin-delta-maintained` and `no-ledger`.
+links: [D0095, D0118, D0158]

@@ -1,0 +1,59 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0155
+title: "M3 is the delta executor: the calculus and the incremental executor L2–L4 need, and the five things it deliberately is not"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  M3's scope, fixed at Session A and frozen with docs/specs/m3.md, the D0125 precedent
+  one milestone on.
+  .
+  IN. (1) The delta calculus in `tannen.kernel.delta` — `negate`, `diff`, `apply` with a
+  pinned normalisation order (D0156, D0157), and the per-operator delta rules derived from
+  declared algebra, never hand-written (BRIEF P5). (2) The incremental executor
+  `tannen.incremental` over the M1 store/trace machinery, with the ledger (D0163). (3) The
+  answer D0109 recorded as owed (D0158). (4) Arrival-perturbation generators (D0130's rule
+  again). (5) Laws L3.1–L3.16. (6) The two M2 red-team closures D0142 routed here —
+  `why_slots` (RT-M2-04, D0161) and the `Why` encode gate (RT-M2-07, D0162).
+  .
+  OUT, each named so a reader does not go looking. Performance of any kind: the
+  replacement maintenance of the non-linear operators is deliberately unoptimised, and
+  BRIEF §10 forbids the work before M5. Recursion and fixpoints: DBSP's recursive circuits
+  have no graph object here to run on (D0163 keeps the executor per-node, caller-composed).
+  N[X]/Z[X] provenance: the count-of-derivations semiring is post-M5, and D0157 names it as
+  the structure whose absence bounds what `Why` can do under retraction. Oracles, captures,
+  SpendGuard and the R2 backend are M4; the Grade-S governor wire is M4 at the earliest
+  (D0088, unchanged). Renavon inputs are M5 and a Tier-C door regardless. The columnless
+  unit relation m1 §3 reserved "for when M3 needs it" is NOT needed — a delta shares its
+  relation's schema and the empty delta is `Rel(schema, [])` — and global aggregates stay
+  out, m1 §4.1's refusal unchanged.
+rationale: >-
+  Recorded because "M3 delta executor (L2–L4, arrival-perturbation generators)" is BRIEF
+  §8's whole sentence and everything above is an inference from it. The inference worth
+  defending is that the executor stays per-node rather than growing a circuit runtime: L4
+  asks for "random composite graphs", and the temptation is to build a graph object to run
+  them on. The graphs live in the frozen model's plan interpreter instead (the M2
+  precedent), and D0163 records why. The out-list is longer than the in-list for D0125's
+  reason: three exclusions — performance, a graph runtime, N[X] — are each a plausible next
+  step that would quietly widen the milestone, and naming them costs a paragraph now and
+  saves the argument later.
+reversibility: >-
+  Scope is the most reversible thing in a milestone until its laws are frozen, and after
+  the freeze not reversible at all — which is why it is recorded before the tag. Nothing
+  here binds M4.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: >-
+      The spec this record fixes the scope of, frozen at m3-laws-freeze. Its scope
+      paragraph carries the in/out lists this record defends.
+  - type: file
+    target: BRIEF.md
+    strength: documentary
+    detail: >-
+      §8 ("M3 delta executor (L2–L4, arrival-perturbation generators)"), §6 (L2–L4's
+      wording), P5 (incrementality derived not hand-written) and §10 (no performance work
+      before M5) are the sentences this scope is derived from.
+links: [D0109, D0114, D0125, D0130, D0142]

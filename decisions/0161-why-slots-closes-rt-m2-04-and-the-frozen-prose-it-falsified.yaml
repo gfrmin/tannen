@@ -1,0 +1,68 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0161
+title: "why_slots locates every Why, closing RT-M2-04; the frozen M2 prose it falsified is a documentary defect, not a retired law node"
+tier: A
+date: "2026-09-04"
+risk_flags: [governance-paths]
+decision: >-
+  RT-M2-04 (docs/redteam/2026-09-01-m2-boundary.md; routed to M3 by D0142) found that the
+  M2 witnessed-row door locates its `Why` with `why_slot`, which checks self/left/right in
+  fixed order and returns AT MOST ONE location. So `product(Why, Why)`,
+  `product(Z*Why, B)`, `product(Z, Z*Why)` and `product(Z*Why, Z*Why)` each carry a `Why`
+  the door never inspects, and frozen docs/specs/m2.md §3's claim that the invariant holds
+  "under any semiring carrying a `Why`" is stronger than the shipped check.
+  .
+  THE FIX (docs/specs/m3.md §2.2): `why_slots(S)` returns EVERY `Why` location by recursive
+  descent over the product structure; the witnessed-row check refuses a surviving row if
+  ANY located `Why` is empty. `why_slot` survives as the single-slot accessor defined over
+  `why_slots`. `anti_join` under a multi-`Why` semiring is refused BY NAME — its absence
+  witness conjoins one address into "the" `Why`, and two `Why` slots give that convention
+  two inequivalent readings, so a law rather than slot order must decide. The shipped
+  single-slot behaviour is kept as the mutant `why-slot-first-match`, the
+  `antijoin-disjunctive` precedent exactly. L3.13 freezes all of it.
+  .
+  WHAT DID AND DID NOT NEED SUPERSEDING. No frozen law NODE asserted the false universal:
+  the frozen corpus constructs only `product(Z, Why)` and `product(Z, Z)` (verified by
+  grep before this freeze), so every frozen law is true of the semirings it actually
+  builds. What was falsified is frozen PROSE — m2.md §3's "any semiring carrying a `Why`"
+  and the §5.2/§2.2 phrasings that lean on it. Prose is not a node; the supersession
+  machinery (D0128) retires law nodes, and running it against prose would be a category
+  error. So the correction is: this record, stating the enforcement was narrower than the
+  statement; the claim carried forward at its TRUE strength by the new frozen law L3.13;
+  and `governance/laws.yaml`'s `pending` list left empty (D0164). The frozen bytes of
+  m2.md are not edited — they cannot be — and the record of what they overclaimed is part
+  of the record.
+rationale: >-
+  Filed with the `governance-paths` risk flag because it is a correction to a frozen,
+  owner-relevant surface, and because a reader must understand why NO laws.yaml entry
+  accompanies a "the frozen spec was wrong" finding. The distinction — node versus prose —
+  is the whole point: D0128's mechanism exists for a law that turns out wrong, and this is
+  a law that was RIGHT about everything it tested and a sentence that promised more than any
+  law tested. The honest closure is a stronger new law plus a record, not a ceremonial
+  retirement of a node that never failed.
+reversibility: >-
+  The fix lands in unfrozen kernel code (`semiring.why_slots`, `rel`'s check) at Session B
+  and is reversible there; the CLAIM is frozen into L3.13. The frozen m2 prose stays as it
+  is by construction — this record is the only durable correction available for it.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§2.2 (why_slots, the multi-Why refusals, the frozen-prose defect)."
+  - type: manifest
+    target: tests/laws/m3/test_l3_door.py
+    strength: enforced
+    detail: >-
+      L3.13 asserts `why_slots` finds every `Why`, the door fires at every position, and
+      `anti_join` refuses multi-`Why` by name; drives `_delta_model.py::check_doors`, which
+      kills `why-slot-first-match`.
+  - type: file
+    target: docs/specs/m2.md
+    strength: documentary
+    detail: >-
+      The frozen prose this record corrects: §3's "any semiring carrying a `Why`" was an
+      overclaim against the shipped single-slot locator. Documentary because m2.md is
+      frozen and no guard reads prose — the correction lives here and in L3.13, not in an
+      edit.
+links: [D0128, D0142, D0164]

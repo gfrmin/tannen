@@ -1,0 +1,57 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0160
+title: "aggregate has two derived delta forms — replacement over a Monoid, subtractive over an AbelianGroup — and their agreement is the law where P5's abelian-group clause engages"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  `aggregate`'s delta rule has two forms (docs/specs/m3.md §4), by the algebra the caller
+  declared:
+  .
+  Over a `Monoid` — the only algebra M1's `aggregate` accepted — the rule is REPLACEMENT:
+  recompute the fold over the new input integral, and the parent's delta is
+  `diff(out_new, out_old)`. A bare monoid has no inverse, so a retracted contribution
+  cannot be folded out; recomputing the group's value is the only sound move, and BRIEF §10
+  prices it.
+  .
+  Over a declared `AbelianGroup` the rule is SUBTRACTIVE: each touched group's folded value
+  is maintained by folding arriving contributions in with the group op and retracted ones
+  out with the declared `inverse`, never recomputed from the whole group. This is where
+  BRIEF P5's "abelian group for subtractability" ENGAGES — `tannen.kernel.algebra`'s
+  `AbelianGroup` has existed since M1 and been used by nothing; M3 is its first consumer,
+  and its declared `inverse` becomes load-bearing here.
+  .
+  The law (L3.8) is that the two forms AGREE, and both agree with the reference one-shot
+  fold, byte-identically, in both stream directions. The declared group laws are tested
+  DIRECTLY (BRIEF L3: "declared-monoid laws tested directly"), which is what gives the
+  mutant `group-inverse-wrong` — a subtractive aggregate over a broken `inverse` — somewhere
+  to die: without the direct group-law test and the replacement/subtractive agreement, a
+  wrong inverse would pass every convergence check that never happened to retract a
+  contributor. D0114's lesson, one operator over: the model half catches nothing here; only
+  the mutant discriminates.
+rationale: >-
+  Two forms rather than one because the algebra genuinely determines which is available: a
+  reader might expect subtractive maintenance always, and it is unsound for a monoid with no
+  inverse (min, max, first). Recording the split names when each applies and pins the
+  agreement law that makes the subtractive form trustworthy. It is also the record that
+  finally gives `AbelianGroup` a reason to exist, which D0106's "governance-mechanics ratio"
+  worry would otherwise flag as dead surface.
+reversibility: >-
+  Frozen into L3.8. Reversible only by supersession. The subtractive form is an
+  optimisation of the replacement form's result, so dropping it later would narrow the API
+  without changing any answer — but the agreement law is what documents that, and it is
+  frozen.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§4's two aggregate rows."
+  - type: manifest
+    target: tests/laws/m3/test_l3_integrated.py
+    strength: enforced
+    detail: >-
+      L3.8 asserts subtractive ≡ replacement ≡ the reference fold and the declared group
+      laws hold under property test; drives `_delta_model.py::check_integrated_ops`, which
+      kills `group-inverse-wrong`.
+links: [D0114, D0158]

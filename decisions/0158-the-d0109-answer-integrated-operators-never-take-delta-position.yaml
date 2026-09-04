@@ -1,0 +1,59 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0158
+title: "The D0109 answer: integrated operators never take delta position, and the cone raises become the executor's tripwire rather than expiring"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  D0109 recorded that `anti_join` raising on a delta relation "is not an answer" and that
+  M3 owes one before it runs `anti_join` over a delta; D0114 sharpened it to "an answer,
+  not a re-reading of a law that was never asked the question". The answer
+  (docs/specs/m3.md §3.4):
+  .
+  A RAW DELTA NEVER TAKES OPERAND POSITION at `distinct`, `aggregate`, `anti_join`, or
+  `to_bag`. Negative counts are lawful in DELTA POSITION ONLY — the arguments of `negate`,
+  `diff`, `apply`, and the linear and bilinear rules — and the integrated operators consume
+  INTEGRALS, which the executor keeps inside the non-negative cone at every prefix of every
+  stream (L3.4). For a non-monotone operator the delta rule is replacement over integrals
+  (D0160's aggregate forms, and the contagion rule D0163); retractions are applied to the
+  right integral BEFORE absence is judged, and absence is judged against the resulting
+  cone-valued relation — the only relation about which "this key is not there" is a
+  proposition rather than a guess.
+  .
+  So the cone raises at `Z.multiplicity`, `Z.collapse` and `anti_join`'s presence test DO
+  NOT EXPIRE. They are RE-COMMISSIONED: the guard that a delta reached an integrated
+  operator is now the guard that the executor kept its promise, and it must still fire. The
+  mutant `antijoin-eats-delta` feeds the delta in anyway — judging presence by the sign of
+  a count instead of the bag image of an integral — and L3.7 requires it to die; that is
+  D0114's demanded answer made a live assertion rather than a re-reading.
+  .
+  DELIBERATELY NOT DONE: any definition of `anti_join`, `distinct` or `aggregate` that
+  takes a delta as an operand and returns something. D0109 declined to pre-decide it and
+  was right to: a guess frozen into an operator's behaviour before the milestone that needs
+  it could argue with it is worse than a refusal. The answer is about WHERE negatives are
+  lawful, not a meaning for the question the refusal made unanswerable.
+rationale: >-
+  D0109's own words — "M3 changes the cone assumption in a distant file and nothing
+  connects that change to this operator" — are the failure this record closes: the
+  connection is now a frozen law (L3.7) and a mutant that dies. The non-obvious part, worth
+  the record, is that the ANSWER is to keep the refusal, not remove it. A reader expecting
+  M3 to "teach anti_join about deltas" would lift the raise; the raise is the tripwire, and
+  lifting it is precisely the mutant.
+reversibility: >-
+  Frozen into L3.7. Reversing it — teaching an integrated operator to eat deltas — is a
+  supersession and would also require superseding L1.2's negative refusals, which is the
+  cost D0156 keeps by not lifting them.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§3.4 (the D0109 answer)."
+  - type: manifest
+    target: tests/laws/m3/test_l3_integrated.py
+    strength: enforced
+    detail: >-
+      L3.7 asserts replacement reaches the reference AND a raw delta at each integrated
+      operator or `to_bag` still raises by name; drives
+      `_delta_model.py::check_integrated_ops`, which kills `antijoin-eats-delta`.
+links: [D0109, D0114, D0156, D0160, D0163]

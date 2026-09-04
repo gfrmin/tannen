@@ -1,0 +1,146 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0154
+title: "The M3 boundary sitting queue, opened before the spec so that the six defects D0152 records — and three more the M2 close left — surface where the owner reads"
+tier: C
+date: "2026-09-04"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE M3 BOUNDARY SITTING, non-blocking (BRIEF §9.2): work continues around
+  every item below. Opened at the START of the milestone, before docs/specs/m3.md exists,
+  for D0131's reason stated one milestone later: the digest's "Requires owner" section is
+  a query over TIER-C records, and the M2 sitting's defects are recorded in D0152 and
+  D0153 — both Tier A, both therefore invisible in that section however loudly their
+  risk_flags render elsewhere. This record is the surface those items need. Later M3
+  items arrive as their own records linking here, never as edits to this one (D0045).
+  .
+  (1) FIRST, D0152 ITEM 6 — THE CUSTODIAN NEVER RUNS THE FIXTURE THE M2 SITTING
+  INSTALLED. `scripts/custodian.sh` carries no `poison` line for
+  `tests/poison/oracle-shadow-model/`, the fixture closing RT-M2-01, the M1->M2 pass's
+  single critical finding; it is the only one of the corpus's fourteen fixtures without
+  one, so the custody floor reports "intact" without ever exercising it. The cause is
+  structural (step 6 installs the custodian from the PREVIOUS milestone's proposals dir,
+  and M2's shipped no draft), which is why this session ships
+  docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh — a draft carrying the fix
+  in D0152's recommended shape: the poison list DERIVED from `tests/poison/*/`, refusing
+  a directory with no invocation (D0095 half (2), the same move D0142 made for the
+  oracle map). Installing it is the sitting's owner-signed act; the draft existing is
+  what makes step 6 reachable at all.
+  .
+  (2) D0152 ITEMS 1-5, IN ITS OWN NUMBERING. The D0141 retarget guard that re-arms on
+  its own success and stops a resumed sitting (`boundary_sitting.sh:1461-1462`); step
+  4f's skip-guard reading one of the three files its decline branch reverts (`:694` vs
+  `:786`); the receipt signed without checking `ssh-keygen -Y sign`'s exit status, with
+  a success line printed regardless (`custodian.sh:283-285`); the driver having no lock
+  though the sitting is a single-run ceremony (two concurrent runs produced D0153); and
+  the installed fixture's README still opening "**needs patch**" while naming a
+  reproduction path the sitting's own `git mv` deleted.
+  .
+  (3) D0153 — `custodian.sh:268` PICKS THE PREVIOUS RECEIPT WITH `tail -1`, AND `:273`
+  DROPS THE CHAIN LINE ON ANY SAME-DAY RE-RUN, silently, because `$prev` then equals the
+  receipt being written; `check_receipts` parses only `- HEAD:` so no guard notices a
+  missing `previous receipt` line. Same file as item (2)'s third clause, same sitting.
+  .
+  (4) D0146 ITEM 2 — `custodian.sh:66` AND `check_manifest.py:113` DISAGREE ABOUT
+  `__pycache__`. A `.pyc` written under `tests/poison/` leaves check_manifest green and
+  the custodian red at `make verify`'s LAST step, ~37 minutes in, with a message ("not
+  manifested") that invites the wrong fix. The one-line `find` exclusion is owner
+  territory because the custodian is.
+  .
+  (5) D0148 ITEM 5 — A DECLINED SITTING IS NOT A NO-OP. The custodian writes and signs
+  the receipt before the owner is asked to commit anything, so abandoning a decline
+  leaves a signed receipt untracked, which step 0 clause (b) reads as sitting artifacts:
+  the NEXT run starts `RESUMED=1` and skips the precondition gate. Moving the receipt
+  behind a confirm reorders the receipt-then-tag argument (D0071), which is exactly why
+  it needs the owner and a sitting rather than a quick edit.
+  .
+  (6) `governance/tag-roles.yaml` `required_tags` LAGS FOR THE THIRD TIME (D0095, then
+  D0131 item 5, now here): `m3-laws-freeze` is minted this session under delegation 1
+  and cannot be added to the enumeration at :46-53 by the builder. The recurring shape —
+  an enumeration extended only at the moment its extender may not edit it — is D0095
+  half (2)'s argument for deriving the set; until that lands, the row must be added at
+  every boundary by hand.
+  .
+  (7) `scripts/check_laws.py` HAS NO POISON FIXTURE. The M2 sitting added it to the
+  custody set (D0131 items 3-4, applied at step 4e), which makes it a guard the owner
+  signs for — and it is the only custody-set guard with no fixture under `tests/poison/`
+  and no `poison` line in the custodian, so BRIEF §9.1's guard-liveness-by-poison
+  discipline does not cover the guard that can retire a frozen law. Verified this
+  session: `grep check_laws scripts/custodian.sh` is empty and no `tests/poison/*`
+  directory targets it. A fixture (e.g. a supersession entry whose successor does not
+  exist, which check_laws must refuse) is a `tests/poison/` install — author-key
+  territory twice over.
+  .
+  (8) D0143'S `event()` FOLLOW-UP, THE D0117 RESIDUE. D0130's `event()` counts are the
+  quantity D0117 asks evidence records to carry, and they are reachable — but hypothesis
+  writes its own retry bookkeeping into the same undifferentiated dict, so wiring them
+  in today records a wall of version-dependent internals beside the law's declared
+  shapes. Any clean answer touches `governance/schemas/evidence-record.schema.json`,
+  which is frozen, sealed and custody-set — three separate reasons it waits here.
+  .
+  (9) COSMETIC, FOR WHOEVER PREPARES THE M3 DRIVER: the M2 driver's transcript lines
+  hardcode "712 tests" where the suite now runs 717; a re-run or a copied M3 driver
+  inherits the stale count. Recorded so the M3 drafting session greps for it rather than
+  rediscovering it.
+rationale: >-
+  Filed as Tier C for D0131's reason, which held: the tier is what determines
+  visibility, not whether the builder is asking for a decision. BRIEF §9.1's digest is
+  exception-only, and a Tier-A record carrying an owner-key item is invisible by
+  construction in the one section the owner is committed to reading. D0152 says in its
+  own decision text that its six items "are recorded and queued to the M3 boundary
+  sitting"; this record is the queue that sentence assumes, and without it the six items
+  surface as two risk-flagged titles.
+  .
+  Opened before the spec rather than with the close because of D0045: fields are
+  immutable, so a queue written at the end holds only what was remembered then, while
+  one written at the start accumulates joiners by link. D0105 and D0131 are the
+  precedent at both prior boundaries, and D0131's item (1) — the item that would
+  otherwise have been lost entirely — is the standing argument for opening early.
+  .
+  Item (1) is listed first deliberately: it is the only item whose absence weakens the
+  custody floor itself rather than the ceremony around it, and it is the one item this
+  session can materially advance without touching author-key territory, by shipping the
+  draft the M2 sitting lacked. The draft is a proposal in docs/proposals/ — neither
+  sealed nor custody-set — and enforces nothing until the owner installs it, which is
+  the same strength D0143 claimed for the M2 driver draft and the reason every binding
+  below is documentary.
+reversibility: >-
+  A queue, not a change: nothing here alters an artifact, and declining any item at the
+  sitting costs only this record's accuracy. What is not reversible is skipping the
+  queue: the M1 sitting's carry list is how RT-M2-01 reached M2 still open, and D0152
+  item 6 is how a critical fixture reached the sealed corpus with the custody floor
+  never running it. Item (1) left undone once more would make that two sittings in a
+  row.
+status: blocked-on-owner
+bindings_count: 4
+bindings:
+  - type: file
+    target: scripts/custodian.sh
+    strength: documentary
+    detail: >-
+      Carries items (1), (2)'s receipt-signing clause, (3) and (4) at the lines cited.
+      Documentary because every one of them is an absence or an unchecked status this
+      file cannot detect in itself, and because the file is custody-set and author-key
+      territory — the fact that makes this queue necessary.
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Items (2) and (5): the retarget guard, the skip-guard subset, the missing lock,
+      and the decline-path receipt ordering all live here. Custody-set
+      (governance/custody.sha256), so every fix is the owner's.
+  - type: file
+    target: governance/tag-roles.yaml
+    strength: documentary
+    detail: >-
+      Item (6): `required_tags`, short of `m3-laws-freeze` from the moment this
+      session's freeze tag is minted until the sitting extends it.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh
+    strength: documentary
+    detail: >-
+      Item (1)'s ready draft, written this session: the live custodian with the poison
+      list derived from tests/poison/*/ and a refusal on a directory with no
+      invocation. Documentary and it must stay documentary until the owner installs it
+      — a drafted patch awaiting owner application enforces nothing (D0143's words for
+      the same situation).
+links: [D0045, D0095, D0105, D0117, D0131, D0141, D0142, D0143, D0146, D0148, D0152, D0153]

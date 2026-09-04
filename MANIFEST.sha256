@@ -76,6 +76,18 @@ f138cfe1ed3c5b970f923d2ee5d4569ab1a63a539f61bc98e9ed5a7fdf26ef46  tests/laws/m2/
 bded0ca525901d99b942203378ec34fcd66cef39c76c406cc8a86c9e90311cb1  tests/laws/m2/test_l2_lineage.py
 ef0de7d06f893d85861792f5f7be9a4598dff2daf200fab941808d2f2be38962  tests/laws/m2/test_l2_provenance.py
 409b89c1c091e6c5a6f62a77f5f98813af17dea43ae10a8b78280477fb6d25a2  tests/laws/m2/test_l2_sources.py
+27116aecdc237121f6c46df46504c978b3d3c8fac3f6c5d40e4c80651721c3e2  docs/specs/m3.md
+9bb98eb1400fd95be636c0a4baba86d82d1f7ad9d666cfdb2fc8a2f8d7686843  tests/laws/m3/_delta_model.py
+c4abdda90ff3e1023fd41f673041a12039acbe986f19a9781fa2294b72fddd79  tests/laws/m3/_delta_subject.py
+da55ebdb37be9b518d54dfc2e1204814e3cb924f7ed2e48fc6c8ec2d569bad17  tests/laws/m3/test_l3_delta.py
+885c068f5767a322f30000f3e9ae1f6e6c4f1eb55bbf0c571c37604329e948ad  tests/laws/m3/test_l3_linear.py
+6a084fbb7481a7b69f9d57a9573ac709dd89b71f8be547f7e145f6d96fddc1bb  tests/laws/m3/test_l3_join.py
+93936c1a66bdfe3eaed062cb7a8c8818118385bb542b578f6da1fcfeac69eae4  tests/laws/m3/test_l3_integrated.py
+e701cdeff31c8bb4202da7f0dbf67d00c2f25216d23f3aeee6d3d3cf01d61f5a  tests/laws/m3/test_l3_convergence.py
+67600eaf4b39d11eeb379ba0e03cffedeb89a99d12687d38d7d231bac26b1b81  tests/laws/m3/test_l3_graph.py
+16645f44bb887055632ac7e651e7fe71e7ed81ce633d97200a1add8bb8608f90  tests/laws/m3/test_l3_door.py
+b671ca777ae85cdd73bf60da6f36221564a3dd32c7c1b53048005adcf7a77c1e  tests/laws/m3/test_l3_executor.py
+aa547ae13435f3fd641697a56b18f5053269080ebf477d79909df852df2fb425  tests/laws/m3/test_l3_differential.py
 
 # --- supersession notes (D0106 ruling 2; D0128) ------------------------------
 # tests/laws/m1/test_l1_rel.py

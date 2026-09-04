@@ -6,11 +6,13 @@ exactly the moment it becomes unrewritable, so `pytest tests/laws/<m>` prints th
 a check that the laws do NOT run; nothing checked that they could ever pass. D0093 is what
 that hole produced.
 
-This file is the other half. It imports `tests/laws/m2/_model.py` directly — no tannen, no
-sentinel — and runs every model-checked family against the model and against its stated
-mutant. It therefore runs at EVERY commit, including the freeze commit at which every M2
-law is a skip, which is the whole point: the assertions are exercised before the code they
-are about exists.
+This file is the other half. It imports each milestone's frozen model directly — no
+tannen, no sentinel — and runs every model-checked family against the model and against
+its stated mutant. It therefore runs at EVERY commit, including a freeze commit at which
+every law of that milestone is a skip, which is the whole point: the assertions are
+exercised before the code they are about exists. M2 (`tests/laws/m2/_model.py`) and M3
+(`tests/laws/m3/_delta_model.py`) are both driven here; a new milestone's model joins
+`MODELS` below.
 
 It also drives `scripts/check_laws.py`, which since the M2 boundary sitting is a
 `make verify` step in its own right (D0131 item 4). Driving it from pytest as well is
@@ -31,22 +33,30 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-MODEL_PATH = REPO_ROOT / "tests" / "laws" / "m2" / "_model.py"
 REGISTRY = REPO_ROOT / "governance" / "laws.yaml"
 
+#: Each milestone's frozen model, by the unique module name its own directory gives it.
+#: A bare stem must be unique across milestones or `plugin.py`'s oracle-shadow guard
+#: refuses the run (RT-M1-01/RT-M2-01), which is why m2 is `_model` and m3 is
+#: `_delta_model` (D0165). A new milestone's model joins this list.
+MODEL_PATHS = {
+    "m2": ("_m2_model", REPO_ROOT / "tests" / "laws" / "m2" / "_model.py"),
+    "m3": ("_m3_delta_model", REPO_ROOT / "tests" / "laws" / "m3" / "_delta_model.py"),
+}
+
 #: Enough draws for every mutant to die, measured rather than guessed: the whole matrix
-#: runs in about five seconds at this budget. `make laws-sweep` is where the search goes
-#: wider; this is a gate, and a gate that costs a minute gets disabled.
+#: runs in a handful of seconds at this budget. `make laws-sweep` is where the search
+#: goes wider; this is a gate, and a gate that costs a minute gets disabled.
 EXAMPLES = 25
 
 
-def _load_model():
-    """Import the frozen model by path. `tests/laws` carries no `__init__.py`, and
+def _load_model(module_name: str, path: Path):
+    """Import a frozen model by path. `tests/laws` carries no `__init__.py`, and
     `sys.dont_write_bytecode` keeps a `__pycache__` out of a sealed directory."""
     previous = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
     try:
-        spec = importlib.util.spec_from_file_location("_m2_model", MODEL_PATH)
+        spec = importlib.util.spec_from_file_location(module_name, path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
@@ -54,38 +64,47 @@ def _load_model():
         sys.dont_write_bytecode = previous
 
 
-M = _load_model()
+MODELS = {m: _load_model(name, path) for m, (name, path) in MODEL_PATHS.items()}
+
+#: (milestone, family) and (milestone, mutant) pairs, so a failure names the milestone.
+_FAMILIES = [(m, f) for m, M in MODELS.items() for f in M.FAMILIES]
+_MUTANTS = [(m, mut) for m, M in MODELS.items() for mut in sorted(M.MUTANTS)]
 
 
 # --------------------------------------------------------------- the model and its mutants
 
 
-@pytest.mark.parametrize("family", M.FAMILIES)
-def test_the_model_passes_every_family(family: str) -> None:
+@pytest.mark.parametrize("milestone,family", _FAMILIES, ids=[f"{m}:{f}" for m, f in _FAMILIES])
+def test_the_model_passes_every_family(milestone: str, family: str) -> None:
     """Half one of D0094 §2: the frozen laws' assertions hold against a transcription of
     the spec. D0093 — an axiom demanding a semiring with no zero divisors, frozen into a
     product semiring — fails this on its first run."""
+    M = MODELS[milestone]
     M.run_family(M.MODEL, family, EXAMPLES)
 
 
-@pytest.mark.parametrize("mutant", sorted(M.MUTANTS))
-def test_every_mutant_dies_by_the_check_that_names_it(mutant: str) -> None:
+@pytest.mark.parametrize("milestone,mutant", _MUTANTS, ids=[f"{m}:{mut}" for m, mut in _MUTANTS])
+def test_every_mutant_dies_by_the_check_that_names_it(milestone: str, mutant: str) -> None:
     """Half two, and the half most likely to be dropped as gold-plating: a law that passes
     against a deliberately broken model is not testing what it claims. It is also the only
     half that catches a law which cannot FAIL — a model with no subtraction cannot produce
     the negative L1.9 forbids, so only a mutant that can makes that law say anything.
 
-    `antijoin-disjunctive` is not a hypothetical. It is tannen's own M1 behaviour, kept as
-    a mutant so D0132's defect cannot come back quietly.
+    `antijoin-disjunctive` (M2) and `antijoin-delta-maintained` (M3) are not
+    hypotheticals: the first is tannen's own M1 behaviour, the second is the M3 spec's own
+    refuted first draft, each kept as a mutant so its defect cannot come back quietly.
     """
+    M = MODELS[milestone]
     family = M.CAUGHT_BY[mutant]
     with pytest.raises(AssertionError):
         M.run_family(M.MUTANTS[mutant], family, EXAMPLES)
 
 
-def test_every_family_is_aimed_at_by_a_mutant() -> None:
+@pytest.mark.parametrize("milestone", sorted(MODELS))
+def test_every_family_is_aimed_at_by_a_mutant(milestone: str) -> None:
     """A mutant nobody aims a check at proves nothing, and a family nothing is aimed at is
     a family whose discrimination is unmeasured."""
+    M = MODELS[milestone]
     assert set(M.CAUGHT_BY.values()) == set(M.FAMILIES)
     assert set(M.CAUGHT_BY) == set(M.MUTANTS)
 

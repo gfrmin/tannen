@@ -1,0 +1,70 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0157
+title: "apply's normalisation order is add → cone → group-zero drop → valuation, and byte identity is the L2–L4 equality — earned, not quotiented"
+tier: A
+date: "2026-09-04"
+risk_flags: []
+decision: >-
+  `apply(base, delta, dead)` is pointwise addition followed by three normalisation steps
+  IN THIS ORDER (docs/specs/m3.md §3.3): (1) the CONE CHECK — a row driven below the
+  non-negative cone is an over-retraction, refused by name, which is where m1 §4.4's
+  promised loud break lands, at the operation whose arguments made the question askable;
+  (2) the GROUP-ZERO DROP — a row zero in every group component is dropped, `(0, {{r}})`
+  included, because the reference has no such row; (3) the VALUATION — every surviving
+  row's every `Why` is filtered by `surviving(w, dead)` (M2 §4, now kernel code). The
+  criterion for step 2 is the group components, NOT the bag image: a positive count whose
+  `Why` is empty must fall through to be refused by the witnessed-row invariant, never be
+  dropped as bag-empty. Construction is untouched — a caller-built `(0, {{r}})` is still
+  retained (frozen L1.4/D0093); `apply` is a new operation choosing what to EMIT.
+  .
+  L2, L3 and L4 assert CONTENT-ADDRESS equality — the same byte identity L1 gave replay
+  and the golden corpus pins — not a quotient. For pure arrivals it is free: a `srcrow/1`
+  ref depends on `(source, row)` only, so any partition unions identical refs idempotently
+  while counts add commutatively. For retractions it is EARNED by step 3: `Why` is PosBool
+  with no subtraction, so pointwise addition leaves the cumulative run's witnesses where
+  the reference has the net run's, and `surviving(w, dead)` recovers the reference exactly
+  on the positive fragment (the residue theorem, L3.11). `anti_join` sits outside that
+  fragment and earns byte identity by replay instead (D0163's contagion rule).
+  .
+  REJECTED: equality up to bag image (a quotient). It states less than is true and
+  silently abandons BRIEF §5.5's promise that the default pipeline's provenance survives a
+  delta — L2.3 would become meaningless for any integral that ever saw a retraction.
+  REJECTED: one-sided witness containment ("incremental ⊇ reference"). Honest but weaker,
+  it breaks the L1 byte-identity brand at exactly the milestone whose executor is the
+  product, and it needs the same residue machinery to STATE that the valuation needs to
+  RUN. The exact-provenance-under-retraction limit is recorded rather than hidden: a
+  group-valued (Z[X]-shaped) provenance would subtract witnesses natively and need no
+  valuation, and that is the post-M5 N[X] seam.
+rationale: >-
+  The order is load-bearing and non-obvious, so it is pinned rather than left to the
+  implementer. Put the group-zero drop before the cone check and an over-retraction that
+  happens to land on zero would vanish instead of being refused; key step 2 on the bag
+  image instead of the group components and a witnessed-but-uncounted row would be dropped
+  before step 3's alarm could fire. The equality choice is the milestone's whole ambition:
+  a delta executor that only kept the bag image right would be a Z-set engine, and tannen's
+  claim is that provenance is incremental too (P4). Byte identity is how that claim is
+  checkable rather than aspirational.
+reversibility: >-
+  The order and the equality are frozen into L3.2–L3.4, L3.11 and L3.12; changing either
+  after m3-laws-freeze is a supersession. The rejected alternatives are recorded so a
+  future reader weighing them starts from why they were declined.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§3.3 (apply's order), §5 (byte identity, both rejected alternatives)."
+  - type: manifest
+    target: tests/laws/m3/test_l3_delta.py
+    strength: enforced
+    detail: >-
+      L3.2 (apply identities, byte-identical), L3.4 (the cone guard refuses an
+      over-retraction), via `_delta_model.py::check_delta_algebra`.
+  - type: manifest
+    target: tests/laws/m3/test_l3_graph.py
+    strength: enforced
+    detail: >-
+      L3.11 (the residue theorem — `surviving` recovers the reference `Why` exactly) and
+      L3.12 (final integrals byte-identical to the reference), via
+      `_delta_model.py::check_graph_convergence`.
+links: [D0093, D0110, D0158, D0163]

@@ -1,0 +1,53 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0162
+title: "Why.encode re-checks every atom against the ref grammar, closing RT-M2-07 and making frozen m2 §7's totality claim true as written"
+tier: A
+date: "2026-09-04"
+risk_flags: [governance-paths]
+decision: >-
+  RT-M2-07 (routed to M3 by D0142) found that `Why.of` refuses a non-ref atom by name but
+  `_Why.encode` re-checked nothing. Frozen docs/specs/m2.md §7 leans on the `of` refusal
+  for `lineage`'s totality — "a malformed atom … cannot reach a `Rel`" — but a `Why` built
+  by operator arithmetic on a hand-crafted element, or by any future path that skips `of`,
+  could carry a non-grammar atom into `encode`, hence into the canonical form, hence into
+  the store, and `lineage` would then meet the atom §7 says it cannot.
+  .
+  THE GATE (docs/specs/m3.md §2.3): `Why`'s `encode` verifies every atom against the
+  pinned ref grammar and raises by name (provenance-ref-grammar). L3.14 freezes the
+  property at the reachable strength: NO SPELLING puts a non-grammar atom into a `Rel`, a
+  `to_value`, or a content address. The red team measured the gate against the full frozen
+  suite before proposing it — 665 nodes green — so it costs nothing that was ever
+  legitimate.
+  .
+  Like D0161 this makes a frozen PROSE claim true rather than retiring a node: m2 §7's
+  totality sentence and `sources.py`'s totality docstring were true of every path the
+  frozen tests exercise and false of a path they did not. The gate closes the path; the
+  new law states the closed property; no laws.yaml entry is warranted (D0164).
+rationale: >-
+  Filed with `governance-paths` for D0161's reason — a correction touching a frozen,
+  owner-relevant surface. The gate is the cheaper and more complete half of RT-M2-07's
+  remedy: the deeper fix the red team named (package-qualified imports of the oracle) is a
+  different finding (RT-M2-01, D0165's territory); this one is a one-line re-check the red
+  team already proved free, so it lands as a law rather than a queue item.
+reversibility: >-
+  The gate lands in unfrozen kernel code (`semiring._Why.encode`) at Session B; the CLAIM
+  is frozen into L3.14. Reversible only by supersession of L3.14.
+status: accepted
+bindings:
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: "§2.3 (the encode gate)."
+  - type: manifest
+    target: tests/laws/m3/test_l3_door.py
+    strength: enforced
+    detail: >-
+      L3.14 asserts no spelling puts a non-grammar atom into a `Rel`, canonical form or
+      content address; drives `_delta_model.py::check_doors`.
+  - type: file
+    target: docs/specs/m2.md
+    strength: documentary
+    detail: >-
+      §7's totality claim, true of every frozen-test path and false of the `encode`-without-
+      `of` path this gate closes. Documentary: frozen prose, corrected here and by L3.14.
+links: [D0142, D0161, D0164]
