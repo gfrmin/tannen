@@ -1,0 +1,95 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0175
+title: "The M3 red-team report disclosed a fifth absolute home path; the guard went red only once the file was TRACKED, which is D0112's own first bug arriving from the other side — tree redacted, history not, and D0115's count of four is now stale"
+tier: A
+date: "2026-09-05"
+risk_flags: ["public-surface"]
+decision: >-
+  `docs/redteam/2026-09-05-m3-boundary.md:572`, committed at `37df2a2`, quoted the contents
+  of `.venv/.../_editable_impl_tannen.pth` verbatim, which meant quoting an absolute
+  `/home/<user>/…` path. `tests/test_no_pii.py::test_no_new_home_directory_path_is_tracked`
+  now fails on it. The tree is corrected here to the tilde form the guard's own message
+  recommends and the rest of this repository uses; the sentence keeps its point, because
+  what mattered was that the `.pth` names the ORIGINAL tree, not which user owns it.
+  .
+  HOW IT GOT PAST A GREEN SUITE, WHICH IS THE PART WORTH RECORDING. The full suite was run
+  before the commit and reported 828 passed. It was honest and it was blind: the guard scans
+  `git ls-files`, the report was still UNTRACKED at that moment, so the one file the pass had
+  just written was the one file the scan could not see. That is exactly D0112's first bug —
+  "while the file was still untracked `git ls-files` never showed it to the scan, so the
+  suite was green about a file it had never read" — reappearing not in the guard's own source
+  but in the workflow around it. D0112 fixed the guard's blindness to ITSELF and pinned it
+  with `test_the_guard_scans_its_own_source`; nothing pins the more general shape, which is
+  that a pre-commit measurement of a tracked-file guard is a measurement of the PREVIOUS
+  commit. The five pre-commit hooks did not catch it either, and could not: D0112 deliberately
+  made this a test rather than a hook, because `.pre-commit-config.yaml` is custody-set.
+  .
+  NOT DONE, AND EACH REFUSED FOR A REASON. No `KNOWN_DISCLOSURES` entry: the four that are
+  there are declared because they cannot be redacted without rewriting signed history, and
+  this one can simply be written differently — a tolerance list that absorbs anything a
+  tilde would have fixed stops meaning what its four entries mean. Precedent points the other
+  way too and was considered: `docs/redteam/2026-08-24-m0-boundary.md` IS in the list, for
+  "naming the target it was run against". This line does not name a target; it transcribes a
+  `.pth`. No history rewrite: every rewrite invalidates the signed tags and breaks the
+  receipt chain (D0112). No hook added: custody-set, owner's.
+  .
+  SO THE COUNT IS NOW FIVE, IN HISTORY, PERMANENTLY, AND D0115 SAYS FOUR. D0115's audit
+  paragraph reads "FOUR files disclose an absolute `/home/<user>/…` path, in the tree and in
+  history… One letter of username, in four places, permanently", and its argument to the
+  owner is that this is a knowing acceptance rather than a discovery. `37df2a2` makes it five
+  places in history — four in the tree, one now only in a blob. D0045 makes D0115's text
+  immutable, so this record is the correction, and it is filed against the door the owner
+  reads before pushing: whoever signs the publication is accepting five, not four.
+  .
+  The guard is green on the tree again: `uv run pytest tests/test_no_pii.py` = 18 passed,
+  where it was 1 failed / 17 passed before this edit. Both numbers measured, in that order.
+rationale: >-
+  Tier A: one prose line in an unfrozen, uncustodied document, plus this record. It changes
+  no behaviour, no interface and no frozen byte, and it is reversible in the tree — the only
+  irreversible half already happened at `37df2a2` and is what the third paragraph declares.
+  .
+  Filed rather than fixed silently for two reasons. The count in D0115 is an input to a
+  Tier-C door and it is now wrong by one; a correction that lives only in a diff is not an
+  input to anything. And the miss has a shape worth naming — "green before staging is a
+  measurement of the previous commit" — which is the same family as D0112's own first bug and
+  as [[produce-the-failure]]'s standing complaint that a guard believed without being watched
+  failing is a guard about nothing. The general fix (run tracked-file guards against the
+  STAGED set, not the committed set) is not attempted here: the natural home for it is
+  `.pre-commit-config.yaml`, which is custody-set, so it queues to the boundary sitting
+  alongside D0154's items rather than landing in a session that is cleaning up after itself.
+reversibility: >-
+  The tree edit is trivially reversible. The disclosure it responds to is not: the original
+  bytes are in `37df2a2` and will be in any clone, and publication would publish them. That
+  asymmetry is the whole content of this record — the tree can be made to look clean and the
+  history cannot, which is precisely the argument D0112 made for declaring the first four.
+status: accepted
+bindings:
+  - type: pytest
+    target: tests/test_no_pii.py::test_no_new_home_directory_path_is_tracked
+    strength: enforced
+    detail: >-
+      The guard that caught it, and the one that keeps the tree correct from here. Named as
+      the binding because the fix is only as durable as the test: if this assertion is ever
+      loosened, this record's claim that the tree carries four and not five stops being true
+      with nothing to say so.
+  - type: pytest
+    target: tests/test_no_pii.py::test_the_known_disclosures_are_still_there
+    strength: enforced
+    detail: >-
+      The other direction, and the reason no entry was added above: the tolerance list is
+      asserted non-vacuous, so a fifth entry would have to keep disclosing to stay legal.
+      Redacting instead of declaring keeps that list meaning what its four reasons say.
+  - type: file
+    target: docs/redteam/2026-09-05-m3-boundary.md
+    strength: documentary
+    detail: >-
+      The corrected line, at the document it corrects. DOCUMENTARY: the file records the
+      change but detects nothing — the detection is the pytest binding above.
+  - type: file
+    target: decisions/0115-publish-the-repository-tier-c-door-external-bytes.yaml
+    strength: documentary
+    detail: >-
+      The record whose count this supersedes in fact but may not edit (D0045). Bound so a
+      reader arriving at the publication door from the projection finds the correction
+      instead of the stale four.
+links: ["D0115", "D0112", "D0045", "D0116"]
