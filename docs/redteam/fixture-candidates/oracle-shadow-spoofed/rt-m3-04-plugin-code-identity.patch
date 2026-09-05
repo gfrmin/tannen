@@ -1,0 +1,96 @@
+diff --git a/src/tannen/laws/plugin.py b/src/tannen/laws/plugin.py
+index e6de787..c00b019 100644
+--- a/src/tannen/laws/plugin.py
++++ b/src/tannen/laws/plugin.py
+@@ -77,6 +77,66 @@ def _frozen_oracles(root: Path) -> dict[str, list[Path]]:
+     return oracles
+ 
+ 
++def _code_digest(code: Any, digest: Any = None) -> Any:
++    """A content fingerprint of a code object, nested code objects included.
++
++    `repr(co_consts)` is NOT usable here: a nested comprehension's code object reprs with
++    its memory address, so two independent loads of the same file disagree on ten of this
++    repo's sixteen oracle functions. Measured before this spelling was kept.
++    """
++    import hashlib
++    import types
++
++    digest = digest or hashlib.sha256()
++    digest.update(code.co_code)
++    digest.update(repr(code.co_names).encode("utf-8"))
++    for const in code.co_consts:
++        if isinstance(const, types.CodeType):
++            digest.update(b"<code>")
++            _code_digest(const, digest)
++        else:
++            digest.update(repr(const).encode("utf-8"))
++    return digest
++
++
++def _public_callables(module: Any) -> list[str]:
++    """The public names a module exports. Read from the FROZEN reference only — never
++    from the module under test, which controls its own `__all__` and would otherwise
++    shrink the comparison to nothing by declaring `__all__ = []`."""
++    return sorted(
++        name
++        for name in (getattr(module, "__all__", None) or dir(module))
++        if not name.startswith("_")
++    )
++
++
++def _fingerprint_of(module: Any, name: str) -> str | None:
++    """The code fingerprint `module` answers with for `name`, or None if it has no code
++    to answer with (absent, or not a Python-level callable)."""
++    code = getattr(getattr(module, name, None), "__code__", None)
++    return _code_digest(code).hexdigest() if code is not None else None
++
++
++def _substituted_callables(name: str, module: Any, frozen: Path) -> list[str]:
++    """The public callables `module` answers with that are not the frozen file's own.
++
++    The frozen file is loaded fresh under a private name — never into `sys.modules`, so
++    this cannot itself become the shadow it is looking for.
++    """
++    import importlib.util
++
++    spec = importlib.util.spec_from_file_location(f"_tannen_oracle_check_{name}", frozen)
++    if spec is None or spec.loader is None:  # pragma: no cover - a frozen path always loads
++        return []
++    reference_module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(reference_module)
++    return [
++        public
++        for public in _public_callables(reference_module)
++        if _fingerprint_of(reference_module, public) != _fingerprint_of(module, public)
++    ]
++
++
+ def _oracle_shadow_problem(root: Path) -> str | None:
+     """None if every frozen oracle imported this run came from its frozen file; else a
+     message naming EVERY one that did not. All of them, because a run that shadows two
+@@ -95,9 +155,22 @@ def _oracle_shadow_problem(root: Path) -> str | None:
+             continue
+         actual_file = getattr(module, "__file__", None)
+         actual = Path(actual_file).resolve() if actual_file else None
+-        if actual == frozen[0]:
++        if actual != frozen[0]:
++            problems.append(f"sys.modules[{name!r}] is {actual}, not the frozen {frozen[0]}")
+             continue
+-        problems.append(f"sys.modules[{name!r}] is {actual}, not the frozen {frozen[0]}")
++        # RT-M3-04: `__file__` is a plain attribute and a decoy can set it to the frozen
++        # path, which defeats the comparison above entirely — measured: a proxy reporting
++        # the frozen path neutered `check_differential` 1,400 times while all 544 law tests
++        # passed, 52 records went fresh and check_manifest was OK. So what ANSWERS to the name
++        # is compared
++        # against a fresh load of the frozen file, function by function, on the CODE it
++        # carries rather than on what it says about itself.
++        substituted = _substituted_callables(name, module, frozen[0])
++        if substituted:
++            problems.append(
++                f"sys.modules[{name!r}] reports the frozen {frozen[0]} but answers with "
++                f"different code for {substituted}"
++            )
+     if not problems:
+         return None
+     return "; ".join(problems) + (

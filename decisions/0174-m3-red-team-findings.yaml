@@ -1,0 +1,202 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0174
+title: "M2→M3 boundary red team: six findings, two critical, none closed — M3 introduced a second identity scheme for code and it is weaker than the one M1 already had"
+tier: A
+date: "2026-09-05"
+risk_flags: ["governance-paths"]
+decision: >-
+  BRIEF §9.1 point 5, D0021 and D0059 mandate a red team at each milestone boundary, run in a
+  fresh context that did not write the milestone's implementation (D0104). This session ran
+  that pass against `~/git/worktrees/tannen/m3` at `3528996`, clean tree, as a SINGLE fresh
+  session — M0's and M1's method, returning to it after M2's six-subagent departure. Eight
+  probes were specified going in; the floor was six. Full record:
+  `docs/redteam/2026-09-05-m3-boundary.md`.
+  .
+  SIX FINDINGS: two critical, three high, one medium, plus the status audit. NONE CLOSED,
+  deliberately — three of the four remedies are builder-landable and are left for a session
+  that is not also the session that found them, with the D0092 regression bindings written
+  then.
+  .
+  - RT-M3-01 (critical): a `DeltaNode`'s descriptor names its code by STRING. `params` carries
+    `predicate_id: "risk-ok"`; the predicate is in a module-level dict addressed by nothing. Two
+    processes registering different predicates under one name produce a byte-identical
+    `step_id`, and the trace serves the first one's answer to the second with `rebuilt=False`.
+    Measured with a control: the hostile predicate genuinely returns both rows; against the
+    shared trace it returns one. Nothing is tampered with — `register_predicate` is public API
+    and the documented way to do this, so `TraceIntegrityError` cannot fire. THIS IS A
+    REGRESSION AGAINST M1, not a gap M1 shared: `@transform` hashes the function's SOURCE TEXT
+    (D0084) and refuses a lambda outright, and measured side by side, a changed COMMENT moves
+    M1's descriptor while a changed BEHAVIOUR does not move M3's. D0167's premise — "a lambda
+    has no content address" — is M1's reason for a REFUSAL, and M3 used it as a licence; the
+    shipped catalogue is four lambdas. Falsifies frozen `docs/specs/m3.md:337-338` and frozen
+    L3.15's own docstring, both of which assert a step is a pure function of
+    (descriptor, state, ledger, deltas). It is also a function of the registry, which is in
+    none of them.
+  .
+  - RT-M3-04 (critical): RT-M2-01 RE-OPENED against the closure D0142 installed for it. That
+    closure derived the SET of oracle names off the filesystem, correctly, and left untouched
+    HOW a name is checked: `sys.modules[name].__file__` compared against the frozen path
+    (plugin.py:96-99). `__file__` is a plain attribute. A decoy that sets it to the frozen path
+    passes. Measured: `check_differential` — frozen L3.12, BRIEF §6's differential kill
+    criterion — was answered 1,400 times by `lambda *a, **k: None` while the WHOLE LAW SUITE
+    across all four milestones reported "544 passed, 1 xfailed", 52 evidence records were
+    written, `check_manifest` reported "frozen paths intact; seals unbroken; custody set
+    current", and `tannen laws report` ended "OK — 52 law(s) carry fresh passing evidence" with
+    zero stale rows. That last line is the completion criterion CLAUDE.md names for an
+    implementation session and the one D0170 quotes to say M3 is done; it says the same thing
+    with the kill criterion neutered. A positive control was run FIRST: the naive decoy trips
+    the guard exactly as designed, so the guard's input set is known non-empty and the spoof is
+    what defeats it.
+    WORSE THAN A RE-RUN: `tests/poison/oracle-shadow-model/` does bite the shipped guard
+    (verified), so once D0154 item 1 wires it into the custodian at this sitting, the custody
+    floor will certify this guard live while testing only the half it already catches.
+  .
+  - RT-M3-02 (high): `_ALWAYS_REPLAYS` — the contagion rule's operator set — is a hand-written
+    frozenset referenced in exactly two places, both inside `incremental.py`; nothing derives
+    it and nothing asserts it. Its siblings `_REQUIRED` and `_ARITY` are the same shape, shipped
+    in the milestone whose sitting closes that class as a standing rule (D0171 ruling 3, D0172).
+    The set is CORRECT TODAY; the finding is the unequal failure modes, measured by emptying it:
+    `distinct` and `aggregate` raise loudly (the M1 cone tripwire D0158 re-commissioned), and
+    `anti_join` diverges SILENTLY — a retracted row survives in the maintained integral. The
+    FROZEN suite does not cover it: with `anti_join` removed, `pytest tests/laws/m3` is 38/38
+    green and the only failures are two in `tests/test_incremental.py`, which is not under
+    `tests/laws/` and therefore not sealed. The frozen files say why: `_delta_subject.py:149-158`
+    re-implements the rule inside the subject adapter and defers the shipped executor's own
+    embodiment to L3.15, and every `DeltaNode` in L3.15 is unary, so never an `anti_join`.
+    The mutant `antijoin-delta-maintained` kills the MODEL; the identical defect in the PACKAGE
+    passes every frozen law.
+  .
+  - RT-M3-03 (high): `anti_join`'s two operand orders share one `step_id`, because
+    `derivation_id` is order-insensitive (frozen m1 §8, L1.13) and `advance` inherits it
+    (D0167). With IDENTICAL schemas on both sides there is nothing for a type system to catch:
+    `advance(node, [B, A])` is served from the trace with `[A, B]`'s answer, `rebuilt=False`, no
+    exception; the control with a fresh trace returns the correct `[]`. This FALSIFIES THE
+    STATED PREMISE of D0171 ruling (2) — "a caller error the type system should catch, not the
+    identity scheme" — which is `status: blocked-on-owner` and UNSIGNED, so the correction
+    reaches the sitting before the ruling is enacted rather than after. The ruling's conclusion
+    may still stand; its reason does not. The remedy proposed does not touch `derivation_id`:
+    the asymmetry belongs to the node, so a non-commutative binary operator carries its operand
+    roles in its own declared form. Touches frozen `docs/specs/m3.md:336-337`, where the word
+    `sorted` is the defect.
+  .
+  - RT-M3-05 (medium): D0169's range-reading fix made seven invisible laws visible, and also
+    made one passing node write four evidence records. Measured across milestones: m0 10 laws /
+    25 nodes, m1 17 / 117, m2 9 / 29, with NO node in any of them claiming more than one law;
+    m3 is 16 laws / 12 nodes, with five nodes carrying twelve. M3 is the first milestone with
+    fewer law nodes than laws, its evidence resolution is materially coarser than any
+    predecessor's, and nothing says so where a reader would look. Not an argument for reverting
+    D0169 — before it those laws had no evidence at all. It compounds RT-M3-02: L3.11 and L3.12
+    are one node.
+  .
+  - RT-M3-06 (informational): status audit at `3528996`. BOTH M2 closures M3 was chartered to
+    land hold when re-attacked — RT-M2-04 (`why_slots` is recursive; `anti_join` refuses on a
+    derived slot COUNT, better than the "by name" D0170 claims; `_refuse_unwitnessed` is in
+    `Rel._init` so `_build` does not bypass it) and RT-M2-07 (`Rel(…)` now refuses a non-grammar
+    atom; the `_check`/`add`/`mul` residue is the one RT-M2-07 itself accepted). RT-M2-01 is
+    re-opened as RT-M3-04. RT-M2-02's custody half is partially closed — `scripts/check_laws.py`
+    is now custody-set. Unchanged: RT-05/RT-M1-03 (forgeable surface now 52 laws, up from 36),
+    RT-07, RT-10, RT-11, RT-12, RT-M1-02, RT-M1-04. Re-measured and still open exactly as filed:
+    `required_tags` 7 against 8 tags (4th recurrence), 14 poison fixtures against 13 custodian
+    invocations with `oracle-shadow-model` the one unexercised, and
+    `scripts/boundary_sitting.sh` byte-identical to `m2-close` (both `ff043f9`).
+    .
+    AND D0172(E) IS WRONG BY ONE. It states `scripts/check_drift.py` is "the one script absent"
+    from the custody set. Measured: `scripts/rehearse_sitting.sh` is also absent — a
+    21,911-byte driver whose purpose is to run the custody-set `scripts/boundary_sitting.sh`
+    end to end before the owner's key does. The rehearsal that vouches for a custody-set script
+    is vouched for by nothing.
+  .
+  ONE POISON FIXTURE DRAFTED, with its guard patch, at
+  `docs/redteam/fixture-candidates/oracle-shadow-spoofed/` — the staging area D0154 declared
+  spent is re-opened. It is the only finding of the six that warrants a fixture: RT-M3-01,
+  RT-M3-02 and RT-M3-03 need a law or a guard that does not exist yet, and a fixture belongs
+  with the guard it poisons, not ahead of it. Verified both directions: reproduces the hole
+  against the shipped check (exit 0, 14 passed), exits 1 against the patch naming exactly
+  `['check_differential']`, clean tree stays green, and both installed oracle fixtures still
+  bite. Three candidate patches were FALSIFIED BY MEASUREMENT before one survived (a
+  `co_filename` check has false positives because hypothesis builds two real functions by
+  `exec`; a `repr(co_consts)` digest disagrees with itself across loads because a nested code
+  object reprs with its address), and a fourth defect was found in the surviving patch by
+  attacking it — it read the export list from the module under test, so a decoy declaring
+  `__all__ = []` fingerprinted nothing and passed. All four are written into the fixture's
+  README.
+  .
+  A METHODOLOGY DEFECT IS RECORDED RATHER THAN QUIETLY CORRECTED. A copied worktree's `.venv`
+  carries `_editable_impl_tannen.pth` holding the ABSOLUTE path of the original tree, so a
+  sandbox copy of this repo silently imports the original's `tannen`. RT-M3-02's first
+  measurement was made that way and was measuring nothing — the mutation had not loaded. Re-run
+  with `PYTHONPATH` set, the honest result is DIFFERENT AND WEAKER than the first, and the
+  finding as filed is the corrected one. Anyone red-teaming from a copied worktree must set
+  `PYTHONPATH` and verify `module.__file__` before trusting a result.
+rationale: >-
+  Recorded as the one record the M3 boundary sitting can point at for "the red team ran, here is
+  what it found, here is what closed and what didn't" — the D0104 and D0153 pattern, so the
+  digest's exception-only view carries a single governance-paths-flagged entry for the whole
+  pass rather than requiring the sitting to reconstruct scope from the report alone.
+  .
+  Filed with the pass's own errors in it, following the norm RT-04's M0 closure set and D0104
+  continued. Two are load-bearing for how the findings should be read: the sandbox
+  editable-install defect, which made one measurement worthless and whose correction WEAKENED
+  the finding it touched, and the three falsified patches, which matter because both rejected
+  spellings looked correct on review and only failed when run. A pass that reports six findings
+  and no mistakes is a pass that did not check its own work.
+  .
+  The two clean results are recorded as results. RT-M2-04 and RT-M2-07 were M3's chartered
+  closures, and an audit that only lists what is broken cannot be falsified — the sitting is
+  entitled to know which of the previous pass's asks were actually met, measured rather than
+  assumed from a green suite.
+  .
+  RT-M3-03 is filed with urgency it would not otherwise carry because D0171 is UNSIGNED. A
+  ruling whose stated reason is false is worth correcting before the key touches it, and after
+  the sitting it would cost a supersession instead of an amendment.
+reversibility: >-
+  A statement of what was found; nothing to reverse. Nothing was closed, nothing was installed
+  under `tests/poison/`, no frozen path was touched, and `evidence/` in the real tree was not
+  written to — every run that writes evidence was done in a sandbox copy with its own store.
+  The drafted patch and fixture change nothing until the owner installs them; a drafted patch
+  awaiting application enforces nothing (D0143's words). The six findings are a to-do list, not
+  an action.
+status: accepted
+bindings_count: 6
+bindings:
+  - type: file
+    target: docs/redteam/2026-09-05-m3-boundary.md
+    strength: documentary
+    detail: >-
+      The full pass — every probe, reproduction transcript, control, severity rationale, and the
+      section on where the pass fell short of its own rules.
+  - type: file
+    target: docs/redteam/fixture-candidates/oracle-shadow-spoofed/rt-m3-04-plugin-code-identity.patch
+    strength: documentary
+    detail: >-
+      RT-M3-04's measured, not-yet-landed guard patch. Builder-landable
+      (`src/tannen/laws/plugin.py` is neither manifested nor custody-set); left uncommitted so
+      the session that found the hole is not the session that certifies the fix.
+  - type: file
+    target: src/tannen/incremental.py
+    strength: documentary
+    detail: >-
+      RT-M3-01's subject (`PREDICATES`/`MAPS`/`MONOIDS`/`GROUPS` at :89-92, the descriptor at
+      :293) and RT-M3-02's (`_ALWAYS_REPLAYS` at :260). Unfrozen and uncustodied, so both
+      remedies are builder acts; documentary here because this record reports rather than fixes.
+  - type: file
+    target: docs/specs/m3.md
+    strength: documentary
+    detail: >-
+      Frozen, and falsified in two places: :339 ("a step is a pure function of those inputs",
+      :337-338, RT-M3-01) and :336-337 ("sorted delta refs", RT-M3-03). Documentary by necessity — no
+      builder act may touch it, and D0171 ruling (1) routes supersessions to this sitting.
+  - type: file
+    target: decisions/0171-the-m3-conferral-rulings.yaml
+    strength: documentary
+    detail: >-
+      RT-M3-03 falsifies the stated premise of ruling (2). D0171 is `blocked-on-owner` and
+      unsigned, so this is an amendment to an unenacted ruling rather than a supersession.
+  - type: file
+    target: decisions/0172-the-enumeration-audit.yaml
+    strength: documentary
+    detail: >-
+      RT-M3-06's correction: finding (E) names one script absent from the custody set where
+      there are two, and the one it misses — `scripts/rehearse_sitting.sh` — is the rehearsal
+      that certifies a custody-set driver.
+links: [D0021, D0059, D0084, D0092, D0104, D0128, D0142, D0143, D0153, D0154, D0158, D0163, D0167, D0169, D0170, D0171, D0172]

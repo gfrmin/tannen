@@ -41,6 +41,15 @@ unsealed, unmanifested, and indistinguishable from a decoy.
 
 The next pass's candidates append below the table as usual.
 
+### Re-opened 2026-09-05 by the M2→M3 pass
+
+One new candidate, `oracle-shadow-spoofed/`, plus its guard patch. The staging area is no
+longer spent. Note the shape of the recurrence: `oracle-shadow-model/` was installed at the
+M2 sitting on the belief that the derived map closed the class, and the row below records
+that belief being retracted once already. It is now retracted a second time in a different
+direction — the map is derived correctly, and the **identity test the map feeds** is what a
+decoy defeats. Deriving *which* modules to check did not make *how* they are checked sound.
+
 ---
 
 | Candidate | Guard poisoned | Closes | Bites today? |
@@ -55,6 +64,7 @@ The next pass's candidates append below the table as usual.
 | `check-decisions-file-skip/` | `scripts/check_decisions.py` (pytest bindings) | RT-M1-05 | **INSTALLED** 2026-08-31 → `tests/poison/check-decisions-file-skip/`; the guard patch landed with it at that sitting, so the qualifier below is spent and only `rt-m1-05-check-decisions.patch` remains staged here. As drafted: **yes against the drafted fix** (`ALLOWED_SKIP_REASON_PREFIXES`) — drafted and verified this session, **not committed**: `scripts/check_decisions.py` is a custody-set member (`governance/tier-c.yaml`), so landing it reddens `check_manifest.py`'s custody check, which cascades into D0063's own file-level binding on `tests/test_governance_scripts.py` and blocks pre-commit's `check-decisions` hook on every commit thereafter. The patch is queued for the owner to apply together with the custody re-signature at the M1 boundary sitting; this pins the tooth against the drafted, not-yet-live guard |
 | `oracle-shadow/` | `src/tannen/laws/plugin.py`'s collection-time oracle check | RT-M1-01 | **yes** — the check already landed this session (`_oracle_shadow_problem`); this pins the tooth. Does not close the underlying naming hazard (queued) |
 | `oracle-shadow-model/` | `src/tannen/laws/plugin.py`'s oracle check, **as widened by RT-M2-01** | RT-M2-01 | **INSTALLED** 2026-09-03 → `tests/poison/oracle-shadow-model/`, and it bites: exit 1 at collection, naming RT-M2-01 and `shadowed`. Exercised by `tests/test_governance_scripts.py::test_oracle_shadow_model_fails_its_poison` (D0141's binding, upgraded to *enforced* 2026-09-04). ~~needs patch: the shipped check pins the single name `_fragment` (plugin.py:50-51), so this fixture PASSES today~~ — **retracted**: D0142 replaced those two constants with `_frozen_oracles()`, which derives the map from `tests/laws/m*/_*.py` off the filesystem rather than enumerating names, so the widening cannot lag a milestone again. What remains true: M2 added `_model` and `_subject`, bare-imported across seven frozen law files, and `tests/` is not a sealed dir. Verified 2026-09-01: 34 tests pass against the decoy; with `check_differential` stubbed, L2.9 is vacuous and all 113 M2 law tests still pass with `check_manifest` clean. The plugin patch is builder-landable (no manifest row, not custody-set); installation under `tests/poison/` is owner work |
+| `oracle-shadow-spoofed/` | `src/tannen/laws/plugin.py`'s oracle check, **as widened by RT-M3-04** | RT-M3-04 | **needs patch** — the shipped check compares `sys.modules[name].__file__` against the frozen path, and `__file__` is a plain attribute a decoy can set. Verified 2026-09-05 against the shipped check: the decoy reproduces the hole (`exit=0`, 14 passed) with `check_differential` — frozen L3.12, BRIEF §6's kill criterion — answered 1,400 times by a stub, 38 M3 law nodes green, 16 fresh evidence records, `check_manifest` clean and `tannen laws report` showing `L3.12 ok pass`. Against `rt-m3-04-plugin-code-identity.patch` it exits 1 naming `['check_differential']`, the clean tree stays green, and `oracle-shadow/` + `oracle-shadow-model/` both still bite. The patch is builder-landable (`plugin.py` is neither manifested nor custody-set); installation under `tests/poison/` is owner work |
 
 ---
 
