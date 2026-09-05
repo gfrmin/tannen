@@ -1,0 +1,172 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0172
+title: "The enumeration audit D0171 ruling (3) mandates: seven hand-maintained lists, two of them live defects — one closed in session, and the worse one is not a lag but an already-wrong law-descriptor subject, measured"
+tier: A
+date: "2026-09-05"
+risk_flags: ["governance-paths"]
+decision: >-
+  ONE ITEM, NOT FOUR (D0171 ruling 3). Every hand-maintained enumeration of milestones,
+  tags, fixtures or laws in the repo, audited 2026-09-05 at `aecf42b`. Seven found. Each
+  claim below is a measurement that was run, not a reading of the code; the two clean
+  results are recorded alongside the findings so the audit can be falsified rather than
+  merely believed.
+  .
+  === TWO LIVE DEFECTS ===
+  .
+  (A) `src/tannen/laws/harness.py:28` `HARNESS_FILES` — AND IT IS ALREADY WRONG, NOT MERELY
+  FRAGILE. The law descriptor's subject is `src/tannen/**` plus a hand-written tuple of
+  root files (`conftest.py`, `pyproject.toml`) plus every `tests/**/conftest.py`. The
+  module's own docstring defines the subject as "everything that decides how hard a law was
+  tested". `governance/laws.yaml` — the supersession registry, whose ONLY purpose is to
+  decide which law nodes run at all (D0128) — is in none of those sets. MEASURED: appending
+  a comment to `governance/laws.yaml` and recomputing leaves `harness_subject` BYTE-
+  IDENTICAL (`sha256:24b0dd2bdd708f218ace938f9…` before and after). So retiring a law node
+  invalidates NO evidence record: every verdict recorded before the retirement stays fresh
+  for a harness that now runs fewer nodes. That is RT-09 exactly — the M0 red-team finding
+  L1.17 exists to close — one file over, and it has been true since D0128 landed the
+  registry at M2.
+  .
+  THE ENUMERATION IS INSIDE THE FROZEN LAW. `tests/laws/m1/test_l1_harness.py`'s
+  `test_l1_17_changing_any_harness_input_moves_the_subject` is parametrised over four
+  hand-written paths — the source control, `conftest.py`, `pyproject.toml` and a data file.
+  The law passes. It passes because its four cases are covered, not because the subject is
+  complete, and the input added AFTER the freeze is the one nobody could add a case for.
+  This is the sharpest instance of ruling (3)'s class the repo contains: the enumeration
+  that lagged is the one inside the law written to stop exactly this failure.
+  .
+  WHAT IT COSTS TO FIX, so the sitting can price it. Widening `HARNESS_FILES` is unfrozen
+  code and a builder act — but it moves EVERY law descriptor, so the whole suite must be
+  re-run against a fresh evidence root before the report is green (the same cost D0169
+  paid, and the freshness mechanism working). Proving the widening is the frozen half:
+  L1.17's parametrize cannot be extended, so the new case is a NEW law file frozen forward
+  under D0128, or a non-frozen test that pins it until then. Not done in this session
+  because it is a supersession, and D0171 ruling (1) puts supersessions at the sitting.
+  .
+  (B) `tests/test_law_validation.py:42` `MODEL_PATHS` — THE VALIDATION RATCHET'S OWN MAP IS
+  HAND-MAINTAINED. `{m2: _model.py, m3: _delta_model.py}`, and the comment above it says in
+  so many words "A new milestone's model joins this list". MEASURED: `MODEL_PATHS` is
+  referenced in exactly TWO places in the repo — its own definition and the `MODELS`
+  comprehension one line later — so NOTHING compares it against `tests/laws/*/`. It is
+  complete today (both models on disk are listed).
+  .
+  THE CONSEQUENCE WAS PRODUCED, NOT ARGUED. Deleting M3's row and running the whole ratchet
+  file gives **22 passed** — exactly the M2-only count D0139 recorded for this file at the
+  M2 boundary. All nine M3 mutants stop being generated, `test_every_mutant_dies_by_the_
+  check_that_names_it` passes over what remains, and nothing anywhere says a milestone left
+  the matrix. That is D0169's shape inside the machinery D0094 built to catch laws that
+  cannot fail — and note that D0142 already derived the ORACLE-SHADOW GUARD's set from the
+  filesystem, so this was the un-derived half of a fix that was believed complete.
+  .
+  CLOSED IN THIS SESSION, because the file is neither frozen nor custody-set and the fix
+  needs no key: `test_the_mutant_map_is_total` derives the models from disk and asserts the
+  map against them. A model is identified by the INTERFACE the ratchet consumes — a module
+  declaring `FAMILIES`, `MUTANTS` and `CAUGHT_BY` — read statically by `ast`, over the same
+  `tests/laws/m*/_*.py` candidate set `plugin._frozen_oracles` derives, so the two guards
+  cannot disagree about what an oracle is and neither depends on a model being importable.
+  Derived AND asserted rather than simply derived (ruling 3's second half): the map still
+  carries each model's milestone-unique module name (D0165), which no scan can supply.
+  Watched to fail on the omission it exists to catch before being trusted.
+  .
+  === TWO KNOWN LAGS, ALREADY QUEUED, RE-MEASURED ===
+  .
+  (C) `governance/tag-roles.yaml:47-53` `required_tags` — 7 entries; `git tag` lists 8.
+  `m3-laws-freeze` missing. Third recurrence (D0095, D0131 item 5, D0154 item 6). This is
+  the one where derivation genuinely risks over-firing — D0095's shallow-clone worry — so
+  it is ruling (3)'s "derive AND assert" case, not its "derive" case.
+  .
+  (D) `scripts/custodian.sh` poison invocations — 14 fixture directories under
+  `tests/poison/`, 13 `poison` lines. `oracle-shadow-model` (RT-M2-01, the M1→M2 pass's one
+  critical finding) has none. D0154 item 1; the draft that derives the list and refuses an
+  unexercised fixture is already written and awaiting the owner's key.
+  .
+  === THREE UNASSERTED DUPLICATIONS, CLEAN TODAY ===
+  .
+  (E) `governance/tier-c.yaml` `custody.paths` — the custody set, hand-enumerated with a
+  mix of globs and literal names. Every `scripts/check_*.py` that the gate runs is listed.
+  `scripts/check_drift.py` is the one script absent, and it is a Makefile JOB rather than a
+  `make verify` guard — but it DRAFTS DECISION RECORDS into `decisions/`, so a file that
+  can author governance is neither frozen nor custody-set. Recorded as a scope question for
+  the owner rather than as a defect, since nothing claims it is covered.
+  .
+  (F) `governance/tier-c.yaml` `non_goals` — BRIEF §10 transcribed by hand into YAML, with
+  no assertion tying the two. MEASURED: all 12 items match §10's prose sentence for
+  sentence, modulo markdown emphasis. Clean today; one of the cheapest derive-and-assert
+  wins available, and both files are custody-set so drift needs the owner either way.
+  .
+  (G) `tests/poison/README.md`'s fixture table — 14 rows, 14 directories, complete today,
+  nothing asserts it. Same shape as (D) one layer out: the custodian's derived completeness
+  pass in D0154 item 1's draft would make this table's drift visible too, for free.
+  .
+  === CHECKED AND CLEARED, so the audit is falsifiable ===
+  .
+  `tests/test_laws_runner.py` derives its milestone set from `discovery.milestones()` and
+  pins the SHAPE, not the contents — fixed at D0169, the reason this audit exists.
+  `.github/workflows/ci.yml` names no guards: it runs `make verify`, so CI cannot drift
+  from the local gate. `.pre-commit-config.yaml` names four guards, but it claims to be a
+  fast subset and not the gate, so it is a deliberate selection rather than a lagging
+  enumeration. `discovery.milestones` and `discover_laws` read the filesystem.
+  `MANIFEST.sha256` is a SELECTION rather than a derivation — but for the three sealed
+  directories (`tests/laws`, `tests/poison`, `governance/schemas`) `check_manifest` already
+  asserts the selection against the filesystem, which is precisely ruling (3)'s prescribed
+  shape and the proof that it is cheap.
+rationale: >-
+  Filed as one item because filing it as seven would repeat the mistake being closed: the
+  class recurred four times partly because each instance was small enough to fix and queue
+  on its own, which kept anyone from asking how many more there were. The answer is seven,
+  and the interesting result is not the count but that the two worst are in the validation
+  machinery rather than in the governance data — `required_tags` lagging is visible and
+  annoying, while a law-descriptor subject blind to the file that retires law nodes is
+  invisible and reports green. D0094's argument, one layer further in.
+  .
+  Recorded with each measurement's command and result because an audit that says "I looked"
+  is worth nothing against this failure class: every one of these lists LOOKS complete when
+  read, and (B) is complete today. What distinguishes a finding from a clean result here is
+  whether anything would notice tomorrow, which is a property of the code and not of the
+  data — so each entry states which it is.
+reversibility: >-
+  An audit changes nothing; it is a statement of what is. The fixes it enables have
+  asymmetric costs and are deliberately NOT bundled: (B) is closed here, in an unfrozen,
+  uncustodied file, at the cost of one test; (F) and (G) are the same size and wait only
+  because they are clean today; (C) needs the owner's key; (D) is drafted and awaits it;
+  (A) moves every law descriptor and requires a supersession to prove, so it belongs to a
+  sitting rather than to a session.
+  What is NOT reversible is leaving (A) unrecorded — it has been silently true since M2,
+  and the only reason it surfaced is that a ruling forced a sweep rather than another
+  point fix.
+status: accepted
+bindings_count: 5
+bindings:
+  - type: file
+    target: src/tannen/laws/harness.py
+    strength: documentary
+    detail: >-
+      Finding (A): `HARNESS_FILES` at :28, and the subject that omits
+      `governance/laws.yaml`. Documentary because the fix is a supersession the owner
+      gates, not a patch — the frozen law that would prove it cannot be extended.
+  - type: file
+    target: tests/laws/m1/test_l1_harness.py
+    strength: documentary
+    detail: >-
+      Finding (A)'s frozen half: `test_l1_17_changing_any_harness_input_moves_the_subject`
+      is parametrised over four hand-written paths, so the law passes while the subject is
+      incomplete. Frozen at `m1-laws-freeze`; documentary by necessity.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_the_mutant_map_is_total"
+    strength: enforced
+    detail: >-
+      Finding (B), closed: `MODEL_PATHS` is now asserted against the models derived from
+      `tests/laws/m*/_*.py` by the ratchet interface they declare. Measured failing on a
+      deleted row (22 passed without it, the M2-only count) before being trusted.
+  - type: file
+    target: governance/tag-roles.yaml
+    strength: documentary
+    detail: >-
+      Finding (C): `required_tags`, 7 entries against 8 tags, third recurrence, and the one
+      case where D0095's shallow-clone worry makes "derive AND assert" the right shape.
+  - type: file
+    target: scripts/custodian.sh
+    strength: documentary
+    detail: >-
+      Findings (D) and (G): 14 fixtures, 13 invocations, and a README table nothing checks.
+      The derived completeness pass drafted for D0154 item 1 closes both at once.
+links: [D0094, D0095, D0128, D0131, D0142, D0154, D0169, D0171]

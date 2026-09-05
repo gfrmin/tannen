@@ -1,0 +1,121 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0173
+title: "The governance-mechanics metric, measured at close tags as D0171 ruling (5) directs — and the correction the measurement itself forces: report a pair of deltas, because measuring at boundaries does not rescue the ratio"
+tier: A
+date: "2026-09-05"
+risk_flags: ["governance-paths"]
+decision: >-
+  D0171 ruling (5) directs that D0106 item 3 is a MEASUREMENT problem to fix rather than a
+  metric to drop, and answers the parameter that was blocking it: measure at boundaries
+  only. This record is the measurement, which BRIEF §9.1's metric-calibration rule requires
+  before any comparison and which D0145 clause (d) already identified as the one part of
+  this that is not an owner act. The draft reporter is
+  `docs/proposals/2026-09-04-m3-boundary-sitting/mechanics_metric.py`; it is NOT installed,
+  because the digest is rendered by custody-set files.
+  .
+  THE SERIES, at every `*-close` tag plus HEAD. Numerator arms are D0145's own, unchanged
+  so its numbers stay comparable: guards `scripts/*.py`, drivers `scripts/*.sh`, fixtures
+  `tests/poison/**`. Raw newline counts from git blobs.
+  .
+    ref         guards  drivers  fixt   MECH   Δmech   product   Δprod  ratio
+    m0-close      2000     1345   350   3695      +0      1133      +0   3.26
+    m1-close      2043     1735   440   4218    +523      2790   +1657   1.51
+    m2-close      2330     2855   595   5780   +1562      3098    +308   1.87
+    HEAD          2330     2855   595   5780      +0      4495   +1397   1.29
+  .
+  (1) THE OWNER'S SUSPICION IS CONFIRMED, BUT AS AN EVENT AND NOT A TREND. M2 added 1,562
+  lines of mechanism against 308 lines of product — mechanism grew at 5.1x the thing it
+  guards. M1 grew at 0.32x and M3 so far at 0.00x. The M2 figure is almost entirely one
+  artifact: the boundary sitting installed the 1,950-line driver, which is why `drivers`
+  jumps 1,735 → 2,855 in a milestone whose product delta was a 252-line shell module.
+  .
+  (2) MEASURING AT CLOSE TAGS DOES NOT RESCUE THE RATIO, which is the correction the
+  measurement forces on the ruling. Ruling (5) offered two repairs — normalise per
+  milestone, or measure at boundaries only — and the second alone is insufficient: it
+  removes the Session-A sawtooth D0145 diagnosed, but D0145's FIRST finding survives it
+  untouched. Against the kernel the close-tag ratio runs 11.69, 2.74, 3.62; against the
+  package 3.26, 1.51, 1.87. Neither is monotone, and the fall from 11.69 means "the kernel
+  got written", not "mechanism was pruned". SO THE RECOMMENDATION IS TO REPORT THE PAIR OF
+  PER-MILESTONE DELTAS AND NOT A RATIO. "Mechanism +1562, product +308" is legible at a
+  glance and says the thing a single quotient cannot; the ratio may be printed beside it,
+  but nothing should ratchet on it.
+  .
+  (3) THE DENOMINATOR MUST BE THE WHOLE PACKAGE, NOT THE KERNEL — and this is a real
+  choice, not a detail. Milestones deliberately alternate: M2's deliverable was
+  `src/tannen/sources.py`, shell by construction, so a kernel-only denominator scores M2
+  at 27.9x instead of 5.1x purely because the milestone's work was correctly placed
+  outside the kernel. The bigger number is an artefact of the layering discipline the
+  brief mandates. D0145 listed this among its six undefined parameters and gave five
+  defensible readings; this answers it with the reason rather than by preference.
+  .
+  (4) HEAD'S FLAT MECHANISM IS A FLOOR, NOT A PLATEAU, and reporting it without saying so
+  would be the metric's first lie. Mechanism is unchanged since `m2-close` only because
+  the M3 sitting has not happened: the M3 driver is not yet drafted, and installing it
+  adds roughly the M2 driver's 1,950 lines. The M3-close reading will jump for that reason
+  alone, and a reader seeing "+0" today must not conclude the growth stopped.
+  .
+  (5) FLAG, NEVER FAIL, AND NO THRESHOLD IS PROPOSED. Three closed milestones is not a
+  baseline, and BRIEF §9.1's metric-calibration rule is explicit: land the measurement,
+  publish one digest carrying true values, and only then compare. Proposing a threshold
+  here would be the exact move D0116 refuses — presenting a decision as a formality.
+  .
+  D0145's SIX PARAMETERS ARE NOW ALL ANSWERED: arms (D0145's own), denominator (whole
+  package, (3)), counting rule (raw blob newlines, with the one binary fixture counted the
+  same way and its count reported separately), measurement point (`*-close` only, ruling
+  5), what is reported (the delta pair, (2)), and flag-versus-fail (flag, no threshold,
+  (5)). "Sustained" is deliberately left open until there are enough boundaries to define
+  it against.
+  .
+  THE TRAP D0145 RECORDED IS RESTATED IN THE DRAFT'S HEADER, because this is the file that
+  would spring it: a third digest metric needs its OWN comment line and its OWN regex.
+  Extending `_gov.py`'s `METRICS_RE` in place silently disarms the ratchet — the
+  custody-set poison digest at `tests/poison/check-decisions-ratchet/digest/2020-01-01.md`
+  carries exactly two fields and the builder can never regenerate it.
+  .
+  The draft's own close-tag list is DERIVED from `git tag --list '*-close'`, not
+  enumerated, per D0171 ruling (3) and D0172. Writing it any other way would have made the
+  metric that measures governance mechanics the eighth instance of the defect class the
+  same sitting is closing.
+rationale: >-
+  Recorded rather than folded into the sitting's driver because the measurement and the
+  installation are different acts with different owners, and because the measurement
+  CORRECTS the ruling that requested it. Ruling (5) assumed the instrument could be fixed
+  by moving where it is read; the series shows the denominator problem is independent of
+  the measurement point, so the honest response is to report a different quantity rather
+  than the same quotient less often. Saying so plainly is worth more than a compliant
+  implementation of a metric that would still be dominated by whether the kernel happened
+  to get written that milestone.
+  .
+  The M2 result is recorded with its cause attached for the same reason: "mechanism grew
+  at 5.1x the product" invites a conclusion about drift, and the true statement is that one
+  sitting installed one driver. A metric whose first published reading is misunderstood
+  will be distrusted for the rest of its life, and this one's first reading is unusual.
+reversibility: >-
+  Nothing is installed and nothing enforces: the draft is a reporter in `docs/proposals/`,
+  which the owner runs, amends or discards at the sitting. Reversing the RECOMMENDATION
+  costs a record. What is not cheap to reverse is wiring it into the digest the wrong way
+  — extending the shared metrics regex rather than adding a line — because the artifact it
+  breaks is custody-set and cannot be regenerated by the builder.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/mechanics_metric.py
+    strength: documentary
+    detail: >-
+      The drafted reporter and the six answered parameters. Documentary and it must stay
+      documentary until installed — a drafted patch awaiting owner application enforces
+      nothing (D0143's words for the same situation).
+  - type: file
+    target: scripts/gen_projections.py
+    strength: documentary
+    detail: >-
+      Where the digest line would land, and custody-set — which is why this record stops
+      at measurement. Its sibling `scripts/_gov.py` carries `METRICS_RE`, the trap.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/CONFERRAL.md
+    strength: documentary
+    detail: >-
+      The document whose ruling (5) this executes; the correction in (2) belongs to the
+      conferral's record, not only to this one.
+links: [D0106, D0116, D0131, D0143, D0145, D0171, D0172]

@@ -10,6 +10,39 @@ and where should I be suspicious?*
 
 ---
 
+## Rulings (2026-09-05) — the conferral is closed; this section is the outcome
+
+Recorded in full as **D0171** (unsigned until the sitting). Everything below this section
+is left exactly as it was written, so the questions and the answers can be read against
+each other — the M0 conferral's precedent.
+
+| # | Ruling | Landed as |
+|---|---|---|
+| 1 | **`advance`/`record`: the reading stands** — recording is caller policy, consistent with M1's rebuilder split. But m3 §7's sentence is false as written, so **supersede the prose forward** under D0128 rather than gloss it. *"The gap between what's frozen and what's true is exactly where the next D0049 will hide."* | owner act at the sitting |
+| 2 | **`derivation_id` stays order-insensitive; no widening at M4.** A caller passing operands in the wrong order is a type-system problem misfiled as an identity problem. Revisit only with evidence. | no change — §4 stands |
+| 3 | **Standing rule: no guard may depend on a hand-maintained enumeration** of milestones, tags, fixtures or laws. Derive; where derivation may over-fire, derive **and** assert. One audit item, not four. | D0172 — seven lists, two defects, one closed |
+| 4 | **D0154 splits by consequence.** Floor-integrity items (1, 7, and 2's receipt clause) go in *this* sitting; 3, 4, 5, 6, 8, 9 wait. *An unexercised custody fixture is a silent floor failure, which is the category the floor exists for.* | §3's table, re-ordered at the sitting |
+| 5 | **The mechanics ratchet is a measurement to fix, not a metric to drop.** Normalise per milestone, or measure at boundaries only. | D0173 + `mechanics_metric.py` |
+
+Also recorded as advice rather than ruling: **bring D0115 (publish) forward** rather than
+leaving it behind nine queue items — a remote is a real external witness, and it is the
+one change that *reduces* the machinery instead of adding to it.
+
+**Two premises of the conferral message are corrected in D0171,** because both bear on
+ruling 5 and one makes its own case stronger. The repo is **twelve days old**, not three
+months (first commit `5c3a474`, 2026-08-24; 74 commits). And **three** milestones are
+closed — M3 is implemented and not yet closed; `m3-close` is what this sitting mints.
+
+**What the audit found that this document did not ask about.** Ruling 3's sweep turned up
+a defect worse than any enumeration lag: `governance/laws.yaml` — the file whose only job
+is to decide which law nodes run — is **outside the law descriptor's subject**. Appending
+to it leaves `harness_subject` byte-identical, so retiring a law node invalidates no
+evidence record. That is RT-09, the finding L1.17 exists to close, one file over, and it
+has been true since M2. The enumeration that lagged is the parametrize **inside frozen
+L1.17 itself**. D0172 (A) has the measurement and the cost of the fix.
+
+---
+
 ## 1. The short version
 
 **M3 is implemented and green.** 38 M3 law nodes, zero skips; 52/52 laws across M0–M3

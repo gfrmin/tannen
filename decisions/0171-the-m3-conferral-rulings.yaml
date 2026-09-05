@@ -1,0 +1,132 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0171
+title: "The M3 conferral: five rulings — the enumeration class becomes a standing rule, D0154 splits by consequence, both M3 narrowings stand, and the ratchet metric is a measurement problem to fix rather than a metric to drop"
+tier: C
+date: "2026-09-05"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE OWNER RULED ON `docs/proposals/2026-09-04-m3-boundary-sitting/CONFERRAL.md`, in
+  conversation on 2026-09-05, before the sitting. Recorded here verbatim in substance and
+  UNSIGNED: the rulings are instructions the builder acts on immediately where the act is
+  reversible, and the Tier-C half of them — superseding frozen prose, and the composition
+  of the sitting itself — is authoritative only once this record carries the owner's
+  signature at that sitting. That distinction is D0063's own (a record of rulings is not
+  the key that enacts them) and D0064's (a Tier-C record without a signature is not
+  accepted), and it is stated rather than assumed because the rulings arrived by message.
+  .
+  (1) `advance`/`record` — THE READING STANDS, AND THE PROSE IS SUPERSEDED FORWARD.
+  Recording is caller policy, consistent with M1's `AlwaysRebuild`/`VerifyingTrace` split,
+  and `rebuilt` meaning "new to the store" is defensible. But `docs/specs/m3.md` §7's
+  sentence is now FALSE AS WRITTEN, and a known-wrong frozen sentence glossed by a decision
+  record is refused: supersede the prose forward under the D0128 mechanism rather than
+  leaving the gap. The owner's argument, kept because it generalises: "the gap between
+  what's frozen and what's true is exactly where the next D0049 will hide."
+  .
+  (2) `derivation_id` STAYS ORDER-INSENSITIVE; NO WIDENING AT M4. Accepted as inherited
+  frozen M1 semantics (m1 §8, L1.13). Changing it invalidates evidence across three
+  milestones to fix a case where a caller passes operands in the wrong order — a caller
+  error the type system should catch, not the identity scheme. Revisit only with evidence
+  of a real defect; do not pre-emptively churn the kernel's identity for a hypothetical.
+  .
+  (3) STANDING RULE, NEW: **no guard may depend on a hand-maintained enumeration of
+  milestones, tags, fixtures, or laws.** Derive from the filesystem or from the tags; and
+  where derivation risks over-firing — D0095's shallow-clone worry is the named case —
+  DERIVE *AND* ASSERT against the enumeration, so drift is loud rather than silent. This
+  supersedes the practice of filing each recurrence as its own queue item: the class has
+  now occurred four times (D0095 and D0131 item 5 on `required_tags`, D0142 on the oracle
+  map, D0169 on the law locator and its milestone list) and is to be closed as a class.
+  The audit the rule requires — every remaining hand-written list in the repo, ONE item,
+  not four — is D0172, filed the same day; it found seven lists and two live defects, one
+  of which is not a lag but an already-wrong subject, measured.
+  .
+  (4) D0154 SPLITS BY CONSEQUENCE. Floor-integrity items go in THIS sitting; the rest wait.
+  In: item 1 (the `oracle-shadow-model` poison line and the derived completeness pass),
+  item 7 (a `check_laws` poison fixture), and item 2's receipt exit-status clause. Out, to
+  a later sitting: items 3, 4, 5, 6, 8, 9. The owner's argument, which corrects a reading
+  of the repo's own doctrine: gating one-way doors and letting reversible work flow is
+  right, but AN UNEXERCISED CUSTODY FIXTURE IS A SILENT FLOOR FAILURE, which is the
+  category the floor exists for — so it is not a peer of "the transcript says 712 tests".
+  .
+  (5) THE GOVERNANCE-MECHANICS RATCHET METRIC (D0106 item 3) IS OVERDUE, AND D0145 IS A
+  MEASUREMENT PROBLEM, NOT A REASON TO DROP IT. D0145 measured that the naive ratio fires
+  at every laws-freeze by construction; the instruction is to FIX THE MEASUREMENT —
+  normalise per milestone, or measure at boundaries only — rather than leave the growth
+  invisible in the one page the owner reads, "which is precisely the condition under which
+  it continues."
+  .
+  ALSO RECORDED, AS ADVICE RATHER THAN RULING: bring D0115 (publish; Tier-C door
+  external-bytes) FORWARD rather than leaving it behind nine queue items. The argument is
+  that a remote is a real external witness, and that it is the one change which REDUCES
+  the machinery instead of adding to it — several current mechanisms exist only because
+  the enforcement surface is a single machine with no second observer, which the M0
+  conferral said plainly at the time.
+  .
+  TWO PREMISES OF THE CONFERRAL MESSAGE ARE CORRECTED HERE, because both are load-bearing
+  for ruling (5) and one of them makes the owner's own case stronger. The repo is TWELVE
+  DAYS OLD, not three months: first commit `5c3a474` on 2026-08-24, 74 commits to
+  `aecf42b`. And three milestones are CLOSED (m0, m1, m2 have close tags); M3 is
+  implemented and not yet closed — `m3-close` is what this sitting mints. So the growth
+  ruling (5) asks to make visible is not three months of accretion but twelve days of it:
+  170 decision records, 115 documentary bindings, 14 poison fixtures and a 1,950-line
+  driver that needs end-to-end rehearsal to be safe to run. The trajectory is steeper than
+  the message assumed, which is an argument for the metric, not against it.
+rationale: >-
+  Filed Tier C for D0131's and D0154's reason: the tier determines visibility, and the
+  digest's "Requires owner" section is a query over Tier-C records. Rulings (1) and (4)
+  need the owner's key — one supersedes frozen text, the other composes a sitting — and a
+  Tier-A record carrying them would be invisible in the one section the owner is committed
+  to reading. Ruling (3) is filed here rather than as a Tier-A engineering note because it
+  is a constraint on how every future guard may be built, which is closer to a constitution
+  clause than to a design choice; if the owner would rather it live in BRIEF §9.1 verbatim,
+  that is a constitution-amendment door and belongs at this sitting too.
+  .
+  Recorded with the rulings' ARGUMENTS and not merely their outcomes, following D0063,
+  because each ruling turned on a reason the builder had not made: that a false frozen
+  sentence is a hiding place rather than a cosmetic defect; that order-insensitivity is a
+  type-system problem misfiled as an identity problem; that a silent floor failure is not
+  in the same queue as a stale transcript count; and that a metric which fires by
+  construction is a broken instrument rather than a wrong question.
+reversibility: >-
+  Rulings (2) and (4) are reversible at any later sitting — one changes nothing, the other
+  reorders a queue. Ruling (3) is reversible in principle but is intended as standing, and
+  the audit it mandates (D0172) is already done, so its cost is already sunk. Ruling (1) is
+  the one-way half: superseding frozen prose writes a new frozen artifact and marks the old
+  one superseded, and the supersession itself cannot be un-recorded — which is why it waits
+  for the signature rather than being executed under the standing delegation.
+status: blocked-on-owner
+bindings_count: 5
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/CONFERRAL.md
+    strength: documentary
+    detail: >-
+      The document ruled on. Left as written, so the questions and the answers can be read
+      against each other (D0063's precedent).
+  - type: file
+    target: docs/specs/m3.md
+    strength: documentary
+    detail: >-
+      Ruling (1)'s target: §7's "replaying a stream hits traces" is the sentence to be
+      superseded forward. Documentary and it must stay documentary until the owner's key
+      enacts it — the file is frozen at `m3-laws-freeze` and no builder act may touch it.
+  - type: file
+    target: governance/tag-roles.yaml
+    strength: documentary
+    detail: >-
+      Ruling (3)'s named instance and the reason it became a rule: `required_tags` is the
+      enumeration that has lagged at three consecutive boundaries.
+  - type: file
+    target: scripts/custodian.sh
+    strength: documentary
+    detail: >-
+      Ruling (4)'s floor-integrity set: item 1's poison line and derived completeness pass,
+      item 7's `check_laws` fixture, and item 2's receipt exit-status clause all land here.
+      Author-key territory, which is what "goes in this sitting" means.
+  - type: file
+    target: scripts/gen_projections.py
+    strength: documentary
+    detail: >-
+      Ruling (5)'s target: the ratchet metrics are rendered here, so the corrected
+      measurement lands here and in `scripts/check_decisions.py`. Both are custody-set, so
+      the draft is the builder's and the installation is the owner's.
+links: [D0063, D0064, D0094, D0095, D0106, D0115, D0128, D0131, D0142, D0145, D0154, D0167, D0169, D0170, D0172]

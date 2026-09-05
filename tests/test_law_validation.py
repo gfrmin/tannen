@@ -23,6 +23,7 @@ and finding out.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import os
 import subprocess
@@ -107,6 +108,70 @@ def test_every_family_is_aimed_at_by_a_mutant(milestone: str) -> None:
     M = MODELS[milestone]
     assert set(M.CAUGHT_BY.values()) == set(M.FAMILIES)
     assert set(M.CAUGHT_BY) == set(M.MUTANTS)
+
+
+#: What makes a frozen oracle a RATCHET MODEL, as opposed to a subject adapter or a
+#: fragment: it declares the three names this file consumes. Identifying models by the
+#: interface the ratchet actually uses is what stops this check from becoming a second
+#: hand-written list beside the one it guards.
+RATCHET_INTERFACE = frozenset({"FAMILIES", "MUTANTS", "CAUGHT_BY"})
+
+
+def _models_on_disk(root: Path) -> dict[str, list[Path]]:
+    """Every frozen oracle declaring `RATCHET_INTERFACE`, by milestone directory.
+
+    Read STATICALLY, for `discovery.discover_laws`' reason: the check must not depend on
+    the models being importable, or a model that fails to load would report as no model at
+    all — the exact silence being guarded against. The candidate set is
+    `tests/laws/m*/_*.py`, the same set `plugin._frozen_oracles` derives (D0142), so the
+    two guards cannot disagree about what an oracle is.
+    """
+    found: dict[str, list[Path]] = {}
+    for path in sorted((root / "tests" / "laws").glob("m*/_*.py")):
+        if path.stem.startswith("__"):
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        assigned = {
+            target.id
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name)
+        }
+        if RATCHET_INTERFACE <= assigned:
+            found.setdefault(path.parent.name, []).append(path)
+    return found
+
+
+def test_the_mutant_map_is_total() -> None:
+    """`MODEL_PATHS` covers every frozen model on disk — D0172 finding (B), D0171 ruling (3).
+
+    Without this, `MODEL_PATHS` was a hand-maintained enumeration referenced in exactly two
+    places, and a milestone omitted from it contributed no `(milestone, mutant)` pairs: the
+    matrix above would pass over the milestones that ARE listed and report green while the
+    omitted milestone's mutants never ran. That is D0169's shape inside the machinery D0094
+    built to catch laws that cannot fail, and D0142 had already derived the oracle-shadow
+    guard's set from the filesystem — this is the un-derived half of that fix.
+
+    Derived AND asserted rather than simply derived (D0171 ruling 3): the map still carries
+    each model's module NAME, which must be milestone-unique or the oracle-shadow guard
+    refuses the run (D0165), and no filesystem scan can supply that. So the scan finds the
+    models and this assertion makes any disagreement loud.
+    """
+    on_disk = _models_on_disk(REPO_ROOT)
+    duplicated = {m: paths for m, paths in on_disk.items() if len(paths) > 1}
+    assert not duplicated, (
+        f"one milestone declares two ratchet models ({duplicated}) — the map is keyed by "
+        "milestone and could only carry one of them"
+    )
+    found = {milestone: paths[0] for milestone, paths in on_disk.items()}
+    listed = {milestone: path for milestone, (_, path) in MODEL_PATHS.items()}
+    assert found == listed, (
+        "MODEL_PATHS disagrees with the frozen models on disk: missing "
+        f"{sorted(set(found) - set(listed))}, stale {sorted(set(listed) - set(found))}. "
+        "A model absent from the map contributes no mutants, so the matrix passes over "
+        "the milestones that remain and says nothing about the one that left."
+    )
 
 
 # ------------------------------------------------------------------------ scripts/check_laws.py
