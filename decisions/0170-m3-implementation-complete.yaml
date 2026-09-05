@@ -1,0 +1,135 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0170
+title: "M3 implementation complete: sixteen frozen laws green with zero skips, no frozen path touched — and the spec's own completion criterion was unmeetable until the law locator was fixed"
+tier: A
+date: "2026-09-05"
+risk_flags: [governance-paths]
+decision: >-
+  Session B is complete under BRIEF §8's frozen-oracle protocol, against `docs/specs/m3.md`
+  §11's list item by item, at commit `7d57ff0`: `uv run pytest tests/laws/m3` passes with 38
+  nodes and ZERO skips; `uv run tannen laws report` shows fresh passing evidence for
+  L3.1-L3.16 and for all 52 laws across M0-M3; `make verify` is green at every step
+  including `lint-imports --config governance/importlinter.toml`, which still proves the
+  kernel imports no IO and no clock — `tannen.kernel.delta` is pure calculus and
+  `tannen.incremental` is shell, and the contract is what keeps the executor from drifting
+  inward; `tests/test_law_validation.py` is green; `governance/laws.yaml`'s `pending` list
+  is empty; and the M1 node D0128 retired reports XFAIL, never XPASS.
+  .
+  FIVE CHANGES TO SHIPPED CODE, and nothing else was needed.
+  .
+  (1) `src/tannen/kernel/delta.py`, new — the delta calculus: `surviving`, `group_slots`,
+  `at_slot`, `is_delta_semiring`, `negate`, `diff`, `apply` with §3.3's pinned normalisation
+  order, and the derived rules `linear_delta`, `join_delta`, `replace_delta`,
+  `group_aggregate_delta`. Two structural locators carry every question about shape, so no
+  function in the module knows that `ZxWhy` is a pair (D0168).
+  .
+  (2) `src/tannen/incremental.py`, new — the executor shell: `DeltaNode`, `Ledger`,
+  `advance`. Code is referenced by name out of registries because a lambda has no content
+  address (D0167).
+  .
+  (3) `src/tannen/sources.py` gained `ingest_delta` — arrivals and retractions as one delta
+  `Rel`, each row witnessed by its own `srcrow/1` ref, so a retraction's witness
+  dereferences to the row it removes (D0166).
+  .
+  (4) `semiring.why_slots` by recursive descent, `negate` on Z/Why/products, and the ref
+  gate in `Why.encode` — closing RT-M2-04 and RT-M2-07 (D0161, D0162), which is what makes
+  frozen m2 §3's and §7's claims true at their stated strength rather than true of the
+  shipped semiring only.
+  .
+  (5) `rel._refuse_unwitnessed` now iterates every `Why` slot, `ops` conjoins the absence
+  witness along a slot path, and `anti_join` refuses a multi-`Why` semiring by name.
+  .
+  TWO INVARIANTS WERE PRODUCED AS FAILURES BEFORE BEING TRUSTED, not observed to be green.
+  Dropping `replay=True` from the node above an `anti_join` leaves the superseded citation
+  standing and byte identity against the one-shot reference fails — the contagion rule
+  (D0163) is load-bearing, measured. Moving the ledger's discard after the source `apply`
+  fires the witnessed-row alarm on a LAWFUL stream, which is §6's ordering earning its
+  place. Green as a starting condition proves nothing (D0094); both checks were run from
+  the failing side.
+  .
+  THE KILL CRITERION WAS NOT TRIGGERED. §11 names a failure of L3.12 — the differential
+  against the frozen model — as the thing that stops everything. It passed on its first run
+  against the shipped package.
+  .
+  THE COMPLETION CRITERION WAS UNMEETABLE UNTIL D0169. This is the fact that most needs
+  saying in a record titled "complete". `discovery.LAW_TEST_RE` read only the leading law
+  number, so seven laws the frozen m3 §10 table declares — L3.2, L3.3, L3.4, L3.8, L3.10,
+  L3.12, L3.14 — were invisible to discovery, to `tannen laws report` and to the evidence
+  stream. §11 asks for fresh evidence for L3.1-L3.16; before the fix no run could produce
+  it, however green. `make verify` could not have been green at `d7dd372`, Session A's tip,
+  and that was MEASURED in a throwaway worktree at that commit rather than inferred. The
+  claim this record makes is therefore about the tree as it stands after D0169, not about
+  the tree the freeze left.
+  .
+  THE GATE, AS IT RAN — and it did not run as one command. Background processes are reaped
+  in this environment after ~10-15 minutes and a foreground call caps at 600s, so
+  `make verify`'s ~37 minutes were executed step by step, with the pytest step split into
+  chunks (`laws/m0 laws/m1`, `laws/m2 laws/m3`, the kernel and validation files, the
+  governance files, and `check_decisions`' own poison case run alone). Every step's output
+  was read. Recorded because a reader is entitled to know the gate was run in pieces:
+  829 tests collected; 52 law(s) carrying fresh passing evidence; 169 records valid with 87
+  pytest bindings green, 0 unenforced and 1 Tier-C door queued; three import contracts kept;
+  custody floor intact with every guard failing its poison. The residual skips and the one
+  xfail are the same pre-existing three D0139 recorded: the S-pending conformance vector,
+  D0124's empty parameter set, and the node D0128 retired.
+  .
+  WHAT IS NOT DONE, AND IS NOT A GAP HERE. The M2→M3 boundary red team (BRIEF §9.1 point 5)
+  has not run: D0104 requires a fresh context that did not write the implementation, and
+  this one wrote it. The M3 sitting driver is not drafted — `scripts/boundary_sitting.sh` is
+  today byte-identical to the M2 draft, i.e. it is the M2 driver, still naming M2's steps
+  and still quoting a suite of 712 tests where 829 are now collected (D0154 item 9).
+  Neither is a milestone deliverable; both stand between here and the sitting, and both are
+  stated in `docs/proposals/2026-09-04-m3-boundary-sitting/CONFERRAL.md` so that scheduling
+  the sitting does not depend on anyone remembering them.
+rationale: >-
+  Recorded so the digest's laws section and the M3 boundary sitting have one record to point
+  at for "the milestone is done", and so that the three facts a green suite cannot show are
+  written down rather than inferred: that the two new invariants were verified from their
+  failing side, that the kill criterion never fired, and that the criterion this record
+  claims to satisfy was not measurable at all until a defect in the measuring machinery was
+  fixed mid-session. The last is the one a later reader is most likely to need and least
+  likely to reconstruct, since the evidence stream now shows sixteen healthy M3 rows with
+  nothing to suggest that nine of them were the most that could ever have appeared.
+reversibility: >-
+  A statement of state; nothing to reverse. The tag that will attest it (`m3-close`) is the
+  owner's, at the sitting (D0049), and cannot be minted under the standing delegation.
+status: accepted
+bindings_count: 6
+bindings:
+  - type: pytest
+    target: tests/laws/m3/test_l3_differential.py
+    strength: enforced
+    detail: >-
+      L3.12, the differential against the frozen `_delta_model.py`: green only if the
+      executor agrees with the oracle annotation for annotation on every catalogue shape.
+      §11's kill criterion lives here.
+  - type: pytest
+    target: tests/laws/m3/test_l3_executor.py
+    strength: enforced
+    detail: >-
+      L3.15 and L3.16 — the calculus carried through the store, a registered descriptor and
+      the trace, which is the only form in which a user meets it.
+  - type: pytest
+    target: tests/laws/m3/test_l3_convergence.py
+    strength: enforced
+    detail: >-
+      L3.9-L3.11 — that a maintained stream converges to the one-shot answer byte for byte,
+      and the residue theorem on the positive fragment.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_every_mutant_dies_by_the_check_that_names_it"
+    strength: enforced
+    detail: >-
+      The half that would catch a law which cannot fail — all nine M3 mutants die by the
+      check that names them, run at every commit.
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_the_report_over_the_real_repo_is_well_formed"
+    strength: enforced
+    detail: >-
+      The check that makes this record's central claim measurable at all: the report's law
+      ids equal the frozen spec tables' law ids, for every milestone including this one.
+      It is the test D0169 found descoped.
+  - type: manifest
+    target: docs/specs/m3.md
+    strength: enforced
+    detail: The spec whose §11 states the completion criteria this record claims.
+links: [D0154, D0155, D0163, D0166, D0167, D0168, D0169, D0094, D0104, D0128, D0139]
