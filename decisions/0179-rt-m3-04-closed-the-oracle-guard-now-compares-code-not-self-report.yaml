@@ -1,0 +1,111 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0179
+title: "RT-M3-04 closed: the oracle-shadow guard authenticated a module by its own `__file__`, so a decoy that set it neutered L3.12's kill criterion with the whole gate green — the check now compares the CODE a module answers with against a fresh load of the frozen file"
+tier: A
+date: "2026-09-06"
+risk_flags: ["governance-paths"]
+decision: >-
+  `src/tannen/laws/plugin.py`'s `_oracle_shadow_problem` gains a second tooth. Where the
+  frozen path and the module's self-reported `__file__` agree, the guard no longer stops
+  there: it loads the frozen file fresh under a private name (never into `sys.modules`),
+  reads the public export list OFF THE FROZEN REFERENCE, and compares a recursive digest of
+  each callable's code object — `co_code`, `co_names`, `co_consts`, descending into nested
+  code objects — against whatever the module under test answers with for that name.
+  .
+  The patch is the one the M2->M3 red team drafted and measured
+  (`docs/redteam/fixture-candidates/oracle-shadow-spoofed/rt-m3-04-plugin-code-identity.patch`),
+  applied unchanged. `src/tannen/laws/plugin.py` is in neither `MANIFEST.sha256` nor
+  `governance/tier-c.yaml#custody.set`, so this is builder-landable; the poison fixture that
+  pins it is NOT, and stays staged for the sitting.
+  .
+  WATCHED FAILING IN THREE DIRECTIONS, ON THE REAL TREE, BEFORE IT WAS BELIEVED (D0111,
+  D0116). All three ran under `TANNEN_NO_EVIDENCE=1` so no poisoned verdict could reach the
+  store; `plugin.py:149` runs the shadow check unconditionally even then, which is what made
+  that safe.
+  .
+  (1) THE HOLE, REPRODUCED. Decoy `_delta_model` with `__file__` set to the frozen path and
+  `check_differential` stubbed to return None: `exit=0`, `14 passed in 6.54s`. BRIEF §6's
+  differential kill criterion answered by a stub, and the guard said nothing.
+  .
+  (2) POSITIVE CONTROL, so the guard's input set is known non-empty: the two INSTALLED naive
+  fixtures (`tests/poison/oracle-shadow-model`, `tests/poison/oracle-shadow`) both exit 1
+  against the shipped guard, naming the shadowing file. The guard was working; it was
+  working on the half that was already covered.
+  .
+  (3) AFTER THE PATCH: the same exploit exits 1 with `sys.modules['_delta_model'] reports the
+  frozen .../tests/laws/m3/_delta_model.py but answers with different code for
+  ['check_differential']`. Both naive fixtures still exit 1 — the half that worked did not
+  regress. And no false positive: `tests/laws/m2 tests/laws/m3` = `151 passed in 61.27s`,
+  matching the red team's sandbox figure exactly, with all five frozen oracles re-exec'd
+  fresh and no module-level side effect surfacing.
+  .
+  ONE OPERATIONAL FOOTGUN, RECORDED SO THE NEXT PERSON REPRODUCING THESE CONTROLS DOES NOT
+  THINK THEY BROKE SOMETHING. Invoking a poison fixture by hand
+  (`PYTHONPATH=tests/poison/oracle-shadow-model uv run pytest -p bootstrap_shadow_model ...`)
+  writes `__pycache__/*.pyc` under `tests/poison/`, which is a CUSTODY-SET path
+  (`tests/poison/**/*`). The next custodian run then reports four
+  `FAIL — not manifested: ...cpython-313.pyc` and `custody floor violated`. It is not a
+  custody breach — the files are untracked, gitignored build artifacts — and
+  `find tests/poison -name __pycache__ -type d -exec rm -rf {} +` restores
+  `custody floor intact`, which was measured, not assumed. Notably the CUSTODIAN'S OWN runs
+  of the same fixtures leave nothing behind: after a clean-up and a full `--check-only` run,
+  zero `.pyc` remain. So the hazard belongs to the manual invocation only.
+  .
+  WHAT THIS DOES NOT CLOSE, stated because the fixture README states it and a closure record
+  that quietly widens its own claim is worse than none. This is defence in depth, not the
+  fix. A decoy that `compile()`s its stub from the frozen source and diverts behaviour
+  through a closure or mutable default still has to change SOME code object, so the tooth has
+  real teeth — but the actual remedy is a package-qualified import in the frozen law file,
+  which needs the owner's key because the law files are frozen. RT-M1-01 named it at M1,
+  RT-M2-01 repeated it at M2, RT-M3-04 repeats it at M3. **That is the same recommendation at
+  three consecutive boundaries**, and it is queued to the sitting rather than counted as done
+  here.
+rationale: >-
+  Tier A: one unfrozen, uncustodied implementation file, plus this record. No signature, no
+  dependency, no frozen path touched.
+  .
+  Landed now rather than at the sitting because it is the prerequisite for the fixture, not
+  the other way round: `docs/redteam/fixture-candidates/README.md` marks
+  `oracle-shadow-spoofed/` **needs patch**, and installing a fixture whose tooth does not
+  exist leaves the custodian permanently red. With this landed the fixture is install-ready,
+  which converts one of the sitting's items from two steps to one.
+  .
+  Landed in the same session as D0180 deliberately. `src/tannen/laws/plugin.py` and
+  `src/tannen/kernel/refs.py` are both inside `harness_subject`
+  (`src/tannen/laws/harness.py`), so either edit moves ALL 52 law descriptors; batching them
+  costs one full evidence re-run instead of two, and a descriptor churn nobody needed is
+  itself a cost this repo has paid before.
+  .
+  DELIBERATELY NOT DONE: the poison fixture not installed (`tests/poison/` is author-key
+  territory, BRIEF §9.1), `scripts/custodian.sh` not wired to it, and the patch not modified
+  — it was applied exactly as the red team measured it, so this record's evidence and the
+  fixture README's evidence describe the same bytes.
+reversibility: >-
+  `git revert` of one file. The guard is additive: it fires only where the previous check
+  already passed, so reverting restores the prior behaviour exactly and loses nothing else.
+  The evidence re-run it forces is not reversible in the sense that records are append-only,
+  but that is the store working as designed — no record is overwritten or deleted.
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/laws/plugin.py
+    strength: enforced
+    detail: >-
+      `_oracle_shadow_problem` and its four new helpers. ENFORCED: the check runs at
+      collection time on every pytest session, including under `TANNEN_NO_EVIDENCE`, and
+      calls `pytest.exit(returncode=1)` — a law run cannot proceed past a substituted oracle.
+  - type: file
+    target: docs/redteam/fixture-candidates/oracle-shadow-spoofed/README.md
+    strength: documentary
+    detail: >-
+      The finding, the three rejected spellings, and the exploit's own instrumentation
+      (`check_differential` answered 1,400 times by a stub while 544 law tests passed and 52
+      records went fresh). DOCUMENTARY until the owner installs the fixture; the record says
+      so rather than implying the corpus already covers this.
+  - type: pytest
+    target: tests/laws/m3/test_l3_differential.py
+    strength: enforced
+    detail: >-
+      L3.12, the law the exploit made vacuous. Bound so the thing being protected is named,
+      not just the guard protecting it.
+links: ["D0142", "D0154", "D0116", "D0111", "D0176", "D0180"]

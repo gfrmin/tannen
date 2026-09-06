@@ -1,0 +1,99 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0182
+title: "The publication sitting gets its own executable driver, drafted under docs/proposals/ and rehearsed in dry-run — every previous sitting had one and this one had prose, and running it once found two defects that reading it did not"
+tier: A
+date: "2026-09-06"
+risk_flags: ["governance-paths"]
+decision: >-
+  `docs/proposals/2026-09-06-publication/publication_sitting.sh`, 258 lines, drafted and
+  NOT installed. Sitting drivers in `scripts/` are custody-set
+  (`governance/tier-c.yaml#custody.set` lists `opening_sitting.sh` and
+  `boundary_sitting.sh`), so installing it is a `git mv` plus a custody row plus a
+  re-signature — the owner's act, at the sitting.
+  .
+  WHY IT EXISTS. `scripts/opening_sitting.sh` is 246 lines and
+  `scripts/boundary_sitting.sh` is 1,950; `scripts/rehearse_sitting.sh` drives the latter
+  against a disposable clone. The publication sitting had an eleven-step prose runbook in a
+  README. It is also the least forgiving sitting yet: it rewrites every commit, re-signs all
+  eight tags including the trust root, and spends the receipt chain's no-rewrite guarantee.
+  D0068's lesson is that three consecutive M0->M1 attempts stopped on defects a single
+  end-to-end run would have found in seconds (D0065, D0066) — each one spending the owner's
+  attention, which is the resource the whole governance layer exists to conserve.
+  .
+  THE RUN FOUND TWO REAL DEFECTS THAT READING DID NOT.
+  .
+  (1) The dropped-commit check was anchored on the WRONG FIELD. `git filter-repo`'s
+  `commit-map` marks a dropped commit with forty zeros in the NEW column; the draft grepped
+  `'^0\{40\} '`, the OLD column, which matches nothing ever. It would have reported every
+  rewrite clean, including one that silently dropped commits — a guard that cannot fail,
+  D0116 species II, inside the step that is irreversible. Now spelled exactly as
+  `rehearse_rewrite.sh` step 6 spells it, with the well-formed-pair count cross-checked
+  against the pre-rewrite commit count.
+  .
+  (2) Step 6 resolved each tag's new commit by looking the OLD sha up inside the rewritten
+  clone — where, by construction, it does not exist. `git rev-list -1 <old>` fails there and
+  yields the empty string, so the driver would have offered an empty re-tag target for all
+  eight tags. Now resolved through the commit-map, with `die` if a tag's commit is missing
+  from it.
+  .
+  Both were found by `--dry-run`, which narrates every step and signs and writes nothing:
+  the run reaches "the sitting is closed" with exit 0 and all eleven steps rendered. Two
+  further fixes came from making that mode honest — the draft would have opened a pager and
+  created a `mktemp -d` even in dry-run.
+  .
+  WHAT THE DRY RUN CANNOT PROVE, said plainly so a green run is not over-read: it exercises
+  step order, quoting, the derived tag lists and the narration. It does NOT exercise
+  filter-repo, any signature, or the gate on rewritten objects. A full rehearsal against a
+  disposable clone with a throwaway owner key — `rehearse_sitting.sh`'s pattern — is the
+  next thing this driver needs and is NOT done. `rehearse_rewrite.sh` already covers the
+  rewrite mechanics end to end (14 steps, three negative controls); what remains uncovered
+  is the two joined together.
+  .
+  DESIGN CHOICES WORTH THE LINE. The eight tags are read from `governance/tag-roles.yaml`
+  and `git tag`, never listed inline — CLAUDE.md's standing rule that no guard may depend on
+  a hand-maintained enumeration applies to the thing driving the owner's key at least as
+  much. The rewrite runs only in a fresh `git clone`, never in place, because `~/git/tannen`
+  is bare with four live worktrees. Nothing is force-pushed and no tag is deleted before its
+  replacement is confirmed signable. And the driver refuses to proceed past step 0 without
+  patch 04 (D0177), because step 1 is the step that defect corrupts.
+rationale: >-
+  Tier A: one new file under `docs/proposals/`, executable but wired into nothing, plus this
+  record. It signs nothing, changes no guard, and adds no dependency.
+  .
+  Drafted rather than installed for the same reason every other artifact in this package is:
+  a driver in `scripts/` is custody-set, and the builder drafting one is not the builder
+  installing one. Kept in the package rather than `scripts/` so the sitting's whole surface —
+  patches, drafts, fixtures, probes, driver — is one directory the owner reads in one pass.
+  .
+  DELIBERATELY NOT DONE: not moved to `scripts/`, not added to the custody set or
+  `MANIFEST.sha256`, not referenced by the `Makefile`, and no full rehearsal with a throwaway
+  key — that is real work and claiming it undone is better than implying a green dry-run
+  covered it.
+reversibility: >-
+  Deleting one unreferenced file. It is inert until the owner installs it; until then the
+  eleven-step prose runbook in the package README remains the operative instruction, and the
+  two agree because the driver was written from it.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publication_sitting.sh
+    strength: documentary
+    detail: >-
+      The driver. DOCUMENTARY and it must stay so until installed: a script under
+      `docs/proposals/` that no gate invokes enforces nothing, and calling it enforced would
+      be the exact overclaim this repo files findings about.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/rehearse_rewrite.sh
+    strength: documentary
+    detail: >-
+      The rehearsal that already covers the rewrite mechanics, and the file whose step 6
+      supplied the correct commit-map spelling after the driver's own draft got it wrong.
+      Bound so the gap between the two — driver rehearsed only in dry-run — is visible from
+      the record rather than only from the prose above.
+  - type: file
+    target: scripts/opening_sitting.sh
+    strength: documentary
+    detail: >-
+      The 246-line precedent this driver is modelled on: `say`/`note`/`confirm`, idempotent
+      steps, owner-run, signs nothing by itself.
+links: ["D0068", "D0176", "D0177", "D0181", "D0065", "D0066"]

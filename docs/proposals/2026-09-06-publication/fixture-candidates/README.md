@@ -57,3 +57,47 @@ python scripts/check_concepts.py --root tests/poison/check-concepts   # FAIL, no
 
 And that the count guard is not merely decorative in the real tree — the four probes run
 for patch `01` are recorded in the package README.
+
+---
+
+# Fixture candidate 2 — `tests/poison/check-concepts-brief-row/` — **needs patch 05**
+
+Staged, not installed, and **it must not be installed before patch `05`**: the guard tooth
+it poisons does not exist yet, so installing it now would leave the custodian permanently
+red, which is the opposite of what a poison fixture is for. Same rule the M3 red team's
+`oracle-shadow-spoofed/` follows.
+
+## Why
+
+Patch `05` adds the check that a concept record's `sources[].repo` set matches the owners
+BRIEF §2 names for that row. Its whole point is that **`brief_row` is currently read by
+nothing**, so a record can disagree with the frozen constitution about who owns a concept
+and every guard stays green. A tooth with no fixture is a tooth nobody watches fail.
+
+## The tree
+
+A one-record poison tree, mirroring `tests/poison/check-concepts/`'s shape:
+
+`tests/poison/check-concepts-brief-row/concepts/poison-brief-row-drift.yaml` — a record
+whose `brief_row` quotes a real BRIEF §2 row naming **two** owners, whose `sources` lists
+**one**, and which carries **no** `brief_row_divergence` declaration. Plus the minimal
+`governance/policy.yaml` (`expected_citation_pins: 1`) that fixture candidate 1 explains.
+
+**Marker:** `brief_row` (the substring patch 05's message is required to contain, the way
+`check-concepts/` keys on `snapshot content drifted`).
+
+## Watched failing — against the probe, since the guard is not applied yet
+
+`probes/brief_row_fidelity.py` is patch 05's logic. Run today against the real tree it
+reports `tooth 2: 7/8 ok`, the single RED being `provenance-ref-grammar` — the true
+positive D0180 created and declared. That is the *undeclared* form of the same shape this
+fixture pins:
+
+```
+provenance-ref-grammar     pkm,renavon   pkm   ok   RED
+```
+
+Before installing, confirm in a scratch copy that (a) the fixture fails patch 05's guard,
+(b) the message carries the marker, and (c) adding a `brief_row_divergence` declaration to
+the fixture record turns it green — so the fixture is pinning the tooth and not merely a
+malformed record.

@@ -1,0 +1,132 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0181
+title: "A decision record can bind to a file that is later legitimately deleted, and there is no way to say so: the record is immutable, `check_decisions` resolves file bindings by bare existence, and both coupled guards are always-run pre-commit hooks — so D0180's ruling is UNEXECUTABLE in the tracked tree until the owner patches the guard, and the publication sitting would have discovered this at step 5"
+tier: A
+date: "2026-09-06"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  Executing D0180 to measure it produced a defect with no builder-landable fix, and the
+  shape is worth more than the instance.
+  .
+  THE INSTANCE. Deleting `concepts/snapshots/provenance-ref-grammar/renavon-adr-002.md`
+  breaks a `type: file` binding inside D0115 — Tier C, `accepted`, OWNER-SIGNED.
+  `check_decisions.binding_violation` resolves a file binding by bare existence and offers no
+  escape hatch: `return None if (root / target).exists() else f"target does not exist: ..."`.
+  D0045 makes D0115's fields immutable, so the binding cannot be rewritten, and
+  `scripts/check_decisions.py` is custody-set, so the guard cannot be taught. Three
+  protections that are each individually correct compose into a state with no legal exit.
+  .
+  THE SHAPE, WHICH IS THE PART THAT GENERALISES: **any record may bind to a path, and nothing
+  stops that path being legitimately retired later.** There is no per-binding supersession
+  anywhere in the system. Every such retirement, forever, is a permanent red.
+  .
+  IT IS WORSE THAN A RED GATE — IT IS AN UNCOMMITTABLE TREE, IN BOTH DIRECTIONS. The citation
+  and the bytes are coupled by `check_concepts.py`'s orphan check. Withdraw the `source` entry
+  and keep the file: `check_concepts` fails on the orphan. Delete the file as well:
+  `check_decisions` fails on the binding. **Both are `always_run: true` hooks in
+  `.pre-commit-config.yaml`**, so there is no intermediate state that commits. The only way to
+  land D0180's ruling today is `git commit --no-verify`, i.e. bypassing the enforcement layer
+  this repository is built on, to buy a privacy delta that D0180 measures at exactly zero (the
+  bytes are in 80 of 80 commits until the rewrite, and there is no remote). That was refused.
+  The ruling is sequenced to the sitting instead, after `patches/06`.
+  .
+  THE BLAST RADIUS IS NOT ONE RECORD, AND THAT WAS NOT VISIBLE FROM READING THE GUARD.
+  Measured with the deletion applied, `check_decisions: FAIL (3 violation(s))`:
+  D0115's own dangling binding; `decisions/0063-conferral-rulings.yaml` — "pytest node fails:
+  tests/test_governance_scripts.py"; and D0177 — "pytest node fails:
+  tests/test_governance_scripts.py::test_check_passes_on_real_tree". The second and third are
+  consequences of the first, because that test runs `check_decisions` against the real tree
+  (`1 failed, 24 passed in 843.44s`). **One dangling file binding takes down every record
+  bound to the governance test suite.**
+  .
+  THE SITTING WOULD HAVE HIT THIS ANYWAY, AND LATER. Runbook step 5 deletes the sibling
+  snapshots; D0115 binds to one of them. The sitting would have reached step 9 —
+  `make verify` on the rewritten history — with the owner's key out, nine steps of momentum
+  spent and an irreversible rewrite already performed, and could not have passed it. That is
+  precisely the failure mode D0068 was written about: three consecutive M0->M1 attempts
+  stopped on defects one end-to-end run would have found (D0065, D0066), each spending the
+  owner's attention. Executing D0180 early converted a mid-sitting blocker into a drafted
+  patch. **`patches/06` is therefore a PREREQUISITE of the sitting, not an improvement to
+  it**, and the runbook and driver both say so.
+  .
+  THE FIX, DRAFTED AT
+  `docs/proposals/2026-09-06-publication/patches/06-check-decisions-retired-bindings.md`:
+  a new optional `retires_bindings` field naming `(record, target, reason)`, honoured only
+  for `documentary` bindings, only from an `accepted` record, refused if the target still
+  exists — a dormant retirement would silently cover a FUTURE deletion of the same path,
+  species I of D0116's taxonomy arriving through the door built to fix species I — and
+  printed on every honoured retirement so nothing resolves invisibly. D0115's binding is
+  `strength: documentary`, so the fix is available at exactly the strength where it is safe;
+  checked, not assumed. It touches `scripts/check_decisions.py` and
+  `governance/schemas/decision-record.schema.json`, both custody-set.
+  .
+  THIS RECORD CANNOT CARRY ITS OWN RETIREMENT YET: the schema is
+  `additionalProperties: false`, so adding `retires_bindings` today fails validation. It is
+  added when patch 06 lands, as step 2 of the sitting.
+  .
+  A SECOND FINDING, FOUND WHILE LOOKING FOR AN EXISTING MECHANISM. `supersedes` is already in
+  `decision-record.schema.json` (`{"type": "string", "pattern": "^D[0-9]{4}$"}`). **No record
+  uses it and no code reads it** — `grep -n supersedes scripts/*.py` and
+  `grep -l '^supersedes:' decisions/*.yaml` are both empty. A reader who found that key would
+  reasonably conclude supersession is handled; it is not. It would not have helped here in any
+  case, being whole-record: D0115 is not superseded, one of its four bindings points at a path
+  that no longer exists. Either wire it up or delete it — a declared mechanism that does
+  nothing is worse than an absent one, because it answers a question it cannot answer.
+rationale: >-
+  Tier A: one record and one drafted patch under `docs/proposals/`. No guard edited, no
+  signature made, no frozen or custody-set path touched, and the tracked tree left byte-
+  identical to `a9a6029` for everything the measurement disturbed.
+  .
+  A tombstone file at the bound path was considered and rejected: it satisfies D0115's
+  existence check but is then an uncited file under `concepts/snapshots/`, so it trades a red
+  in `check_decisions` for a red in `check_concepts` and adds a decoy artifact to a directory
+  whose whole point is that every file in it is vouched for. Named because it is the obvious
+  idea and someone will have it again.
+  .
+  Leaving the gate red with a note — which CLAUDE.md does permit — was the working plan for
+  part of this session and was abandoned on measurement. It costs a red CI, masks any NEW
+  `check_decisions` failure until an owner sitting of unknown date, and cannot actually be
+  committed without `--no-verify`. Against that it buys nothing D0180 could not get by
+  sequencing. Recorded because the reasoning is the deliverable: the right response to
+  "two guards block this" was not to bypass them but to ask what they were protecting.
+  .
+  DELIBERATELY NOT DONE: `scripts/check_decisions.py` not edited; the schema not edited;
+  D0115 not edited, not re-signed, and its binding not rewritten; no `--ignore` or allowlist
+  added anywhere, which would have made the guard quieter without making it right; and no
+  `--no-verify` commit.
+reversibility: >-
+  Nothing to reverse — the measurement was taken and undone within the session, and every
+  guard is green. What is NOT reversible is the ordering constraint this establishes for the
+  sitting: patch 06 must land before step 5, because after the rewrite the deletion cannot be
+  walked back.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/06-check-decisions-retired-bindings.md
+    strength: documentary
+    detail: >-
+      The drafted mechanism, its four anti-vacuity constraints, and the observed failure
+      output. DOCUMENTARY: a patch awaiting the owner's key enforces nothing — which is the
+      whole reason this is filed rather than carried to the sitting in someone's head.
+  - type: file
+    target: decisions/0115-publish-the-repository-tier-c-door-external-bytes.yaml
+    strength: documentary
+    detail: >-
+      The record whose binding will break. Named at its path so the next reader of that
+      immutable, owner-signed file can find out why one of its four bindings is scheduled to
+      dangle without having to reconstruct it.
+  - type: config
+    target: governance/tier-c.yaml#custody.set
+    strength: enforced
+    detail: >-
+      Lists `scripts/check_decisions.py`, which is why the fix is drafted rather than applied.
+      ENFORCED: `check_manifest.py::check_required_signatures` and the custody seal make that
+      boundary mechanical, not a convention this session chose to respect.
+  - type: file
+    target: .pre-commit-config.yaml
+    strength: enforced
+    detail: >-
+      `check-concepts` and `check-decisions` are both `always_run: true`. ENFORCED, and that
+      is the fact that turns this from a red gate into an uncommittable tree — the reason the
+      ruling is sequenced rather than landed behind `--no-verify`.
+links: ["D0180", "D0115", "D0045", "D0116", "D0068", "D0177", "D0176"]

@@ -1,0 +1,189 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0180
+title: "Owner ruling 2026-09-06: remove references to the fourth sibling. Measured by executing it, then reverted and sequenced to the publication sitting — 54 of the hits cannot go at all, three of them ARE the guard that forbids depending on it, and removing the rest early buys exactly nothing"
+tier: A
+date: "2026-09-06"
+risk_flags: ["public-surface", "governance-paths"]
+decision: >-
+  Asked as the last open question of D0176 — "you ruled on 'may this quote 58 lines'; nobody
+  asked 'may it name that repository in public'" — the owner ruled: remove all references.
+  The ruling stands and is binding. Its EXECUTION is sequenced to the publication sitting,
+  for two measured reasons and not for reluctance.
+  .
+  REASON 1 — IT CANNOT BE EXECUTED IN THE TRACKED TREE TODAY, IN EITHER DIRECTION. The
+  citation and the vendored bytes are coupled by `check_concepts.py`'s orphan check:
+  withdraw the `source` entry and leave the file, and that guard fails
+  ("orphan vendored artifact (no record cites it)"); delete the file too, and
+  `check_decisions.py` fails, because owner-signed, immutable D0115 carries a `type: file`
+  binding to exactly that path. **Both guards are `always_run: true` pre-commit hooks**, so
+  either half blocks every commit, and D0045 forbids the obvious fix. The full finding, its
+  blast radius and the drafted remedy are D0181; the remedy is `patches/06`, which is
+  custody-set and therefore the owner's to apply.
+  .
+  REASON 2 — DOING IT EARLY BUYS NOTHING, AND THIS IS D0176'S OWN ARGUMENT TURNED ON ITSELF.
+  `concepts/snapshots/provenance-ref-grammar/renavon-adr-002.md` is present in **80 of 80
+  commits** — counted, not assumed — so `git show <any commit>:<path>` still prints the ADR's
+  first line with the file deleted at HEAD. The bytes leave only when the history rewrite
+  removes them, which is step 5 of the same sitting. And there is still no remote, so nothing
+  is exposed either way in the meantime. Deleting at HEAD today would trade a red gate and a
+  bypassed pre-commit for a privacy delta of zero.
+  .
+  ONE PART OF THE RULING **IS** LANDED, BECAUSE IT IS THE ONLY PART NOTHING BLOCKS.
+  `src/tannen/kernel/refs.py`'s module docstring restated the owner list inline — "pkm
+  SPEC-PRINCIPLES §1's hash-prefix discipline, Renavon ADR-002's typed opaque refs" — three
+  lines above quoting BRIEF §2's own "restatement is duplication; duplication is drift". The
+  inline list is gone; the `[cites: provenance-ref-grammar]` marker stays and still resolves
+  (the marker scan is `docs/specs/` only, and the registry record carries the owner list).
+  This is safe today because no guard reads that prose, and it is right independently of the
+  ruling: a citation marker plus a registry entry is the repo's own answer to restatement.
+  It is also the ONLY tracked-tree change this ruling makes today — `concepts/` is
+  byte-identical to `a9a6029`.
+  .
+  THE REST WAS EXECUTED, MEASURED, REVERTED — so the numbers below are observations rather
+  than predictions. With the withdrawal applied: `check_concepts` green, `check_decisions` red on
+  exactly three violations (D0181 quotes them), the citation-pin count 13 -> **12**, and
+  these gone ENTIRELY from the tracked tree — the org slug outside two immutable records, the
+  internal ADR path `docs/architecture/decisions/002-...`, the ADR heading quoted verbatim,
+  the pinned private commit `ab68dd9c...`, and the snapshot content hash. The tree was then
+  restored: the excerpt is byte-identical (`sha256:310cc274...`, re-verified against the
+  record's own pin) and every guard is green again.
+  .
+  WHAT THE RULING CAN NEVER REACH: **54 hits across 23 files** — 42 in source files plus 12
+  in generated `DECISIONS.md`, which reproduces them from immutable records every time it is
+  regenerated. Counted with
+  `git grep -ic renavon | awk -F: '{s+=$2} END {print s" in "NR}'`; an earlier draft of this
+  record said "40 in 20" from a pre-edit count and was simply wrong, which is why the command
+  is quoted rather than the number trusted. Every one is protected, load-bearing, or both:
+  .
+  `governance/importlinter.toml` (2) holds the FORBIDDEN MODULE NAMES of the `no-cross-repo`
+  contract — deleting the string deletes the guard behind CLAUDE.md's first hard rule, and
+  `tests/poison/lint-imports-kernel/` is the fixture proving it bites. `governance/tier-c.yaml`
+  (5) carries `renavon-first-contact`, THE ID OF ONE OF THE FIVE TIER-C DOORS, plus the
+  mirrored forbidden-import list. `BRIEF.md` (8) is frozen and custody-set, and its hits
+  include §10 non-goals, the §9.2 door list, and the M5 charter — the milestone IS "dogfood
+  one Renavon vertical", so removing the word removes the project's purpose. Three frozen
+  specs (3). `scripts/boundary_sitting.sh` and its two archived copies (3) — custody-set, and
+  the copies' entire value is byte-correspondence to it, so editing them destroys the archive
+  rather than cleaning it. Eleven decision records (19), immutable under D0045, `0115`
+  owner-signed, plus their projection (12).
+  .
+  Two further mentions are left deliberately rather than by protection:
+  `docs/redteam/2026-08-24-m0-boundary.md` quotes BRIEF §10 verbatim and describes what the
+  import guard forbids, and `rehearse_rewrite.sh` greps for the name as a POST-REWRITE CHECK.
+  Both are guard-describing text; removing them would weaken the documentation of the
+  isolation the ruling presupposes.
+  .
+  THE RESIDUE IS PARTLY SELF-INFLICTED, AND WORTH NAMING: **the publication record is what
+  publishes it.** D0176 quotes the org slug and the ADR path in the course of explaining that
+  excision would not remove them. Writing the finding down made it permanent. Scrubbing it
+  would mean rewriting a signed, immutable attestation — the same objection that made the
+  package refuse to re-sign the five receipts, and it is refused here for the same reason. So
+  is the arithmetic: the grand total across the tree went 68 -> 69 in 31 files, because this
+  record and `patches/05`/`06` and the probe describe what they remove. An audit trail that
+  explains itself has to name the thing. **The figure that matters is not the count but the
+  KIND**: after the sitting executes this, no internal document path, ADR heading, private
+  commit SHA or vendored line of that repository survives anywhere except inside two
+  immutable records and their projection.
+  .
+  ONE DELIBERATE DEVIATION, FLAGGED BEFORE IT WAS TAKEN AND APPROVED IN THE PLAN. When the
+  withdrawal is executed, the record's `brief_row` — a quote of frozen BRIEF §2, which names
+  two owners — is KEPT VERBATIM. Redacting a quote of the constitution to conceal a name the
+  constitution publishes anyway would make the registry misreport the brief, which is a worse
+  defect than the one it hides. The record then becomes narrower than the row it quotes, by
+  decision, and the divergence is declared in its `notes`.
+  .
+  AND THAT DEVIATION IS ITSELF A FINDING. `scripts/check_concepts.py` READS `brief_row`
+  NOWHERE — it validates a non-empty string and stops. A concept record can therefore
+  disagree with the frozen constitution about WHO OWNS A CONCEPT, which is the entire point
+  of BRIEF §2, with the whole gate green. Patch drafted at
+  `docs/proposals/2026-09-06-publication/patches/05-check-concepts-brief-row-fidelity.md`,
+  with a reproducible probe and a poison fixture specified. The first spelling of that patch
+  was thrown away because it MEASURED GREEN on the exact case it existed for: `brief_row`'s
+  quoted span is only BRIEF §2's Concept column, and the Owner column is free prose after the
+  closing quote. The kept spelling checks both and reports 8/8 on both teeth today, 7/8 with
+  the withdrawal applied — red on exactly the record that changed, and on nothing else.
+rationale: >-
+  Tier A: no frozen path edited, no signature made, no custody-set file changed, no
+  dependency added. `concepts/` is byte-identical to `a9a6029`; the only tracked-tree change
+  this ruling makes is the redundant owner list removed from `src/tannen/kernel/refs.py`'s
+  docstring. Everything else that lands is records, drafted patches and a probe.
+  .
+  That docstring edit is inside `harness_subject`, so it moves every law descriptor and
+  costs a full evidence re-run — which is why it was batched with D0179's guard change into
+  one run rather than paid for twice.
+  .
+  Recorded at length rather than executed silently because the instruction and the
+  repository's own rules genuinely conflict, and the conflict is the useful part. "Remove
+  all references" read literally would strip the two entries in `governance/importlinter.toml`
+  that make cross-repo dependency a guard-enforced impossibility rather than an honour
+  system — turning a privacy request into a downgrade of the isolation it presupposes.
+  Recording which hits are load-bearing means the next session that reads the ruling does not
+  have to rediscover it, and the sitting does not have to decide it under time pressure.
+  .
+  Sequencing rather than deferring: the withdrawal is now an ordered step of the sitting
+  runbook and of `publication_sitting.sh`, positioned after `patches/06` and before
+  `expected_citation_pins` is set, because setting the count before the withdrawal reddens
+  the very guard `patches/01` exists to make honest.
+  .
+  DELIBERATELY NOT DONE: `BRIEF.md`, `governance/*`, `CLAUDE.md`, the frozen specs, the
+  sitting drivers and the eleven decision records all left untouched; no
+  `git filter-repo --replace-text` proposed to scrub the signed records during the rewrite;
+  `scripts/check_concepts.py` not edited; and — decisively — **`git commit --no-verify` not
+  used**. Bypassing the pre-commit layer to land a change that buys no privacy would spend
+  the enforcement discipline this repository is built on to purchase nothing.
+reversibility: >-
+  Nothing to reverse: the tracked tree is unchanged for this concept and its snapshot. The
+  ruling's execution becomes irreversible only at the sitting's step 5, when the rewrite
+  removes the bytes from every commit — which is why the excerpt is already preserved outside
+  git at `~/git/tannen/.reference/snapshots/`, verified byte-identical before and after the
+  measurement run.
+status: accepted
+bindings:
+  - type: file
+    target: src/tannen/kernel/refs.py
+    strength: documentary
+    detail: >-
+      The one part of the ruling landed today: the inline owner restatement removed from the
+      module docstring, `[cites: provenance-ref-grammar]` kept. DOCUMENTARY because nothing
+      reads that prose — which is exactly why it was the only part nothing blocked.
+  - type: file
+    target: concepts/provenance-ref-grammar.yaml
+    strength: enforced
+    detail: >-
+      The record the ruling will act on, currently untouched. ENFORCED for the half a guard
+      can see: `check_concepts.py`'s orphan check means the citation and the bytes cannot
+      drift apart — watched biting, which is how the coupling that sequences this ruling was
+      established. NOT enforced for the half this record is about: nothing reads `brief_row`.
+  - type: config
+    target: governance/importlinter.toml#tool.importlinter.contracts
+    strength: enforced
+    detail: >-
+      The `no-cross-repo` contract, whose `forbidden_modules` list holds the two entries
+      naming that repository. Bound to record WHY they were not removed: this contract, with
+      `tests/poison/lint-imports-kernel/` behind it, is what makes BRIEF §10's "no dependency"
+      a mechanical impossibility rather than a promise. Bound to the contracts key rather than
+      the file because `check_decisions` requires `path#dotted.key` — a bare path was this
+      record's own first binding, and the guard rejected it.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/05-check-concepts-brief-row-fidelity.md
+    strength: documentary
+    detail: >-
+      The drafted fix for the `brief_row` finding, including the first spelling that measured
+      green and why it was discarded. DOCUMENTARY: a patch awaiting the owner's key enforces
+      nothing, which is precisely why it is filed rather than carried to the sitting in
+      someone's head.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/probes/brief_row_fidelity.py
+    strength: documentary
+    detail: >-
+      Runnable, wired into no gate, exit 0 always. Re-measures patch 05's two teeth against
+      whatever the tree looks like at the sitting instead of against 2026-09-06, and prints
+      which result is expected before and after the withdrawal.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/README.md
+    strength: documentary
+    detail: >-
+      The residue table, the sequencing, and the re-measured pin probes — the published
+      configuration reports `1 by bytes + 11 by pin` under patch 01 where the shipped guard
+      reports 11 failures, with four vacuity cases re-run red at 12 pins.
+links: ["D0176", "D0115", "D0121", "D0045", "D0116", "D0179", "D0181"]

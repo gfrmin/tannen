@@ -43,13 +43,24 @@ itself:
 # NOT derived from concepts/ — see scripts/check_concepts.py. Raise or lower this only
 # when a concept record's `sources` list actually changes, and re-sign.
 concept_registry:
-  expected_citation_pins: 13
+  expected_citation_pins: 12
 ```
 
-`13` is measured at `5f206cc`: 13 `snapshot.path` entries across 8 records, all unique.
-**If the owner also drops the renavon source entry from
-`concepts/provenance-ref-grammar.yaml` (see the package README, "What excision does not
-remove"), this becomes `12`.**
+**`12` — but only AFTER you execute D0180's withdrawal, which is a step of this sitting.**
+The tracked tree today has **13**: the fourth sibling's `source` entry is still present,
+because withdrawing it is blocked until `patches/06` lands (D0181). Withdrawing it retires
+one pin *and* one snapshot file together — `check_concepts.py`'s orphan check couples them,
+and that coupling was watched biting rather than assumed.
+
+So the ordering inside step 2 matters: **apply `patches/06`, execute the withdrawal, then
+set this value to what you measure.** Setting `12` before the withdrawal reddens the guard
+this patch exists to make honest.
+
+Re-measure rather than trusting this line; the command is one grep:
+
+```sh
+grep -rh '      path: concepts/snapshots/' concepts/*.yaml | sort -u | wc -l
+```
 
 ---
 

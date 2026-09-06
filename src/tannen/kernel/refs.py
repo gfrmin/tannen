@@ -1,9 +1,10 @@
 """Content-address refs — the one home for the pinned ref grammar.
 
 `sha256:<64 lowercase hex>` [cites: provenance-ref-grammar]: pkm SPEC-PRINCIPLES §1's
-hash-prefix discipline, Renavon ADR-002's typed opaque refs. Every ref this system
-emits is minted here, so the grammar cannot drift between the encoder, the store and
-the descriptor module (BRIEF §2: restatement is duplication; duplication is drift).
+hash-prefix discipline. Every ref this system emits is minted here, so the grammar
+cannot drift between the encoder, the store and the descriptor module (BRIEF §2:
+restatement is duplication; duplication is drift). The marker is the citation: the
+registry record carries the owner list, so it is not restated here.
 
 Pure: hashing is not IO (BRIEF §5.3, contract `kernel-no-io`).
 """
