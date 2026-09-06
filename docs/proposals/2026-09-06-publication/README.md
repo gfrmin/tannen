@@ -33,6 +33,7 @@ but it is the *consequence* of the excision, not a substitute for it.
 | `patches/01-check-concepts-degraded-pins.patch` | mechanism (a) + the pin count D0115 makes non-optional | no — custody-set |
 | `patches/02-check-receipts-rewrite-map.patch` | the receipt chain survives a declared rewrite without any receipt being edited | no — custody-set |
 | `patches/03-owner-edits-at-the-sitting.md` | `policy.yaml` ×2, `tag-roles.yaml` ×2, `.pre-commit-config.yaml` (optional) | no — signed files |
+| `patches/04-custodian-receipt-signing.md` | **D0177**, found while running this package's own merge gate: the custodian prints `author-signed` when `ssh-keygen` failed, leaves an unsigned receipt behind, and exits 0. It fires only when the custodian runs **bare** — which is what step 1 of the runbook below does. | no — author-key |
 | `LICENSE.draft` | Apache-2.0, verbatim (`sha256:cfc7749b…`, two independent local copies agree byte-for-byte) | no — a licence at the root **is** the grant |
 | `NOTICE.draft`, `README.md.draft`, `CONTRIBUTING.md.draft` | the root files a public repo needs; none exists today | no |
 | `fixture-candidates/README.md` | `tests/poison/check-concepts/governance/policy.yaml` | no — author-key territory |
@@ -119,6 +120,8 @@ of it", and the first was never asked.
 
 Ordered. Each step's output feeds the next; steps 1–4 are reversible, step 5 is not.
 
+0. Apply `patches/04` **first**. Step 1 is the step D0177 corrupts, and an unsigned
+   receipt written there would be believed for the rest of the sitting.
 1. Fresh attention receipt at the **pre-rewrite** HEAD.
 2. Apply `patches/01`, `patches/02`, and the `policy.yaml` / `tag-roles.yaml` edits from
    `patches/03` (`trust_root.object` is filled in at step 6, not now).

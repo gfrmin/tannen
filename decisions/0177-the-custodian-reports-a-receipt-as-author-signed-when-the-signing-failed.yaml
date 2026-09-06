@@ -1,0 +1,101 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0177
+title: "scripts/custodian.sh prints 'attention receipt written and author-signed' when ssh-keygen failed — an unsigned receipt left in the store, a false success line, exit 0, and the only context it fires in is a sitting"
+tier: A
+date: "2026-09-06"
+risk_flags: ["governance-paths"]
+decision: >-
+  Found by running `scripts/custodian.sh` bare as the `m3 -> master` merge gate, on a
+  machine that does not hold the owner key's passphrase. Reported, not fixed: the file is
+  author-key territory (BRIEF §9.1, CLAUDE.md hard rules). The patch is drafted at
+  `docs/proposals/2026-09-06-publication/patches/04-custodian-receipt-signing.md` for the
+  sitting that is already being assembled.
+  .
+  `scripts/custodian.sh:283-285` runs `ssh-keygen -Y sign` and never reads its exit status,
+  then unconditionally says so. Observed verbatim:
+  .
+  "custodian: custody floor intact / Enter passphrase for ".../tannen_owner": Load key
+  ".../tannen_owner": incorrect passphrase supplied to decrypt private key / custodian:
+  attention receipt written and author-signed: receipts/2026-09-06.md (+ .sig)"
+  .
+  There is no `.sig`. The custodian exited 0 having written an UNSIGNED receipt into
+  `receipts/`, asserted it was signed, named a file that does not exist, and reported the
+  custody floor intact.
+  .
+  WHY IT IS WORSE THAN A COSMETIC MESSAGE. The receipt step runs AFTER `check_receipts.py`
+  and only when the custodian is invoked bare — `make verify` passes `--check-only` and
+  skips it. So the single context in which this fires is a boundary sitting, which is the
+  worst available one: the step appears to succeed and the damage surfaces on the NEXT
+  custodian run, by which time the operator has moved on. It is also the artifact that
+  starts the Tier-B silence-as-consent clock, so an unsigned receipt between two runs is a
+  clock nobody can verify started.
+  .
+  IT DOES SELF-DETECT, WHICH BOUNDS IT, AND THE CONTROL WAS RUN RATHER THAN ASSUMED:
+  `check_receipts: FAIL (1 violation(s)) — receipts/2026-09-06.md has no signature. A
+  receipt is an attestation of presence; an unsigned one attests to nothing...`. That is
+  the guard working. But "the next run catches it" is not the property line 285 claims,
+  and a custody floor whose last line can be false is exactly the class this repository
+  spends its effort on — D0116's taxonomy, and the same shape as D0112's credential filter
+  that could not fail.
+  .
+  THE FIX IS FOUR LINES: test the exit status; on failure `rm -f` the receipt this step
+  created three lines earlier and call `bad`, which already increments FAIL so the
+  custodian exits non-zero. The deletion is the only one in the script and touches nothing
+  that was ever signed, committed or attested — an unsigned receipt is worse than no
+  receipt, because it reddens every later run for a file that should never have been left
+  behind.
+  .
+  HOUSEKEEPING, STATED SO IT IS NOT DISCOVERED LATER. The unsigned `receipts/2026-09-06.md`
+  was untracked, was never committed, was removed within minutes, and `check_receipts.py`
+  was re-run to confirm `5 receipt(s); chain unbroken to HEAD`. A copy is held outside the
+  repository as evidence for the drafted patch. The receipt chain is byte-for-byte what it
+  was before the run.
+  .
+  AND A SECOND, SMALLER LESSON: running the custodian bare has a WRITE side effect on
+  `receipts/`, which is owner-attestation territory. Nothing warns about that at the call
+  site. A builder session's default invocation should be `--check-only`; this one was not,
+  which is how the defect was found, and is the reason it is worth writing down rather
+  than filing as bad luck.
+rationale: >-
+  Tier A: one new decision record and one drafted patch under `docs/proposals/`. It changes
+  no byte of any guard, needs no signature, and adds no dependency. The finding itself is
+  about a custody-set, author-key file, but reporting a defect is not editing one.
+  .
+  Filed immediately rather than batched because the sitting it affects is the one being
+  assembled right now (D0176), and step 1 of that sitting's runbook is "take a fresh
+  attention receipt" — the exact step this defect corrupts. A finding about a sitting is
+  worth most before the sitting.
+  .
+  DELIBERATELY NOT DONE: `scripts/custodian.sh` not edited (author-key), no receipt
+  re-created, no attempt to sign anything with a key this session does not hold, and no
+  `--check-only` default added to the Makefile — `make verify` already passes it, and
+  changing the bare invocation's behaviour is the owner's call on the owner's script.
+reversibility: >-
+  Fully reversible: a record and a proposal. The one irreversible-looking act — deleting
+  the unsigned receipt — removed a file created minutes earlier by the failed run itself,
+  never tracked and never signed, with a copy preserved outside the repository and the
+  chain re-verified afterwards.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/04-custodian-receipt-signing.md
+    strength: documentary
+    detail: >-
+      The drafted fix and its two-direction failure watch, one of which (`TANNEN_OWNER_KEY=
+      /dev/null`) is runnable by anyone without the owner key. DOCUMENTARY: a patch awaiting
+      the owner's key enforces nothing, which is precisely why the finding is filed here
+      instead of being silently carried to the sitting in someone's head.
+  - type: pytest
+    target: tests/test_governance_scripts.py::test_check_passes_on_real_tree
+    strength: enforced
+    detail: >-
+      The guard that DOES catch the consequence, one run late: an unsigned receipt in
+      `receipts/` reddens the chain check. Bound so the bound on the blast radius is a
+      measured property with a test behind it, not a reassurance in prose.
+  - type: file
+    target: scripts/custodian.sh
+    strength: documentary
+    detail: >-
+      Lines 283-285, the subject. Author-key territory, so the binding records where the
+      defect is rather than claiming anything about it being fixed.
+links: ["D0176", "D0116", "D0112", "D0063", "D0154"]
