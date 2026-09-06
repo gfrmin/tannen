@@ -1,0 +1,101 @@
+--- a/scripts/check_concepts.py
++++ b/scripts/check_concepts.py
+@@ -3,7 +3,11 @@
+ 
+ Per BRIEF §2: the registry is data the build consumes. This check enforces:
+   - every concepts/*.yaml validates against governance/schemas/concept-record.schema.json;
+-  - every snapshot a record cites exists and hashes to the recorded sha256;
++  - every snapshot a record cites either exists and hashes to the recorded sha256, or is
++    absent and verified by PIN alone (D0115 mechanism (a) — the published tree carries
++    the citation, the authorised clone carries the bytes);
++  - the number of citation pins accounted for matches governance/policy.yaml's
++    `concept_registry.expected_citation_pins`, which is NOT derived from concepts/;
+   - every file under concepts/snapshots/ is cited by some record (no orphan artifacts);
+   - grade S records name an existing, non-empty vector corpus; every corpus directory
+     under conformance/vectors/ belongs to some grade-S record;
+@@ -54,6 +58,13 @@
+     cited_vector_dirs: set[Path] = set()
+     seen_ids: set[str] = set()
+ 
++    # D0115 mechanism (a). A published clone carries the citation PINS; the bytes stay in
++    # the authorised clone. Both are legal, and the difference is counted rather than
++    # assumed: `by_bytes` is a full verification, `by_pin` is a promise nothing here can
++    # check. The totals are printed so a reader can see which mode a tree is in.
++    pins_by_bytes = 0
++    pins_by_pin = 0
++
+     for path in record_paths:
+         rel = path.relative_to(root)
+         record = load_yaml(path)
+@@ -73,9 +84,15 @@
+             snap = root / snap_rel
+             cited_snapshots.add(snap)
+             if not snap.exists():
+-                fail.add(f"{rel}: vendored snapshot missing: {snap_rel}")
++                # NOT a failure since D0115: absence is the published configuration. The
++                # pin still has to be ACCOUNTED FOR below, which is the whole reason this
++                # branch cannot simply `continue` in silence.
++                pins_by_pin += 1
+             elif sha256_file(snap) != source["snapshot"]["sha256"]:
+                 fail.add(f"{rel}: vendored snapshot content drifted: {snap_rel}")
++                pins_by_bytes += 1
++            else:
++                pins_by_bytes += 1
+ 
+         vectors = record["conformance"].get("vectors")
+         if record["grade"] == "S":
+@@ -90,6 +107,42 @@
+             if not (root / test_path.split("::", 1)[0]).exists():
+                 fail.add(f"{rel}: conformance test path missing: {test_path}")
+ 
++    # THE CONDITION D0115 MAKES NON-OPTIONAL, and the reason the branch above counts
++    # instead of skipping. A degraded check whose input set is empty reports success
++    # having verified nothing — species I of D0116's taxonomy, installed by the fix for
++    # a publication, in the configuration nobody runs locally. So the pins are counted
++    # and the total is compared against an expectation that does NOT come from
++    # concepts/: deriving 13 from concepts/*.yaml lets a truncated registry agree with
++    # itself. It comes from governance/policy.yaml, which the degraded path does not
++    # also skip and which the custody floor already covers (required_signatures, so it
++    # cannot be edited without an owner re-signature).
++    pins_seen = pins_by_bytes + pins_by_pin
++    policy_path = root / "governance" / "policy.yaml"
++    if not policy_path.exists():
++        fail.add(
++            "governance/policy.yaml is missing, so the citation-pin expectation cannot be "
++            "read — a registry check with no expectation to meet is the vacuous pass this "
++            "count exists to prevent (D0115)"
++        )
++    else:
++        expected_pins = (load_yaml(policy_path).get("concept_registry") or {}).get(
++            "expected_citation_pins"
++        )
++        if not isinstance(expected_pins, int):
++            fail.add(
++                "governance/policy.yaml names no integer "
++                "concept_registry.expected_citation_pins — see D0115: the expectation is "
++                "owner-signed policy precisely so a truncated concepts/ cannot supply it"
++            )
++        elif pins_seen != expected_pins:
++            fail.add(
++                f"citation pins accounted for = {pins_seen} "
++                f"({pins_by_bytes} by bytes, {pins_by_pin} by pin), but "
++                f"governance/policy.yaml expects {expected_pins}. Either a concept record "
++                "is missing from this tree, or the registry changed and the owner-signed "
++                "expectation was not updated with it"
++            )
++
+     snapshots_root = root / "concepts" / "snapshots"
+     if snapshots_root.exists():
+         for artifact in sorted(p for p in snapshots_root.rglob("*") if p.is_file()):
+@@ -125,7 +178,10 @@
+         elif actual != expected:
+             fail.add("CONCEPTS.md is stale (input-hash mismatch) — run make projections; never hand-edit")
+ 
+-    return fail.finish(f"{len(record_paths)} records, artifacts complete, CONCEPTS.md fresh")
++    return fail.finish(
++        f"{len(record_paths)} records, {pins_by_bytes} pin(s) verified by bytes + "
++        f"{pins_by_pin} by pin, artifacts complete, CONCEPTS.md fresh"
++    )
+ 
+ 
+ if __name__ == "__main__":
