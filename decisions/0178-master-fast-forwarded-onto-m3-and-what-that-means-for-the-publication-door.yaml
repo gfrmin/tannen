@@ -1,0 +1,72 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0178
+title: "master fast-forwarded onto m3 at 9e69ddd — routine under D0048, recorded only because master becomes the PUBLIC DEFAULT BRANCH and now carries an unclosed milestone and a Tier-C-pending publication package"
+tier: A
+date: "2026-09-06"
+risk_flags: ["public-surface"]
+decision: >-
+  `master` moved `54c3da9 -> 9e69ddd`, a clean fast-forward of nine commits: M3 Session A
+  and B, the builder tail, the conferral rulings, the M2->M3 red team, and D0175-D0177.
+  `m0`, `m1` and `m2` were already ancestors of `m3` and are `0` ahead, so this single
+  fast-forward merges everything there is to merge; no merge commit exists and none was
+  needed.
+  .
+  Tier A and not asked about, per `governance/policy.yaml in_repo_mechanics.covers`
+  ("merging a milestone branch into master once its gate is green") and D0048, which says
+  in as many words that asking about anything in that list is itself a defect. The
+  precondition was measured at `9e69ddd`, not assumed: **828 passed / 1 skipped / 1
+  xfailed** in 1181s, `tannen laws report` = "OK — 52 law(s) carry fresh passing evidence",
+  `custodian.sh --check-only` = "custody floor intact" with all 8 tags matching their
+  signer class, and all five pre-commit guards green on each of the three commits this
+  session added. `check_receipts` and `check_manifest` re-run after the ref moved.
+  .
+  WHY THIS IS RECORDED AT ALL, WHEN D0048 ARGUES AGAINST THE CEREMONY. Two facts about the
+  new `master` that only matter because of D0115/D0176:
+  .
+  (1) `master` is the branch D0176's runbook pushes FIRST, so that GitHub makes it the
+  default. What it points at is therefore not an internal bookkeeping detail — it is the
+  first thing a stranger sees, and it is what CI runs against on the first push.
+  .
+  (2) It now carries an **unclosed milestone** (there is no `m3-close`; M3's boundary
+  sitting has not happened and its driver is still byte-identical to M2's) and a
+  **Tier-C-pending publication package** whose own record, D0176, is
+  `status: blocked-on-owner`. Both are accurate states of an honest repository and neither
+  is a reason to hold the merge — but a reader who arrives at a public `master` should find
+  that said somewhere rather than infer it, and D0045 makes D0176's text immutable, so it
+  is said here.
+  .
+  Nothing else moved: `m0`, `m1` and `m2` still point where they did, no tag was created,
+  moved or deleted, and no signature was made. The bare repository at `~/git/tannen` holds
+  `master` as its HEAD and has no working tree, so the ref update touched no index.
+rationale: >-
+  Tier A: a fast-forward of an unsigned ref, explicitly inside `in_repo_mechanics.covers`,
+  performed with the gate measured green first. `git push --ff-only` semantics were relied
+  on rather than `update-ref`, so a non-fast-forward would have been refused by git rather
+  than by care.
+  .
+  The record is deliberately short. D0048's complaint is that deference spends the owner's
+  attention, which is the resource the autonomy protocol exists to conserve; a record that
+  merely narrates a merge would be the written form of the same defect. What earns the file
+  is the two publication-facing facts above, which are not derivable from the ref move and
+  which have no other immutable home.
+reversibility: >-
+  A ref move on an unsigned branch: `git update-ref refs/heads/master 54c3da9` restores it,
+  and no object is lost either way. It becomes irreversible only in the sense every commit
+  does once the repository is published — which is D0176's subject, not this record's.
+status: accepted
+bindings:
+  - type: config
+    target: governance/policy.yaml#in_repo_mechanics.covers
+    strength: enforced
+    detail: >-
+      The clause that makes this Tier A and makes asking about it a defect. ENFORCED: the
+      key is owner-signed and in `required_signatures`, so the permission this act relies on
+      cannot be widened without the owner noticing — which is the half of D0053's cut that
+      actually bites.
+  - type: file
+    target: decisions/0176-publication-the-history-rewrite-the-declared-discontinuity-and-what-excision-does-not-remove.yaml
+    strength: documentary
+    detail: >-
+      The reason `master`'s contents are a publication fact rather than bookkeeping: its
+      runbook pushes this branch first, precisely so it becomes the public default.
+links: ["D0048", "D0053", "D0072", "D0176", "D0177", "D0045"]
