@@ -1,0 +1,96 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0185
+title: "The owner key's passphrase path measured rather than left on the cannot-prove list, and the sitting's precondition now reports it: ssh-agent turns fourteen prompts into one, with no change to how anything is signed"
+tier: A
+date: "2026-09-07"
+risk_flags: ["governance-paths"]
+decision: >-
+  `publication_sitting.sh`'s precondition reports, per key, which passphrase path the sitting
+  is about to take. It changes nothing about how signing works; it says which of the two
+  behaviours the run will have, before anything is signed.
+  .
+  MEASURED with a throwaway passphrase-protected ed25519 key, three invocations, the
+  driver's exact shape (`ssh-keygen -Y sign -f "$OWNER_KEY" -n <namespace> <file>`):
+  .
+  (a) `-f <ENCRYPTED PRIVATE KEY>`, no agent: `Enter passphrase for "pk":` on the terminal,
+  EVERY TIME. The sitting makes ten owner signatures across ~95 minutes, so that is ten
+  prompts.
+  .
+  (b) `-f <PUBLIC KEY>` with ssh-agent holding the private half: signs silently, and the
+  signature verifies against `allowed_signers`.
+  .
+  (c) `-f <PRIVATE KEY PATH>` with ssh-agent holding it: ALSO SIGNS SILENTLY, rc 0. This is
+  the one that matters. ssh-keygen finds the key in the agent and never asks, with `-f`
+  still pointing at the private path exactly as the driver already writes it. **So the fix
+  needs no code: one `ssh-add` before the sitting makes all fourteen key touches silent.**
+  .
+  Measured against the real keys, WITHOUT signing anything with them —
+  `ssh-keygen -y -P ''` fails fast on an encrypted key and `ssh-keygen -lf` reads the public
+  half out of the private file without decrypting it, so neither probe prompts:
+  `~/.ssh/tannen_owner` IS passphrase-protected and was not in any agent;
+  `~/.ssh/tannen_builder` is not, which is what `DELEGATIONS.md` intends for an unattended
+  builder key. As things stood, the sitting would have prompted ten times.
+  .
+  The report runs in `--dry-run` too, under its own header before the precondition: the
+  probes never sign, never prompt and never read a passphrase, and a preview of the sitting
+  is exactly where an owner wants to be told they are about to be asked for a passphrase ten
+  times. Guarding it on `$DRY` was the first spelling and was wrong for that reason.
+  .
+  These are SSH signatures, so the machinery is ssh-agent. Not gpg-agent, no pinentry, and
+  no cache TTL to expire — but `ssh-add -t` would introduce one, so the report says not to
+  use it: the sitting runs about 95 minutes.
+  .
+  ALSO WRITTEN DOWN, because it was asked twice and had only ever been answered in
+  conversation: EVERY REHEARSAL RUN IS A FRESH CLONE. `rehearse_publication.sh` makes a new
+  `mktemp -d` and a new `git clone --no-hardlinks` per invocation and deletes both on exit
+  unless `--keep`, and the driver applies all seven patches itself at step 2 from the
+  package. D0183's clean full run was therefore the whole sitting in a clone minutes old,
+  not the tail of the run that found the defects. The package README now says so, together
+  with the reason that is still not a plateau: fast run 4 was green and full run 1 then found
+  two more defects, because fast mode skips the hooks and gates where they bit.
+rationale: >-
+  Tier A: one file under `docs/proposals/`, one README, one record. No guard changed, no
+  frozen or custody-set path touched, no signature made, nothing pushed.
+  .
+  "The real key's passphrase path" had sat on D0183's cannot-prove list as though it were in
+  the same class as GitHub's first CI run. It is not. CI fails forward — you fix it and push
+  again — whereas a passphrase surprise bites DURING the sitting, in the middle of a run that
+  has already spent an hour and is holding the owner's attention, which is the exact failure
+  D0068 is about. It was also the cheapest item on that list to settle: five minutes with a
+  throwaway key, and the answer turned out to remove the risk rather than merely characterise
+  it.
+  .
+  The probes were chosen so that reporting costs nothing and risks nothing: neither reads a
+  passphrase, neither can prompt, and a wrong answer from either degrades to a warning the
+  owner can ignore rather than to a refusal to proceed. The driver does not `ssh-add` on the
+  owner's behalf — loading a key into an agent is the owner's act, and a script that does it
+  silently is the wrong shape for a custody floor.
+reversibility: >-
+  Deleting the precondition block and this record; the driver signs identically either way.
+  What is not reversible is the measurement: the agent path (c) is now known to work with the
+  driver unmodified, which is why no code was written to accommodate it.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publication_sitting.sh
+    strength: enforced
+    detail: >-
+      `key_encrypted`, `agent_holds` and `key_report` in the precondition — per key, with the
+      count of signatures this sitting makes with it (owner 10, builder 4). Neither probe
+      prompts, and both were watched giving the right answer on a passphrase-protected key
+      and on a bare one.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/README.md
+    strength: documentary
+    detail: >-
+      The runbook's "Before you start: one `ssh-add`" section, and the paragraph stating that
+      every rehearsal run is a fresh clone — the question D0183's list of runs kept inviting.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/rehearse_publication.sh
+    strength: documentary
+    detail: >-
+      The harness clears `SSH_AUTH_SOCK` deliberately, so a rehearsal always exercises the
+      key file and never an agent that happens to be running. That is why a green rehearsal
+      never covered path (c), and why (c) had to be measured outside it.
+links: ["D0184", "D0183", "D0176", "D0068", "D0111", "D0045"]

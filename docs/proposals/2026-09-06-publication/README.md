@@ -81,9 +81,39 @@ repository's HEAD and tree are untouched (a positive control, not a promise).
 
 **What a green run proves:** step order, quoting, every patch applying and every frozen row
 refreshed, the rewrite, the re-tagging, the attestation, and a green gate on rewritten
-objects. **What it cannot prove:** custody — the throwaway key attests to nothing; the real
-key's passphrase path; GitHub's first CI run. Read green as "the mechanism works", never as
-"the sitting happened".
+objects. **What it cannot prove:** custody — the throwaway key attests to nothing; GitHub's
+first CI run. Read green as "the mechanism works", never as "the sitting happened".
+
+### Before you start: one `ssh-add` (D0185)
+
+Measured 2026-09-07 with a throwaway passphrase-protected key, three ways.
+`ssh-keygen -Y sign -f <encrypted key>` prints `Enter passphrase for …` on the terminal
+**every time** — ten times for the owner key across ninety-five minutes. With the key in
+ssh-agent the **identical** invocation signs silently, because ssh-keygen finds it there;
+`-f` keeps pointing at the private path and nothing in the driver changes. (These are SSH
+signatures, so this is ssh-agent — not gpg-agent, and no pinentry is involved.)
+
+Measured against the real keys, without signing anything with them: `~/.ssh/tannen_owner`
+**is** passphrase-protected; `~/.ssh/tannen_builder` is not, as `DELEGATIONS.md` intends.
+
+```sh
+ssh-add ~/.ssh/tannen_owner     # once; then all 14 key touches are silent
+ssh-add -l                      # confirm
+```
+
+Do **not** use `ssh-add -t` — the sitting runs about 95 minutes. The driver's precondition
+now reports which of the two paths you are on, per key, before anything is signed; the
+rehearsal harness deliberately clears `SSH_AUTH_SOCK` so it always exercises the key file.
+
+**Every run is a fresh clone**, and this matters for reading the list below. The harness
+makes a new `mktemp -d` and a new `git clone --no-hardlinks` on each invocation and deletes
+both on exit unless `--keep`; the driver applies all seven patches itself at step 2, from the
+package. So the clean full run was **not the tail of the run that found the defects** — it
+was the whole sitting, precondition to close, in a clone built minutes earlier with every fix
+already in the artifacts. What that is *not* is a plateau: it is one run at full fidelity.
+Fast run 4 was also green, and full run 1 then found two more defects — because fast mode
+skips exactly the hooks and gates where they bit. The fidelity above this one has never run
+at all: the real key, GitHub, CI.
 
 **The runs, in order** (2026-09-07; transcripts kept outside the repository):
 
@@ -194,7 +224,7 @@ because the custodian that writes it checks the floor first.
 
 | Step | What the driver does | Key |
 |---|---|---|
-| P | `custodian.sh --check-only`; records the pre-rewrite HEAD | |
+| P | `custodian.sh --check-only`; records the pre-rewrite HEAD; reports each key's passphrase path (D0185) | |
 | 0 | patches **04** and **07** to `custodian.sh` (author-key); row refreshed | |
 | 2 | patches 01, 02, 05, 06; both schema rows; patch 03's `policy.yaml` and `tag-roles.yaml` edits; `licence_defaults` → **Apache-2.0**, both keys (D0176 ruling 2); pin count **measured** and written | |
 | 2b | D0180's withdrawal: source entry out, snapshot `git rm`'d, divergence declared, D0181 retires D0115's binding, pins re-measured (**12**), probe must read 8/8 | |

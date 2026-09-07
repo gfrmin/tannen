@@ -197,6 +197,36 @@ note "publication sitting, $TODAY_START, at $ROOT$( [ "$DRY" = 1 ] && printf ' (
 note "scratch, and its steps file recording how far this run got: $SCRATCH"
 
 # ---------------------------------------------------------------- P
+# ---------------------------------------------------------------- the passphrase path
+# MEASURED, not assumed (D0185), with a throwaway passphrase-protected key: `ssh-keygen -Y
+# sign -f <encrypted key>` prints `Enter passphrase for "…":` on the terminal EVERY time —
+# ten times for the owner key alone, spread across ninety-five minutes. With the key in
+# ssh-agent the IDENTICAL invocation signs silently, because ssh-keygen finds it there; `-f`
+# keeps pointing at the private path and nothing in this driver changes. So this reports
+# which of the two you are about to do; it does not alter how anything is signed.
+# Neither probe prompts: `-lf` reads the public half out of the private file without
+# decrypting it, and `-y -P ''` fails fast on an encrypted key.
+key_encrypted() { ! ssh-keygen -y -P '' -f "$1" >/dev/null 2>&1; }
+agent_holds()   { local fp; fp=$(ssh-keygen -lf "$1" 2>/dev/null | awk '{print $2}')
+                  [ -n "$fp" ] && ssh-add -l 2>/dev/null | grep -qF "$fp"; }
+key_report() {   # <label> <keyfile> <how many signatures this sitting makes with it>
+    if   ! key_encrypted "$2"; then note "$1 key: no passphrase — $3 signature(s), no prompts"
+    elif agent_holds "$2";     then note "$1 key: passphrase-protected, held by ssh-agent — $3 signature(s), no prompts"
+    else warn "$1 key is passphrase-protected and NOT in ssh-agent: expect $3 SEPARATE prompts."
+         warn "  ssh-add $2"
+         warn "  once, now, makes all $3 silent. Do not use 'ssh-add -t': this sitting runs ~95 min."
+    fi
+}
+# Reported in --dry-run too: the probes never sign, never prompt and never read a
+# passphrase, and a preview of the sitting is exactly where this belongs.
+say "Keys — which passphrase path this sitting takes"
+for _k in "owner:$OWNER_KEY:10" "builder:$BUILDER_KEY:4"; do
+    _lbl=${_k%%:*}; _rest=${_k#*:}; _path=${_rest%:*}; _n=${_rest##*:}
+    if [ -f "$_path" ]; then key_report "$_lbl" "$_path" "$_n"
+    else note "$_lbl key: not present at $_path (dry run, or set TANNEN_$(printf '%s' "$_lbl" | tr a-z A-Z)_KEY)"
+    fi
+done
+
 say "Precondition — the custody floor is green BEFORE anything is signed"
 note "This is the state the first receipt attests to. A red floor here means builder work,"
 note "not a sitting. The 45-minute gate runs at step G, AFTER the patches — on this tree."
