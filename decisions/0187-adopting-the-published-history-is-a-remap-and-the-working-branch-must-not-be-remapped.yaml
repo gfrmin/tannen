@@ -1,0 +1,109 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0187
+title: "Adoption of the published history is a remap through the signed attestation, not a fetch and reset — and the working branch is the one branch that must NOT be remapped, which only running the guards on the result revealed"
+tier: A
+date: "2026-09-07"
+risk_flags: ["governance-paths"]
+decision: >-
+  `docs/proposals/2026-09-06-publication/adopt_published_history.sh` points the LOCAL
+  repository at the published, rewritten history, and `rehearse_adoption.sh` runs it against a
+  disposable copy of that repository with a real, signed commit map. Neither is applied; the
+  owner runs adoption after the push and after CI is green, and the script refuses without
+  `--ci-green`, which is the owner asserting they looked.
+  .
+  WHY IT IS NOT `git fetch && git reset --hard origin/master`. The published repository
+  carries ONE branch, `master`, and eight tags — no `m0`/`m1`/`m2`/`m3` refs at all (D0186).
+  There is nothing to reset the milestone branches TO. Each must be resolved through the
+  complete old->new commit map in `receipts/REWRITE-<date>.md`, which is what that
+  owner-signed artifact exists for (D0176). The script verifies that signature under
+  `tannen-rewrite` BEFORE it trusts a single pair, and stops on any branch whose tip is not in
+  the map rather than guessing at one.
+  .
+  THE DEFECT THE REHEARSAL FOUND, and it is the whole reason this has a record rather than
+  three lines in a README. The first version remapped EVERY branch, `master` included. Every
+  ref-level check passed — 35 of them: branches moved, each new tip existed in the published
+  history, every old tip resolved under the backup namespace, all four worktrees clean and on
+  their branch's new tip, all eight tags replaced, nothing left in the incoming namespace, the
+  real repository untouched. And the repository was still wrong. The sitting makes TWO commits
+  of its own — the pre-rewrite commit A and the post-rewrite commit C — which exist only in
+  the published history and have no pre-publication counterpart to map from. So remapping
+  `master` lands it two commits BEFORE the publication: no attestation in the tree, an
+  unpatched `check_receipts.py`, the old trust root still pinned in `tag-roles.yaml`, and the
+  re-signed tags sitting beside all of it. `check_receipts`, `check_tag_signers` and the
+  custodian all go red, from one cause, and the repository reads as broken when it is merely
+  at the wrong commit.
+  .
+  TWO RULES, then. A HISTORICAL branch (m0, m1, m2) marks a point in the past and resolves
+  through the map to the same point in the rewritten history. The WORKING branch — `master`,
+  and any branch sitting on master's tip, which is how `m3` is arranged here — takes the
+  PUBLISHED HEAD. Measured: 40 of 40, the three guards green on the adopted repository, and
+  `m0 2c70d735 -> 7dea211b`, `m1 4845d9fb -> d4240734`, `m2 54c3da9b -> 49faf936` through the
+  map while `m3` and `master` both take the published head.
+  .
+  "THE REFS MOVED CORRECTLY" AND "THE REPOSITORY WORKS" ARE DIFFERENT CLAIMS. That is the
+  generalisable finding, and it is D0186's shape one level up: a verdict can be green across
+  every check it has and still be measuring the wrong thing. The harness now runs
+  `check_receipts`, `check_tag_signers` and the custodian on the adopted repository, and
+  asserts that `master` is EXACTLY the published head rather than any remap of it.
+  .
+  The negative control makes the point exactly. A mutant that removes the two-rule
+  distinction scores 35 ok and 5 FAIL — and THE 35 THAT PASS ARE THE SAME 35 REF-LEVEL CHECKS
+  THAT PASSED BEFORE THE DEFECT WAS FOUND. The five that fail are the two new assertions about
+  the published head and the attestation, and the three guards. The defect is invisible to
+  every check that asks whether the refs moved correctly and visible only to the ones that ask
+  whether the repository works.
+  .
+  WHAT IT NEVER DOES. Touch the stash — shared across worktrees, so entries made against the
+  old history will apply to the new one only by luck; it reports them and stops there. Move
+  anything before every pre-publication ref is copied under
+  `refs/backup/pre-publication-<date>/`, so every SHA named in 186 decision records stays
+  resolvable and the whole adoption is reversible. Or run while any worktree has uncommitted
+  work: `git branch -f` REFUSES a branch checked out in a worktree, so the script moves those
+  from inside the worktree with `reset --hard`, which would silently discard the work.
+rationale: >-
+  Tier A, and the tier is the argument for the backup refs rather than a formality. Under the
+  2026-08-24 amendment tiers classify by reversibility, and adoption WITH the backup namespace
+  is reversible — every old ref is one `update-ref` away. Without it, discarding the only copy
+  of the pre-publication history would be a one-way door, and would belong to the owner and a
+  sitting. The backups are what keep this a Tier A act, so they are taken before anything
+  moves and the script says how to undo with them.
+  .
+  Adoption itself is recommended rather than assumed, and the recommendation is the reviewer's
+  and mine both: permanent divergence buys nothing and costs an ambiguity — four worktrees on
+  commits that exist nowhere upstream, and every pre-publication SHA in the decision records
+  resolving locally and nowhere else. But it is sequenced strictly: after the push, after a
+  green CI. Adopting a history that CI rejects is the one version of this that is genuinely
+  awkward to undo, which is why the flag exists and why it is named for what the owner has to
+  have looked at.
+reversibility: >-
+  Deleting both scripts and this record; neither runs unless invoked. The adoption itself is
+  reversible while `refs/backup/pre-publication-<date>/` exists — which is the point of taking
+  it first, and the reason the closing message says not to delete those refs until months have
+  passed.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/adopt_published_history.sh
+    strength: enforced
+    detail: >-
+      The two rules, the attestation-signature check before the map is trusted, the backup
+      namespace taken before anything moves, the worktree-cleanliness refusal, the
+      move-from-inside-the-worktree handling of checked-out branches, and the post-adoption
+      guards.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/rehearse_adoption.sh
+    strength: enforced
+    detail: >-
+      A bare clone with four worktrees — the same shape as the real repository, including the
+      trap that `git branch -f` refuses a checked-out branch — against a published history
+      produced by actually running the publication rehearsal, so the map is real and signed
+      rather than a fixture agreeing with itself.
+  - type: file
+    target: decisions/0186-the-rewritten-clone-had-no-master-branch-and-the-fix-would-have-deleted-the-owners.yaml
+    strength: documentary
+    detail: >-
+      Why the published repository has one branch, which is why adoption must remap rather
+      than fetch — and the immediately preceding instance of a green verdict measuring the
+      wrong thing.
+links: ["D0186", "D0185", "D0184", "D0183", "D0176", "D0111", "D0116", "D0045"]

@@ -258,6 +258,30 @@ checks it out and removes the milestone branch, so the published repository carr
 branch. Nothing is lost: every milestone branch is an ancestor of master, and every milestone
 is marked by a signed tag that is published.
 
+## After the push: adopting the published history (D0187)
+
+`adopt_published_history.sh --from <url> --ci-green` points this repository at the published
+history. Run it **after the push and after CI is green** — it refuses without `--ci-green`,
+which is you saying you looked.
+
+It is a remap, not a fetch-and-reset: the published repository has one branch and no
+`m0`/`m1`/`m2`/`m3` refs to reset to, so every historical branch resolves through the signed
+commit map in `receipts/REWRITE-<date>.md` — whose signature is verified under
+`tannen-rewrite` before a single pair is trusted. `master`, and any branch sitting on its tip,
+takes the published head instead: the sitting's own two commits exist only there and have no
+pre-publication counterpart to map from.
+
+Every pre-publication ref is copied under `refs/backup/pre-publication-<date>/` **before**
+anything moves, so every SHA named in the decision records stays resolvable and the whole
+thing is one `update-ref` per branch away from undone. It refuses on any dirty worktree —
+`git branch -f` will not move a checked-out branch, so the script resets from inside the
+worktree, which would discard uncommitted work. It reports the shared stash stack and never
+touches it.
+
+Rehearsed by `rehearse_adoption.sh` against a bare clone with four worktrees and a real signed
+map: 40/40, including `check_receipts`, `check_tag_signers` and the custodian run on the
+adopted repository.
+
 **One line only you can settle**, and it is not a licence any more (D0184): the driver now
 executes D0176 ruling (2) at step 2, so `governance/policy.yaml` says `licence_defaults`
 Apache-2.0 for both keys and agrees with the `LICENSE` at the root — under your step-G
