@@ -1,0 +1,174 @@
+diff --git a/governance/schemas/concept-record.schema.json b/governance/schemas/concept-record.schema.json
+index cbf389c..08c8995 100644
+--- a/governance/schemas/concept-record.schema.json
++++ b/governance/schemas/concept-record.schema.json
+@@ -26,6 +26,17 @@
+       "minLength": 1,
+       "description": "Verbatim-enough citation of the BRIEF §2 table row this record executes."
+     },
++    "brief_row_divergence": {
++      "type": "object",
++      "additionalProperties": false,
++      "required": ["omits", "reason", "decision"],
++      "description": "Declared, deliberate narrowing of this record against the BRIEF §2 row it quotes (D0180): owners that row names which this record does not cite. scripts/check_concepts.py's second tooth reads it — an undeclared divergence fails, and a declaration naming an owner the row does not name (or one the record cites anyway) fails as stale.",
++      "properties": {
++        "omits": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
++        "reason": { "type": "string", "minLength": 1 },
++        "decision": { "type": "string", "pattern": "^D[0-9]{4}$", "description": "The record that rules the divergence." }
++      }
++    },
+     "notes": { "type": "string" },
+     "sources": {
+       "type": "array",
+diff --git a/scripts/check_concepts.py b/scripts/check_concepts.py
+index 263ee5e..4bf0af2 100755
+--- a/scripts/check_concepts.py
++++ b/scripts/check_concepts.py
+@@ -11,7 +11,10 @@ Per BRIEF §2: the registry is data the build consumes. This check enforces:
+   - every file under concepts/snapshots/ is cited by some record (no orphan artifacts);
+   - grade S records name an existing, non-empty vector corpus; every corpus directory
+     under conformance/vectors/ belongs to some grade-S record;
+-  - the generated CONCEPTS.md is fresh (its input-hash header matches the records).
++  - the generated CONCEPTS.md is fresh (its input-hash header matches the records);
++  - brief_row quotes a BRIEF §2 row verbatim, and the owners that row names match the
++    record's sources[].repo unless the record declares otherwise under
++    brief_row_divergence (D0180 — until then no guard read the field at all).
+ 
+ Exits non-zero on any violation.
+ """
+@@ -42,6 +45,114 @@ from _gov import (  # noqa: E402
+ )
+ 
+ 
++#: The constellation vocabulary BRIEF §2's Owner column is read against — the same five
++#: tokens the probe that measured this used (docs/proposals/2026-09-06-publication/probes/).
++#: A hand-written enumeration, which CLAUDE.md's standing rule says a guard should not
++#: depend on; kept because BRIEF §1's first column is prose ("Renavon monorepo", not a
++#: slug), so deriving it needs a normalisation that is itself a judgement — named as a
++#: known weakness in patch 05 rather than left for the next red team. The fourth token
++#: stays after D0180 for the reason importlinter.toml's forbidden names do: it is what
++#: lets the guard SEE a citation to that repository, declared or not.
++OWNER_TOKENS = ("pkm", "life-agent", "proplang", "renavon", "tannen")
++
++
++def norm(text: str) -> str:
++    """Markdown emphasis is not content: strip backticks and asterisks, collapse whitespace.
++    Measured 2026-09-06: without this, 2 of 8 faithful records fail on markup alone
++    (similarity 0.990 and 0.991, prose identical) — the first spelling of this check died
++    of that false positive."""
++    return re.sub(r"\s+", " ", re.sub(r"[`*]", "", text)).strip()
++
++
++def load_brief(root: Path) -> tuple[str, dict[str, str]] | None:
++    """(normalised BRIEF.md text, {normalised Concept cell: normalised Owner cell}) over
++    every table row, or None when this root has no BRIEF.md.
++
++    NO fallback to the real repo's BRIEF: a poison tree that needs this tooth carries its
++    own one-row constitution excerpt, the way check-concepts/ carries its own policy.yaml —
++    a fixture violates a guard, it does not duplicate the governance corpus, and a fixture
++    record forced to quote the real §2 would be exactly that duplication. In the real tree
++    BRIEF.md is frozen and custody-set, so its absence is check_manifest's failure before
++    it is this one's; the skip is printed, never silent.
++    """
++    brief_md = root / "BRIEF.md"
++    if not brief_md.exists():
++        return None
++    text = brief_md.read_text(encoding="utf-8")
++    rows: dict[str, str] = {}
++    for line in text.splitlines():
++        if line.startswith("|") and line.count("|") >= 4 and not line.startswith("|---"):
++            cells = line.split("|")
++            rows[norm(cells[1])] = norm(cells[2])
++    return norm(text), rows
++
++
++def owners_in(text: str) -> set[str]:
++    lowered = text.lower()
++    return {token for token in OWNER_TOKENS if token in lowered}
++
++
++def brief_row_problems(record: dict, brief: tuple[str, dict[str, str]]) -> list[str]:
++    """D0180's finding, in two teeth: `brief_row` is a required field whose stated job is
++    to carry the BRIEF §2 row a record answers to, and until this nothing read it, so a
++    record could misreport who owns a concept with the whole gate green.
++
++    Tooth 1 — the double-quoted span in brief_row is verbatim in BRIEF.md (markup-
++    normalised). Catches a record that rewrites the concept title.
++
++    Tooth 2 — the owners BRIEF §2 names for that row equal the record's sources[].repo
++    set, unless the record declares the difference under `brief_row_divergence`. The
++    declaration is the point: it turns "a human wrote a paragraph explaining this" into
++    data the guard reads, so the NEXT divergence — the undeclared one — is the one that
++    fails. A declaration naming an owner BRIEF does not name for the row, or one the
++    record cites anyway, is itself a failure: a dormant declaration would silently cover
++    a future omission (D0116 species I).
++
++    The quoted span is only BRIEF §2's Concept column; the Owner column is free prose
++    after the closing quote. That is why a check on the span alone measured GREEN on the
++    exact case it existed for, and why there are two teeth.
++    """
++    brief_text, rows = brief
++    problems: list[str] = []
++    quoted = re.search(r'"([^"]+)"', record["brief_row"])
++    if quoted is None:
++        return ["brief_row quotes nothing — the BRIEF §2 concept cell must appear in double quotes"]
++    span = norm(quoted.group(1))
++    if span not in brief_text:
++        problems.append(f"brief_row quotes {span!r}, which is not verbatim in BRIEF.md")
++    owner_cell = rows.get(span)
++    if owner_cell is None:
++        problems.append(
++            f"brief_row quotes {span!r}, which is not a BRIEF §2 table row, so its owners "
++            "cannot be checked"
++        )
++        return problems
++    want = owners_in(owner_cell)
++    got = owners_in(" ".join(source["repo"] for source in record["sources"]))
++    declared = set((record.get("brief_row_divergence") or {}).get("omits") or ())
++    stale = declared - (want - got)
++    if stale:
++        problems.append(
++            f"brief_row_divergence declares omits {sorted(stale)}, but BRIEF §2 names no "
++            "such owner that this record fails to cite — a stale declaration would cover a "
++            "future omission (D0116 species I)"
++        )
++    missing = want - got - declared
++    if missing:
++        problems.append(
++            f"brief_row owners per BRIEF §2 are {sorted(want)} but sources[].repo names "
++            f"{sorted(got)} — undeclared divergence: {sorted(missing)} (cite the owner, or "
++            "declare the omission under brief_row_divergence)"
++        )
++    extra = got - want
++    if extra:
++        problems.append(
++            f"brief_row: sources[].repo names {sorted(extra)}, which BRIEF §2 does not name "
++            "as an owner of this row"
++        )
++    return problems
++
++
+ def main() -> int:
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument("--root", type=Path, default=REPO_ROOT)
+@@ -50,6 +161,10 @@ def main() -> int:
+     fail = Failures("check_concepts")
+ 
+     schema = load_schema(root, "concept-record.schema.json")
++    brief = load_brief(root)
++    if brief is None:
++        print(f"  brief_row fidelity: no BRIEF.md under {root.name}/ — both teeth skipped "
++              "(a poison tree that needs them carries its own excerpt)")
+     record_paths = sorted((root / "concepts").glob("*.yaml"))
+     if not record_paths:
+         fail.add("no concept records found under concepts/")
+@@ -78,6 +193,9 @@ def main() -> int:
+         seen_ids.add(record["id"])
+         if path.stem != record["id"]:
+             fail.add(f"{rel}: filename stem {path.stem!r} != id {record['id']!r}")
++        if brief is not None:
++            for problem in brief_row_problems(record, brief):
++                fail.add(f"{rel}: {problem}")
+ 
+         for source in record["sources"]:
+             snap_rel = source["snapshot"]["path"]

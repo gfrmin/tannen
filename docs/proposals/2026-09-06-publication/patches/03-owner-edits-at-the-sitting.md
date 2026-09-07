@@ -122,3 +122,40 @@ as a diff here because the shape depends on whether the owner wants the whole PI
 commit time or only the four assertion tests — D0112's rationale anticipated exactly this
 choice and left it open ("If publication is approved (D0115) the owner may want it at
 commit time as well — that is an addition to this, not a replacement").
+
+---
+
+## 4. Found by rehearsing the sitting for real (D0183) — three more owner edits, all in the driver
+
+**Manifest rows.** Four of the files this sitting edits are MANIFEST-frozen —
+`scripts/custodian.sh`, `governance/tag-roles.yaml`, both `governance/schemas/*.json` — and
+so are `DELEGATIONS.md` and `tests/poison/README.md`, which it also touches. The
+`frozen-paths` hook refuses a commit whose staged frozen file disagrees with its row. The
+driver refreshes every row it changes (`manifest_refresh`, copied from
+`boundary_sitting.sh`); the runbook never said so.
+
+**`FOUNDING_TAGS` follows the re-created `m0-laws-freeze`.** `scripts/custodian.sh:79`
+enumerates the one builder tag that predates the blessing of delegation 1 — by **tag-object
+hash**. Re-creating the tag changes that hash, so on the rewritten history the custodian
+reports *builder tag predates its delegation's blessing and is not enumerated*. The driver
+rewrites the constant to the new object at step 6 (keeping the old one in the comment) and
+refreshes the row.
+
+**`DELEGATIONS.md`'s founding ratification is amended, not rewritten.** The same object and
+its sealing commit are named in prose there, and that prose is what the trust root blessed.
+The driver appends one paragraph after *"by this explicit enumeration, and it alone"*:
+the re-creation date, the new sealing commit and tag object, and a pointer to
+`receipts/REWRITE-<date>.md`, which now carries the old→new map for every **tag** as well as
+every commit. Every re-signed tag keeps its ORIGINAL message — the close tags quote the
+pre-amendment `DELEGATIONS.md` and its hash, which is what was attested on those dates.
+`brief-freeze`'s message stays the original too; the blessed text is not re-blessed, it is
+re-sealed over the rewritten commit at the original tagger date.
+
+**The citation's three specifics are scrubbed from history**, not only from the tree: the
+withdrawn source's section title, pinned commit and content hash lived on in two past
+versions each of `concepts/provenance-ref-grammar.yaml`, `CONCEPTS.md` and this package's
+README. `git filter-repo --replace-text` replaces each with `[withdrawn: D0180]`. The driver
+reads the three strings off the pre-rewrite record at run time, so neither it nor the
+harness carries them. The repository slug and document path are **not** scrubbed:
+owner-signed immutable D0115 and D0176 name them at HEAD, and the README's "what excision
+does NOT remove" already says so.

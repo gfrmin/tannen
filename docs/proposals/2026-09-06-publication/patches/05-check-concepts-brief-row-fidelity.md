@@ -1,7 +1,10 @@
 # Patch 05 — `brief_row` is unchecked, so a concept record can misreport BRIEF §2's owners
 
-**Status: drafted, not applied.** `scripts/check_concepts.py` is custody-set
-(`governance/tier-c.yaml#custody.set`), so the owner applies this. Filed by D0180.
+**Status: drafted as `05-check-concepts-brief-row-fidelity.patch`, not applied.**
+`scripts/check_concepts.py` and the concept schema are custody-set, so the driver applies
+it at step 2 under your confirmation (D0183). Filed by D0180; watched in every direction in
+a scratch clone — green 8/8, red on exactly the withdrawn record, green once declared, red
+on a stale declaration, red on a misquoted title — and rehearsed end to end.
 
 ## The finding
 
@@ -101,11 +104,13 @@ enforced rather than narrated.
 
 ## Poison fixture
 
-Warranted, and specified as **fixture candidate 2** in `../fixture-candidates/README.md`:
-`tests/poison/check-concepts-brief-row/` — a one-record tree whose owner list drops a repo
-BRIEF §2 names, with no `brief_row_divergence`. Marker `brief_row`. Author-key territory;
-installs at the sitting, and **only after this patch** — the tooth it poisons does not exist
-until then.
+Staged as **fixture candidate 2** in `../fixture-candidates/check-concepts-brief-row/`: a
+one-record tree whose `sources` cites one of the two owners its `brief_row` names, with no
+`brief_row_divergence`, against **its own one-row constitution excerpt** — the guard reads
+`BRIEF.md` at the root it is pointed at and never falls back to the real one, so a fixture
+needs its own the way `check-concepts/` needs its own policy. Marker `brief_row`, watched
+biting and watched going green with a declaration. The driver installs it at step 4, after
+this patch.
 
 ## What this does not close
 

@@ -1,0 +1,217 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0183
+title: "The publication sitting rehearsed end to end with a throwaway owner key: the driver now performs the sitting instead of narrating it, twelve defects the dry-run could not see were found by execution and eight more by reading, patches 04–06 became diffs and a seventh was born, and the citation withdrawal reached the published history only by scrubbing it"
+tier: A
+date: "2026-09-07"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  `docs/proposals/2026-09-06-publication/publication_sitting.sh` is rewritten to PERFORM
+  every step of the sitting under the owner's confirmation — apply the patches, refresh
+  every frozen row, execute D0180's withdrawal, install the fixtures, sign, rewrite, re-tag,
+  attest, commit, gate — with the keys read from the environment the way
+  `scripts/boundary_sitting.sh` reads them. Its first draft (D0182) left eight tag
+  signatures, the attestation, custody and D0176 "to the keyboard on purpose"; that is
+  exactly what a rehearsal cannot exercise and exactly what D0065 and D0066 were.
+  .
+  `rehearse_publication.sh`, modelled on `scripts/rehearse_sitting.sh`, runs that driver
+  against a disposable clone with a throwaway `owner@tannen` enrolled beside the real one,
+  answers `y` to every prompt, and judges what is left behind with 51 checks: every
+  tag re-created, verifying, at its original tagger date; the trust root repinned; no sibling
+  snapshot path and none of the three withdrawn strings in any commit of any ref; the
+  attestation verifying under `tannen-rewrite`; every cheap guard, the custodian and the
+  brief_row probe green on the rewritten history; the pin count in policy equal to the
+  measured one; nothing uncommitted in either clone; and the real repository's HEAD and tree
+  untouched — a positive control on the isolation claim, not a promise.
+  .
+  THE RUNS. (1) NEGATIVE CONTROL FIRST (D0111): the committed driver of `424b21e`, run for
+  real, STOPPED AT STEP 1 AFTER 46 MINUTES — its precondition gate crossed midnight, the
+  custodian wrote and signed `receipts/2026-09-07.md`, and the driver looked for the 09-06
+  receipt it had named at start. The dry-run D0182 reports had reached "the sitting is
+  closed" on that same driver; this is what the dry-run could not prove, measured.
+  (2) A partial run to step 4, in minutes, found that installing the spoofed-oracle fixture
+  left D0179's file binding dangling. (3) Four mechanics-only runs (`TANNEN_SITTING_FAST=1`:
+  gates and hooks skipped, ~1 min each) found six more, listed below; the fourth was green.
+  (4) THE FIRST FULL RUN, real gates and hooks: step G's `make verify` green on the patched
+  tree in 42 minutes (831 passed, 1 skipped, 1 xfailed; 52 laws fresh; the retirement
+  printed; the three new poison lines biting); receipt, commit A, rewrite, re-tagging,
+  attestation, custody and D0176 all through; STOPPED AT COMMIT C, 87 minutes in, by the
+  hooks — findings (s) and (t) below. (An earlier attempt was terminated at step G nine
+  minutes in by the builder's own mistaken kill of its `make verify`, and is not counted.)
+  (5) THE CLEAN FULL RUN, after those two fixes: THE SITTING COMPLETES. Driver exit 0
+  after 752 lines and 94 minutes; 51 of 51 verdict checks ok; no unexpected failure line
+  anywhere in the transcript. Per phase: precondition through step 4 (all seven patches,
+  D0180's withdrawal, the four root files, three poison fixtures) 8 SECONDS; step G — custody
+  re-signed, then the full gate on the patched tree — 34 min; the receipt 7 s; commit A 13 min
+  under the hooks; **the whole irreversible middle — the rewrite, eight tags re-created at
+  their original tagger dates, the attestation, custody and D0176 — FOUR SECONDS**; commit C
+  13.5 min; step 9's full gate on the rewritten history 34 min. Both gates: 832 passed,
+  1 skipped, 1 xfailed (three above the tracked tree's 829 — the three fixtures the driver
+  installs). On rewritten objects, step 9 reports: `check_manifest` OK; `check_concepts` OK,
+  8 records, 1 pin verified BY BYTES + 11 by pin; `check_decisions` OK, 182 records, 93 pytest
+  bindings, `retired: D0115 <- D0181 (target absent by ruling)` printed, 0 unenforced, ratchet
+  residue 5 (was 5); `check_tag_signers` OK, 8 tags, every signer matching its class, trust
+  root repinned at `8ce720db94ef…`; `check_receipts` OK, 6 receipts, **chain unbroken to HEAD
+  through 84 remapped commits**; `check_laws` OK; 52 laws fresh; and the custodian green with
+  no tolerances. The real repository's HEAD and working tree were untouched throughout — a
+  positive control, run, not asserted.
+  .
+  FOUND BY READING THE DRIVER AGAINST THE GUARDS, before any run (each confirmed by the
+  runs): (a) four MANIFEST-frozen files are edited and no step refreshed their rows —
+  the frozen-paths hook refuses the first commit; (b) patch 04 changes a custody-set file
+  and the custodian ran right after it, red before step 1 every time; (c) the rewrite clone
+  had no venv and no hooks, so step 8 and step 9 could not run there; (d) tag messages were
+  captured with `%(contents)`, which INCLUDES the old SSH signature block; (e) nothing
+  committed the post-rewrite artifacts, so step 9 measured a dirty tree; (f) patch 01 makes
+  the existing check-concepts poison tree fail for two reasons, so fixture candidate 1 is a
+  prerequisite, not an option; (g) patches 04, 05 and 06 were prose, so nothing could apply
+  them; (h) the full gate ran BEFORE the patches, leaving the irreversible step guarded only
+  by commit hooks — it now runs after step 2 and before the rewrite.
+  .
+  FOUND ONLY BY EXECUTION: (i) the midnight receipt, above; (j) D0179's binding, above —
+  a binding follows the artifact it names (D0045; D0141's did the same at the M2 sitting);
+  (k) a commit that only deletes the snapshots becomes EMPTY under `--invert-paths`,
+  filter-repo prunes it, and the map reports a lost commit — the deletion commit is gone,
+  the rewrite IS the deletion, and the private tree keeps its bytes as patch 01 allows;
+  (l) patch 02's receipt loop verified the attestation AS A RECEIPT under `tannen-receipt`
+  — invisible to `rehearse_rewrite.sh`, which mapped the owner to the builder key; (m) the
+  custodian carried its OWN receipt-chain check in bash and rejected the attestation the
+  patched guard accepted, in the same `make verify` — BRIEF §2's duplication-is-drift,
+  inside the floor; patch 07 makes it delegate to `check_receipts.py` as 3b delegates to
+  `check_tag_signers.py`; (n) `FOUNDING_TAGS` in the custodian and the founding ratification
+  in `DELEGATIONS.md` enumerate `m0-laws-freeze` BY TAG OBJECT, which re-tagging changes —
+  "builder tag predates its delegation's blessing and is not enumerated" on the rewritten
+  history; both now follow the new object, and the attestation carries the old->new map for
+  every tag as well as every commit; (o) the withdrawn citation's section title, pinned
+  commit and content hash were STILL IN HISTORY — two past versions each of the record, of
+  CONCEPTS.md and of the package README — D0176's own finding one level down; the rewrite
+  now scrubs exactly those three strings (`--replace-text`, read off the pre-rewrite record
+  at run time so no file in the package carries them), and NOT the repository slug or
+  document path, which owner-signed immutable D0115 and D0176 name at HEAD by design;
+  (p) the driver's scratch files inside the rewrite clone made filter-repo refuse ("not a
+  fresh clone") and would then have been swept into the published commit by `git add -A`;
+  (q) the spoofed-oracle fixture's README declares marker `RT-M3-04`, a string the guard
+  never emits — a custodian line keyed on it would have reported "failed its poison for the
+  wrong reason"; it is keyed on the guard's own tooth text; (r) the harness's first spelling
+  carried the withdrawn strings LITERALLY in its verdict, which would have republished them
+  the moment it was committed — it reads them from the record now; (s) `tests/
+  test_conformance.py` asserted every cited snapshot EXISTS, so the published configuration
+  (1 by bytes + 11 by pin, legal to `check_concepts.py` since patch 01) failed D0087's
+  binding and the hooks refused commit C — the suite now counts pins against the same
+  owner-signed expectation the guard reads, and asserts every snapshot present when none
+  is declared, non-vacuous either way; (t) the receipt-clock test parsed every
+  `receipts/*.md` stem as a date and raised on `REWRITE-2026-09-07`, taking D0063, D0071,
+  D0073 and D0092's bindings down with it — it now tolerates the attestation the way
+  `_gov.receipt_state` already did.
+  .
+  ALSO LANDED. Patches 04, 05, 06 as real diffs (each applies to pristine HEAD independently
+  and in the driver's order); patch 07; fixture candidates 2 and 3 as trees, candidate 1 as
+  a file; the probe's two teeth in `check_concepts.py` with a `brief_row_divergence`
+  declaration in the concept schema — measured in a scratch clone in every direction (green
+  8/8; red on exactly the withdrawn record; green once declared; red on a stale declaration;
+  red on a misquoted title); `retires_bindings` in `check_decisions.py` and the decision
+  schema — measured likewise (red without a retirement; green with `retired: D0115 <- D0181`
+  printed; red on a stale one, a wrong target, a non-accepted retiring record, and an
+  enforced binding). The pytest mirror gains two POISON rows and a spoofed-oracle test
+  (27 passed in the rehearsal clone).
+  .
+  WHAT A GREEN RUN CANNOT PROVE, said plainly: custody — the throwaway key attests to
+  nothing; the real key's passphrase path; GitHub's first CI run; and that `~/git/tannen`
+  keeps the un-rewritten history, since the driver has no adoption step and that is the
+  owner's call. Two lines are flagged for the owner rather than decided:
+  `licence_defaults.code: MIT` in policy against the Apache-2.0 ruling, and whether the bare
+  repo adopts the published history.
+rationale: >-
+  Tier A: files under `docs/proposals/`, one record, no guard in the tracked tree changed,
+  no frozen or custody-set path touched, no signature made, nothing pushed. Every guard is
+  green at this commit.
+  .
+  D0068 is the reason the harness exists and the reason it ran before the driver was
+  trusted: three consecutive M0->M1 sittings stopped on defects one end-to-end run would
+  have found, and D0182 had explicitly named the full rehearsal as "the next thing this
+  driver needs and NOT done". The negative control was run first, per D0111, so that a
+  green verdict later would mean something: the harness watched the committed driver fail
+  at step 1 before it ever watched the new one succeed.
+  .
+  Twelve of the twenty defects were invisible to reading. Five of them — the pruned
+  deletion commit, the custodian's duplicate receipt check, the citation strings
+  surviving in history, the conformance suite and the receipt-clock test — would have
+  surfaced at the real sitting AFTER the irreversible step, with the owner's key out. That is the whole argument for a mechanics-only mode:
+  a defect in step 6 costs a minute to find under `TANNEN_SITTING_FAST=1` and two hours
+  under the real gates, and the fast run is honest about what it skips.
+  .
+  DELIBERATELY NOT DONE: no patch applied to the tracked tree; the fixtures not installed;
+  `oracle-shadow-model` not wired into the custodian (D0154 item 1, a different sitting's
+  item); no `supersedes` decision (D0181's second finding stands open); no derivation of the
+  owner vocabulary in patch 05 (declared weakness, unchanged); the driver not moved to
+  `scripts/` and not custody-set — installing it is the owner's act.
+reversibility: >-
+  Deleting files under `docs/proposals/` and this record. The driver and harness are inert
+  until the owner runs them; until then the runbook in the package README, now written from
+  the driver's order, is the operative instruction. What is not reversible is what the runs
+  established about ORDER: the full gate before the rewrite, patches 06 and 07 before step 5,
+  no deletion commit before `--invert-paths`, and the founding-tag enumeration following
+  the re-tagging rather than preceding it.
+status: accepted
+bindings_count: 11
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publication_sitting.sh
+    strength: documentary
+    detail: >-
+      The driver, rewritten to perform. DOCUMENTARY until installed: a script under
+      docs/proposals/ that no gate invokes enforces nothing.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/rehearse_publication.sh
+    strength: documentary
+    detail: >-
+      The harness, and the negative control's shape (TANNEN_REHEARSE_DRIVER). Wired into no
+      gate; the builder runs it before every change to the driver.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/02-check-receipts-rewrite-map.patch
+    strength: documentary
+    detail: >-
+      Corrected: the receipt loop skips REWRITE-* attestations (finding l).
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/04-custodian-receipt-signing.patch
+    strength: documentary
+    detail: D0177's fix as a diff the driver applies at step 0.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/05-check-concepts-brief-row-fidelity.patch
+    strength: documentary
+    detail: D0180's two teeth and the brief_row_divergence declaration, as a diff.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/06-check-decisions-retired-bindings.patch
+    strength: documentary
+    detail: D0181's retirement mechanism, as a diff; the sitting's prerequisite.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/patches/07-custodian-delegates-receipt-chain.patch
+    strength: documentary
+    detail: >-
+      Finding (m): the custodian's second implementation of the receipt chain, replaced by
+      a delegation to the custody-set guard.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/fixture-candidates/README.md
+    strength: documentary
+    detail: >-
+      The four fixtures the driver installs at step 4, each watched biting, and the
+      corrected marker for the spoofed oracle (finding q).
+  - type: pytest
+    target: tests/test_conformance.py::test_citation_pins_are_accounted_for
+    strength: enforced
+    detail: >-
+      Finding (s): the conformance suite counts pins against the owner-signed expectation
+      when one is declared and requires every snapshot present when none is — the published
+      and the authorised configuration both legal, neither vacuous.
+  - type: pytest
+    target: tests/test_governance_scripts.py::test_same_day_boundary_starts_the_receipt_clock
+    strength: enforced
+    detail: >-
+      Finding (t): tolerates a `REWRITE-<date>.md` attestation among the receipts, as
+      `_gov.receipt_state` does.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      The precedent the harness is modelled on line for line — throwaway key appended never
+      substituted, answers from a file not a pipe, the stamped transcript, the verdict shape.
+links: ["D0182", "D0181", "D0180", "D0179", "D0177", "D0176", "D0068", "D0111", "D0045", "D0141", "D0065", "D0066", "D0154"]

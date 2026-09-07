@@ -1,0 +1,20 @@
+# Poison fixture: schema-valid record whose brief_row quotes a row naming TWO owners while
+# sources cites ONE, with no brief_row_divergence — check_concepts must report "brief_row".
+id: poison-brief-row-drift
+title: Poison — record cites fewer owners than its BRIEF §2 row names, undeclared
+posture: adopt
+grade: L
+brief_row: >-
+  BRIEF §2: "Poison concept (`two owners`)" — owners pkm POISON-SPEC §1 and proplang
+  POISON-DOC §2. This record cites only the first, and declares nothing.
+sources:
+  - repo: https://example.invalid/pkm
+    document: POISON-SPEC.md
+    section: "§1"
+    commit: deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+    lines: whole file
+    snapshot:
+      path: concepts/snapshots/poison-brief-row-drift/owner-doc.md
+      sha256: "1e83e11b774dbc467d5ffa2e5deacca2c2d30490f865aed87ae4afaab27d9feb"
+conformance:
+  tests: []

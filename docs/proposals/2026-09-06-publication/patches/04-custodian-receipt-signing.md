@@ -2,7 +2,8 @@
 
 Found 2026-09-06 by running `scripts/custodian.sh` bare as the merge gate for `m3 ->
 master`, on a machine without the owner key's passphrase. Author-key territory (BRIEF
-§9.1), so drafted, not applied.
+§9.1), so drafted, not applied — **now as `04-custodian-receipt-signing.patch`, which the
+driver applies at step 0 under your confirmation (D0183).**
 
 ## What happens
 

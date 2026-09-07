@@ -397,7 +397,17 @@ def test_same_day_boundary_starts_the_receipt_clock(monkeypatch: pytest.MonkeyPa
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     import _gov
 
-    rdate = max(dt.date.fromisoformat(p.stem) for p in (REPO_ROOT / "receipts").glob("*.md"))
+    # The tolerance _gov.receipt_state already has: `receipts/REWRITE-<date>.md` (D0176) is
+    # a rewrite attestation, not a receipt, and its stem is not a date. Found by rehearsing
+    # the publication sitting — this comprehension raised ValueError on the first rewritten
+    # history and took three records' bindings down with it (D0183).
+    dates = []
+    for p in (REPO_ROOT / "receipts").glob("*.md"):
+        try:
+            dates.append(dt.date.fromisoformat(p.stem))
+        except ValueError:
+            pass
+    rdate = max(dates)
     long_after = rdate + dt.timedelta(days=30)
 
     monkeypatch.setattr(_gov, "boundary_tag_dates", lambda root: [rdate])

@@ -1,0 +1,22 @@
+diff --git a/scripts/custodian.sh b/scripts/custodian.sh
+index 51f4b86..8db4e5a 100755
+--- a/scripts/custodian.sh
++++ b/scripts/custodian.sh
+@@ -280,7 +280,14 @@ if [ "${1:-}" != "--check-only" ]; then
+         echo "  an owner-signed witness that the history up to that point was not rewritten"
+         echo "  afterwards (D0063 ruling 4); scripts/check_receipts.py verifies the chain."
+     } >"$receipt"
+-    ssh-keygen -Y sign -f "${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}" \
+-        -n tannen-receipt "$receipt"
+-    say "attention receipt written and author-signed: $receipt (+ .sig)"
++    if ssh-keygen -Y sign -f "${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}" \
++           -n tannen-receipt "$receipt"; then
++        say "attention receipt written and author-signed: $receipt (+ .sig)"
++    else
++        # An unsigned receipt is worse than no receipt: it attests to nothing while
++        # looking like an attestation, and check_receipts would then redden every later
++        # run for a file this step should never have left behind.
++        rm -f "$receipt"
++        bad "receipt signing FAILED — $receipt removed, not left unsigned"
++    fi
+ fi

@@ -1,6 +1,8 @@
+diff --git a/scripts/check_receipts.py b/scripts/check_receipts.py
+index eeba484..756e988 100755
 --- a/scripts/check_receipts.py
 +++ b/scripts/check_receipts.py
-@@ -12,6 +12,12 @@
+@@ -12,6 +12,12 @@ What this does not claim: it says nothing about what happened between two commit
  one interval, and a builder who never takes a receipt is not caught by it — a stale
  receipt is caught instead, by receipt_state suspending Tier-B consent.
  
@@ -13,7 +15,7 @@
  Exits non-zero on any violation.
  """
  
-@@ -30,6 +36,12 @@
+@@ -30,6 +36,12 @@ from _gov import Failures, REPO_ROOT, git_env, owner_key_enrolled  # noqa: E402
  
  HEAD_RE = re.compile(r"^- HEAD: ([0-9a-f]{7,40}|\(unborn\))\s*$", re.M)
  
@@ -26,7 +28,7 @@
  
  def git(root: Path, *args: str) -> subprocess.CompletedProcess:
      return subprocess.run(["git", "-C", str(root), *args],
-@@ -43,6 +55,65 @@
+@@ -43,6 +55,65 @@ def receipt_head(path: Path) -> str | None:
      return match.group(1)
  
  
@@ -92,7 +94,21 @@
  def main() -> int:
      parser = argparse.ArgumentParser(description=__doc__)
      parser.add_argument("--root", type=Path, default=REPO_ROOT)
-@@ -57,6 +128,13 @@
+@@ -50,13 +121,26 @@ def main() -> int:
+     root = args.root.resolve()
+     fail = Failures("check_receipts")
+ 
+-    receipts = sorted((root / "receipts").glob("*.md")) if (root / "receipts").is_dir() else []
++    # A rewrite attestation is not a receipt: it is read above, under its own namespace,
++    # and carries no HEAD. Left in this list it is verified as a receipt under
++    # tannen-receipt and fails — found by the full rehearsal, invisible to the rewrite
++    # rehearsal because that one mapped owner@tannen to the builder key.
++    receipts = sorted(
++        p for p in (root / "receipts").glob("*.md") if not p.name.startswith("REWRITE-")
++    ) if (root / "receipts").is_dir() else []
+     if not receipts:
+         print("  no receipts yet (the first lands at the opening sitting)")
+         return fail.finish("no receipts to check")
  
      enrolled = owner_key_enrolled(root)
      signers = root / "allowed_signers"
@@ -106,7 +122,7 @@
      previous: tuple[Path, str] | None = None
  
      for receipt in receipts:
-@@ -70,35 +148,36 @@
+@@ -70,35 +154,36 @@ def main() -> int:
                  )
          elif not signers.exists():
              fail.add("allowed_signers is missing, so no receipt signature can verify")
@@ -157,7 +173,7 @@
  
      if previous is not None:
          last_receipt, last_head = previous
-@@ -113,7 +192,8 @@
+@@ -113,7 +198,8 @@ def main() -> int:
                      "an extension of what was attested."
                  )
  

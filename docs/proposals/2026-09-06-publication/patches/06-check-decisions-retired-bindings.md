@@ -1,7 +1,11 @@
 # Patch 06 — a file binding can be broken by a legitimate deletion, and the record is immutable
 
-**Status: drafted, not applied.** Touches `scripts/check_decisions.py` and
-`governance/schemas/decision-record.schema.json`, both custody-set. Filed by D0181.
+**Status: drafted as `06-check-decisions-retired-bindings.patch`, not applied.** Touches
+`scripts/check_decisions.py` and `governance/schemas/decision-record.schema.json`, both
+custody-set; the driver applies it at step 2 under your confirmation (D0183). Filed by
+D0181; watched in every direction in a scratch clone against the real D0115/D0181 pair —
+red without a retirement, green with `retired: D0115 <- D0181` printed, red on a stale
+retirement, on a wrong target, on a non-accepted retiring record, on an enforced binding.
 
 **This one is not optional if the sitting is to finish.** Runbook step 5 deletes the
 sibling snapshots. D0115 — owner-signed, `accepted` — binds to one of them by path. The
@@ -82,10 +86,11 @@ does nothing is worse than an absent one, because it answers a question it canno
 
 ## Poison fixture
 
-Warranted, and specified alongside the others in `../fixture-candidates/README.md` when
-this patch is applied: a record binding `type: file` to a path the fixture tree does not
-contain, with no retirement. Marker `target does not exist`. Plus its inverse — a
-retirement of an `enforced` binding, which must be refused.
+The first case — a dead binding with no retirement — is the existing `check-decisions/`
+fixture (marker `binding does not resolve`), unchanged. The inverse is staged as **fixture
+candidate 3**, `../fixture-candidates/check-decisions-retired-enforced/`: an accepted record
+retiring another's `enforced` binding, which must be refused. Marker `only a documentary
+binding may be retired`, watched biting. The driver installs it at step 4.
 
 ## Until it is applied
 
