@@ -60,13 +60,29 @@ OWNER_KEY="${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}"
 BUILDER_KEY="${TANNEN_BUILDER_KEY:-$HOME/.ssh/tannen_builder}"
 PKG="docs/proposals/2026-09-06-publication"
 
-say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+say()  { printf '\n\033[1m== %s\033[0m\n' "$*"
+         [ -n "${STEPS:-}" ] && printf '%s\n' "$*" >> "$STEPS"; return 0; }
 note() { printf '   %s\n' "$*"; }
 warn() { printf '   \033[33m! %s\033[0m\n' "$*"; }
 # A [waiting] line arms the rehearsal harness's silence tolerance for the rest of the step
 # (rehearse_publication.sh, D0069): anything slower than ~25 s says so first.
 waiting() { printf '   [waiting] %s\n' "$*"; }
-die()  { printf '\npublication: STOP — %s\n' "$*" >&2; exit 1; }
+die()  { printf '\npublication: STOP — %s\n' "$*" >&2
+         # An abort is `exit 1` with no trap, so this is the only place that can say what
+         # the run leaves behind. The two regimes were measured, not reasoned (D0184): the
+         # answer differs either side of the sitting's first commit.
+         if [ -n "${STEPS:-}" ] && [ -s "$STEPS" ]; then
+             printf 'reached: step %s   (every step this run announced: %s)\n' \
+                 "$(awk '/^Step /{l=$2} END{print l}' "$STEPS")" "$STEPS" >&2
+             if grep -q '^Step A' "$STEPS"; then
+                 printf 'The sitting had already committed (step A): the tree is clean and the custody\nfloor is green. There is nothing to undo — this is a coherent place to stop.\n' >&2
+             else
+                 printf 'The sitting had NOT committed yet: patches are applied in the WORKING TREE and the\ncustody floor is RED until they are signed at step G. Undo with:\n    git checkout -- . && git clean -fd\n' >&2
+             fi
+             [ -n "${WORK:-}" ] && [ -d "${WORK:-}/.git" ] \
+                 && printf 'The rewrite happened only in the disposable clone at %s — rm -rf it.\n' "$WORK" >&2
+         fi
+         exit 1; }
 confirm() { [ "$DRY" = 1 ] && { note "[dry-run] would ask: $1"; return 0; }
             local a; read -rp "   $1 [y/N] " a; [[ "${a:-}" == [yY]* ]]; }
 run() { [ "$DRY" = 1 ] && { note "[dry-run] $*"; return 0; }; "$@"; }
@@ -168,8 +184,17 @@ TODAY_START="$(date +%Y-%m-%d)"
 # an untracked file in the rewrite clone makes filter-repo refuse ("not a fresh clone"),
 # and anything left there afterwards is swept into the published commit by `git add -A`.
 # Both were found by the fast rehearsal.
-SCRATCH="$( [ "$DRY" = 1 ] && echo "<scratch dir>" || mktemp -d "${TMPDIR:-/var/tmp}/tannen-sitting.XXXXXX")"
+SCRATCH="${TANNEN_SITTING_SCRATCH:-$( [ "$DRY" = 1 ] && echo "<scratch dir>" \
+           || mktemp -d "${TMPDIR:-/var/tmp}/tannen-sitting.XXXXXX")}"
+[ "$DRY" = 1 ] || mkdir -p "$SCRATCH"
+# The breadcrumb: one line per step, appended as it is announced. A `die` is exit 1 with
+# no trap, so after an abort THIS is what says how far the sitting got — to you at the
+# keyboard, and to rehearse_publication.sh, which must not learn the driver's state by
+# parsing the driver's prose (BRIEF §2: one implementation, not two).
+STEPS=""
+if [ "$DRY" != 1 ]; then STEPS="$SCRATCH/steps"; : > "$STEPS"; fi
 note "publication sitting, $TODAY_START, at $ROOT$( [ "$DRY" = 1 ] && printf ' (DRY RUN)')"
+note "scratch, and its steps file recording how far this run got: $SCRATCH"
 
 # ---------------------------------------------------------------- P
 say "Precondition — the custody floor is green BEFORE anything is signed"
@@ -215,7 +240,8 @@ note "01  check_concepts.py    mechanism (a): absent snapshot = pin-only citatio
 note "02  check_receipts.py    resolve a recorded HEAD through a signed rewrite attestation"
 note "05  check_concepts.py    brief_row fidelity (D0180) — the field no guard read"
 note "06  check_decisions.py   retires_bindings (D0181) — REQUIRED for step 5"
-note "03  policy.yaml          external_surface.publishing; concept_registry (measured)"
+note "03  policy.yaml          external_surface.publishing; concept_registry (measured);"
+note "                         licence_defaults -> Apache-2.0 (D0176 ruling 2)"
 note "    tag-roles.yaml       m3-laws-freeze joins required_tags (trust_root: step 6)"
 warn "06 is a PREREQUISITE, not an improvement: step 5 deletes snapshots, owner-signed"
 warn "immutable D0115 binds to one by path, and without 06 the gate at step 9 cannot go"
@@ -235,6 +261,28 @@ for p in 01-check-concepts-degraded-pins 02-check-receipts-rewrite-map \
 done
 run manifest_refresh . governance/schemas/concept-record.schema.json
 run manifest_refresh . governance/schemas/decision-record.schema.json
+edit "policy_licence" . <<'PY'
+import pathlib
+p = pathlib.Path("governance/policy.yaml"); s = p.read_text()
+old = ("# Licence defaults (per the proplang precedent). NOTE: a licence default is not a\n"
+       "# publication decision \u2014 any byte leaving the repo boundary remains Tier-C door 2.\n"
+       "licence_defaults:\n"
+       "  code: MIT\n"
+       "  docs: CC-BY-SA-4.0\n")
+new = ("# The licence, settled at the publication sitting. D0176 ruling (2), owner, 2026-09-06:\n"
+       "# Apache-2.0 whole, superseding the MIT/CC-BY-SA-4.0 split these keys used to carry.\n"
+       "# LICENSE and NOTICE at the root are the grant; these keys are still a default and\n"
+       "# still not a publication decision \u2014 every byte leaving the boundary is Tier-C door 2.\n"
+       "# No guard reads either key; the owner signature over this file is what makes it hold.\n"
+       "licence_defaults:\n"
+       "  code: Apache-2.0\n"
+       "  docs: Apache-2.0\n")
+if "code: Apache-2.0" in s:
+    print("   policy.yaml: licence_defaults already Apache-2.0")
+else:
+    assert s.count(old) == 1, "licence_defaults anchor not found"
+    p.write_text(s.replace(old, new)); print("   policy.yaml: licence_defaults = Apache-2.0 (D0176 ruling 2)")
+PY
 edit "policy_publishing" . <<'PY'
 import pathlib
 p = pathlib.Path("governance/policy.yaml"); s = p.read_text()
@@ -342,8 +390,9 @@ for f in LICENSE NOTICE README.md CONTRIBUTING.md; do
     fi
 done
 warn "A licence file at the root IS the grant. Apache-2.0 by your ruling of 2026-09-06."
-warn "governance/policy.yaml still says licence_defaults.code: MIT — yours to reconcile if"
-warn "you want the policy file to agree with the LICENSE; no guard reads either."
+note "governance/policy.yaml was reconciled to match at step 2 (licence_defaults, both"
+note "keys) and is signed with the rest of that file at step G. No guard reads either"
+note "key: the agreement between them is held by your signature, not by a check."
 stop_after 3
 
 # ---------------------------------------------------------------- 4

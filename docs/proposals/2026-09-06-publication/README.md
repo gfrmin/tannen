@@ -196,7 +196,7 @@ because the custodian that writes it checks the floor first.
 |---|---|---|
 | P | `custodian.sh --check-only`; records the pre-rewrite HEAD | |
 | 0 | patches **04** and **07** to `custodian.sh` (author-key); row refreshed | |
-| 2 | patches 01, 02, 05, 06; both schema rows; patch 03's `policy.yaml` and `tag-roles.yaml` edits; pin count **measured** and written | |
+| 2 | patches 01, 02, 05, 06; both schema rows; patch 03's `policy.yaml` and `tag-roles.yaml` edits; `licence_defaults` → **Apache-2.0**, both keys (D0176 ruling 2); pin count **measured** and written | |
 | 2b | D0180's withdrawal: source entry out, snapshot `git rm`'d, divergence declared, D0181 retires D0115's binding, pins re-measured (**12**), probe must read 8/8 | |
 | 3 | the four root files | |
 | 4 | the four poison fixtures, their rows, custodian lines, README rows, pytest mirror; D0179's binding follows the moved README | |
@@ -217,10 +217,14 @@ Then, and only then — narrated by the driver, never run by it: `gh repo create
 clone the published repo into a scratch directory to run `make verify` there — the first
 time this gate has ever run on a machine that is not this one.
 
-**Two lines only you can settle**, flagged by the driver rather than decided:
-`governance/policy.yaml` still says `licence_defaults.code: MIT` against the Apache-2.0
-ruling (no guard reads either); and `~/git/tannen` keeps the un-rewritten history — whether
-the bare repo adopts the published one is a separate decision the driver does not make.
+**One line only you can settle**, and it is not a licence any more (D0184): the driver now
+executes D0176 ruling (2) at step 2, so `governance/policy.yaml` says `licence_defaults`
+Apache-2.0 for both keys and agrees with the `LICENSE` at the root — under your step-G
+signature, since no guard reads either key. What remains is that `~/git/tannen` keeps the
+un-rewritten history: whether the bare repo adopts the published one is a separate decision
+the driver does not make. Taking it costs a backup ref (`git tag
+backup/pre-publication-<date> master`) and a reset of the four worktrees; the excised bytes
+are unaffected either way, since they live outside git at `~/git/tannen/.reference/`.
 
 ## The bytes are not lost
 

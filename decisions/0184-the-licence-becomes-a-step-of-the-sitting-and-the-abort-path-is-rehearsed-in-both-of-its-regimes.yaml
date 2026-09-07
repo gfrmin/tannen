@@ -1,0 +1,152 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0184
+title: "The licence stops being a line the owner is asked to reconcile and becomes a step of the sitting, and the abort path — the one branch every rehearsal had answered `y` to — is rehearsed in both of its two regimes"
+tier: A
+date: "2026-09-07"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  TWO CHANGES, both under `docs/proposals/`, no guard in the tracked tree touched.
+  .
+  (1) THE LICENCE IS EXECUTED, NOT FLAGGED. `publication_sitting.sh` step 2 gains a third
+  `policy.yaml` editlet beside the two it already had: `licence_defaults` becomes
+  `Apache-2.0` for BOTH keys, executing D0176 ruling (2) of 2026-09-06, which superseded
+  the MIT/CC-BY-SA-4.0 split. D0183 had left this "flagged for the owner rather than
+  decided"; there was nothing left to decide, only something left to do.
+  .
+  It goes IN the sitting rather than in a commit before it, and the reason is mechanical
+  rather than aesthetic. `governance/policy.yaml` is in `governance/tier-c.yaml#custody.set`
+  AND in `required_signatures` (`tannen-policy`, `owner@tannen`), so a builder cannot
+  commit that edit at all — it reddens `check_manifest::check_custody` and
+  `check_required_signatures` until the owner re-signs. An owner doing it alone spends a key
+  touch, a ~20-minute hook chain and a ~45-minute gate on a file the sitting already opens
+  and already signs once at step G. As a third line in that same edit it costs nothing.
+  .
+  And it buys less than it looks: the rewrite scrubs exactly three strings (the withdrawn
+  citation's section title, pinned commit and content hash), so `licence_defaults.code: MIT`
+  survives in every past version of `policy.yaml` either way. Only HEAD differs between the
+  two routes — never the published history. Recorded because the opposite was argued.
+  .
+  (2) THE ABORT PATH IS REHEARSED. `rehearse_publication.sh --abort-at N` answers `n` to the
+  Nth prompt instead of `y`. Every prompt in every previous rehearsal was answered `y`, so
+  the branch the owner would most want proven — something looks wrong in the irreversible
+  middle, they answer `n` — was the one branch never executed. `confirm` failure is `die`,
+  which is `exit 1` with no trap and no rollback, and "is that recoverable?" had only ever
+  been answered by reading the driver.
+  .
+  MEASURED, four runs, ~90 seconds each under `TANNEN_SITTING_FAST=1`:
+  (a) ABORT AT PROMPT 3, INSIDE STEP 2 — before the sitting's first commit. 29 of 29 checks
+  ok. The driver exits 1, names its step, and the recovery — `git checkout -- .` and
+  `git clean -fd` — is PERFORMED by the verdict, not described: dirty tree and red custody
+  floor before it, clean tree and green floor after.
+  .
+  (b) ABORT AT PROMPT 8, INSIDE STEP 6 — after commit A, before the tags are re-created.
+  36 of 36 ok. The repository is clean, carries exactly one new commit whose parent is the
+  state the driver started from, and every one of the eight tags still points where it did
+  and still verifies. `check_manifest`, `check_concepts`, `check_tag_signers`,
+  `check_receipts`, `check_laws` and the custodian are all green with no tolerances.
+  .
+  (c) ABORT AT PROMPT 9, INSIDE STEP 7 — THE DEEPEST POINT: the rewrite has run and all
+  eight tags have been re-created. 36 of 36 ok, identical to (b), because all of it happened
+  in a disposable `--no-local` clone: 86 commits in a directory outside the repository, which
+  nothing in the repository references, and which the verdict then deletes and re-checks.
+  NO ABORT LEAVES THE REPOSITORY HALF-REWRITTEN, BECAUSE THE REPOSITORY IS NEVER REWRITTEN
+  IN PLACE.
+  .
+  (d) NEGATIVE CONTROL, run because a check never seen failing is not evidence (D0111):
+  abort at prompt 3 while asserting step 6. Exactly ONE check fails — "the abort landed on
+  step 6" — and the other 28 pass. A true positive with no collateral.
+  .
+  THE FINDING THE NEGATIVE CONTROL PRODUCED, and the reason it was run first (D0111): THE
+  ABORT PATH HAS TWO REGIMES, and only one of them is the clean stop the first run showed.
+  Before step A the sitting has applied patches but committed nothing, so the tree is DIRTY
+  and the custody floor is RED — `scripts/custodian.sh` is patched and `custody.sha256` is
+  not re-signed until step G. That is the CORRECT outcome, and a verdict that asserts
+  cleanliness there reports a working abort as breakage. The verdict now branches on whether
+  the breadcrumb records step A, checks each regime on its own terms, and PERFORMS the
+  recovery each one needs: `git checkout -- . && git clean -fd` before A, `rm -rf` the
+  rewrite clone after. At or after step A there is nothing to undo.
+  .
+  `die()` now says the same thing to the owner, since after an abort it is the only thing
+  that can: the step reached, which regime, the exact undo command, and the disposable clone
+  to delete.
+  .
+  THE BREADCRUMB, and why it replaced a grep. The harness first learned which step an abort
+  landed on by grepping the transcript for the driver's step header — a second copy of the
+  driver's step vocabulary living in the test, which is BRIEF §2's duplication-is-drift and
+  D0183 finding (m) in miniature. It had teeth: the pattern was `-- Step` and the driver
+  prints `== Step`, grep matched nothing, and because `LAST_STEP=$(last_step)` is an
+  assignment-only statement, under `set -euo pipefail` the failing substitution became the
+  statement's status and KILLED THE HARNESS MID-VERDICT — not one loud check but no verdict
+  at all. So the driver states its own state: `say()` appends every header it prints to
+  `$SCRATCH/steps`, `SCRATCH` honours `TANNEN_SITTING_SCRATCH` exactly as it already honours
+  `TANNEN_REWRITE_WORK`, and the harness reads the file. Every bare substitution in the
+  verdict now ends `|| true`, and a check asserts the breadcrumb is non-empty, because a
+  check reading an empty file passes for the wrong reason (D0116).
+  .
+  WHAT THIS STILL DOES NOT PROVE, unchanged from D0183 and not weakened by these runs: the
+  real key's passphrase path; GitHub's first CI run; a `make verify` on any machine but this
+  one. The abort runs are `TANNEN_SITTING_FAST=1`, so they prove the SHAPE of the stopping
+  point — tree, tags, guards, custody floor — and not that the full gate is green there;
+  `check_decisions` is deliberately omitted from the abort verdict because a pytest per
+  binding would make an abort rehearsal cost as much as the sitting.
+rationale: >-
+  Tier A: files under `docs/proposals/` and one record. No guard in the tracked tree
+  changed, no frozen or custody-set path touched, no signature made, nothing pushed. The
+  licence value itself is not a decision taken here — D0176 ruling (2) took it, owner, in
+  conversation on 2026-09-06; this record only moves its execution from the owner's memory
+  into the driver, where every other ruling of that sitting already lives.
+  .
+  The abort work exists because a green rehearsal that answers `y` to everything measures
+  one path through a branching script and reports it as if it measured the script. The
+  question came from outside this session and was a good one: the untested branch was
+  exactly the branch that matters most, since it is the one taken when something looks
+  wrong. Answering it by reading was possible — the architecture does confine the rewrite to
+  a disposable clone — but this repository does not accept "possible to reason out" where
+  running it costs ninety seconds, and the negative control immediately produced a regime
+  that reading had missed.
+reversibility: >-
+  Deleting the three edits and this record. Both artifacts stay inert until the owner runs
+  them. What is not reversible is what the runs established: that an abort never leaves the
+  repository half-rewritten, because the repository is never rewritten in place; and that
+  the stopping point's shape depends on which side of step A it falls, which is now the
+  driver's own message rather than a thing to be worked out at 2am.
+status: accepted
+bindings_count: 5
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publication_sitting.sh
+    strength: enforced
+    detail: >-
+      The `policy_licence` editlet at step 2 (idempotent, anchor-asserting, watched running
+      twice against a real copy of `policy.yaml` and parsing as YAML afterwards); the step
+      breadcrumb written by `say()`; and `die()`'s two-regime recovery message.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/rehearse_publication.sh
+    strength: enforced
+    detail: >-
+      `--abort-at N`, the two-regime verdict, the performed recovery, and the completion
+      check that the green path's breadcrumb ends at "The sitting is closed" — so the
+      breadcrumb is non-vacuous in both modes.
+  - type: config
+    target: governance/policy.yaml#licence_defaults
+    strength: documentary
+    detail: >-
+      The key the sitting rewrites to Apache-2.0 at step 2. Documentary, not enforced, and
+      deliberately so: no guard reads `licence_defaults` any more than it reads
+      `external_surface.publishing` (D0176 corrected D0115 on exactly that point). What makes
+      the file agree with the `LICENSE` at the root is the owner's signature over it at step
+      G, not a check.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/README.md
+    strength: documentary
+    detail: >-
+      The runbook: step 2's row names the licence edit, and "two lines only you can settle"
+      is now one — the adoption of the rewritten history by the bare repository, with the
+      backup ref that makes it cheap.
+  - type: file
+    target: decisions/0176-publication-the-history-rewrite-the-declared-discontinuity-and-what-excision-does-not-remove.yaml
+    strength: documentary
+    detail: >-
+      Ruling (2), taken by the owner on 2026-09-06 and immutable under D0045. This record
+      executes it; it does not re-decide it, and the licence text is not restated here.
+links: ["D0183", "D0182", "D0181", "D0180", "D0176", "D0115", "D0111", "D0116", "D0045", "D0068", "D0177"]

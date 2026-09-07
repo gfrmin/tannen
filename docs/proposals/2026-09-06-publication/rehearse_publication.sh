@@ -31,6 +31,16 @@
 #   rehearse_publication.sh --from head     # the committed tree only (negative control:
 #                                           # TANNEN_REHEARSE_DRIVER=<old driver>)
 #   rehearse_publication.sh --keep          # keep the clone and the rewrite for inspection
+#   rehearse_publication.sh --abort-at N    # answer n to the Nth prompt instead of y, and
+#                                           # judge what an ABORTED sitting leaves behind
+#
+# WHY --abort-at EXISTS. Every prompt above is answered y, so the one path the owner most
+# wants rehearsed — something looks wrong in the irreversible middle, they answer n — was
+# the one path never executed. Each `confirm` failure is `die`, which is `exit 1` with no
+# trap and no rollback, so "is that recoverable?" was a question answered by reading the
+# driver rather than by running it. It is not any more. With TANNEN_SITTING_FAST=1 an abort
+# run costs about a minute. N is a prompt index, and the verdict asserts WHICH step it
+# landed on — a wrong index fails loudly instead of passing on the wrong abort.
 #
 # Environment: TANNEN_REHEARSE_DRIVER overlays some other driver (how the harness is tested
 # against its own history — `git show <sha>:…/publication_sitting.sh > old.sh`);
@@ -41,14 +51,16 @@ ROOT="${TANNEN_REHEARSE_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 cd "$ROOT"
 PKG="docs/proposals/2026-09-06-publication"
 
-MODE=worktree KEEP=0
+MODE=worktree KEEP=0 ABORT_AT=0 ABORT_STEP="${TANNEN_ABORT_STEP:-6}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --from) MODE="$2"; shift 2 ;;
         --keep) KEEP=1; shift ;;
-        *) echo "usage: $0 [--from head|worktree] [--keep]" >&2; exit 2 ;;
+        --abort-at) ABORT_AT="$2"; shift 2 ;;
+        *) echo "usage: $0 [--from head|worktree] [--keep] [--abort-at N]" >&2; exit 2 ;;
     esac
 done
+case "$ABORT_AT" in ''|*[!0-9]*) echo "--abort-at takes a prompt index" >&2; exit 2 ;; esac
 case "$MODE" in head|worktree) ;; *) echo "--from must be head or worktree" >&2; exit 2 ;; esac
 
 say()  { printf '\n\033[1m-- %s\033[0m\n' "$*"; }
@@ -58,6 +70,8 @@ T0=$SECONDS
 WORK=$(mktemp -d "${TMPDIR:-/var/tmp}/tannen-pubrehearsal-XXXXXX")
 CLONE="$WORK/repo"
 RW="$WORK/rw"                        # the driver's $TANNEN_REWRITE_WORK
+SITTING="$WORK/sitting"              # the driver's $TANNEN_SITTING_SCRATCH
+STEPFILE="$SITTING/steps"            # ...and the breadcrumb it appends a step to
 LOG="$WORK/transcript.txt"
 STAMPED="$WORK/transcript.stamped"   # same lines, each prefixed with elapsed seconds
 SILENCE_LIMIT=25                     # seconds the driver may be quiet without saying so
@@ -160,6 +174,7 @@ for t in $(git -C "$CLONE" tag); do
 done
 RECEIPTS_BEFORE=" $(cd "$CLONE" && ls receipts/ 2>/dev/null | tr '\n' ' ')"
 COMMITS_BEFORE=$(git -C "$CLONE" rev-list --all --count)
+CLONE_HEAD_BEFORE=$(git -C "$CLONE" rev-parse HEAD)
 # The strings the sitting must remove from HISTORY, read off the record before the driver
 # withdraws it — so this file never has to carry them, which would defeat the check the
 # moment the harness itself is committed.
@@ -173,10 +188,17 @@ for s in r["sources"]:
 ')
 note "${#NEEDLES[@]} strings must leave the history (read from the record, not written here)"
 
-say "Running the driver — y to every prompt, transcript at $LOG"
+if [ "$ABORT_AT" -gt 0 ]; then
+    say "Running the driver — n to prompt #$ABORT_AT (expected: step $ABORT_STEP), y to the rest"
+else
+    say "Running the driver — y to every prompt, transcript at $LOG"
+fi
 # Answers come from a FILE, not from `yes |`: a pipe that outlives the driver dies of
 # SIGPIPE, and under pipefail that becomes the pipeline's status (rehearse_sitting.sh).
-awk 'BEGIN { for (i = 0; i < 2000; i++) print "y" }' > "$WORK/answers"
+# bash prints a `read -p` prompt only when stdin is a terminal, so nothing marks the
+# prompts in the transcript: the verdict identifies the abort by the last STEP header
+# instead, which is printed unconditionally.
+awk -v n="$ABORT_AT" 'BEGIN { for (i = 1; i <= 2000; i++) print (i == n ? "n" : "y") }' > "$WORK/answers"
 stamp() {   # stdin -> stdout unchanged; a copy with elapsed seconds to $1 (D0069)
     local line start=$SECONDS
     : > "$1"
@@ -192,6 +214,7 @@ set +e
     TANNEN_OWNER_KEY="$KEY" \
     TANNEN_BUILDER_KEY="${TANNEN_BUILDER_KEY:-$HOME/.ssh/tannen_builder}" \
     TANNEN_REWRITE_WORK="$RW" \
+    TANNEN_SITTING_SCRATCH="$SITTING" \
     PAGER=cat \
     TERM=dumb \
     bash "$PKG/publication_sitting.sh" ) < "$WORK/answers" 2>&1 \
@@ -205,7 +228,7 @@ note "driver exited $DRIVER_RC after $(wc -l < "$LOG") lines and $(( (SECONDS - 
 # thing that is missing rather than the check that noticed. Cheap guards are RE-RUN here;
 # the 45-minute gate (`make verify` on the rewritten history) is the driver's own step 9,
 # and it is trusted through the driver's exit status — the driver dies if it is red.
-say "Verdict"
+[ "$ABORT_AT" -gt 0 ] || say "Verdict"
 FAILED=0
 check() {  # <description> <command...>
     local desc="$1"; shift
@@ -238,7 +261,121 @@ silences() {
 }
 speaks_up() { [ -z "$(silences "$1")" ]; }
 
+present() { grep -q "$1" "$2"; }
+# Which step a run reached is the DRIVER's fact, so the driver states it: say() appends
+# every header it prints to $TANNEN_SITTING_SCRATCH/steps, and this reads the last one that
+# names a step. The first spelling of this scraped the transcript for the header text, which
+# is a second copy of the driver's step vocabulary living out here — BRIEF §2's
+# duplication-is-drift, and D0183 finding (m) in miniature. It also had teeth: the pattern
+# was wrong, grep matched nothing, and under `set -euo pipefail` the failing substitution
+# killed the harness mid-verdict instead of failing one check. Hence `|| true` at every bare
+# substitution below, and a check that the breadcrumb had anything in it at all.
+last_step() { awk '/^Step /{last=$2} END{print last}' "$STEPFILE" 2>/dev/null; }
+reached_step() { awk -v s="$1" '$1=="Step" && $2==s {f=1} END{exit !f}' "$STEPFILE" 2>/dev/null; }
+
+if [ "$ABORT_AT" -gt 0 ]; then
+    say "Verdict — an ABORTED sitting: n at prompt #$ABORT_AT"
+    LAST_STEP=$(last_step || true)
+    note "last step the driver recorded: ${LAST_STEP:-<none>} (expected $ABORT_STEP)"
+    check "the driver left a step breadcrumb at all"                   test -s "$STEPFILE"
+    check "the driver refused to continue (exit 1, not a completion)"  test "$DRIVER_RC" -eq 1
+    check "and said so, rather than dying silently"                    present 'publication: STOP' "$LOG"
+    check "the abort landed on step $ABORT_STEP"                       equal "$LAST_STEP" "$ABORT_STEP"
+    # Isolation still holds on the abort path — the same positive control as a green run.
+    check "the real repo's HEAD is untouched"     equal "$ROOT_HEAD_BEFORE" "$(git -C "$ROOT" rev-parse HEAD)"
+    check "the real repo's working tree is untouched" equal "$ROOT_STATUS_BEFORE" "$(root_state)"
+    # What the abort leaves in the repo the owner is actually sitting in.
+    # TWO REGIMES, and the negative control is what found the second one. Before step A the
+    # sitting has applied patches but committed nothing, so the tree is DIRTY and the custody
+    # floor is RED — scripts/custodian.sh is patched and custody.sha256 is not re-signed until
+    # step G. That is the correct outcome, not a defect, and asserting cleanliness there would
+    # report a working abort as breakage. The recovery differs too, so each is checked on its
+    # own terms and performed rather than described.
+    if reached_step A; then
+        REGIME="after the sitting's first commit"
+        check "nothing was left uncommitted in the sitting's own clone" test -z "$(in_clone git status --porcelain)"
+        check "the sitting's pre-rewrite commit is HEAD, and it is the only one added" \
+            equal "$(in_clone git rev-list --all --count)" "$((COMMITS_BEFORE + 1))"
+        check "and its parent is the state the driver started from" \
+            equal "$(in_clone git rev-parse HEAD^)" "$CLONE_HEAD_BEFORE"
+    else
+        REGIME="before the sitting's first commit"
+        check "no commit was added, since step A was never reached" \
+            equal "$(in_clone git rev-list --all --count)" "$COMMITS_BEFORE"
+        check "the tree is dirty, as an abort before the first commit must leave it" \
+            test -n "$(in_clone git status --porcelain)"
+    fi
+    note "regime: $REGIME"
+    # The claim the whole abort question turns on: the repo was never rewritten, only the
+    # throwaway clone was. Checked per tag rather than in aggregate, so a failure names one.
+    while IFS=$'\t' read -r t obj cmt _date; do
+        check "tag $t still points where it did (no rewrite reached the repo)" \
+            equal "$(in_clone git rev-parse "$t")" "$obj"
+        check "tag $t still verifies in the repo" bash -c \
+            "cd '$CLONE' && git -c gpg.format=ssh -c gpg.ssh.allowedSignersFile=allowed_signers verify-tag '$t'"
+    done < "$WORK/tags_before.txt"
+    check "no rewrite attestation was written" bash -c "! ls '$CLONE'/receipts/REWRITE-*.md >/dev/null 2>&1"
+    # And the stopping point is coherent, not merely intact. check_decisions is omitted on
+    # purpose: it runs a pytest per binding (~20 min) and would make an abort rehearsal cost
+    # as much as the sitting. That is a stated gap in this run, not a claim about the guard.
+    if reached_step A; then
+        for g in check_manifest check_concepts check_tag_signers check_receipts check_laws; do
+            check "$g is green at the stopping point" in_clone .venv/bin/python -I -P "scripts/$g.py"
+        done
+        check "the custodian is green at the stopping point, with no tolerances" \
+            in_clone bash scripts/custodian.sh --check-only
+    else
+        check "the custody floor is RED at the stopping point, as an applied-but-unsigned patch must leave it" \
+            bash -c "! ( cd '$CLONE' && bash scripts/custodian.sh --check-only >/dev/null 2>&1 )"
+    fi
+    # The rewrite clone: disposable by construction, and the recovery is performed here
+    # rather than described, because "just rm -rf it" is exactly the kind of claim this
+    # harness exists to stop taking on trust.
+    if [ -d "$RW/.git" ]; then
+        note "rewrite clone present at $RW ($(in_rw git rev-list --all --count) commits)"
+        check "the rewrite clone is outside the real repo" bash -c \
+            "case '$RW' in '$ROOT'/*) exit 1 ;; *) exit 0 ;; esac"
+        check "nothing in the repo references it"          empty in_clone git grep -l -- "$RW"
+    else
+        note "no rewrite clone: the abort came before step 5"
+    fi
+    say "Recovery, performed"
+    rm -rf "$RW"
+    if ! reached_step A; then
+        note "before step A the recovery is an undo, not a deletion: git checkout -- . && git clean -fd"
+        ( cd "$CLONE" && git checkout -- . && git clean -fdq ) || true
+        check "after the undo the tree is clean again" test -z "$(in_clone git status --porcelain)"
+    fi
+    check "after recovery the repo's custody floor is green" \
+        in_clone bash scripts/custodian.sh --check-only
+    check "and the real repo is still untouched" equal "$ROOT_HEAD_BEFORE" "$(git -C "$ROOT" rev-parse HEAD)"
+    say "Unexpected failure lines in the transcript (the STOP itself is expected)"
+    awk '
+      /fails its poison as required/ { next }
+      /publication: STOP/            { next }
+      /^[+-]/ { next }
+      /^ .*(printf|echo|bad\(\))/ { next }
+      /: FAIL|FAILED|Traceback|command not found|No such file|Error [0-9]|error:|fatal:/ {
+          printf "%d:%s\n", NR, $0
+      }' "$LOG" | head -40
+    say "Transcript: $LOG (timed copy: $STAMPED)"
+    note "total $(( (SECONDS - T0) / 60 )) min"
+    [ "$KEEP" = 1 ] && note "kept: clone $CLONE" || note "(--keep to inspect the clone)"
+    if [ "$FAILED" -eq 0 ]; then
+        printf '\n\033[32mabort rehearsal: n stops the sitting at a coherent, reversible point\033[0m\n'
+        if reached_step A; then
+            printf 'the repo keeps the pre-rewrite commit, clean and green; the rewrite was only ever\nin a temp clone\n'
+        else
+            printf 'nothing was committed and nothing was rewritten; the applied patches undo with\ngit checkout -- . && git clean -fd, which this run performed\n'
+        fi
+        exit 0
+    fi
+    printf '\n\033[31mabort rehearsal: %d check(s) failed\033[0m\n' "$FAILED"
+    exit 1
+fi
+
 check "the driver ran to completion (exit 0)"            test "$DRIVER_RC" -eq 0
+check "and recorded every step through the last one"     equal "$(awk 'END{print}' "$STEPFILE" 2>/dev/null || true)" "The sitting is closed"
 check "no step aborted the sitting"                      absent 'publication: STOP' "$LOG"
 check "no silence over ${SILENCE_LIMIT}s went unannounced"     speaks_up "$STAMPED"
 # Isolation, as a positive control rather than a promise.
