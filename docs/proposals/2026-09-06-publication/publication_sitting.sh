@@ -12,8 +12,9 @@
 # WHY THIS EXISTS. Every previous sitting had an executable driver and a rehearsal harness
 # in front of it; this one had an eleven-step prose runbook (D0182). D0068's lesson is
 # blunt: three consecutive attempts at the M0->M1 sitting stopped on defects a single
-# end-to-end run would have found in seconds. This sitting rewrites 77 commits and re-signs
-# the trust root. It is the least forgiving one yet.
+# end-to-end run would have found in seconds. This sitting rewrites EVERY commit in the
+# history — 84 of them at the last rehearsal, and one more for each commit made between
+# now and the sitting — and re-signs the trust root. It is the least forgiving one yet.
 #
 # IT PERFORMS THE SITTING; IT DOES NOT NARRATE IT. The first draft left eight tag
 # signatures, the attestation, custody and D0176 "to the keyboard on purpose". That is
