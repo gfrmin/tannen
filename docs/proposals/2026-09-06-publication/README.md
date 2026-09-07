@@ -258,6 +258,37 @@ checks it out and removes the milestone branch, so the published repository carr
 branch. Nothing is lost: every milestone branch is an ancestor of master, and every milestone
 is marked by a signed tag that is published.
 
+## Running it (D0188)
+
+```sh
+ssh-add ~/.ssh/tannen_owner                       # in THIS terminal; see above
+
+bash docs/proposals/2026-09-06-publication/preflight.sh \
+  && bash docs/proposals/2026-09-06-publication/publication_sitting.sh
+```
+
+The `&&` is load-bearing: if preflight finds a blocker the sitting must not start. Preflight
+checks what the driver cannot see — `git-filter-repo`, `uv`, `gh` and its scopes, disk, and
+whether the destination repository already exists — and delegates everything else to
+`publication_sitting.sh --dry-run` rather than keeping a second copy of its checks.
+
+Then, with the rewrite-clone path the sitting prints at the end:
+
+```sh
+bash docs/proposals/2026-09-06-publication/publish_push.sh --work <that path> --dry-run
+bash docs/proposals/2026-09-06-publication/publish_push.sh --work <that path> --yes
+```
+
+`publish_push.sh` creates the repository, pushes `master` **before** the tags so the public
+default branch is decided correctly, repairs the default if GitHub makes `main`, watches CI's
+first-ever run to completion, then clones the published repository and runs `make verify` in
+it. It refuses first: the source must be clean, carry exactly one branch, be on `master`, have
+a `receipts/REWRITE-*.md` in HEAD's tree, and all eight tags must verify.
+
+It is the only script here that sends bytes out — Tier-C door `external-bytes`, opened by
+owner-signed D0115 and executed by D0176. It requires `--yes`, the driver never calls it, and
+`--dry-run` prints every command without running one.
+
 ## After the push: adopting the published history (D0187)
 
 `adopt_published_history.sh --from <url> --ci-green` points this repository at the published

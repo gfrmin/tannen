@@ -1,0 +1,86 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0188
+title: "The two ends of the sitting stop being things the owner types: a preflight that checks what the driver cannot see, and the push, the CI watch and the fresh-clone gate as one script that refuses anything that is not the sitting's output"
+tier: A
+date: "2026-09-07"
+risk_flags: ["public-surface", "governance-paths"]
+decision: >-
+  Two scripts under `docs/proposals/2026-09-06-publication/`, neither invoked by the driver.
+  .
+  `preflight.sh` — ten seconds, run immediately before the sitting. It checks what the driver
+  CANNOT see, because it is all outside the repository: `git-filter-repo` (step 5 dies without
+  it), `uv`, `gh` and its scopes, free space where the clone and two venvs go, and whether the
+  destination repository already exists. It deliberately does NOT re-implement the custody
+  floor, the key passphrase report or the patch applicability: it runs
+  `publication_sitting.sh --dry-run` and passes its verdict through. That is the same
+  delegation patch 07 imposes on the custodian, for the same reason — one implementation, not
+  two (BRIEF §2). Measured on this machine: `git-filter-repo a40bce54`, `gh` authenticated as
+  `gfrmin` with scopes `repo`/`workflow`/`admin:org`, 262G free, and `gfrmin/tannen` DOES NOT
+  YET EXIST, so nothing collides.
+  .
+  `publish_push.sh` — the steps the sitting narrates and leaves to the keyboard: create the
+  repository, push, confirm the default branch, watch CI's first run to completion, then clone
+  the published repository and run `make verify` in it. They are typed at minute ninety-five,
+  after fourteen signatures, which is exactly when `push --all` instead of `push -u origin
+  master` costs a repository whose default branch is wrong — D0186 is that same class of
+  mistake, and it was found in the narration rather than in a run.
+  .
+  It refuses anything that is not the sitting's output, before it creates anything: the source
+  must be clean, carry EXACTLY ONE branch, be on `master`, have a `receipts/REWRITE-*.md` in
+  HEAD's tree, and all eight tags must verify against `allowed_signers`. Then it creates the
+  repository WITHOUT pushing, pushes `master` first so the public default is decided
+  correctly, pushes the tags, and repairs the default branch if GitHub made `main`.
+  .
+  THIS IS THE ONE SCRIPT IN THE PACKAGE THAT SENDS BYTES OUT. Tier-C door `external-bytes`,
+  opened by owner-signed D0115 and executed by D0176 — but the act stays the owner's: it
+  requires `--yes`, the driver never calls it, and `--dry-run` prints every command without
+  running one. Measured that way against a REAL rewrite clone produced by the publication
+  rehearsal — 90 commits, one branch `master`, attestation present, all 8 tags verifying — and
+  it printed the whole sequence, in order, having run nothing.
+  .
+  Two bugs found by running rather than reading, both in the guards themselves: `[ -d
+  "$WORK/.git" ]` rejects a worktree, whose `.git` is a FILE, so the repository check now asks
+  git; and the closing hand-off printed `$PWD/adopt_published_history.sh`, which is the repo
+  root rather than the package, so it now resolves against the script's own directory. Both
+  would have appeared only at the moment they were relied on.
+rationale: >-
+  Tier A: two files under `docs/proposals/` and one record. No guard changed, no frozen or
+  custody-set path touched, no signature made, nothing pushed — the script that COULD push
+  refuses without `--yes` and was exercised only in `--dry-run`.
+  .
+  The argument for both is the same as D0068's and it is now this package's most repeated
+  finding: the parts of a sitting that are prose rather than code are the parts that fail. The
+  driver was narration once, and rehearsing it found twenty defects (D0183); the publish step
+  was still narration, and reading it found one that would have stopped the sitting at its
+  final command (D0186). These two scripts close the last stretches of prose at either end.
+  .
+  `preflight.sh` earns its place by being cheap enough to run every time, and by delegating.
+  A preflight that re-implemented the driver's checks would be a second copy of them, drifting
+  from the first — which is the defect this repository has now found three times in three
+  different guards.
+reversibility: >-
+  Deleting both scripts and this record. Neither runs unless invoked, neither is wired into
+  the driver, and the sitting works exactly as before without them — the steps they perform
+  are still written out in the package README.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/preflight.sh
+    strength: enforced
+    detail: >-
+      The environment checks, and the delegation to `publication_sitting.sh --dry-run` rather
+      than a second copy of its checks.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publish_push.sh
+    strength: enforced
+    detail: >-
+      The refusals (clean, one branch, on master, attestation in HEAD, eight tags verifying,
+      destination absent), the create-then-push-master-first ordering that decides the public
+      default branch, the CI watch, and the fresh-clone `make verify`. Requires `--yes`.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/README.md
+    strength: documentary
+    detail: >-
+      The runbook these two scripts execute; the publish section it narrates is now also code.
+links: ["D0187", "D0186", "D0185", "D0184", "D0183", "D0176", "D0115", "D0068"]
