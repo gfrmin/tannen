@@ -17,7 +17,11 @@ load-bearing; CI fails if a binding's target is missing or skipped. This check:
     Grade-P/S-pending residue may rise above the last digest's recorded metrics. Until
     M0 this was a digest flag only; decision D0020 said it hardens to a failure here at
     the M0 boundary, and it now has;
-  - verifies the generated DECISIONS.md is fresh (input-hash header).
+  - verifies the generated DECISIONS.md is fresh (input-hash header);
+  - honours a per-binding retirement (`retires_bindings`, D0181): a `type: file` binding
+    whose target was legitimately deleted resolves iff an ACCEPTED record retires exactly
+    that (record, target) pair, the binding is DOCUMENTARY, and the target is still
+    absent — and prints every retirement it honours.
 
 Exits non-zero on any violation.
 """
@@ -149,6 +153,57 @@ def binding_violation(root: Path, kind: str, target: str) -> str | None:
     return f"unknown binding type: {kind}"
 
 
+def collect_retirements(root: Path, record_paths: list[Path],
+                        fail: Failures) -> dict[tuple[str, str], str]:
+    """{(retired record id, target): retiring record id} from every record's
+    `retires_bindings` (D0181), read in a pass of its own BEFORE bindings resolve —
+    records resolve in sequence order and the retiring record is, by construction, later
+    than the one it retires.
+
+    Why this exists: any record may bind to a path, and nothing stops that path being
+    legitimately retired later. D0045 makes the record immutable and `binding_violation`
+    resolves a file binding by bare existence, so without this every such retirement is a
+    permanent red — measured on D0115's binding to a snapshot the owner ruled deleted,
+    where one dangling binding also took down every record bound to the governance test
+    suite (3 violations, not 1).
+
+    Four refusals keep the mechanism from becoming the hole it patches. Honoured only from
+    an `accepted` record: a provisional or blocked record cannot quietly satisfy another
+    record's binding. Only for a `documentary` binding — checked at the binding, in main():
+    an enforced binding is the record's claim on reality, and if reality moved the owner
+    re-issues the record. A retirement whose target still EXISTS is a violation: a dormant
+    retirement would silently cover a future deletion of the same path — species I of
+    D0116's taxonomy arriving through the door built to close species I. And every
+    honoured retirement is printed, so nothing resolves invisibly.
+    """
+    retirements: dict[tuple[str, str], str] = {}
+    for path in record_paths:
+        record = load_yaml(path)
+        if not isinstance(record, dict) or not record.get("retires_bindings"):
+            continue
+        rel = path.relative_to(root)
+        rid = record.get("id", path.stem)
+        for entry in record["retires_bindings"]:
+            if not isinstance(entry, dict) or not {"record", "target"} <= entry.keys():
+                continue   # malformed: the schema check in main() reports it
+            if record.get("status") != "accepted":
+                fail.add(
+                    f"{rel}: retires a binding of {entry['record']} but is "
+                    f"{record.get('status')!r}, not accepted — only an accepted record may "
+                    "retire another record's binding"
+                )
+                continue
+            if (root / entry["target"]).exists():
+                fail.add(
+                    f"{rel}: stale retirement — {entry['target']} still exists, so the "
+                    f"binding of {entry['record']} it retires is not dangling; a retirement "
+                    "that outlives its reason would silently cover the NEXT deletion of "
+                    "that path (D0116 species I)"
+                )
+            retirements[(entry["record"], entry["target"])] = rid
+    return retirements
+
+
 def run_pytest(root: Path, targets: list[str]) -> subprocess.CompletedProcess:
     """One pytest invocation. `sys.executable` is the interpreter this script already
     runs under (`uv run python scripts/check_decisions.py`), so this reuses the resolved
@@ -259,6 +314,8 @@ def main() -> int:
     counted: list[str] = []
     valid_records: list[dict] = []
     pytest_bindings: dict[str, list[str]] = {}
+    retirements = collect_retirements(root, record_paths, fail)
+    honoured: set[tuple[str, str]] = set()
 
     for path in record_paths:
         rel = path.relative_to(root)
@@ -284,6 +341,23 @@ def main() -> int:
         for binding in record["bindings"]:
             if binding["type"] == "pytest":
                 pytest_bindings.setdefault(binding["target"], []).append(str(rel))
+                continue
+            retired_by = retirements.get((rid, binding["target"]))
+            if binding["type"] == "file" and retired_by is not None:
+                # D0181. A retired binding resolves without its target — but only a
+                # documentary one, and never silently (see collect_retirements).
+                honoured.add((rid, binding["target"]))
+                if (root / binding["target"]).exists():
+                    pass   # still present: collect_retirements reported the stale retirement
+                elif binding.get("strength", "enforced") != "documentary":
+                    fail.add(
+                        f"{rel}: binding to {binding['target']} is retired by {retired_by}, "
+                        "but the binding is enforced — only a documentary binding may be "
+                        "retired; an enforced one that no longer holds needs a new record"
+                    )
+                else:
+                    print(f"  retired: {rid} <- {retired_by} (target absent by ruling): "
+                          f"{binding['target']}")
                 continue
             problem = binding_violation(root, binding["type"], binding["target"])
             if problem:
@@ -339,6 +413,14 @@ def main() -> int:
                     f"{rid}: veto window passed {-days} day(s) ago but the attention receipt "
                     "is stale — BLOCKED, not consented (BRIEF §9.1; blocks accumulate)"
                 )
+
+    for (retired_id, target), by in retirements.items():
+        if (retired_id, target) not in honoured:
+            fail.add(
+                f"{by} retires a binding that {retired_id} does not carry (no `type: file` "
+                f"binding to {target}, or no such record) — a retirement must name a real "
+                "binding, or it is a permission waiting for a path"
+            )
 
     resolved = resolve_pytest_bindings(root, sorted(pytest_bindings))
     unresolved = sum(1 for v in resolved.values() if v is NOT_RESOLVED)

@@ -1,0 +1,16 @@
+# Poison fixture (D0181, patch 06): an ENFORCED file binding whose target is absent, which
+# the next record tries to retire — check_decisions must refuse with "only a documentary
+# binding may be retired". An enforced binding is the record's claim on reality; if reality
+# moved, the owner re-issues the record. A retirement that could quiet it is a hole.
+id: D0001
+title: Poison — enforced binding to a path that no longer exists
+tier: A
+date: "2026-09-07"
+decision: Bind this record, with strength enforced, to a file that is deliberately absent.
+rationale: Guard-liveness corpus (BRIEF §9.1).
+reversibility: n/a (fixture)
+status: accepted
+bindings:
+  - type: file
+    target: this-target-is-deliberately-absent.txt
+    strength: enforced

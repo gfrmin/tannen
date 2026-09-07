@@ -130,3 +130,9 @@ bindings:
       is the fact that turns this from a red gate into an uncommittable tree — the reason the
       ruling is sequenced rather than landed behind `--no-verify`.
 links: ["D0180", "D0115", "D0045", "D0116", "D0068", "D0177", "D0176"]
+retires_bindings:
+  - record: D0115
+    target: concepts/snapshots/provenance-ref-grammar/renavon-adr-002.md
+    reason: >-
+      Deleted by owner ruling of 2026-09-06 (D0180). The binding was documentary — it named
+      where the blocker lived, and the blocker is what was removed.

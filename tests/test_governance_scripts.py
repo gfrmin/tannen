@@ -78,6 +78,14 @@ POISON = [
     ("check_decisions_file_skip",
      ["scripts/check_decisions.py", "--root", "tests/poison/check-decisions-file-skip"],
      "unexplained skip"),
+    # Installed at the publication sitting (D0183) beside the guard patches they prove:
+    # patch 05 (brief_row read at last, D0180) and patch 06 (retires_bindings, D0181).
+    ("check_concepts_brief_row",
+     ["scripts/check_concepts.py", "--root", "tests/poison/check-concepts-brief-row"],
+     "brief_row"),
+    ("check_decisions_retired_enforced",
+     ["scripts/check_decisions.py", "--root", "tests/poison/check-decisions-retired-enforced"],
+     "only a documentary binding may be retired"),
 ]
 
 
@@ -480,3 +488,31 @@ def test_a_bindings_count_that_disagrees_with_the_list_is_caught(tmp_path: Path)
     assert "0002-count-agrees" not in out, (
         "the honest record was flagged too, so the check bans the field rather than "
         f"comparing it:\n{out}")
+
+
+
+def test_oracle_shadow_spoofed_fails_its_poison() -> None:
+    """RT-M3-04 (D0179): the same guard, sharpened. A decoy that sets `__file__` to the
+    frozen path passed the M2-era identity test outright — `check_differential` answered
+    1,400 times by a stub while 544 law tests passed. The guard now compares the CODE a
+    module answers with against a fresh load of the frozen file, and this fixture
+    (tests/poison/oracle-shadow-spoofed/, installed at the publication sitting) keeps the
+    spoofed half of the corpus, which `oracle-shadow-model/` cannot reach.
+
+    Same deviations from POISON as its two siblings, for the same reasons: no `-I -P`, `-B`,
+    a pytest run rather than --root, the venv interpreter at a literal path. The marker is
+    the guard's own tooth text — the fixture README's "RT-M3-04" never appears in the output.
+    """
+    env = {k: v for k, v in os.environ.items() if k != "TANNEN_CHECK_DECISIONS_NESTED"}
+    env["PYTHONPATH"] = str(REPO_ROOT / "tests" / "poison" / "oracle-shadow-spoofed")
+    result = run(
+        [str(REPO_ROOT / ".venv" / "bin" / "python"), "-B", "-m", "pytest",
+         "-p", "bootstrap_shadow_spoofed", "tests/laws/m3/test_l3_differential.py", "-q"],
+        env=env,
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, (
+        f"oracle-shadow-spoofed PASSED its poison — weakened:\n{combined}"
+    )
+    assert "answers with different code" in combined, combined
+    assert "shadowed" in combined, combined

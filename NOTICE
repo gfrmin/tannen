@@ -1,0 +1,29 @@
+tannen — a kernel for pure, content-addressed, provenance-native data pipelines
+Copyright 2026 the tannen authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+--------------------------------------------------------------------------------
+
+Attribution of adopted concepts (BRIEF.md §2)
+
+This repository adopts concepts owned by other documents, by pinned citation and
+conformance test rather than by restatement. `concepts/*.yaml` records the owner,
+document, section, commit and content hash for each. Those owners are named there and
+in BRIEF.md §1; nothing in this repository restates their definitions, and no code from
+any of them is vendored or imported in either direction.
+
+The verbatim excerpts that once backed those citations are not part of this repository's
+history (decision D0176). A citation resolves here to a pinned hash; anyone holding the
+owner's document at the pinned commit can verify the pin. `concepts/snapshots/` retains
+only this project's own excerpt of its own BRIEF.

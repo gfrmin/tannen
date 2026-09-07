@@ -24,14 +24,6 @@ sources:
     snapshot:
       path: concepts/snapshots/provenance-ref-grammar/pkm-SPEC-PRINCIPLES.md
       sha256: e1bda76682a779846e9dc104f0619fbcf4b9bdff4a50ac05886356e428d283a5
-  - repo: https://github.com/renavondata/renavon-monorepo
-    document: docs/architecture/decisions/002-pipeline-rigour-stance.md
-    section: "[withdrawn: D0180]"
-    commit: [withdrawn: D0180]
-    lines: whole file
-    snapshot:
-      path: concepts/snapshots/provenance-ref-grammar/renavon-adr-002.md
-      sha256: [withdrawn: D0180]
 conformance:
   vectors: null
   pending_reason: >-
@@ -40,3 +32,10 @@ conformance:
     here on an owner's behalf — adoption waits for the owner to publish (Tier C to do
     otherwise: modifying an owned concept).
   tests: []   # on upgrade to S: parse-all-positives / reject-all-negatives / round-trip
+brief_row_divergence:
+  omits: [renavon]
+  reason: >-
+    Withdrawn ahead of publication (owner ruling 2026-09-06, D0180) so the public registry
+    carries no internal document path, ADR heading or private commit SHA of that
+    repository. brief_row stays a verbatim quote of frozen BRIEF §2, which still names it.
+  decision: D0180

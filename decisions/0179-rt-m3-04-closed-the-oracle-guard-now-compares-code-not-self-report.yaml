@@ -95,7 +95,7 @@ bindings:
       collection time on every pytest session, including under `TANNEN_NO_EVIDENCE`, and
       calls `pytest.exit(returncode=1)` — a law run cannot proceed past a substituted oracle.
   - type: file
-    target: docs/redteam/fixture-candidates/oracle-shadow-spoofed/README.md
+    target: tests/poison/oracle-shadow-spoofed/README.md
     strength: documentary
     detail: >-
       The finding, the three rejected spellings, and the exploit's own instrumentation

@@ -1,0 +1,18 @@
+# Poison fixture (D0181, patch 06): the retirement that must be REFUSED, because the
+# binding it names is enforced.
+id: D0002
+title: Poison — retires D0001's enforced binding
+tier: A
+date: "2026-09-07"
+decision: Retire D0001's binding to the absent path.
+rationale: Guard-liveness corpus (BRIEF §9.1); an accepted record, a real binding, an absent target — everything a legitimate retirement has except the strength.
+reversibility: n/a (fixture)
+status: accepted
+bindings:
+  - type: file
+    target: decisions/0001-poison-enforced-binding-to-a-deleted-path.yaml
+    strength: documentary
+retires_bindings:
+  - record: D0001
+    target: this-target-is-deliberately-absent.txt
+    reason: Poison — must be refused; the binding is enforced, not documentary.

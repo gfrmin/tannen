@@ -1,0 +1,4 @@
+# Minimal policy for this poison tree (fixture candidate 1's reasoning): one record, one
+# snapshot.path, so the citation-pin expectation patch 01 requires is 1.
+concept_registry:
+  expected_citation_pins: 1

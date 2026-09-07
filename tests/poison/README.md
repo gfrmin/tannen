@@ -101,3 +101,16 @@ test among several passing ones read as fully enforced (`pytest_violation` calle
 proves — installing the fixture before the patch would leave the custodian red against
 a guard that isn't shipped yet, which is why this row and `oracle-shadow/`'s were never
 one table addition (see D0105 item 2).
+
+## Added at the publication sitting (2026-09-07)
+
+Three fixtures and one file, each the poison for a guard patch that landed at the same
+sitting (D0183; `docs/proposals/2026-09-06-publication/fixture-candidates/README.md`).
+`check-concepts/governance/policy.yaml` is the file: after patch 01 that fixture failed for
+two reasons, and the policy narrows it back to the one it names.
+
+| Fixture | Guard | Intended violation | Marker |
+|---|---|---|---|
+| `check-concepts-brief-row/` | `scripts/check_concepts.py`, tooth 2 of patch 05 (D0180) | a record whose `brief_row` quotes a row naming two owners while `sources` cites one, with no `brief_row_divergence` — against its own one-row constitution excerpt | `brief_row` |
+| `check-decisions-retired-enforced/` | `scripts/check_decisions.py`, patch 06 (D0181) | an accepted record retiring another's `enforced` file binding, which must be refused | `only a documentary binding may be retired` |
+| `oracle-shadow-spoofed/` | `src/tannen/laws/plugin.py`'s oracle-shadow check as sharpened by RT-M3-04 (D0179) | a decoy `_delta_model` that sets `__file__` to the frozen path — the M2-era identity test passed it outright | `answers with different code` (the guard's own text; the fixture README's `RT-M3-04` never appears in the output) |

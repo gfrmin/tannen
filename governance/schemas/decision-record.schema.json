@@ -66,6 +66,21 @@
     },
     "veto_procedure": { "type": "string", "description": "Tier B: how the owner vetoes (default: say so in the weekly digest review)." },
     "supersedes": { "type": "string", "pattern": "^D[0-9]{4}$" },
+    "retires_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Per-binding supersession (D0181): this record retires another record's `type: file` binding whose target was legitimately deleted. scripts/check_decisions.py honours a retirement only from an `accepted` record, only for a `documentary` binding, only while the target is absent, and prints every one it honours; a retirement naming a binding the record does not carry fails.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["record", "target", "reason"],
+        "properties": {
+          "record": { "type": "string", "pattern": "^D[0-9]{4}$" },
+          "target": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "links": { "type": "array", "items": { "type": "string" } },
     "risk_flags": {
       "type": "array",

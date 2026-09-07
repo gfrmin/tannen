@@ -12,6 +12,12 @@ What this does not claim: it says nothing about what happened between two commit
 one interval, and a builder who never takes a receipt is not caught by it — a stale
 receipt is caught instead, by receipt_state suspending Tier-B consent.
 
+A rewrite that IS legitimate declares itself rather than hiding (D0176): an owner-signed
+`receipts/REWRITE-<date>.md` carrying the complete old->new commit map, through which
+recorded HEADs are resolved before they are looked up. No receipt is ever edited — an
+attestation of a past moment that is rewritten to fit the present is not an attestation.
+An unsigned map buys nothing, because it is the rewriting party vouching for itself.
+
 Exits non-zero on any violation.
 """
 
@@ -30,6 +36,12 @@ from _gov import Failures, REPO_ROOT, git_env, owner_key_enrolled  # noqa: E402
 
 HEAD_RE = re.compile(r"^- HEAD: ([0-9a-f]{7,40}|\(unborn\))\s*$", re.M)
 
+#: A line of a rewrite attestation's map: `  - <old sha> -> <new sha>`, full 40 hex both
+#: sides. Abbreviations are refused on purpose — the map is the only thing standing
+#: between a rewritten history and an unverifiable one, and a prefix is an invitation to
+#: collide.
+REWRITE_MAP_RE = re.compile(r"^\s*- ([0-9a-f]{40}) -> ([0-9a-f]{40})\s*$", re.M)
+
 
 def git(root: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(root), *args],
@@ -43,6 +55,65 @@ def receipt_head(path: Path) -> str | None:
     return match.group(1)
 
 
+def verify_owner(path: Path, signers: Path, namespace: str) -> bool:
+    return subprocess.run(
+        ["ssh-keygen", "-Y", "verify", "-f", str(signers), "-I", "owner@tannen",
+         "-n", namespace, "-s", str(path.with_name(path.name + ".sig"))],
+        input=path.read_bytes(), capture_output=True,
+    ).returncode == 0
+
+
+def load_rewrite_maps(root: Path, fail: Failures, enrolled: bool, signers: Path) -> dict[str, str]:
+    """The old->new commit map of every history rewrite this repo has admitted to.
+
+    A rewrite breaks the chain by construction: every HEAD an owner attested to stops
+    being a commit. The dishonest repair is to edit the receipts, which fabricates an
+    attestation nobody made. The honest one is this: the receipts stay byte-identical and
+    the rewrite declares itself in `receipts/REWRITE-<date>.md`, owner-signed under its
+    own namespace, carrying the complete map. The chain is then still verified end to
+    end — through a discontinuity that is itself signed, dated and public, which is
+    strictly more than an un-rewritten history proves about itself.
+
+    The signature is load-bearing and unskippable once the owner key is enrolled: an
+    unsigned map is a builder asserting that its own rewrite was legitimate, which is the
+    exact claim this guard exists to refuse.
+    """
+    mapping: dict[str, str] = {}
+    for attestation in sorted((root / "receipts").glob("REWRITE-*.md")):
+        rel = attestation.relative_to(root)
+        if not attestation.with_name(attestation.name + ".sig").exists():
+            if enrolled:
+                fail.add(
+                    f"{rel} has no signature. A rewrite attestation is the one artifact "
+                    "that can make a broken chain verify again; unsigned, it is the "
+                    "rewriting party vouching for itself."
+                )
+        elif not signers.exists():
+            fail.add("allowed_signers is missing, so no rewrite attestation can verify")
+        elif not verify_owner(attestation, signers, "tannen-rewrite"):
+            fail.add(f"{rel}: signature does not verify against owner@tannen "
+                     "(namespace tannen-rewrite)")
+        pairs = REWRITE_MAP_RE.findall(attestation.read_text(encoding="utf-8"))
+        if not pairs:
+            fail.add(f"{rel} declares a rewrite but carries no `<old> -> <new>` map lines")
+        for old, new in pairs:
+            if old in mapping and mapping[old] != new:
+                fail.add(f"{rel}: {old} is already mapped to {mapping[old]}, and this "
+                         f"attestation maps it to {new}")
+            mapping[old] = new
+    return mapping
+
+
+def resolve_head(head: str, mapping: dict[str, str]) -> str:
+    """Follow `head` through successive rewrites. Bounded by the map's own size, so a
+    cycle introduced by a malformed attestation cannot hang the custody floor."""
+    seen: set[str] = set()
+    while head in mapping and head not in seen:
+        seen.add(head)
+        head = mapping[head]
+    return head
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -50,13 +121,26 @@ def main() -> int:
     root = args.root.resolve()
     fail = Failures("check_receipts")
 
-    receipts = sorted((root / "receipts").glob("*.md")) if (root / "receipts").is_dir() else []
+    # A rewrite attestation is not a receipt: it is read above, under its own namespace,
+    # and carries no HEAD. Left in this list it is verified as a receipt under
+    # tannen-receipt and fails — found by the full rehearsal, invisible to the rewrite
+    # rehearsal because that one mapped owner@tannen to the builder key.
+    receipts = sorted(
+        p for p in (root / "receipts").glob("*.md") if not p.name.startswith("REWRITE-")
+    ) if (root / "receipts").is_dir() else []
     if not receipts:
         print("  no receipts yet (the first lands at the opening sitting)")
         return fail.finish("no receipts to check")
 
     enrolled = owner_key_enrolled(root)
     signers = root / "allowed_signers"
+    # Read before the loop: a receipt's recorded HEAD is resolved through every admitted
+    # rewrite before it is looked up, so the chain survives a rewrite without a single
+    # owner-signed receipt being edited. Empty in a repo that has never rewritten, which
+    # is the only state the guard had before D0176.
+    rewrite_map = load_rewrite_maps(root, fail, enrolled, signers)
+    if rewrite_map:
+        print(f"  {len(rewrite_map)} commit(s) remapped by signed rewrite attestation(s)")
     previous: tuple[Path, str] | None = None
 
     for receipt in receipts:
@@ -70,35 +154,36 @@ def main() -> int:
                 )
         elif not signers.exists():
             fail.add("allowed_signers is missing, so no receipt signature can verify")
-        else:
-            verify = subprocess.run(
-                ["ssh-keygen", "-Y", "verify", "-f", str(signers), "-I", "owner@tannen",
-                 "-n", "tannen-receipt", "-s", str(sig)],
-                input=receipt.read_bytes(), capture_output=True,
-            )
-            if verify.returncode != 0:
-                fail.add(f"{receipt.relative_to(root)}: signature does not verify against "
-                         "owner@tannen (namespace tannen-receipt)")
+        elif not verify_owner(receipt, signers, "tannen-receipt"):
+            fail.add(f"{receipt.relative_to(root)}: signature does not verify against "
+                     "owner@tannen (namespace tannen-receipt)")
 
         head = receipt_head(receipt)
         if head is None:
             print(f"  {receipt.stem}: no HEAD recorded (pre-chain receipt)")
             continue
-        if git(root, "cat-file", "-e", f"{head}^{{commit}}").returncode != 0:
+        # The receipt keeps saying what it always said; only the lookup moves.
+        resolved = resolve_head(head, rewrite_map)
+        if git(root, "cat-file", "-e", f"{resolved}^{{commit}}").returncode != 0:
+            through = "" if resolved == head else (
+                f" — remapped to {resolved} by a signed rewrite, and that is absent too"
+            )
             fail.add(
                 f"{receipt.relative_to(root)} records HEAD {head}, which is not a commit "
-                "in this repository — the history the owner attested to is gone"
+                f"in this repository{through} — the history the owner attested to is gone. "
+                "If it was rewritten, the rewrite owes this repo a signed "
+                "receipts/REWRITE-<date>.md naming the new commit."
             )
             continue
         if previous is not None:
             prev_receipt, prev_head = previous
-            if git(root, "merge-base", "--is-ancestor", prev_head, head).returncode != 0:
+            if git(root, "merge-base", "--is-ancestor", prev_head, resolved).returncode != 0:
                 fail.add(
                     f"receipt chain broken: {prev_receipt.stem} recorded HEAD {prev_head}, "
-                    f"which is NOT an ancestor of {receipt.stem}'s {head}. History was "
+                    f"which is NOT an ancestor of {receipt.stem}'s {resolved}. History was "
                     "rewritten between two owner-signed attestations (D0063 ruling 4)."
                 )
-        previous = (receipt, head)
+        previous = (receipt, resolved)
 
     if previous is not None:
         last_receipt, last_head = previous
@@ -113,7 +198,8 @@ def main() -> int:
                     "an extension of what was attested."
                 )
 
-    return fail.finish(f"{len(receipts)} receipt(s); chain unbroken to HEAD")
+    through = f" through {len(rewrite_map)} remapped commit(s)" if rewrite_map else ""
+    return fail.finish(f"{len(receipts)} receipt(s); chain unbroken to HEAD{through}")
 
 
 if __name__ == "__main__":

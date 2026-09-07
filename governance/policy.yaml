@@ -18,15 +18,21 @@ budget_envelopes:
   M4: 0
   M5: 0
 
-# Licence defaults (per the proplang precedent). NOTE: a licence default is not a
-# publication decision — any byte leaving the repo boundary remains Tier-C door 2.
+# The licence, settled at the publication sitting. D0176 ruling (2), owner, 2026-09-06:
+# Apache-2.0 whole, superseding the MIT/CC-BY-SA-4.0 split these keys used to carry.
+# LICENSE and NOTICE at the root are the grant; these keys are still a default and
+# still not a publication decision — every byte leaving the boundary is Tier-C door 2.
+# No guard reads either key; the owner signature over this file is what makes it hold.
 licence_defaults:
-  code: MIT
-  docs: CC-BY-SA-4.0
+  code: Apache-2.0
+  docs: Apache-2.0
 
 # External-surface rules (Tier-C door 2). Defaults: nothing leaves.
 external_surface:
-  publishing: forbidden
+  # D0115 (owner-signed) and D0176: this repository is published at
+  # github.com/gfrmin/tannen and developed in public. `publishing` names THIS repository
+  # only — every other byte-leaving act stays a Tier-C door.
+  publishing: this-repo-public
   cross_repo_prs: forbidden
   network_writes: captured-oracles-only
 
@@ -58,3 +64,9 @@ in_repo_mechanics:
     - adding a git remote, or changing the visibility of an existing one
       (Tier-C door external-bytes)
     - pushing to any remote other than a private origin already configured here
+
+# Citation pins the concept registry must account for (D0115 mechanism (a), D0176).
+# NOT derived from concepts/ — see scripts/check_concepts.py. Raise or lower this only
+# when a concept record's `sources` list actually changes, and re-sign.
+concept_registry:
+  expected_citation_pins: 12

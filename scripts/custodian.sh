@@ -133,33 +133,13 @@ require_sig governance/custody.sha256 tannen-custody
 #     HEAD must be an ancestor of the next. Rewriting history between two owner-signed
 #     attestations then stops being invisible. This is also the justification for a remote
 #     when one is eventually added (Tier C): an unrewritable witness, not a backup.
-prev_head=""; prev_name=""
-for receipt in $(ls -1 receipts/*.md 2>/dev/null | sort); do
-    if [ ! -f "$receipt.sig" ]; then
-        [ "$owner_enrolled" -eq 1 ] && bad "unsigned attention receipt: $receipt"
-        continue
-    fi
-    ssh-keygen -Y verify -f allowed_signers -I owner@tannen -n tannen-receipt \
-        -s "$receipt.sig" <"$receipt" >/dev/null 2>&1 \
-        || bad "receipt signature does not verify: $receipt"
-    head=$(sed -n 's/^- HEAD: \([0-9a-f]\{7,40\}\)$/\1/p' "$receipt" | head -1)
-    [ -n "$head" ] || continue
-    if ! git cat-file -e "${head}^{commit}" 2>/dev/null; then
-        bad "receipt $receipt records HEAD $head, which is no longer a commit here"
-        continue
-    fi
-    if [ -n "$prev_head" ] && ! git merge-base --is-ancestor "$prev_head" "$head" 2>/dev/null; then
-        bad "receipt chain broken: $prev_name recorded $prev_head, not an ancestor of $head"
-    fi
-    prev_head="$head"; prev_name="$receipt"
-done
-if [ -n "$prev_head" ]; then
-    if git merge-base --is-ancestor "$prev_head" HEAD 2>/dev/null; then
-        say "receipt chain verifies to HEAD"
-    else
-        bad "receipt chain broken at the tip: $prev_name recorded $prev_head, not an ancestor of HEAD"
-    fi
-fi
+#     ONE implementation, not two. scripts/check_receipts.py is custody-set and is what
+#     `make verify` runs; the inline copy this line replaced drifted from it the first time
+#     the guard learned something new — a rewrite attestation under its own namespace
+#     (patch 02, D0176) — and the custodian then rejected the attestation as a receipt
+#     with a bad signature while the guard accepted it. BRIEF §2: restatement is
+#     duplication; duplication is drift. Found by rehearsing the publication sitting.
+"$PY" -I -P scripts/check_receipts.py || bad "receipt chain violated (scripts/check_receipts.py)"
 
 # 5. Guard liveness by poison: each guard must fail its fixture, for the right reason.
 poison() {
@@ -255,6 +235,22 @@ poison check_decisions_file_skip "unexplained skip" \
     env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONDONTWRITEBYTECODE=1 \
     "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-file-skip
 
+# The publication sitting adds four fixtures (D0183; docs/proposals/2026-09-06-publication/
+# fixture-candidates/README.md): patch 05's brief_row teeth, patch 06's refusal to retire an
+# enforced binding, and RT-M3-04's spoofed oracle shadow, whose marker is the guard's OWN
+# tooth text — "answers with different code" — because the fixture README's "RT-M3-04"
+# never appears in the guard's output (found by wiring it, not by reading it). Candidate 1
+# (check-concepts/governance/policy.yaml) is a file, not a line: it narrows an existing
+# fixture back to one reason.
+poison check_concepts_brief_row "brief_row" \
+    "$PY" -I -P scripts/check_concepts.py --root tests/poison/check-concepts-brief-row
+poison check_decisions_retired_enforced "only a documentary binding may be retired" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONDONTWRITEBYTECODE=1 \
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-retired-enforced
+poison oracle-shadow-spoofed "answers with different code" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONPATH=tests/poison/oracle-shadow-spoofed \
+    "$PY" -B -m pytest -p bootstrap_shadow_spoofed tests/laws/m3/test_l3_differential.py -q
+
 if [ "$FAIL" -ne 0 ]; then
     bad "custody floor violated"
     exit 1
@@ -280,7 +276,14 @@ if [ "${1:-}" != "--check-only" ]; then
         echo "  an owner-signed witness that the history up to that point was not rewritten"
         echo "  afterwards (D0063 ruling 4); scripts/check_receipts.py verifies the chain."
     } >"$receipt"
-    ssh-keygen -Y sign -f "${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}" \
-        -n tannen-receipt "$receipt"
-    say "attention receipt written and author-signed: $receipt (+ .sig)"
+    if ssh-keygen -Y sign -f "${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}" \
+           -n tannen-receipt "$receipt"; then
+        say "attention receipt written and author-signed: $receipt (+ .sig)"
+    else
+        # An unsigned receipt is worse than no receipt: it attests to nothing while
+        # looking like an attestation, and check_receipts would then redden every later
+        # run for a file this step should never have left behind.
+        rm -f "$receipt"
+        bad "receipt signing FAILED — $receipt removed, not left unsigned"
+    fi
 fi

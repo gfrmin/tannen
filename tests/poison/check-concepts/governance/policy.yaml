@@ -1,0 +1,7 @@
+# Minimal policy for the check-concepts poison tree. The fixture must violate ONE guard —
+# snapshot content drift — so it carries the citation-pin expectation its single record
+# needs, and nothing else. `_gov.load_schema` already falls back to the real repo's frozen
+# schemas for exactly this reason: a poison tree violates a guard, it does not duplicate
+# the governance corpus.
+concept_registry:
+  expected_citation_pins: 1
