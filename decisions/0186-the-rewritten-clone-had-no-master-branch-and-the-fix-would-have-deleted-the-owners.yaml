@@ -1,0 +1,112 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0186
+title: "The rewritten clone had no master branch at all, so the documented push would have failed at the last step of the sitting — and the fix for it, written into the wrong function, would have deleted the milestone branch from the owner's own repository"
+tier: A
+date: "2026-09-07"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  `publication_sitting.sh` gains `publish_shape`, called on the rewrite clone and nowhere
+  else: it creates `master` if the clone has none, checks it out, and removes the milestone
+  branch, so the published repository carries exactly one branch and the public default is
+  `master`. `ff_master` returns to what its name says — move `master` to HEAD if it exists
+  and is behind, and nothing else — because it is also called on the repository the owner is
+  sitting in.
+  .
+  THE DEFECT, found by inspecting a KEPT rewrite clone rather than by reading. The driver
+  clones `$PWD`, which is a WORKTREE, so the clone carries only that worktree's branch; and
+  `git filter-repo` DROPS the remote-tracking refs rather than converting them to local
+  branches. Measured on the rewritten clone: `refs/heads/m3` and the eight tags, no `master`,
+  no remotes. The publish narration then said `git push -u origin master  # FIRST, so master
+  becomes the default`, which fails with `src refspec master does not match any` — and the
+  natural recovery, pushing the milestone branch, makes `m3` the default branch of the public
+  repository, against the standing rule that the default is `master` and never anything else.
+  .
+  This would have surfaced at the LAST step of the sitting: after ninety-five minutes, after
+  all fourteen signatures, with `gh repo create` already run. Nothing in the repository was
+  at risk — but the sitting's final act would have been improvised.
+  .
+  THE DEFECT INTRODUCED WHILE FIXING IT, which is the more useful half of this record. The
+  first spelling put the create/checkout/delete logic INSIDE `ff_master`. `ff_master` is
+  called three times: on `$WORK` twice, and at step 5 on `.` — the owner's real repository,
+  to bring `master` up to date before the clone is taken. On the real repository, where
+  `master` DOES exist, that spelling would have switched the m3 worktree to `master` and then
+  run `git branch -D m3`, deleting the milestone branch from the live repo.
+  .
+  IT PASSED THE REHEARSAL, 52 of 52. Two reasons, both worth keeping:
+  .
+  (1) THE FIXTURE WAS SYSTEMATICALLY UNLIKE THE THING IT STOOD FOR. The harness clones a
+  worktree, and a worktree clone has no `master`, so every run took the create-branch path
+  where the deletion is harmless. The dangerous path — `master` exists — was unreachable by
+  construction. The harness now creates `master` in its clone so the fixture exercises the
+  path the owner will, and four checks assert the sitting leaves the repository on its own
+  branch with that branch still existing, and leaves the clone with exactly one branch named
+  `master`. Watched failing on a mutant driver that calls `publish_shape` on the repository,
+  which is the hazard exactly.
+  .
+  MEASURED, after the split: the full mechanics-only run is 56 of 56 with no `fatal:` line in
+  the transcript and the rewritten clone carrying one branch named `master`; the mutant that
+  calls `publish_shape` on the repository is 54 ok and EXACTLY 2 FAIL — the two branch checks,
+  and nothing else. An earlier spelling of that control reddened 25 checks in a cascade, which
+  is evidence the hazard is real but poor evidence about what the checks measure; the isolated
+  version is the useful one.
+  .
+  TWO SMALLER THINGS FIXED WHILE HERE. `publish_shape` would have checked out an existing
+  `master` without confirming it was at HEAD — unreachable where the driver calls it, since a
+  fresh clone has none, but it now fast-forwards a stale master and refuses one that is not an
+  ancestor. And the harness's isolation control — "the real repo's working tree is untouched"
+  — now PRINTS THE DIFFERENCE when it fails. It compares a snapshot taken before the driver
+  ran with one taken after, so an edit made in another window during a three-hour run reads
+  exactly like the driver writing into the real repository. That misreading happened here,
+  cost a diagnosis, and is now answered by the check itself.
+  .
+  (2) THE FAILURE WAS SILENT UNDER `set -e`. `run git … branch -f master HEAD && note "…"`
+  puts the failing command in an AND list, where errexit does not apply, so
+  `fatal: cannot force update the branch 'master' used by worktree at …` scrolled past inside
+  a green run. Only the harness's unexpected-failure-lines scan of the transcript surfaced
+  it, and that scan fails no check — it prints. That is the right design for a scan that
+  cannot know which lines matter, and it is also why a green verdict is never the whole
+  reading of a run.
+rationale: >-
+  Tier A: one file under `docs/proposals/`, one harness, one record. No guard changed, no
+  frozen or custody-set path touched, no signature made, nothing pushed.
+  .
+  The one-branch outcome is a judgement and is recorded as one. A public repository whose
+  branch list reads `master, m3` invites a question whose answer is "an artifact of how the
+  publisher's checkout happened to be arranged", and this package is careful about the public
+  surface everywhere else. Nothing is lost by it: every milestone branch is an ancestor of
+  master, and every milestone is marked by a signed tag that IS published. The driver says so
+  at the point of deletion and names the line to remove to keep the branch instead.
+  .
+  The deeper finding is about fixtures, not about branches. A rehearsal that cannot reach a
+  path proves nothing about it, and "the rehearsal is green" had begun to read as "the driver
+  is safe". It was green here while carrying a change that would have deleted a branch from
+  the owner's repository. The fixture's unlikeness was not noticed for four sessions because
+  nothing had previously depended on it — which is the ordinary way this kind of gap survives.
+reversibility: >-
+  Deleting `publish_shape`, restoring the single `ff_master`, and this record. The published
+  repository's branch shape is decided at the sitting and can be changed afterwards on GitHub
+  in one command; the milestone branches in the local repository are untouched by any of it.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publication_sitting.sh
+    strength: enforced
+    detail: >-
+      `publish_shape` (clone only) and `ff_master` (safe on the real repository), with the
+      publish narration corrected to push one branch and the tags.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/rehearse_publication.sh
+    strength: enforced
+    detail: >-
+      The clone now gets a `master` branch so the fixture reaches the path the owner will,
+      plus four checks: the repository keeps its own branch and that branch still exists (on
+      both the green and the abort paths), and the rewritten clone carries exactly one branch,
+      named master.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/README.md
+    strength: documentary
+    detail: >-
+      The runbook's step table and publish section, which named a push that could not have
+      worked.
+links: ["D0185", "D0184", "D0183", "D0182", "D0176", "D0111", "D0116", "D0068"]

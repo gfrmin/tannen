@@ -142,15 +142,52 @@ commit_here() {   # <dir> <message> — projections first; hooks armed (~20 min 
     fi
     note "committed: $(git -C "$dir" rev-parse --short HEAD 2>/dev/null) $msg"
 }
-ff_master() {   # <dir> — governance/policy.yaml in_repo_mechanics: fast-forwarding an unsigned ref is Tier A
-    if git -C "$1" rev-parse -q --verify master >/dev/null 2>&1; then
-        if git -C "$1" merge-base --is-ancestor master HEAD; then
-            run git -C "$1" branch -f master HEAD && note "master fast-forwarded to HEAD in $1"
+ff_master() {   # <dir> — move master to HEAD if it exists and is behind. NOTHING ELSE.
+    # Called on the OWNER'S REAL REPOSITORY at step 5 as well as on the rewrite clone, so it
+    # must never create, check out or delete a branch: an earlier spelling of the
+    # publish-shape fix below lived in here, and in the real repo it would have switched the
+    # m3 worktree to master and then `branch -D m3`. The rehearsal cannot catch that — its
+    # clone of a worktree has no master, so it takes the harmless path (D0186).
+    local d="$1"
+    [ "$(git -C "$d" rev-parse --abbrev-ref HEAD)" = master ] && {
+        note "$d is on master; commits land on it directly"; return 0; }
+    if git -C "$d" rev-parse -q --verify master >/dev/null 2>&1; then
+        if git -C "$d" merge-base --is-ancestor master HEAD; then
+            run git -C "$d" branch -f master HEAD && note "master fast-forwarded to HEAD in $d"
         else
-            warn "master in $1 is not an ancestor of HEAD — NOT moved; publish would push the wrong branch"
+            warn "master in $d is not an ancestor of HEAD — NOT moved; publish would push the wrong branch"
         fi
     else
-        note "no local master in $1 (a clone of a worktree has only its checked-out branch)"
+        note "no local master in $d (a clone of a worktree has only its checked-out branch)"
+    fi
+}
+publish_shape() {   # <dir> — THE REWRITE CLONE ONLY: exactly one branch, and it is master.
+    # D0186, found by inspecting a kept rewrite clone rather than by reading. The driver
+    # clones $PWD, which is a WORKTREE, so the clone carries only that worktree's branch —
+    # and git-filter-repo DROPS the remote-tracking refs rather than converting them. The
+    # rewritten clone therefore had one branch, `m3`, and no master at all, while the publish
+    # narration said `push -u origin master`: that fails with `src refspec master does not
+    # match any`, and the natural recovery — pushing the milestone branch — makes `m3` the
+    # public default. Never call this on the repository you are sitting in.
+    local d="$1" cur
+    cur=$(git -C "$d" rev-parse --abbrev-ref HEAD)
+    if ! git -C "$d" rev-parse -q --verify master >/dev/null 2>&1; then
+        run git -C "$d" branch master HEAD \
+            && note "master CREATED at HEAD in $d (the clone carried only '$cur')"
+    elif [ "$(git -C "$d" rev-parse master)" != "$(git -C "$d" rev-parse HEAD)" ]; then
+        # A fresh rewrite clone has no master, so this branch is unreachable where the driver
+        # calls it — but checking out a STALE master would silently roll the tree back past
+        # the sitting's own commit, and a footgun that cannot fire today is still a footgun.
+        git -C "$d" merge-base --is-ancestor master HEAD \
+            || die "master in $d is not an ancestor of HEAD — refusing to publish from it"
+        run git -C "$d" branch -f master HEAD && note "master fast-forwarded to HEAD in $d"
+    fi
+    [ "$cur" = master ] || run git -C "$d" checkout -q master || die "could not switch $d to master"
+    if [ "$cur" != master ] && git -C "$d" rev-parse -q --verify "$cur" >/dev/null 2>&1; then
+        run git -C "$d" branch -D "$cur" >/dev/null \
+            && note "removed '$cur' from $d — the published repository carries ONE branch, master"
+        note "Nothing is lost: every milestone branch is an ancestor of master and every"
+        note "milestone is marked by a signed tag. Keep it instead by deleting that line."
     fi
 }
 # Owner edits as data, not keystrokes. Each editlet is idempotent and asserts its anchor.
@@ -214,12 +251,15 @@ key_report() {   # <label> <keyfile> <how many signatures this sitting makes wit
     elif agent_holds "$2";     then note "$1 key: passphrase-protected, held by ssh-agent — $3 signature(s), no prompts"
     else warn "$1 key is passphrase-protected and NOT in ssh-agent: expect $3 SEPARATE prompts."
          warn "  ssh-add $2"
-         warn "  once, now, makes all $3 silent. Do not use 'ssh-add -t': this sitting runs ~95 min."
+         warn "  once, IN THIS TERMINAL, makes all $3 silent. Do not use 'ssh-add -t': ~95 min."
     fi
 }
 # Reported in --dry-run too: the probes never sign, never prompt and never read a
 # passphrase, and a preview of the sitting is exactly where this belongs.
 say "Keys — which passphrase path this sitting takes"
+note "Read from THIS process's SSH_AUTH_SOCK, so it is also the same-terminal check:"
+note "a key added in another window, or an agent socket from a different login, shows"
+note "here as 'not in ssh-agent' — which is exactly what the sitting would experience."
 for _k in "owner:$OWNER_KEY:10" "builder:$BUILDER_KEY:4"; do
     _lbl=${_k%%:*}; _rest=${_k#*:}; _path=${_rest%:*}; _n=${_rest##*:}
     if [ -f "$_path" ]; then key_report "$_lbl" "$_path" "$_n"
@@ -695,7 +735,7 @@ waiting "uv sync --frozen in $WORK"
 run env -C "$WORK" uv sync --frozen --quiet || die "uv sync failed in $WORK"
 run env -C "$WORK" "$WORK/.venv/bin/pre-commit" install --install-hooks >/dev/null || die "pre-commit install failed in $WORK"
 run git -C "$WORK" config gpg.format ssh
-ff_master "$WORK"
+publish_shape "$WORK"
 stop_after 5c
 
 # ---------------------------------------------------------------- 6
@@ -861,8 +901,8 @@ stop_after 9
 # ---------------------------------------------------------------- publish
 say "Publish — and only now"
 note "  gh repo create gfrmin/tannen --public --disable-wiki --source $WORK --remote origin"
-note "  git -C $WORK push -u origin master        # FIRST, so master becomes the default"
-note "  git -C $WORK push origin --all && git -C $WORK push origin --tags"
+note "  git -C $WORK push -u origin master        # the only branch; becomes the default"
+note "  git -C $WORK push origin --tags           # the eight re-signed tags"
 note "  gh repo view gfrmin/tannen --json defaultBranchRef"
 warn "If GitHub created main: gh repo edit --default-branch master"
 warn "                        git push origin --delete main"
@@ -876,3 +916,7 @@ warn "Whether the bare repo adopts $WORK's history is a separate decision; nothi
 say "The sitting is closed"
 note "workdir kept at $WORK — remove it once the push is confirmed"
 note "driver scratch (tag map, scrub expressions) at $SCRATCH — nothing in it is secret; remove at will"
+if [ "$DRY" != 1 ] && agent_holds "$OWNER_KEY" 2>/dev/null; then
+    warn "The owner key is still loaded in ssh-agent. Unload it now:"
+    warn "  ssh-add -d $OWNER_KEY"
+fi

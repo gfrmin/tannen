@@ -234,7 +234,7 @@ because the custodian that writes it checks the floor first.
 | 1 | attention receipt at the pre-rewrite HEAD (the receipt's date is read *here*, not at start) | owner ×1 |
 | A | commit (hooks ~20 min) | |
 | 5 | fresh `--no-local` clone; `filter-repo --invert-paths … --replace-text …`; commit-map checks (no dropped commits, pairs = commits) — **no deletion commit first**: it would be pruned as empty | |
-| 5c | the clone gets a venv, hooks, `gpg.format ssh`, and `master` fast-forwarded | |
+| 5c | the clone gets a venv, hooks, `gpg.format ssh`; `publish_shape` gives it **exactly one branch, `master`** (D0186 — a clone of a worktree has none, and filter-repo drops the remote-tracking refs) | |
 | 6 | all 8 tags re-created at their original dates from their original messages (signature block stripped), verified; `trust_root.object` repinned; `FOUNDING_TAGS` and `DELEGATIONS.md` follow `m0-laws-freeze`; rows refreshed; `check_tag_signers` | owner ×4, builder ×4 |
 | 7 | `receipts/REWRITE-<date>.md`: the complete commit map **and** the tag map, signed under `tannen-rewrite` | owner ×1 |
 | 8 | `gen_custody`; custody signed (policy unchanged since G) | owner ×1 |
@@ -243,9 +243,20 @@ because the custodian that writes it checks the floor first.
 | 9 | **`make verify`** and the custodian on the rewritten history (~45 min) | |
 
 Then, and only then — narrated by the driver, never run by it: `gh repo create`, push
-`master` first, push `--tags`, confirm the default branch, watch CI's first-ever run, and
-clone the published repo into a scratch directory to run `make verify` there — the first
-time this gate has ever run on a machine that is not this one.
+`master` (the clone's only branch, so it becomes the default), push `--tags`, confirm the
+default branch, watch CI's first-ever run, and clone the published repo into a scratch
+directory to run `make verify` there — the first time this gate has ever run on a machine
+that is not this one.
+
+**Why the branch shape needs a step at all (D0186).** The driver clones `$PWD`, a *worktree*,
+so the clone carries only that worktree's branch — and `git filter-repo` drops the
+remote-tracking refs rather than converting them. Measured on a kept rewrite clone:
+`refs/heads/m3` and eight tags, no `master`. The push documented here would have failed with
+`src refspec master does not match any` at the last step of the sitting, and the natural
+recovery would have made `m3` the public default branch. `publish_shape` creates `master`,
+checks it out and removes the milestone branch, so the published repository carries one
+branch. Nothing is lost: every milestone branch is an ancestor of master, and every milestone
+is marked by a signed tag that is published.
 
 **One line only you can settle**, and it is not a licence any more (D0184): the driver now
 executes D0176 ruling (2) at step 2, so `governance/policy.yaml` says `licence_defaults`

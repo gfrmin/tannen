@@ -92,6 +92,11 @@ git clone --quiet --no-hardlinks "$ROOT" "$CLONE"
 git -C "$CLONE" config user.name  "rehearsal"
 git -C "$CLONE" config user.email "rehearsal@invalid"
 git -C "$CLONE" config commit.gpgsign false
+# The real repository has a master branch; a clone of a WORKTREE does not. Create it so
+# the fixture exercises the same path the owner will (D0186): an earlier publish-shape
+# fix was harmless on the create-branch path and would have deleted the owner's milestone
+# branch on the master-exists path, and this clone could not tell the two apart.
+git -C "$CLONE" branch master HEAD 2>/dev/null && :
 git -C "$CLONE" config tag.gpgsign false
 note "cloned $(git -C "$CLONE" rev-parse --short HEAD) with $(git -C "$CLONE" tag | wc -l) tag(s)"
 
@@ -174,6 +179,7 @@ for t in $(git -C "$CLONE" tag); do
 done
 RECEIPTS_BEFORE=" $(cd "$CLONE" && ls receipts/ 2>/dev/null | tr '\n' ' ')"
 COMMITS_BEFORE=$(git -C "$CLONE" rev-list --all --count)
+CLONE_BRANCH_BEFORE=$(git -C "$CLONE" rev-parse --abbrev-ref HEAD)
 CLONE_HEAD_BEFORE=$(git -C "$CLONE" rev-parse HEAD)
 # The strings the sitting must remove from HISTORY, read off the record before the driver
 # withdraws it — so this file never has to carry them, which would defeat the check the
@@ -260,6 +266,17 @@ silences() {
         }' "$1"
 }
 speaks_up() { [ -z "$(silences "$1")" ]; }
+# The isolation check compares a snapshot taken BEFORE the driver ran with one taken after,
+# so ANY edit to the worktree during the run — including the operator's own, in another
+# window — shows up as a failure that reads like the driver wrote into the real repository.
+# It has already been misread once. Name the difference rather than leaving it to be guessed.
+root_state_diff() {
+    local now; now=$(root_state)
+    [ "$ROOT_STATUS_BEFORE" = "$now" ] && return 0
+    note "what differs (before -> after). If you edited the tree while this ran, it is you:"
+    diff <(printf '%s\n' "$ROOT_STATUS_BEFORE") <(printf '%s\n' "$now") | sed 's/^/     /' | head -20
+    note "the driver never writes under $ROOT; HEAD is checked separately and above."
+}
 
 present() { grep -q "$1" "$2"; }
 # Which step a run reached is the DRIVER's fact, so the driver states it: say() appends
@@ -278,12 +295,16 @@ if [ "$ABORT_AT" -gt 0 ]; then
     LAST_STEP=$(last_step || true)
     note "last step the driver recorded: ${LAST_STEP:-<none>} (expected $ABORT_STEP)"
     check "the driver left a step breadcrumb at all"                   test -s "$STEPFILE"
+    check "the repo is still on its own branch, not master"            equal "$(in_clone git rev-parse --abbrev-ref HEAD)" "$CLONE_BRANCH_BEFORE"
+    check "and that branch still exists"                               in_clone git rev-parse -q --verify "$CLONE_BRANCH_BEFORE"
     check "the driver refused to continue (exit 1, not a completion)"  test "$DRIVER_RC" -eq 1
     check "and said so, rather than dying silently"                    present 'publication: STOP' "$LOG"
     check "the abort landed on step $ABORT_STEP"                       equal "$LAST_STEP" "$ABORT_STEP"
     # Isolation still holds on the abort path — the same positive control as a green run.
     check "the real repo's HEAD is untouched"     equal "$ROOT_HEAD_BEFORE" "$(git -C "$ROOT" rev-parse HEAD)"
     check "the real repo's working tree is untouched" equal "$ROOT_STATUS_BEFORE" "$(root_state)"
+    root_state_diff
+root_state_diff   # names what changed, if anything: a bare FAIL here reads as a driver bug
     # What the abort leaves in the repo the owner is actually sitting in.
     # TWO REGIMES, and the negative control is what found the second one. Before step A the
     # sitting has applied patches but committed nothing, so the tree is DIRTY and the custody
@@ -340,7 +361,12 @@ if [ "$ABORT_AT" -gt 0 ]; then
         note "no rewrite clone: the abort came before step 5"
     fi
     say "Recovery, performed"
-    rm -rf "$RW"
+    # The recovery IS the deletion, so it is performed either way — but under --keep the
+    # rewrite is moved aside rather than destroyed, or the flag would delete the very thing
+    # it exists to let you inspect. $RW is gone from where the driver left it in both cases,
+    # which is what the check below actually asserts.
+    if [ "$KEEP" = 1 ]; then mv "$RW" "$WORK/rw-before-recovery" && note "rewrite kept at $WORK/rw-before-recovery"
+    else rm -rf "$RW"; fi
     if ! reached_step A; then
         note "before step A the recovery is an undo, not a deletion: git checkout -- . && git clean -fd"
         ( cd "$CLONE" && git checkout -- . && git clean -fdq ) || true
@@ -375,6 +401,9 @@ if [ "$ABORT_AT" -gt 0 ]; then
 fi
 
 check "the driver ran to completion (exit 0)"            test "$DRIVER_RC" -eq 0
+check "the sitting left the repo on its own branch, not master" \
+    equal "$(in_clone git rev-parse --abbrev-ref HEAD)" "$CLONE_BRANCH_BEFORE"
+check "and did not delete it"  in_clone git rev-parse -q --verify "$CLONE_BRANCH_BEFORE"
 check "and recorded every step through the last one"     equal "$(awk 'END{print}' "$STEPFILE" 2>/dev/null || true)" "The sitting is closed"
 check "no step aborted the sitting"                      absent 'publication: STOP' "$LOG"
 check "no silence over ${SILENCE_LIMIT}s went unannounced"     speaks_up "$STAMPED"
@@ -417,6 +446,10 @@ if [ -d "$RW/.git" ]; then
     PINS_POLICY=$(in_rw awk '/expected_citation_pins:/{print $2; exit}' governance/policy.yaml)
     check "expected_citation_pins ($PINS_POLICY) equals the measured pin count ($PINS_MEASURED)" equal "$PINS_POLICY" "$PINS_MEASURED"
     check "nothing was left uncommitted in the rewritten clone" test -z "$(in_rw git status --porcelain)"
+    check "the rewritten clone carries exactly one branch" \
+        equal "$(in_rw git for-each-ref --format=%\(refname\) refs/heads | wc -l)" "1"
+    check "and that branch is master, so the public default is master" \
+        equal "$(in_rw git rev-parse --abbrev-ref HEAD)" "master"
     NEW_RECEIPT=""
     for _r in "$CLONE"/receipts/*.md; do
         [ -e "$_r" ] || continue
