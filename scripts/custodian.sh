@@ -76,7 +76,7 @@ done
 #    builder-signed tag may predate the blessing of the delegation it invokes
 #    (DELEGATIONS.md "Founding ratification": delegation precedes signature).
 #    FOUNDING_TAGS enumerates the only exceptions, by tag-object hash.
-FOUNDING_TAGS="531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6"   # m0-laws-freeze (D0032/D0035)
+FOUNDING_TAGS="85d19e94e7021e8346ec81f428c2581bfa7313d3"   # m0-laws-freeze re-created at the publication rewrite of 2026-09-07 (receipts/REWRITE-*.md); was 531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6   # m0-laws-freeze (D0032/D0035)
 bless_epoch=""
 if git rev-parse -q --verify refs/tags/brief-freeze >/dev/null 2>&1; then
     bless_epoch=$(git for-each-ref --format='%(taggerdate:unix)' refs/tags/brief-freeze)

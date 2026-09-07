@@ -39,6 +39,11 @@ tag object `531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6`, sealing commit
 `9421d5befe8094c3c3d473ba24305fc63bb4c15d` (custody contingency recorded in
 decision D0032). The owner's `brief-freeze` signature over this file ratifies
 that tag retroactively — by this explicit enumeration, and it alone.
+$marker of 2026-09-07
+(`receipts/REWRITE-2026-09-07.md`, owner-signed under `tannen-rewrite`): the same tag,
+tagger date and message now seal commit `ba0a59dc08c05023708f08ff8664be04f4f20f39` as tag object
+`85d19e94e7021e8346ec81f428c2581bfa7313d3`. That attestation carries the old->new map for every tag and
+every commit; this enumeration covers the re-created object by reference to it.
 
 Standing rule, in force from that same signature: **delegation precedes
 signature.** No builder-signed tag is valid if it was created before the

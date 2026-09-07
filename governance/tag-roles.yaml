@@ -14,7 +14,7 @@ version: 1
 # undetected, before this guard existed.
 trust_root:
   tag: brief-freeze
-  object: c219e63819beb4052b326e47b9cbd5d208779cda
+  object: d60b792fe2ce329806ac70c9e9aa3c22e59fa789
   signer: owner
 
 # Matched in order; first match wins. fnmatch patterns over the tag name.
