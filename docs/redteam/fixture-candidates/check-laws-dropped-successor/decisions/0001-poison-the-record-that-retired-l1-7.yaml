@@ -1,0 +1,12 @@
+# POISON FIXTURE. `_record_exists` looks for a declared `id:` line among decisions/*.yaml,
+# so this file exists to make the registry entry's `record` field resolve. Without it the
+# fixture would fail for TWO reasons and the custodian's marker would not distinguish them.
+id: D0001
+title: "Fixture record: the retirement that dropped its successor"
+tier: A
+date: "2026-09-08"
+decision: "Not a real decision. This tree is a poison fixture for scripts/check_laws.py."
+rationale: "See governance/laws.yaml in this tree."
+reversibility: "Delete the tree."
+status: accepted
+bindings: []

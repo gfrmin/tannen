@@ -40,10 +40,13 @@ from tannen.kernel.algebra import AbelianGroup, Monoid
 from tannen.kernel.derivation import derivation_id
 from tannen.kernel.encoding import content_address
 from tannen.kernel.outcome import OperatorError, Quarantine
-from tannen.kernel.refs import RefError, is_ref
+from tannen.kernel.refs import RefError, is_ref, ref_for_bytes
 from tannen.kernel.rel import Rel
 from tannen.kernel.semiring import why_slots
 from tannen.store import IntegrityError, MissingRef, Store
+# `source_text` is transform.py's, not a copy of it: the rule that a graph hashes source
+# text is one rule (BRIEF §5.1), and it gets one implementation (BRIEF §2).
+from tannen.transform import TransformError, source_text
 
 __all__ = [
     "Advanced",
@@ -86,13 +89,60 @@ DELTA_OPERATORS: tuple[str, ...] = ("source",) + ops.OPERATORS
 # Re-registering the same name with a different object is refused: a descriptor that
 # meant one thing yesterday and another today is worse than no descriptor at all.
 
+#: (kind, name) -> the content address of the code registered under that name. RT-M3-01:
+#: a DeltaNode's descriptor used to carry the NAME and nothing else, so two processes
+#: registering different predicates under one name minted one descriptor, one step_id, and
+#: the trace served the first's answer to the second's computation with `rebuilt=False`.
+#: Nothing was tampered with; the registry is simply not in `(descriptor, state, ledger,
+#: deltas)`. M1 has always hashed a transform's SOURCE TEXT (BRIEF §5.1, D0084) and refused
+#: a lambda for want of one; M3 read "a lambda has no content address" as a licence instead
+#: of a refusal. This map is that regression undone.
+_CODE: dict[tuple[str, str], str] = {}
+
 PREDICATES: dict[str, Callable[[Mapping[str, Any]], bool]] = {}
 MAPS: dict[str, tuple[Callable[[Mapping[str, Any]], Mapping[str, Any]], tuple[str, ...]]] = {}
 MONOIDS: dict[str, Monoid] = {}
 GROUPS: dict[str, AbelianGroup] = {}
 
 
-def _register(registry: dict, kind: str, name: str, value: Any) -> None:
+def _code_address(kind: str, name: str, fn: Callable[..., Any]) -> str:
+    """The content address of a callable's SOURCE TEXT — M1's rule, applied to the code a
+    declared node names (BRIEF §5.1; `tannen.transform` hashes the same bytes the same way).
+
+    A lambda is refused, for M1's reason: it has no source that survives being written down
+    and no name to derive a label from, so nothing about it can enter a descriptor honestly.
+    The catalogue below is four named functions for exactly this reason.
+    """
+    if getattr(fn, "__name__", "") == "<lambda>":
+        raise OperatorError(
+            f"{kind} {name!r}: a lambda cannot be registered — its source is not addressable, "
+            "so a descriptor naming it would not say which code it means (BRIEF §5.1, RT-M3-01). "
+            "Give the function a name."
+        )
+    try:
+        return ref_for_bytes(source_text(fn).encode("utf-8"))
+    except TransformError as exc:
+        raise OperatorError(f"{kind} {name!r}: {exc}") from exc
+
+
+def _algebra_address(kind: str, name: str, algebra: Monoid) -> str:
+    """The content address of a law-checked fold: its operation's source, its identity and
+    its witnesses — everything that decides what the fold computes. `AbelianGroup` adds the
+    inverse, which is the whole of the difference between the two forms (§4, L3.8)."""
+    parts: dict[str, Any] = {
+        "tannen": DELTA_OP_TAG,
+        "algebra": kind,
+        "name": algebra.name,
+        "op": _code_address(kind, name, algebra.op),
+        "identity": algebra.identity,
+        "witnesses": list(algebra.witnesses),
+    }
+    if isinstance(algebra, AbelianGroup):
+        parts["inverse"] = _code_address(kind, name, algebra.inverse)
+    return content_address(parts)
+
+
+def _register(registry: dict, kind: str, name: str, value: Any, code: str) -> None:
     if not isinstance(name, str) or not name:
         raise OperatorError(f"a {kind} id is a non-empty str, not {name!r}")
     existing = registry.get(name)
@@ -102,13 +152,14 @@ def _register(registry: dict, kind: str, name: str, value: Any) -> None:
             "carries may not change meaning (docs/specs/m3.md §7)"
         )
     registry[name] = value
+    _CODE[(kind, name)] = code
 
 
 def register_predicate(name: str, predicate: Callable[[Mapping[str, Any]], bool]) -> str:
     """Name a `select` predicate so a `DeltaNode` can declare it. Returns the name."""
     if not callable(predicate):
         raise OperatorError(f"predicate {name!r}: {predicate!r} is not callable")
-    _register(PREDICATES, "predicate", name, predicate)
+    _register(PREDICATES, "predicate", name, predicate, _code_address("predicate", name, predicate))
     return name
 
 
@@ -118,7 +169,7 @@ def register_map(
     """Name a `map_rows` function together with the schema it declares."""
     if not callable(f):
         raise OperatorError(f"map {name!r}: {f!r} is not callable")
-    _register(MAPS, "map", name, (f, tuple(sorted(schema))))
+    _register(MAPS, "map", name, (f, tuple(sorted(schema))), _code_address("map", name, f))
     return name
 
 
@@ -129,7 +180,7 @@ def register_monoid(name: str, monoid: Monoid) -> str:
             f"monoid {name!r}: {monoid!r} is not a Monoid — register an AbelianGroup with "
             "register_group, so the subtractive form is chosen by declaration (§4)"
         )
-    _register(MONOIDS, "monoid", name, monoid)
+    _register(MONOIDS, "monoid", name, monoid, _algebra_address("monoid", name, monoid))
     return name
 
 
@@ -137,18 +188,37 @@ def register_group(name: str, group: AbelianGroup) -> str:
     """Name a law-checked `AbelianGroup` for `aggregate`'s subtractive form (L3.8)."""
     if not isinstance(group, AbelianGroup):
         raise OperatorError(f"group {name!r}: {group!r} is not an AbelianGroup")
-    _register(GROUPS, "group", name, group)
+    _register(GROUPS, "group", name, group, _algebra_address("group", name, group))
     return name
 
 
 #: The M3 catalogue. These are the names the frozen law files declare, so the shipped
 #: package must resolve them; they are ordinary registrations with no privilege.
-register_predicate("x-positive", lambda row: row.get("x", 0) > 0)
-register_map("k-only", lambda row: {"k": row["k"]}, ("k",))
-register_monoid("sum", Monoid("sum", lambda a, b: a + b, 0, witnesses=tuple(range(-12, 13))))
-register_group(
-    "sum", AbelianGroup("sum", lambda a, b: a + b, 0, lambda a: -a, witnesses=tuple(range(-12, 13)))
-)
+# Named, not lambdas — RT-M3-01. M1 refuses a lambda because it has no addressable source
+# (transform.py:64-65); M3 shipped four of them and read the same fact as permission. These
+# are ordinary functions so that `_code_address` can say what they are.
+
+
+def _x_positive(row: Mapping[str, Any]) -> bool:
+    return row.get("x", 0) > 0
+
+
+def _k_only(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    return {"k": row["k"]}
+
+
+def _add(a: Any, b: Any) -> Any:
+    return a + b
+
+
+def _negate(a: Any) -> Any:
+    return -a
+
+
+register_predicate("x-positive", _x_positive)
+register_map("k-only", _k_only, ("k",))
+register_monoid("sum", Monoid("sum", _add, 0, witnesses=tuple(range(-12, 13))))
+register_group("sum", AbelianGroup("sum", _add, 0, _negate, witnesses=tuple(range(-12, 13))))
 
 
 # ------------------------------------------------------------------------ the ledger
@@ -356,11 +426,24 @@ def _declared_params(operator: str, params: Mapping[str, Any]) -> dict[str, Any]
         ("monoid_id", MONOIDS, "monoid"),
         ("group_id", GROUPS, "group"),
     ):
-        if name in declared and declared[name] not in registry:
+        if name not in declared:
+            continue
+        if declared[name] not in registry:
             raise OperatorError(
                 f"{operator}: {kind} {declared[name]!r} is not registered — register it "
                 f"with tannen.incremental.register_{kind}; known: {sorted(registry)}"
             )
+        # RT-M3-01. The declared form carries the code's content address beside its name, so
+        # the descriptor — and therefore the step_id the trace is keyed by — moves when the
+        # code moves. Without this the trace answers a question it was never asked.
+        code = _CODE.get((kind, declared[name]))
+        if code is None:
+            raise OperatorError(
+                f"{operator}: {kind} {declared[name]!r} is in the registry but has no code "
+                f"address — it was inserted directly rather than through "
+                f"register_{kind}, so what it names cannot be hashed (RT-M3-01)"
+            )
+        declared[f"{kind}_code"] = code
     return declared
 
 

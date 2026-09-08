@@ -407,3 +407,178 @@ def test_a_row_that_fails_in_user_code_is_reported_and_is_not_state(tmp_path) ->
     assert row["operator"] == "select" and row["row"] == A2
     assert r.rel("s").get(A2) == r.rel("s").annotations.zero
     assert r.rel("s").get(A1)[0] == 1
+
+
+# ------------------------------------- RT-M3-02: the replacement set, derived not remembered
+
+#: One two-tick stream per delta operator. Every member of `DELTA_OPERATORS` must appear —
+#: a sweep that silently omits an operator would report a smaller divergent set and agree
+#: with a smaller `_ALWAYS_REPLAYS`, which is the exact failure this file is closing.
+#: `union` needs both sides on one schema; everything else pairs SCHEMA_A with SCHEMA_B.
+_STREAMS: dict[str, dict] = {
+    "source": {"params": {}},
+    "select": {"params": {"predicate_id": "x-positive"}},
+    "project": {"params": {"columns": ("x",)}},
+    "map_rows": {"params": {"map_id": "k-only"}},
+    "union": {"params": {}, "b_schema": SCHEMA_A, "b_rows": (A2, A3)},
+    "join": {"params": {"on": ("k",)}},
+    "distinct": {"params": {}},
+    "anti_join": {"params": {"on": ("k",)}},
+    "aggregate": {"params": {"by": ("k",), "column": "x", "into": "s", "monoid_id": "sum"}},
+}
+
+
+def _final_integral(tmp_path, operator: str, *, replay: bool) -> str:
+    """Run `operator`'s two-tick stream and return the address of its integral.
+
+    Tick 1 arrives rows on both sides; tick 2 RETRACTS one from each. The retraction is the
+    whole experiment: a delta-maintained semilattice cannot subtract, so an operator whose
+    rule must be replacement diverges here, and one whose rule is genuinely incremental
+    does not.
+
+    The caller feeds INTEGRALS to a replaying node and DELTAS to a maintained one — §7's
+    caller-side policy, and the thing `_ALWAYS_REPLAYS` decides. `replay` is passed
+    EXPLICITLY here rather than inherited from that set, so the two runs differ in the
+    declared flag alone; the caller in the sweep below empties the set first so nothing else
+    can be deciding. `source` is its own subject: it consumes an `ingest_delta` result
+    rather than an integral, and `replay=True` is refused for it outright (§6, §7).
+    """
+    spec = _STREAMS[operator]
+    b_schema = spec.get("b_schema", SCHEMA_B)
+    b_first, b_second = spec.get("b_rows", (B1, B2))
+    r = Runner(tmp_path)
+    src_a, src_b = DeltaNode("source"), DeltaNode("source")
+    node = None if operator == "source" else DeltaNode(operator, replay=replay, **spec["params"])
+
+    def tick(a_arrivals=(), a_retractions=(), b_arrivals=(), b_retractions=()) -> None:
+        r.step("a", src_a, [r.feed(SOURCE_A, SCHEMA_A, a_arrivals, a_retractions)])
+        r.step("b", src_b, [r.feed(SOURCE_B, b_schema, b_arrivals, b_retractions)])
+        if node is not None:
+            carrier = r.integral if node.replay else r.delta
+            inputs = [carrier["a"]] if node.arity == 1 else [carrier["a"], carrier["b"]]
+            r.step("n", node, inputs)
+
+    tick(a_arrivals=[(A1, 1), (A2, 1)], b_arrivals=[(b_first, 1), (b_second, 1)])
+    tick(a_retractions=[(A1, 1)], b_retractions=[(b_first, 1)])
+    return address(r.rel("a" if node is None else "n"))
+
+
+def test_the_sweep_covers_every_delta_operator() -> None:
+    """The derivation below is only as good as its input set, and an input set that is
+    itself a hand-written dict is the very thing under investigation. Pin it against the
+    package's own tuple so adding an operator without a stream fails here first."""
+    import tannen.incremental as inc
+
+    assert set(_STREAMS) == set(inc.DELTA_OPERATORS)
+
+
+def test_the_always_replays_set_is_derived_from_behaviour_not_from_memory(tmp_path) -> None:
+    """RT-M3-02, and D0171 ruling (3)'s "derive AND assert" in one test.
+
+    `_ALWAYS_REPLAYS` is a hand-written frozenset naming the operators whose delta rule is
+    replacement whatever the caller declares (§4). Nothing derived it and nothing checked
+    it, and its three members fail UNEQUALLY: emptying the set makes `distinct` and
+    `aggregate` raise loudly, while `anti_join` simply returns a wrong answer — the
+    stale-retention unsoundness of D0163, served silently, with no exception and no
+    divergence any frozen law observes. Measured at the M3 boundary: with `anti_join`
+    removed, `pytest tests/laws/m3` is still 38/38 green.
+
+    So the set is measured rather than trusted: run each operator's stream with the rule in
+    force and again with it emptied, and collect the operators that diverge or raise. That
+    set must be exactly `_ALWAYS_REPLAYS`. A member wrongly present fails because nothing
+    diverges for it; a member wrongly absent fails because something does.
+    """
+    import tannen.incremental as inc
+
+    declared = set(inc._ALWAYS_REPLAYS)
+    saved = inc._ALWAYS_REPLAYS
+    measured: set[str] = set()
+    try:
+        # Emptied for the WHOLE sweep, so `replay` is exactly what each node declares and
+        # the declared set is not quietly deciding the experiment meant to check it. An
+        # earlier spelling compared the declared set against an emptied one, which cannot
+        # fail for a member wrongly ABSENT: both runs would then be the maintained one.
+        inc._ALWAYS_REPLAYS = frozenset()
+        for operator in sorted(inc.DELTA_OPERATORS):
+            if operator == "source":
+                continue  # `replay=True` is refused for it, so there is no pair to compare
+            replayed = _final_integral(tmp_path / f"on-{operator}", operator, replay=True)
+            try:
+                maintained = _final_integral(tmp_path / f"off-{operator}", operator, replay=False)
+            except Exception:
+                measured.add(operator)
+                continue
+            if maintained != replayed:
+                measured.add(operator)
+    finally:
+        inc._ALWAYS_REPLAYS = saved
+
+    assert "source" not in declared, "source has no replay form, so it cannot be in the set"
+    assert measured == declared, (
+        f"the replacement rule is declared for {sorted(declared)} but behaviour says "
+        f"{sorted(measured)}. An operator in the second set and not the first is maintained "
+        f"incrementally and must not be; one in the first and not the second is replaying "
+        f"for no reason this stream can see."
+    )
+
+
+# -------------------------------------------- RT-M3-01: a descriptor names code, not a string
+
+
+def _risk_ok_honest(row):
+    return row.get("x", 0) < 100
+
+
+def _risk_ok_hostile(row):
+    return True
+
+
+def test_a_reused_predicate_name_no_longer_mints_the_same_descriptor() -> None:
+    """RT-M3-01, the regression. Two processes over one trace store, differing only in what
+    they register under a name, used to produce one descriptor and one `step_id` — so the
+    second was served the first's answer with `rebuilt=False` and `TraceIntegrityError`
+    could not fire, because nothing had been tampered with. A regression against M1, which
+    hashes a transform's source text (D0084) and refuses a lambda for want of one.
+
+    The registry is reset between the two registrations because that is exactly what a new
+    process does — "across runs the registry is rebuilt from empty" is the finding's own
+    sentence, and it is why the in-process re-registration guard never applied.
+    """
+    import tannen.incremental as inc
+
+    saved_registry, saved_code = dict(inc.PREDICATES), dict(inc._CODE)
+    try:
+        register_predicate("rt-m3-01", _risk_ok_honest)
+        honest = DeltaNode("select", predicate_id="rt-m3-01").descriptor
+        del inc.PREDICATES["rt-m3-01"], inc._CODE[("predicate", "rt-m3-01")]
+        register_predicate("rt-m3-01", _risk_ok_hostile)
+        hostile = DeltaNode("select", predicate_id="rt-m3-01").descriptor
+    finally:
+        inc.PREDICATES.clear(), inc.PREDICATES.update(saved_registry)
+        inc._CODE.clear(), inc._CODE.update(saved_code)
+
+    assert honest != hostile, (
+        "two different predicates under one name mint one descriptor, so a trace keyed by "
+        "it serves the answer to a computation that was never run (RT-M3-01)"
+    )
+
+
+def test_a_lambda_cannot_be_registered_for_the_reason_m1_refuses_one() -> None:
+    """M1's `transform` refuses a lambda because it has no addressable source; M3 read the
+    same fact as a licence and shipped four. The catalogue is named functions now."""
+    with pytest.raises(OperatorError, match="a lambda cannot be registered"):
+        register_predicate("rt-m3-01-lambda", lambda row: True)
+
+
+def test_a_registry_entry_inserted_behind_the_registrar_is_refused_by_name() -> None:
+    """`PREDICATES` is a plain mutable dict in `__all__`, so the registrar can be bypassed
+    with one assignment — the finding says so. A bypassed entry has no code address, and a
+    descriptor that cannot name its code must not be minted at all."""
+    import tannen.incremental as inc
+
+    inc.PREDICATES["rt-m3-01-smuggled"] = _risk_ok_hostile
+    try:
+        with pytest.raises(OperatorError, match="has no code address"):
+            DeltaNode("select", predicate_id="rt-m3-01-smuggled")
+    finally:
+        del inc.PREDICATES["rt-m3-01-smuggled"]

@@ -1,0 +1,19 @@
+# POISON FIXTURE (D0154 item 7). A miniature tree whose only defect is the one this
+# fixture exists to prove `check_laws.py` refuses: a law retired with a successor that
+# no law file anywhere defines — a claim dropped rather than carried forward (D0106
+# ruling 2). Everything else here is deliberately well-formed, so the guard has exactly
+# one thing to say and the custodian's marker match means what it looks like it means.
+validation:
+  # No MANIFEST.sha256 in this tree, so no law file counts as frozen and
+  # check_declarations has nothing to require. The floor is stated anyway: a fixture
+  # that depended on a key being ABSENT would pass for a second reason.
+  declarations_required_from: m2
+
+superseded:
+  - node: "tests/laws/m1/test_l1_poison.py::test_l1_7_a_law_that_was_retired"
+    successor: "L9.99"
+    record: "D0001"
+    reason: >-
+      The retirement is honest in every respect the guard can check except the one that
+      matters: L9.99 is defined by no law file in this tree, so the claim L1.7 carried
+      is not carried anywhere now.

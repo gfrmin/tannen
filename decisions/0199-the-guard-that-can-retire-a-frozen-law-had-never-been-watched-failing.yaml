@@ -1,0 +1,92 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0199
+title: "A poison fixture for check_laws, whose behaviour is pinned today only by a file any builder may edit — and the defect drafting it exposed: a missing fixture was reported as a weakened guard"
+tier: A
+date: "2026-09-08"
+risk_flags: ["governance-paths"]
+decision: >-
+  D0154 item (7) is DRAFTED, which is as far as a builder may take it. `scripts/check_laws.py`
+  is in the custody set (`governance/tier-c.yaml`) and is the only custody-set guard with
+  NEITHER a fixture under `tests/poison/` NOR a `poison` line in `scripts/custodian.sh` —
+  `grep check_laws scripts/custodian.sh` is empty in the live file. BRIEF §9.1's
+  guard-liveness-by-poison discipline therefore does not cover the guard that decides whether
+  a retired law still carries its claim forward.
+  .
+  BE PRECISE ABOUT WHAT IS MISSING, because it is not the test. This exact behaviour IS
+  covered — `tests/test_law_validation.py::test_check_laws_refuses_a_supersession_whose_
+  successor_no_law_defines` builds a tree with successor `L9.404` and asserts a non-zero exit.
+  What is missing is that the CUSTODY FLOOR never exercises it. That file is unfrozen and
+  uncustodied: an ordinary file any builder may edit, delete or weaken, with no signature over
+  its bytes. The poison corpus exists precisely for the guards whose liveness must not rest on
+  that — every other custody-set guard is watched failing by `custodian.sh` on every run,
+  under the owner's signature, and this one is not. RT-M3-02 names the same shape one layer
+  down: "pinned by one unsealed test and by no frozen law".
+  .
+  THE FIXTURE, staged at `docs/redteam/fixture-candidates/check-laws-dropped-successor/`. A
+  miniature tree passed with `--root`, the shape the `check-decisions-*` and `check-concepts-*`
+  fixtures use. Its only defect is D0154's own suggested case: a `superseded` entry naming
+  successor `L9.99`, which no law file in the tree defines — D0106 ruling 2's rule that a law
+  found wrong is superseded FORWARD, with nothing carrying it forward. The other three files
+  exist to keep it to ONE reason: the law file defines the retired node (else the tree fails on
+  "is not a law node"), the decision record carries `id: D0001` (else the `record` field also
+  fails to resolve), and there is deliberately no `MANIFEST.sha256`, so no law counts as frozen
+  and `check_declarations` requires nothing.
+  .
+  VERIFIED IN BOTH DIRECTIONS. The guard refuses the tree with exactly one violation, naming
+  the successor. The POSITIVE CONTROL — the same tree with `successor: "L1.7"`, a law it does
+  define — passes, `1 superseded/pending node(s) name a live successor`. That control is what
+  makes the refusal about the successor rather than about the tree being unusual.
+  .
+  THE INVOCATION is drafted as HUNK 5 of the sitting's `custodian.sh`. Fixtures install at the
+  driver's step 5 and the custodian at step 6, so the two land together in the right order.
+  Until then the drafted line refuses, which is correct: an invocation whose fixture is not yet
+  on disk should not be quiet.
+  .
+  AND THE DEFECT THAT FOUND. With hunk 5's line present and the fixture not yet installed, the
+  custodian printed **"guard 'check_laws' PASSED its poison fixture — the guard is weakened"**.
+  It had not. Most guards return 0 over an absent tree — there is nothing there to complain
+  about — so `poison()` could not distinguish "the guard no longer bites" from "the corpus is
+  short a directory", and it chose the loudest possible way to say the wrong thing: it sends
+  the reader to the guard when the fault is the fixture. Hunk 1a now refuses a named fixture
+  that is not on disk, by name. This is hunk 1c's exact mirror image — 1c catches an installed
+  fixture no invocation reaches, 1a now catches an invocation whose fixture is absent — and
+  neither direction was covered before this sitting's drafts.
+rationale: >-
+  Tier A: a staging directory and a proposal file. Nothing installed, nothing signed. Installing
+  a fixture under `tests/poison/` is author-key territory twice over (BRIEF §9.1's Tier-C door
+  `trust-root-changes`, and the standing exception at §9.1 point 5 that the builder DRAFTS and
+  the owner installs), so this record can only make the sitting's work smaller, never do it.
+  .
+  Why the fixture is a miniature tree rather than a mutation of the real one. A poison fixture
+  must fail for one reason and be readable as such; mutating `governance/laws.yaml` in place
+  would require the guard to be run against a repository in a state no commit contains. The
+  `--root` shape already exists for exactly this and three fixtures use it.
+  .
+  Why the custodian defect is recorded rather than folded silently into hunk 1a. It is the
+  third guard in this session to be correct about its condition and wrong about what it could
+  observe — D0196's success line printed unconditionally, D0198's derivation vacuous in one
+  direction, and now a refusal that named the wrong culprit. All three were found by running
+  the guard against a case it should refuse, none by reading it. Written down because the
+  pattern is the argument for poison fixtures, and it keeps recurring inside the work that
+  installs them.
+reversibility: >-
+  Delete the staged tree and hunk 5. `check_laws` returns to being the one custody-set guard
+  whose liveness rests entirely on an unsealed test, and the custodian returns to reporting an
+  absent fixture as a weakened guard.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: file
+    target: docs/redteam/fixture-candidates/check-laws-dropped-successor/governance/laws.yaml
+    strength: documentary
+    detail: >-
+      The defect itself — the supersession naming a successor no law file defines. Documentary
+      and it must stay so until the owner installs the tree under `tests/poison/`: a fixture
+      outside the corpus is unsealed and unmanifested, and enforces nothing.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh
+    strength: documentary
+    detail: >-
+      Hunk 5 (the `poison check_laws` line) and hunk 1a's refusal of a fixture that is named
+      but not installed. A drafted patch awaiting owner application enforces nothing (D0143).
+links: ["D0154", "D0171", "D0196", "D0198", "D0129", "D0106", "D0143"]

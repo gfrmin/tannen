@@ -1,0 +1,86 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0198
+title: "RT-M3-02's builder half: the set of operators that must replay is now derived from behaviour and asserted against the hand-written one, and the frozen law suite still cannot see the difference"
+tier: A
+date: "2026-09-08"
+risk_flags: ["governance-paths"]
+decision: >-
+  RT-M3-02 (high, D0174) is CLOSED at the guard level. `_ALWAYS_REPLAYS` is a hand-written
+  frozenset naming the operators whose delta rule is replacement whatever the caller
+  declares (docs/specs/m3.md §4). Nothing derived it and nothing checked it, and its three
+  members fail UNEQUALLY: emptying it makes `distinct` and `aggregate` raise loudly, while
+  `anti_join` returns a WRONG ANSWER — D0163's stale-retention unsoundness, served with no
+  exception, no divergence and no complaint from any frozen law.
+  .
+  THE GUARD IS THE FINDING'S OWN DERIVATION, MADE STANDING. For every delta operator, run
+  a two-tick stream twice — once with `replay=True` and once with `replay=False`, the caller
+  feeding integrals to the replaying node and deltas to the maintained one exactly as §7
+  requires — and collect the operators that diverge or raise. That measured set must equal
+  `_ALWAYS_REPLAYS`. This is D0171 ruling (3)'s "derive AND assert" in its intended shape,
+  and it costs one test in the unsealed `tests/test_incremental.py`.
+  .
+  AN EARLIER SPELLING OF IT WAS VACUOUS IN ONE DIRECTION, and that is worth recording rather
+  than quietly fixing. The first version compared a run under the DECLARED set against a run
+  under an emptied one. For a member wrongly PRESENT that fails correctly; for a member
+  wrongly ABSENT both runs are the maintained one and it passes — so the test could not
+  catch the exact mutation RT-M3-02 is about. The sweep now empties the set for its whole
+  duration and varies only the node's declared `replay` flag, which makes the derivation
+  independent of the thing it is checking.
+  .
+  MEASURED, BOTH DIRECTIONS. With `anti_join` removed from the set the guard fails, naming
+  `['aggregate', 'distinct']` declared against `['aggregate', 'anti_join', 'distinct']`
+  measured. With `select` wrongly added it fails the other way. And the finding's central
+  claim is reproduced independently in the same run: under the `anti_join` mutant,
+  `pytest tests/laws/m3` is still **38 passed**. The shipped embodiment of §4's contagion
+  rule was pinned by nothing sealed; it is now pinned by a guard that watches it.
+  .
+  A COMPANION ASSERTION, because the derivation is only as good as its input set: the sweep's
+  per-operator stream table is pinned against the package's own `DELTA_OPERATORS`, so adding
+  an operator without a stream fails there first rather than silently shrinking the measured
+  set to match a shrunken declared one. A hand-written table checking a hand-written set
+  would otherwise be the same defect twice.
+  .
+  WHAT IS NOT CLOSED, AND IS THE OWNER'S. The coverage gap itself: L3.11/L3.12 decide replay
+  by re-implementing the rule inside the subject adapter and defer to L3.15, and every
+  `DeltaNode` in `test_l3_executor.py` is unary — so no frozen law ever exercises a binary
+  node under the rule. Closing that needs a new or superseding law file under
+  `tests/laws/m3/`, which is frozen. A poison fixture is deliberately NOT drafted here: there
+  was no guard to poison until this record, and the fixture belongs with the guard at the
+  sitting after the one that installs it.
+rationale: >-
+  Tier A: one unfrozen, uncustodied test file. No frozen path edited, no signature made, and
+  `_ALWAYS_REPLAYS` itself is unchanged — the measurement says it was right all along, which
+  is the outcome a derive-and-assert should be able to reach without being a no-op.
+  .
+  Why a test rather than a poison fixture. The finding says it plainly: a fixture proves a
+  GUARD bites, and there was no guard here to bite. Installing a fixture under `tests/poison/`
+  is also author-key territory, so drafting one now would produce a documentary artifact
+  waiting on a sitting while the defect it describes stayed unwatched in the meantime.
+  .
+  Why the vacuity of the first spelling is in the record. This is the second time in one
+  session that a newly written guard was correct about its condition and wrong about what it
+  could observe — D0196 records the first, a success line printed unconditionally. Both were
+  caught by running the guard against a case it should refuse, neither by reading it. That is
+  the argument for poison fixtures arriving twice in a day, and it is cheaper to write down
+  than to rediscover.
+reversibility: >-
+  Delete the two tests. `_ALWAYS_REPLAYS` returns to being a three-member frozenset that
+  nothing derives and nothing checks, whose one silent member can be removed with the frozen
+  law suite staying 38/38 green.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: pytest
+    target: "tests/test_incremental.py::test_the_always_replays_set_is_derived_from_behaviour_not_from_memory"
+    strength: enforced
+    detail: >-
+      The derivation. Watched failing in both directions — a member removed and a member
+      wrongly added — and green on the shipped set.
+  - type: pytest
+    target: "tests/test_incremental.py::test_the_sweep_covers_every_delta_operator"
+    strength: enforced
+    detail: >-
+      The input set of that derivation, pinned against `DELTA_OPERATORS`. Without it an
+      operator with no stream would shrink the measured set silently and agree with a
+      shrunken declared one.
+links: ["D0174", "D0171", "D0163", "D0142", "D0095", "D0196", "D0197"]

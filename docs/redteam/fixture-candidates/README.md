@@ -50,6 +50,23 @@ that belief being retracted once already. It is now retracted a second time in a
 direction — the map is derived correctly, and the **identity test the map feeds** is what a
 decoy defeats. Deriving *which* modules to check did not make *how* they are checked sound.
 
+### Re-opened again 2026-09-08, for the M3 sitting's queue rather than for a red-team pass
+
+One new candidate, `check-laws-dropped-successor/` (D0154 item 7, D0199). It is not a
+red-team finding: it is the **absence** of one. `scripts/check_laws.py` is custody-set and
+is the only custody-set guard with neither a fixture nor a `poison` line — the guard that
+decides whether a retired law still carries its claim forward is the one guard the custody
+floor has never watched fail. Its `poison` line is drafted as HUNK 5 of this sitting's
+`custodian.sh`, so the fixture and its invocation land together at steps 5 and 6.
+
+Drafting it surfaced a defect in the custodian itself, which is why it is worth a row here
+rather than a footnote: with the invocation present and the fixture not yet installed, most
+guards return 0 over an absent tree, so `poison()` printed **"PASSED its poison fixture —
+the guard is weakened"**. That is the loudest possible way to say the wrong thing — it sends
+the reader to the guard when the corpus is what is short a directory. Hunk 1a now refuses a
+named fixture that is not on disk, by name. It is hunk 1c's mirror image, and neither
+direction was covered before this sitting's drafts.
+
 ---
 
 | Candidate | Guard poisoned | Closes | Bites today? |

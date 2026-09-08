@@ -1,0 +1,95 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0197
+title: "RT-M3-01's builder half: a DeltaNode's descriptor now carries the content address of the code it names, so a trace can no longer serve the answer to a computation that was never run"
+tier: A
+date: "2026-09-08"
+risk_flags: ["governance-paths"]
+decision: >-
+  RT-M3-01 (critical, D0174) is CLOSED in the shipped package. A `DeltaNode` named its code
+  by string — `params: {"predicate_id": "risk-ok"}` — while the predicate itself lived in a
+  module-level dict addressed by nothing. Two processes registering different functions
+  under one name minted one descriptor, one `step_id`, and the second was served the
+  first's output with `rebuilt=False`. `TraceIntegrityError` could not fire because nothing
+  had been tampered with: the recorded output resolved perfectly. The registry is simply
+  not in `(descriptor, state, ledger, deltas)`.
+  .
+  WHAT CHANGED, all in unfrozen, uncustodied files. `register_predicate`/`register_map`/
+  `register_monoid`/`register_group` now mint a content address for what they register and
+  record it in a `_CODE` map; `_declared_params` puts it in the declared form beside the
+  name, so `select` declares `predicate_id` AND `predicate_code`. Callables are addressed by
+  their SOURCE TEXT, through `tannen.transform.source_text` — the same bytes M1 has hashed
+  since D0084, made public rather than copied, because one rule gets one implementation
+  (BRIEF §2). A fold is addressed over its operation's source together with its identity and
+  witnesses, and an `AbelianGroup` adds its inverse, which is the whole of the difference
+  between the two aggregate forms.
+  .
+  A LAMBDA IS NOW REFUSED, for M1's reason. D0167 argued code is referenced by name "because
+  a lambda has no content address"; in M1 that fact is the premise of a REFUSAL
+  (`transform.py:64-65`) and M3 used it as a licence, shipping a catalogue of four lambdas.
+  The catalogue is four named functions now — `_x_positive`, `_k_only`, `_add`, `_negate`.
+  .
+  ONE THING BEYOND THE FILED REMEDY. The finding notes that `PREDICATES` is a plain mutable
+  dict in `__all__`, so even the in-process re-registration guard is "one assignment away".
+  A name present in a registry but absent from `_CODE` is now refused at declaration, by
+  name: a descriptor that cannot say which code it means is not minted at all.
+  .
+  MEASURED. Two processes registering different predicates under `"risk-ok"` previously
+  produced one descriptor; they now produce `sha256:23cf6b66…` and `sha256:aca91c36…`. The
+  regression test reproduces the collision when the one line adding the code to the declared
+  form is removed, and passes with it. `tests/laws/m3` is 38/38 and the whole suite is
+  `809 passed, 1 skipped, 1 xfailed` with all 52 evidence records regenerated: every
+  `deltaop/1` address moved, which is the freshness mechanism working rather than a cost.
+  .
+  WHAT IS NOT CLOSED, AND IS THE OWNER'S. Two frozen sentences this finding falsifies stay
+  false until superseded forward at the sitting: `docs/specs/m3.md:337-338` ("a step is a
+  pure function of those inputs") and frozen L3.15's docstring at
+  `tests/laws/m3/test_l3_executor.py:79`. The code now makes them true; the files still
+  cannot be edited by a builder, and a law that is right for the wrong reason should not be
+  left saying so.
+rationale: >-
+  Tier A: `src/tannen/incremental.py`, `src/tannen/transform.py` and
+  `tests/test_incremental.py` are unfrozen and uncustodied. No frozen path edited, no
+  signature made. The red-team report says in its own words that this remedy is
+  builder-landable and was "deliberately left for a session that is not also the session
+  that found them, with the D0092 regression bindings written then" — this is that session.
+  .
+  Why hashing source rather than `repr(fn)` or a caveat in the docs. `repr` addresses an
+  object, not its content, and moves between runs for reasons that have nothing to do with
+  behaviour; documenting the caveat leaves the shortest spelling of a graph still violating
+  BRIEF §5. Both were considered and rejected in the finding, and nothing here reopens them.
+  .
+  Why `source_text` became public instead of being duplicated. The receipt-chain check was
+  duplicated once already and D0176 had to undo it; two implementations of "a graph hashes
+  source text" is the same defect waiting. Verified safe before renaming: the only other
+  occurrence of the name anywhere in the repository is a frozen law's TEST NAME, and that
+  law writes its expected source out literally rather than calling the helper.
+reversibility: >-
+  Revert the three files. The catalogue returns to lambdas, descriptors stop carrying code,
+  and two processes can again share a `step_id` for different computations — with every
+  `deltaop/1` address moving back, so the reversal is as visible as the change.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_reused_predicate_name_no_longer_mints_the_same_descriptor"
+    strength: enforced
+    detail: >-
+      The finding reproduced: two predicates under one name, the registry reset between them
+      the way a new process resets it. Watched failing with the fix's one line removed.
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_lambda_cannot_be_registered_for_the_reason_m1_refuses_one"
+    strength: enforced
+    detail: "M1's refusal, now M3's: a lambda has no addressable source, so it cannot enter a graph."
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_registry_entry_inserted_behind_the_registrar_is_refused_by_name"
+    strength: enforced
+    detail: >-
+      The bypass the finding named: `PREDICATES` is exported and mutable, so an entry can be
+      smuggled past the registrar. Declaring a node on one is now refused.
+  - type: file
+    target: src/tannen/incremental.py
+    strength: enforced
+    detail: >-
+      `_CODE`, `_code_address`, `_algebra_address` and the named catalogue. The descriptor is
+      minted here, so this is where the code either enters the identity or does not.
+links: ["D0174", "D0167", "D0084", "D0092", "D0163", "D0176", "D0198"]

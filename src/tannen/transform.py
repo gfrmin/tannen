@@ -28,7 +28,7 @@ from tannen.kernel.encoding import content_address
 from tannen.kernel.layers import Layer
 from tannen.kernel.refs import ref_for_bytes
 
-__all__ = ["TransformError", "descriptor_of", "transform"]
+__all__ = ["TransformError", "descriptor_of", "source_text", "transform"]
 
 
 class TransformError(ValueError):
@@ -39,7 +39,11 @@ class TransformError(ValueError):
 _SEQ: dict[tuple[str, str], int] = {}
 
 
-def _source_text(fn: Callable[..., Any]) -> str:
+def source_text(fn: Callable[..., Any]) -> str:
+    """The bytes a callable is hashed by: `inspect.getsource`, dedented, LF-normalised.
+
+    Public since D0197 because `tannen.incremental` needs the same rule for the code a
+    DeltaNode names, and BRIEF §2 wants one implementation of it rather than two."""
     try:
         source = inspect.getsource(fn)
     except (OSError, TypeError) as exc:
@@ -69,7 +73,7 @@ def transform(
                 f"{fn.__qualname__} is already registered as {fn.label}; a function has one "
                 "descriptor, and silently shadowing it would leave two claiming it"
             )
-        code_hash = ref_for_bytes(_source_text(fn).encode("utf-8"))
+        code_hash = ref_for_bytes(source_text(fn).encode("utf-8"))
         pair = (fn.__module__, fn.__name__)
         seq = _SEQ.get(pair, 0)
         _SEQ[pair] = seq + 1

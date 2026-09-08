@@ -180,6 +180,16 @@ poison() {
     shift 2
     local fx
     for fx in $(printf '%s\n' "$@" | grep -o 'tests/poison/[A-Za-z0-9_-]*' | sort -u); do
+        # A named fixture that is not on disk must not read as a weakened guard. Most
+        # guards return 0 over an absent tree — there is nothing to complain about — so
+        # `poison` would print "PASSED its poison fixture — the guard is weakened", which
+        # is the loudest possible way to say the wrong thing: it sends the reader to the
+        # guard when the fault is the corpus. This is hunk 1c's mirror image, and it was
+        # found by adding hunk 5's invocation before its fixture was installed.
+        if [ ! -d "$fx" ]; then
+            bad "guard '$name' names fixture $fx, which is NOT INSTALLED — the corpus is short a directory, not the guard weakened"
+            return
+        fi
         case " $POISON_SEEN " in
             *" $fx "*) : ;;
             *) POISON_SEEN="$POISON_SEEN $fx" ;;
@@ -306,6 +316,20 @@ poison oracle-shadow-model "RT-M2-01" \
     env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONPATH=tests/poison/oracle-shadow-model \
     "$PY" -B -m pytest -p bootstrap_shadow_model tests/laws/m2/test_l2_differential.py -q
 # --- end M3 DRAFT HUNK 1b ----------------------------------------------------
+
+# --- M3 DRAFT HUNK 5 (D0154 item 7; ruling (4)'s third in-scope item) --------
+# check_laws.py is the only custody-set guard with NEITHER a fixture nor an invocation:
+# `grep check_laws scripts/custodian.sh` is empty in the live file. It is the guard that
+# can retire a frozen law, so BRIEF §9.1's guard-liveness-by-poison discipline not
+# covering it is the gap with the longest reach. The fixture is a miniature tree whose
+# only defect is a supersession naming a successor no law file defines — D0154's own
+# suggested case, and D0106 ruling 2's rule that a retired claim must be carried forward.
+# It is installed at step 5, which runs BEFORE this file is installed at step 6; until
+# then this line refuses, which is the correct state for an invocation whose fixture is
+# not yet on disk.
+poison check_laws "which no law file defines" \
+    "$PY" -I -P scripts/check_laws.py --root tests/poison/check-laws-dropped-successor
+# --- end M3 DRAFT HUNK 5 -----------------------------------------------------
 
 # --- M3 DRAFT HUNK 1c (D0154 item 1; D0152 item 6; the derived half) ---------
 # Every directory under tests/poison/ must have been reached by some invocation above.
