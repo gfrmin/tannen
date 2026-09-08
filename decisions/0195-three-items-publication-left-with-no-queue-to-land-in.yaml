@@ -1,0 +1,111 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0195
+title: "Three items publication left behind with nowhere to land: a parked cross-repo spec, a frozen CI header that describes a repository that no longer exists, and a policy clause that excludes the push we now make every day"
+tier: C
+date: "2026-09-08"
+risk_flags: ["public-surface", "governance-paths"]
+decision: >-
+  QUEUED FOR THE M3 BOUNDARY SITTING, non-blocking (BRIEF §9.2), joining D0154 by link rather
+  than by edit — the shape that record specifies for itself: "Later M3 items arrive as their own
+  records linking here, never as edits to this one (D0045)."
+  .
+  Filed Tier C for D0154's own stated reason, and because that reason has just been demonstrated
+  again. The digest's "Requires owner" section is a query over TIER-C records. D0191 carried an
+  owner-key item in a Tier-A record and was therefore invisible there — `digest/2026-09-07.md`
+  ends that section at D0176 — and the item survived only because it was rediscovered by hand.
+  (It turned out not to need the owner at all; see D0194. The queue defect is unaffected by
+  that: an item that needs the owner and is filed Tier A is lost whether or not this particular
+  one was.) The three items below all need the owner, and none of them has a queue today.
+  .
+  (1) `SCOPE-under-routing.md` — A CROSS-REPO SPEC IN NO COMMIT, PARKED PENDING A RULING.
+  A 175-line document, mtime 2026-09-06, found in the working tree of `~/git/tannen` during the
+  layout conversion and present in no commit of either the pre- or post-rewrite history. It
+  describes itself as "Companion to: life-agent `DR-DECISION-1-action-space-and-utility.md` §9"
+  and cites as its provenance "decision D-12 of `../life-agent/docs/SESSION-RECORD-2026-09-05.md`".
+  It is parked at `.reference/SCOPE-under-routing.md`, which is gitignored, so it enforces
+  nothing and leaks nothing while it waits. It is deliberately NOT bound as a file below: the
+  path does not exist in a fresh clone or in CI, and a binding that cannot resolve is a broken
+  guard, not a strong one.
+  .
+  Why it is the owner's and not the builder's: it runs directly at the standing rule that no
+  repo of the constellation may depend on another IN EITHER DIRECTION (BRIEF §2's table, §10's
+  non-goals, CLAUDE.md's first hard rule). Whether a scoping document that reasons across the
+  boundary is itself a dependency, and whether tannen may carry one, is a Tier-C question about
+  what the rule means — not a judgement a builder makes by acting. Note also that its own text
+  opens "Repository status note: tannen is private", which has been false since 2026-09-08; a
+  ruling to admit it must correct that line, and a ruling to decline it should say where the
+  document goes instead.
+  .
+  (2) `.github/workflows/ci.yml` DESCRIBES A REPOSITORY THAT NO LONGER EXISTS. Its header reads
+  "This file has never actually run: the repo has no remote (D0061 rationale, and the reason
+  `make verify` on one machine is currently the whole enforcement surface). Adding a remote is a
+  Tier-C door in its own right (external-bytes); when it opens, the justification is …". Every
+  clause is now false: the door opened under D0115/D0176, the remote is
+  `github.com/gfrmin/tannen`, and the file has run three times — failing once (34187597604,
+  which is how D0191 was found) and passing twice. The file is frozen (`MANIFEST.sha256`) and
+  custody-set, so the comment cannot be corrected by a builder even though nothing but prose
+  changes. It is the same class as D0191's `requires-python`: a claim written true, never
+  re-derived, sitting inside the one kind of file that cannot be quietly fixed. It is also now
+  the first thing a public reader meets in the file that tells them how this repository is
+  checked.
+  .
+  (3) `governance/policy.yaml` PERMITS PUSHING TO A PRIVATE ORIGIN AND EXCLUDES EVERY OTHER,
+  AND THIS ORIGIN IS PUBLIC. `in_repo_mechanics.covers` grants Tier A over "pushing to a private
+  origin already configured in this repo", and `in_repo_mechanics.excludes` withholds it from
+  "pushing to any remote other than a private origin already configured here." Read literally,
+  the routine act this repository now performs after every commit is excluded from the tier that
+  authorises it. The authority is real and lies elsewhere — `external_surface.publishing:
+  this-repo-public` plus owner-signed D0115 and D0176 — but the clause that a session actually
+  reads to decide whether it may push says the opposite, and its wording predates publication.
+  `policy.yaml` is owner-signed and named in `required_signatures`, so only the owner can align
+  it. Two shapes to choose between, and the choice is the owner's: widen `covers` to "an origin
+  this repository is published to under `external_surface.publishing`", or delete both clauses
+  and let `external_surface` be the only place that speaks about remotes — one rule in one
+  place, per BRIEF §2.
+rationale: >-
+  Opened as its own record rather than as a note on D0154 because D0045 makes that record's
+  fields immutable, and because a queue that grows by link keeps the date and the reasoning of
+  each joiner intact. D0154 anticipates exactly this and says so.
+  .
+  Tier C is the tier of visibility, not of difficulty. Item (2) is a comment and item (3) is a
+  sentence; neither is hard, and both are unreachable without the owner's key. That combination
+  — trivial to do, impossible for the builder to do — is precisely what the exception-only
+  digest exists to surface, and precisely what gets lost when it is filed under a tier the
+  digest does not query.
+  .
+  Item (1) is listed first because it is the only one whose answer is not already obvious. Items
+  (2) and (3) have a single evidently-correct resolution each and need the owner only for
+  custody reasons; item (1) is a genuine question about a standing rule, and the builder
+  declining to answer it is the point rather than a delay.
+reversibility: >-
+  A queue, not a change. Nothing here alters an artifact; declining any item at the sitting
+  costs only this record's accuracy. What is not reversible is the omission: item (2) stays
+  published and untrue for as long as it goes unrecorded, and item (3) leaves every push resting
+  on a clause that excludes it — a gap that reads, to anyone auditing the repository from
+  outside, exactly like a rule being ignored.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: .github/workflows/ci.yml
+    strength: documentary
+    detail: >-
+      Item (2). Documentary because the defect IS the prose: the workflow's behaviour is
+      correct and its header is false, and no guard reads a comment. Frozen and custody-set,
+      which is what makes it the owner's.
+  - type: config
+    target: "governance/policy.yaml#in_repo_mechanics.covers"
+    strength: documentary
+    detail: >-
+      Item (3). The clause that names a private origin. Documentary because nothing mechanically
+      enforces it — it is read by sessions, not by guards — which is exactly why its being wrong
+      is invisible until someone reads it and stops.
+  - type: file
+    target: BRIEF.md
+    strength: documentary
+    detail: >-
+      Item (1)'s standing rule: §2's constellation table and §10's non-goals, the text that
+      forbids a dependency on another repository of the constellation in either direction. The
+      parked document is not bound — it is gitignored and absent from a fresh clone, so a
+      binding to it would not resolve.
+links: ["D0154", "D0191", "D0194", "D0115", "D0176", "D0045"]

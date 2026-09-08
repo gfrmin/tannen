@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 # scripts/custodian.sh — the guard of the guards (BRIEF §9.1 custody floor).
+#
+# THIS COPY is docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh: the live file
+# plus six delimited hunks (`--- M3 DRAFT HUNK n ---`), each mapped to a D0154 queue item.
+# The owner installs it at the M3 sitting's step 6, after reading the diff. It is a
+# proposal: it enforces nothing until installed.
+#
+# REBASED onto the live file on 2026-09-08 (D0196). The 2026-09-04 draft was written
+# against the pre-publication custodian, and installing it verbatim would have REVERTED
+# three publication-sitting changes: FOUNDING_TAGS back to the pre-rewrite pin (breaking
+# check_tag_signers against the rewritten history), the 28-line inline receipt-chain loop
+# back over D0176's delegation to scripts/check_receipts.py, and the three publication
+# poison invocations (check_concepts_brief_row, check_decisions_retired_enforced,
+# oracle-shadow-spoofed) deleted. That last one interacts with hunk 1c: with the
+# invocations gone and the fixtures still on disk, the new completeness pass would have
+# reddened the floor at the sitting's step 7.
 # AUTHOR-KEY TERRITORY: this file, allowed_signers, tests/poison/, and their
 # MANIFEST.sha256 rows are owner-edited only (CLAUDE.md hard rules; Tier-C door
 # trust-root-changes).
-#
-# ============================= M3 SITTING DRAFT ==============================
-# This is docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh — a DRAFT
-# for the owner to install at the M3 boundary sitting, enforcing nothing until
-# then. It is the live scripts/custodian.sh (M1-sitting vintage) plus four
-# hunks, each delimited `--- M3 DRAFT HUNK n ---` and mapped to a D0154 queue
-# item in this directory's README.md. The M2 sitting shipped no such draft, and
-# that absence is exactly how D0152 item 6 happened: step 6 of the sitting
-# driver installs the custodian by diffing against the previous milestone's
-# proposals dir, found nothing to offer, and printed "already applied".
-# =============================================================================
 #
 # Verifies, in order:
 #   1. frozen-path hashes (MANIFEST.sha256) AND the owner-signed custody set
@@ -24,8 +28,7 @@
 #   4. the owner signatures that are required, not optional: policy.yaml and
 #      custody.sha256. Absent is a downgrade once an owner key is enrolled (RT-04);
 #   5. GUARD LIVENESS BY POISON: every guard must FAIL against its fixture under
-#      tests/poison/, for the intended reason. A guard that passes poison is weakened —
-#      and (M3) a fixture no invocation exercises is a floor that never runs it.
+#      tests/poison/, for the intended reason. A guard that passes poison is weakened.
 #
 # THE FLOOR MAY DEPEND ONLY ON TOOLS THE OS PROVIDES AND PATHS NAMED LITERALLY
 # (conferral ruling 3, decision D0063). Checks 1-4 use sha256sum, ssh-keygen, git and
@@ -73,13 +76,12 @@ fi
 
 # 2. Custody set + CI config are manifested.
 # --- M3 DRAFT HUNK 3 (D0154 item 4; D0146 item 2) ----------------------------
-# `find` now excludes __pycache__, matching check_manifest.py's sealed-path rule:
-# a .pyc written into tests/poison/ by an ad-hoc import made THIS check red at
-# `make verify`'s last step while check_manifest stayed green, and the "not
-# manifested" message invited a manifest row for a gitignored, interpreter-
-# versioned file. The only correct response to a stray .pyc is deleting it;
-# excluding the directory here makes the two guards agree about what a sealed
-# tree contains. (Live line: `$(find tests/poison -type f | sort)`.)
+# `find` now excludes __pycache__, matching check_manifest.py:113's sealed-path rule. A
+# .pyc written into tests/poison/ by an ad-hoc import made THIS check red at `make
+# verify`'s last step, ~37 minutes in, while check_manifest stayed green — and the "not
+# manifested" message invited a manifest row for a gitignored, interpreter-versioned
+# file. The only correct response to a stray .pyc is deleting it; excluding the
+# directory here makes the two guards agree about what a sealed tree contains.
 manifested_ok=1
 for path in scripts/custodian.sh allowed_signers .github/workflows/ci.yml \
     DELEGATIONS.md governance/tier-c.yaml governance/tag-roles.yaml \
@@ -97,7 +99,7 @@ done
 #    builder-signed tag may predate the blessing of the delegation it invokes
 #    (DELEGATIONS.md "Founding ratification": delegation precedes signature).
 #    FOUNDING_TAGS enumerates the only exceptions, by tag-object hash.
-FOUNDING_TAGS="531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6"   # m0-laws-freeze (D0032/D0035)
+FOUNDING_TAGS="85d19e94e7021e8346ec81f428c2581bfa7313d3"   # m0-laws-freeze re-created at the publication rewrite of 2026-09-07 (receipts/REWRITE-*.md); was 531bb8fe9bf070eff2f47fda2dfb3b8b135a7dc6   # m0-laws-freeze (D0032/D0035)
 bless_epoch=""
 if git rev-parse -q --verify refs/tags/brief-freeze >/dev/null 2>&1; then
     bless_epoch=$(git for-each-ref --format='%(taggerdate:unix)' refs/tags/brief-freeze)
@@ -154,46 +156,24 @@ require_sig governance/custody.sha256 tannen-custody
 #     HEAD must be an ancestor of the next. Rewriting history between two owner-signed
 #     attestations then stops being invisible. This is also the justification for a remote
 #     when one is eventually added (Tier C): an unrewritable witness, not a backup.
-prev_head=""; prev_name=""
-for receipt in $(ls -1 receipts/*.md 2>/dev/null | sort); do
-    if [ ! -f "$receipt.sig" ]; then
-        [ "$owner_enrolled" -eq 1 ] && bad "unsigned attention receipt: $receipt"
-        continue
-    fi
-    ssh-keygen -Y verify -f allowed_signers -I owner@tannen -n tannen-receipt \
-        -s "$receipt.sig" <"$receipt" >/dev/null 2>&1 \
-        || bad "receipt signature does not verify: $receipt"
-    head=$(sed -n 's/^- HEAD: \([0-9a-f]\{7,40\}\)$/\1/p' "$receipt" | head -1)
-    [ -n "$head" ] || continue
-    if ! git cat-file -e "${head}^{commit}" 2>/dev/null; then
-        bad "receipt $receipt records HEAD $head, which is no longer a commit here"
-        continue
-    fi
-    if [ -n "$prev_head" ] && ! git merge-base --is-ancestor "$prev_head" "$head" 2>/dev/null; then
-        bad "receipt chain broken: $prev_name recorded $prev_head, not an ancestor of $head"
-    fi
-    prev_head="$head"; prev_name="$receipt"
-done
-if [ -n "$prev_head" ]; then
-    if git merge-base --is-ancestor "$prev_head" HEAD 2>/dev/null; then
-        say "receipt chain verifies to HEAD"
-    else
-        bad "receipt chain broken at the tip: $prev_name recorded $prev_head, not an ancestor of HEAD"
-    fi
-fi
+#     ONE implementation, not two. scripts/check_receipts.py is custody-set and is what
+#     `make verify` runs; the inline copy this line replaced drifted from it the first time
+#     the guard learned something new — a rewrite attestation under its own namespace
+#     (patch 02, D0176) — and the custodian then rejected the attestation as a receipt
+#     with a bad signature while the guard accepted it. BRIEF §2: restatement is
+#     duplication; duplication is drift. Found by rehearsing the publication sitting.
+"$PY" -I -P scripts/check_receipts.py || bad "receipt chain violated (scripts/check_receipts.py)"
 
 # 5. Guard liveness by poison: each guard must fail its fixture, for the right reason.
 # --- M3 DRAFT HUNK 1a (D0154 item 1; D0152 item 6; D0095 half (2)) -----------
-# poison() now RECORDS which tests/poison/ directories its invocation reaches, and a
-# completeness pass after the last invocation refuses any installed fixture no line
-# exercises. The M2 sitting installed oracle-shadow-model — manifest rows, custody rows,
-# README row — and the custodian ran thirteen of fourteen fixtures while printing
-# "custody floor intact": a hand-kept enumeration extended only at the moment its
-# extender may not edit it (D0095's shape, D0152 item 6). The enumerated invocations
-# stay — they are heterogeneous for reasons each one's comment states — but their
-# COVERAGE is now derived from the corpus on disk, the same move D0142 made for the
-# oracle map: had this loop existed on 2026-09-03, the sitting would have failed loudly
-# instead of finishing sooner.
+# poison() now RECORDS which tests/poison/ directories its invocation reaches, and the
+# completeness pass at hunk 1c refuses any installed fixture no line exercises. The M2
+# sitting installed oracle-shadow-model — manifest rows, custody rows, README row — and
+# the custodian ran every fixture but that one while printing "custody floor intact": a
+# hand-kept enumeration extended only at the moment its extender may not edit it (D0095's
+# shape). The enumerated invocations stay, because they are heterogeneous for reasons each
+# one's comment states; their COVERAGE becomes derived, the same move D0142 made for the
+# oracle map. Had this existed on 2026-09-03 the sitting would have failed loudly.
 POISON_SEEN=""
 poison() {
     local name="$1" marker="$2"
@@ -296,35 +276,56 @@ poison check_decisions_file_skip "unexplained skip" \
     env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONDONTWRITEBYTECODE=1 \
     "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-file-skip
 
+# The publication sitting adds four fixtures (D0183; docs/proposals/2026-09-06-publication/
+# fixture-candidates/README.md): patch 05's brief_row teeth, patch 06's refusal to retire an
+# enforced binding, and RT-M3-04's spoofed oracle shadow, whose marker is the guard's OWN
+# tooth text — "answers with different code" — because the fixture README's "RT-M3-04"
+# never appears in the guard's output (found by wiring it, not by reading it). Candidate 1
+# (check-concepts/governance/policy.yaml) is a file, not a line: it narrows an existing
+# fixture back to one reason.
+poison check_concepts_brief_row "brief_row" \
+    "$PY" -I -P scripts/check_concepts.py --root tests/poison/check-concepts-brief-row
+poison check_decisions_retired_enforced "only a documentary binding may be retired" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONDONTWRITEBYTECODE=1 \
+    "$PY" -I -P scripts/check_decisions.py --root tests/poison/check-decisions-retired-enforced
+poison oracle-shadow-spoofed "answers with different code" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONPATH=tests/poison/oracle-shadow-spoofed \
+    "$PY" -B -m pytest -p bootstrap_shadow_spoofed tests/laws/m3/test_l3_differential.py -q
+
 # --- M3 DRAFT HUNK 1b (D0154 item 1; D0152 item 6) ---------------------------
-# The fixture the M2 boundary sitting installed: oracle-shadow-model (RT-M2-01,
-# docs/redteam/2026-09-01-m2-boundary.md — the pass's single CRITICAL finding). The
-# same attack as oracle-shadow, one milestone on: a decoy `_model` primed into
-# sys.modules via a -p-loaded bootstrap plugin, ahead of the frozen
-# tests/laws/m2/test_l2_differential.py's bare `import _model as M`. Every deviation
-# from POISON's usual form is oracle-shadow's, for oracle-shadow's reasons: no -I -P
-# (the attack IS PYTHONPATH; under -I the fixture's own setup could never run), -B
-# (the decoy imports from inside a sealed directory), the literal venv interpreter.
-# No -k: D0142's widened guard aborts at collection, so there is nothing to select.
-# Invocation matches tests/test_governance_scripts.py::
-# test_oracle_shadow_model_fails_its_poison, the fixture's first exercise anywhere —
-# this line is what makes the custody floor, not just an unfrozen test, run it.
+# The fixture the M2 boundary sitting installed and never wired: oracle-shadow-model
+# (RT-M2-01, the M1->M2 pass's single CRITICAL finding). The same attack as oracle-shadow
+# one milestone on — a decoy `_model` primed into sys.modules by a -p bootstrap plugin,
+# ahead of frozen tests/laws/m2/test_l2_differential.py's bare `import _model as M`.
+# Every deviation from poison()'s usual form is oracle-shadow's, for oracle-shadow's
+# reasons: no -I -P (the attack IS PYTHONPATH; under -I the fixture's setup could never
+# run), -B (the decoy imports from inside a sealed directory), the literal venv
+# interpreter. No -k: D0142's widened guard aborts at collection, so there is nothing to
+# select. This line is what makes the custody FLOOR run it, not just an unfrozen test.
 poison oracle-shadow-model "RT-M2-01" \
     env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONPATH=tests/poison/oracle-shadow-model \
     "$PY" -B -m pytest -p bootstrap_shadow_model tests/laws/m2/test_l2_differential.py -q
 # --- end M3 DRAFT HUNK 1b ----------------------------------------------------
 
 # --- M3 DRAFT HUNK 1c (D0154 item 1; D0152 item 6; the derived half) ---------
-# The completeness pass: every directory under tests/poison/ must have been reached by
-# some poison invocation above. This is the loop that would have caught 2026-09-03.
+# Every directory under tests/poison/ must have been reached by some invocation above.
+# This is the loop that would have caught 2026-09-03. It runs BEFORE the FAIL check below,
+# so an unexercised fixture reddens the floor rather than being reported after it closes.
+poison_uncovered=0
 for dir in tests/poison/*/; do
     fx=${dir%/}
     case " $POISON_SEEN " in
         *" $fx "*) : ;;
-        *) bad "fixture $fx is installed but NO poison invocation exercises it (D0152 item 6's shape)" ;;
+        *) bad "fixture $fx is installed but NO poison invocation exercises it (D0152 item 6's shape)"
+           poison_uncovered=$((poison_uncovered+1)) ;;
     esac
 done
-say "poison coverage: every installed fixture is exercised"
+# The success line is CONDITIONAL, and that is not a detail. The first draft of this loop
+# printed it unconditionally, so a run that had just reported an unexercised fixture still
+# closed with "every installed fixture is exercised" — D0177's exact shape, in the guard
+# written to close D0152's. Caught by running the loop against a fabricated orphan rather
+# than by reading it, which is the whole argument for poison fixtures in one line.
+[ "$poison_uncovered" -eq 0 ] && say "poison coverage: every installed fixture is exercised"
 # --- end M3 DRAFT HUNK 1c ----------------------------------------------------
 
 if [ "$FAIL" -ne 0 ]; then
@@ -338,13 +339,15 @@ if [ "${1:-}" != "--check-only" ]; then
     date_str=$(date +%F)
     receipt="receipts/${date_str}.md"
 # --- M3 DRAFT HUNK 4 (D0154 item 3; D0153) -----------------------------------
-# The previous receipt is now the latest one THAT IS NOT the file being written, and
-# its HEAD is read from that file rather than from the 4b loop's last-iteration
-# residue. The live spelling (`sort | tail -1`, then a guard comparing to $receipt)
-# silently dropped the chain line on any same-day re-run, because $prev then equalled
-# $receipt — and check_receipts parses only `- HEAD:`, so nothing noticed. A same-day
-# re-run overwrites the earlier same-day receipt, so pointing at the latest OTHER
-# receipt is exactly the chain the file on disk can support.
+# The previous receipt is now the latest one THAT IS NOT the file being written, and its
+# HEAD is read from that file. Two defects, one fix. (a) The live spelling `sort | tail -1`
+# picks the receipt being written on any same-day re-run, and the guard below then dropped
+# the chain line entirely — silently, because check_receipts parses only `- HEAD:`.
+# (b) `prev_head` is never assigned ANYWHERE in the live file: the only occurrence is the
+# `${prev_head:-...}` read itself, because the loop that used to set it was deleted when
+# the receipt-chain check was delegated to scripts/check_receipts.py. So every receipt
+# written since renders "at (none recorded)" — receipts/2026-09-07.md shows it. The chain
+# line has been decorative since, and nothing noticed.
     prev=$(ls -1 receipts/*.md 2>/dev/null | grep -vx "$receipt" | sort | tail -1)
     {
         echo "# Attention receipt — ${date_str}"
@@ -362,21 +365,22 @@ if [ "${1:-}" != "--check-only" ]; then
         echo "  an owner-signed witness that the history up to that point was not rewritten"
         echo "  afterwards (D0063 ruling 4); scripts/check_receipts.py verifies the chain."
     } >"$receipt"
-# --- M3 DRAFT HUNK 2 (D0154 item 2's third clause; D0152 item 3) -------------
-# The signature's exit status is now checked. The live spelling ignored it and printed
-# "written and author-signed" regardless, so a locked agent, a missing key file or a
-# declined touch on the hardware key produced a receipt with no .sig and a success
-# line — silent at the one moment the owner is standing there able to retry, on the
-# sole artifact the Tier-B silence-as-consent clock rests on. The unsigned receipt is
-# removed on failure: a receipt is an attestation, and half of one on disk is what
-# step 0 of the sitting driver reads as a resumed sitting (D0148 item 5).
     if ssh-keygen -Y sign -f "${TANNEN_OWNER_KEY:-$HOME/.ssh/tannen_owner}" \
-        -n tannen-receipt "$receipt"; then
+           -n tannen-receipt "$receipt"; then
         say "attention receipt written and author-signed: $receipt (+ .sig)"
     else
+# --- M3 DRAFT HUNK 2 (D0154 item 2's third clause; D0152 item 3) -------------
+        # An unsigned receipt is worse than no receipt: it attests to nothing while
+        # looking like an attestation, and check_receipts would then redden every later
+        # run for a file this step should never have left behind. Two additions to the
+        # live spelling, which D0177 already brought this far. The `.sig` goes too: a
+        # stale signature over a removed file outlives the thing it signed. And the exit
+        # is non-zero, because a half-written receipt left behind is exactly what step 0
+        # of the sitting driver reads as a RESUMED sitting and skips its gate for
+        # (D0148 item 5) — so this must stop the run, not merely colour it.
         rm -f "$receipt" "$receipt.sig"
-        bad "receipt signing FAILED (locked agent? declined touch?) — receipt removed; re-run to retry"
+        bad "receipt signing FAILED (locked agent? declined touch?) — $receipt removed; re-run to retry"
         exit 1
-    fi
 # --- end M3 DRAFT HUNK 2 -----------------------------------------------------
+    fi
 fi

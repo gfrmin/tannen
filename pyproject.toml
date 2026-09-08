@@ -4,7 +4,7 @@
 name = "tannen"
 version = "0.0.0"
 description = "A kernel for pure, content-addressed, provenance-native data pipelines"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 # jsonschema is a runtime dependency because the laws runner CONSUMES the frozen
 # evidence-record schema rather than restating its shape in Python (BRIEF §2: a second
 # normative home for one shape is drift). Decision D0040.

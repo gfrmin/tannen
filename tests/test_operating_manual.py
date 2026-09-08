@@ -238,3 +238,72 @@ def test_the_tolerance_list_is_empty_and_any_entry_in_it_names_a_real_command() 
         "empty list is the intended end state, so this failure is the reminder, not a "
         "regression."
     )
+
+
+# --------------------------------------------------------------------------------------
+# The same shape, one level down: what the PACKAGE says about its environment versus the
+# interpreter this repository is actually proven against.
+#
+# D0191 is the instance. `pyproject.toml` declared `requires-python = ">=3.12"`, and that
+# was never true: the frozen M1 replay law runs its fixture in fresh interpreters via
+# `python -c`, the kernel hashes a transform's SOURCE TEXT before admitting it to a graph
+# (BRIEF §5.1), and on 3.12 `inspect.getsource` cannot recover source for `-c` code — so
+# `transform.register` raises. It could not be falsified by any local run, because a local
+# run never chose 3.12. It took the first-ever CI run, on a machine that was not the
+# builder's, to pick Ubuntu's 3.12.3 and go red.
+#
+# `.python-version` was added as the fix and made the red thing green. The untrue sentence
+# survived, because a pin is not a correction. This is that sentence's detector.
+# --------------------------------------------------------------------------------------
+
+
+def declared_python_floor(root: Path = ROOT) -> str:
+    """The lower bound `pyproject.toml` advertises to anyone installing this package."""
+    text = _repo_text("pyproject.toml", root)
+    match = re.search(r"^requires-python\s*=\s*\"[^0-9]*([0-9]+\.[0-9]+)", text, re.MULTILINE)
+    assert match, "pyproject.toml has no parseable requires-python — the metadata changed shape"
+    return match.group(1)
+
+
+def pinned_interpreter(root: Path = ROOT) -> str:
+    """The interpreter every environment actually resolves — uv reads this file, locally
+    and in CI alike."""
+    return _repo_text(".python-version", root).strip()
+
+
+def test_the_declared_python_floor_is_the_interpreter_the_repo_pins() -> None:
+    """One interpreter is proven; advertising a lower one is a claim nothing tests.
+
+    The frozen law suite is green on exactly the version `.python-version` names. A floor
+    below it tells an installer that some other interpreter will work, and the only place
+    that claim can be falsified is a machine the builder does not have — which is precisely
+    how D0191 reached the first public CI run undetected."""
+    floor, pinned = declared_python_floor(), pinned_interpreter()
+    assert floor == pinned, (
+        f"pyproject.toml advertises >={floor} but this repository is proven only against "
+        f"{pinned} (.python-version). Raise the floor, or freeze and pass the laws on "
+        f"{floor} — do not leave the package claiming an environment nothing runs."
+    )
+
+
+def _fake_python_metadata(tmp_path: Path, floor: str, pinned: str) -> Path:
+    (tmp_path / "pyproject.toml").write_text(
+        f'[project]\nname = "x"\nrequires-python = ">={floor}"\n'
+    )
+    (tmp_path / ".python-version").write_text(f"{pinned}\n")
+    return tmp_path
+
+
+def test_the_floor_detector_catches_a_floor_below_the_pin(tmp_path: Path) -> None:
+    """D0191's own state, reproduced: floor 3.12, pin 3.13. Watched failing here, because a
+    guard that has never been seen to fail is not yet a guard (CONTRIBUTING.md)."""
+    root = _fake_python_metadata(tmp_path, floor="3.12", pinned="3.13")
+    assert declared_python_floor(root) == "3.12"
+    assert pinned_interpreter(root) == "3.13"
+    assert declared_python_floor(root) != pinned_interpreter(root)
+
+
+def test_the_floor_detector_is_quiet_when_they_agree(tmp_path: Path) -> None:
+    """The other direction. A detector that fires either way is not a detector."""
+    root = _fake_python_metadata(tmp_path, floor="3.13", pinned="3.13")
+    assert declared_python_floor(root) == pinned_interpreter(root)

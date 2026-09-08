@@ -1,0 +1,89 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0196
+title: "The M3 custodian draft had gone stale enough to revert the publication sitting, and its own new completeness guard would have turned that revert into a red custody floor at the step where tolerances stop"
+tier: A
+date: "2026-09-08"
+risk_flags: ["governance-paths"]
+decision: >-
+  `docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh` is REBASED onto the live
+  `scripts/custodian.sh` at HEAD. The draft was written on 2026-09-04 against the
+  then-live file; the publication sitting changed that file twice since (`63428b4`,
+  `6abd071`), and the sitting's step 6 installs the draft by byte-level `diff -q` — so a
+  stale draft is not a stale document, it is a revert with an owner's signature on it.
+  .
+  WHAT INSTALLING IT VERBATIM WOULD HAVE DONE. Three publication-sitting changes reverted:
+  `FOUNDING_TAGS` back to the pre-rewrite pin `531bb8fe…`, which breaks
+  `check_tag_signers`' delegation-precedes-signature epoch against the rewritten tags; the
+  28-line inline receipt-chain loop restored over D0176's one-line delegation to
+  `scripts/check_receipts.py`, reintroducing exactly the duplication D0183 found rejecting
+  the rewrite attestation; and the three publication poison invocations
+  (`check_concepts_brief_row`, `check_decisions_retired_enforced`, `oracle-shadow-spoofed`)
+  deleted while their fixtures stayed installed on disk.
+  .
+  AND THE THREE INTERACT WITH THE DRAFT'S OWN NEW GUARD, which is the part worth keeping.
+  Hunk 1c adds a completeness pass refusing any installed fixture no invocation exercises.
+  With those three invocations reverted away and their directories still present, the new
+  guard would have `bad`-ed three fixtures — at step 7, which is precisely where
+  `unexpected_failures()` stops tolerating anything and the driver's `custodian --check-only
+  || die` becomes unconditional. The sitting would have died in its irreversible middle,
+  with the owner's key out, holding a custody floor reddened by the guard just installed to
+  strengthen it. A stale draft plus a new derived check is not two small problems.
+  .
+  THE REBASE. Built from the live file forward rather than by patching the old draft, then
+  measured: `diff -u scripts/custodian.sh <draft>` removes exactly seven lines from live,
+  and every one is a line some hunk deliberately replaces. All six hunks are present
+  (1a, 1b, 1c, 2, 3, 4) and every publication-sitting change survives. Verified by running
+  it: `oracle-shadow-model` now fails its poison for `RT-M2-01` — the M2 sitting's own
+  critical fixture, exercised by the custody floor for the first time — the coverage line
+  reports complete, and the floor is intact, in 7.1 seconds.
+  .
+  TWO THINGS THE REBASE FOUND, NEITHER OF WHICH WAS VISIBLE FROM READING.
+  .
+  (a) `prev_head` IS NEVER ASSIGNED ANYWHERE IN THE LIVE CUSTODIAN. Its only occurrence is
+  the `${prev_head:-(none recorded)}` read at `:270`; the loop that used to set it was
+  deleted when the receipt-chain check was delegated out under D0176. So D0154 item (3) is
+  strictly worse than filed: not merely "the chain line is dropped on a same-day re-run"
+  but "every receipt written since the delegation records no previous HEAD at all."
+  `receipts/2026-09-07.md` reads `- previous receipt: 2026-09-03 at (none recorded)`, and
+  no guard noticed because `check_receipts` parses only `- HEAD:`. Hunk 4 fixes both halves
+  — the previous receipt is the latest one that is not the file being written, and its HEAD
+  is read from that file.
+  .
+  (b) THE COMPLETENESS GUARD PRINTED ITS SUCCESS LINE UNCONDITIONALLY. Run against a
+  fabricated orphan fixture, hunk 1c correctly reported the uncovered directory and then
+  closed with "poison coverage: every installed fixture is exercised" anyway. That is
+  D0177's exact shape — a success line that fires regardless of the outcome — reproduced
+  inside the guard written to close D0152's. It is now conditional on the uncovered count.
+  It was caught by running the loop against a fixture no invocation reaches, not by reading
+  it, and the loop had been read several times by then.
+rationale: >-
+  Tier A: a proposal directory changed. Nothing installed, nothing signed, no frozen or
+  custody-set path touched. The live `scripts/custodian.sh` is untouched and stays the
+  owner's.
+  .
+  Why rebase now rather than at the sitting. The M3 driver's step 6 will diff against this
+  file, so the file must be final before the driver is written — and the M2 driver's
+  equivalent line pointing at the PREVIOUS milestone's proposals dir is the mechanism of
+  D0152 item 6 itself. Doing this first is what makes the driver's step 6 writable at all.
+  .
+  Why finding (b) is recorded rather than quietly fixed. The repository's standing argument
+  for poison fixtures is that a guard which has never been watched failing is not yet a
+  guard (CONTRIBUTING.md). This is that argument paying out inside a single session: the
+  guard was correct about the condition it detects and wrong about what it says afterwards,
+  and only the negative control could tell those apart. Recording it also keeps D0177 from
+  reading as a one-off — it is a class, and it has now recurred in the fix for its sibling.
+reversibility: >-
+  `git checkout` the draft to its 2026-09-04 bytes. That restores a file which, installed at
+  the sitting, reverts three live changes and reddens the custody floor at step 7 — so the
+  reversal is available and is not something anyone should want.
+status: accepted
+bindings_count: 1
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh
+    strength: documentary
+    detail: >-
+      The rebased draft. Documentary and it must stay documentary until the owner installs
+      it: a drafted patch awaiting owner application enforces nothing (D0143's words for the
+      same situation). Its effect is measurable only by running it, which this record did.
+links: ["D0154", "D0152", "D0153", "D0177", "D0176", "D0183", "D0143", "D0095"]

@@ -1,0 +1,97 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0194
+title: "The Python floor was the builder's to correct all along: D0191 read a poison fixture's own pyproject.toml as proof that the root one was frozen, and queued a twenty-second edit to a ceremony"
+tier: A
+date: "2026-09-08"
+risk_flags: ["public-surface"]
+decision: >-
+  CORRECTION TO D0191, filed as a new record because decision fields are immutable (D0045).
+  D0191 states that `pyproject.toml` is a FROZEN path and concludes that raising
+  `requires-python` "is queued for the next boundary sitting, where frozen paths can change."
+  Both halves are false. The root `pyproject.toml` is neither frozen nor custody-set, and it is
+  excluded from both ON PURPOSE.
+  .
+  MEASURED, four ways. `MANIFEST.sha256` contains exactly one row matching `pyproject`, and it
+  is `tests/poison/lint-imports/pyproject.toml` (:19) — a poison fixture's own file, not this
+  one. `governance/custody.sha256` contains the same single row (:67). `governance/tier-c.yaml`
+  :103 says "pyproject.toml is deliberately NOT listed: dependency work would otherwise halt
+  mid-milestone." `docs/SITTING.md`:111-113 says the same thing in the same words, and adds
+  where the guarantee actually lives: "its import contracts are covered instead by the
+  contract-shape check inside `check_manifest`."
+  .
+  SO THE FIX IS LANDED HERE, by a builder, in this record's own commit:
+  `requires-python = ">=3.13"`, matching `.python-version` and the interpreter the frozen law
+  suite is actually green on. `uv.lock` is regenerated with it — 1 insertion, 74 deletions,
+  every deletion a cp312 or graalpy312 wheel row plus one dependency marker
+  (`python_full_version < '3.13'`) that can no longer be true. No package version moved;
+  `uv lock --check` and `uv sync --frozen` both pass.
+  .
+  HOW THE ERROR WAS MADE, which is the part worth keeping. The check was
+  `grep -c 'pyproject.toml' MANIFEST.sha256`, it returned `1`, and `1` was read as "listed".
+  The row it matched belongs to a different file that merely ends with the same name. A
+  substring match answered a question about a path it was never looking at, and returned the
+  shape of a true answer. This is the standing pattern at its sixth instance: the fixture that
+  could not reach the path, the `fatal:` line that failed no check, "the refs moved" mistaken
+  for "the repository works", a guard whose printed remedy could not satisfy it, `git diff` in
+  a bare-flagged repo returning zero for every candidate — and now a grep whose count came from
+  somewhere else entirely. A GREEN VERDICT CAN BE MEASURING THE WRONG THING, and an anchored
+  pattern (`grep -E '  pyproject\.toml$'`) would have said so immediately.
+  .
+  THE REAL COST, WHICH D0191 ALSO DID NOT STATE, and which is why the edit is not free even
+  though it needs no signature: `pyproject.toml` is one of two entries in `HARNESS_FILES`
+  (`src/tannen/laws/harness.py:28`), which feeds `harness_subject` — the descriptor every law
+  is recorded against. Editing it moves ALL 52 law descriptors and stales every evidence
+  record. The price is a full evidence re-run, not an owner's key, and edits that move
+  descriptors should be batched into one re-run rather than paying it per change.
+  .
+  AND THE CLAIM BECOMES CHECKABLE. `tests/test_operating_manual.py` — the file whose whole
+  purpose is comparing what this repository SAYS against what it DOES — gains a detector
+  reading `requires-python` and `.python-version` and refusing any gap between them. It was
+  watched failing against the real tree first, naming 3.12 against 3.13, then passing after the
+  edit. Two fixture-backed negative controls hold it honest in both directions.
+rationale: >-
+  Tier A: no frozen path edited (there was none to edit), no signature made, one guard added to
+  an unfrozen, uncustodied test file, one metadata line corrected and its lockfile regenerated.
+  .
+  Why this is not a footnote. D0191's conclusion sent a twenty-second builder edit to a ceremony
+  that has not been scheduled, behind nine queue items, three Tier-C doors and a driver that
+  does not exist yet. The cost of a wrongly-tiered item is not the edit; it is that the untrue
+  sentence in the package metadata stays published for however long the ceremony takes, telling
+  every installer that 3.12 will work when the frozen M1 replay law cannot pass there. D0191
+  itself argues that "a pin that makes a red thing green while the untrue statement survives is
+  exactly the shape of a fix that gets forgotten" — and then, by misreading the freeze, built
+  the mechanism that would forget it.
+  .
+  Why the guard goes in `tests/test_operating_manual.py` rather than a new file. That file
+  already exists for exactly this class — D0108, where CLAUDE.md told sessions to run a command
+  that read no contracts — and its standing argument generalises without change: compare the
+  claim against the thing the claim is about, and fail on divergence. `requires-python` versus
+  `.python-version` is the same comparison one layer down, and it is a derive-and-assert of the
+  kind D0171 ruling (3) makes standing rather than a hand-maintained enumeration.
+  .
+  The negative controls are not decoration. CONTRIBUTING.md requires evidence that a new guard
+  can fail — "A test that has never been watched failing is not yet a test" — and this guard's
+  first run reproduced D0191's exact state and reported it.
+reversibility: >-
+  Restore `requires-python = ">=3.12"`, `uv lock`, and delete the detector: the package resumes
+  advertising an interpreter its own frozen laws cannot pass on, which is the state CI
+  falsified on 2026-09-08. Deleting only the detector is worse than either — it leaves the fix
+  with nothing keeping it true.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: pytest
+    target: "tests/test_operating_manual.py::test_the_declared_python_floor_is_the_interpreter_the_repo_pins"
+    strength: enforced
+    detail: >-
+      The detector. Reads `requires-python` from pyproject.toml and `.python-version`, and
+      fails on any gap, with a message naming both. Watched failing against the real tree
+      before the edit (3.12 against 3.13); green after.
+  - type: file
+    target: pyproject.toml
+    strength: enforced
+    detail: >-
+      The corrected claim itself, `requires-python = ">=3.13"`. Enforced rather than
+      documentary because uv reads it: a resolve on an interpreter below the floor is refused
+      by the tool, not merely contradicted by prose.
+links: ["D0191", "D0045", "D0108", "D0171", "D0176"]
