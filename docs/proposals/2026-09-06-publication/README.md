@@ -311,11 +311,26 @@ owner-signed D0115 and executed by D0176. It requires `--yes`, the driver never 
 
 ## After the push: adopting the published history (D0187)
 
-**First, replay anything committed after the sitting (D0190).** `master` moved on after commit
-A — D0189 and D0190 are themselves on it — and adoption puts `master` at the published head,
-so those commits would be left behind in the backup refs with nothing saying so. The script
-now refuses, names them, and prints the cherry-pick sequence. Replay them onto the published
-head, fast-forward `master`, then re-run it.
+**First, account for anything committed after the sitting (D0190, D0192, D0193).** `master`
+moved on after commit A — D0189 and D0190 are themselves on it — and adoption puts `master` at
+the published head, so those commits would be left behind in the backup refs with nothing
+saying so. The script refuses and names them. There are two ways past it, and which one applies
+depends on **where the work was replayed**:
+
+- Replayed **here**: cherry-pick onto the published head, **push**, then re-run. The push is
+  load-bearing — the guard asks whether a commit is in the published history, and a cherry-pick's
+  new sha is no more in the rewrite map than the original was (D0192).
+- Replayed **in the rewrite clone**, which is where the sitting's own late fixes get made: there
+  is nothing left to replay and re-running can never help. Pass `--accept-unmapped <sha>` once
+  per commit (D0193). It is an assertion the script checks rather than a `--force`: it re-derives
+  the commit's paths and looks each one up at the published head, refusing if an added path is
+  missing there, if a deleted path is still present, or if not one path matches byte for byte.
+
+The real adoption was the second case, and it happened before the flag existed — the two fixes
+had been made in the rewrite clone, so the guard refused correctly and had no exit, and the
+refs were moved by hand instead. That worked and is not a procedure; `--accept-unmapped` is that
+manoeuvre made checkable, and it reports the same numbers the hand check produced (2 identical +
+2 changed downstream for D0190's commit, 4 + 2 for D0189's).
 
 `adopt_published_history.sh --from <url> --ci-green` points this repository at the published
 history. Run it **after the push and after CI is green** — it refuses without `--ci-green`,
@@ -337,16 +352,23 @@ touches it.
 
 Rehearsed by `rehearse_adoption.sh` against a bare clone with four worktrees and a real signed
 map: 40/40, including `check_receipts`, `check_tag_signers` and the custodian run on the
-adopted repository.
+adopted repository. `--accept-unmapped` was verified separately — that rehearsal can no longer
+run (D0189) — against a disposable bare clone fetching the real published repository, in all
+five states: no flag refuses and names both commits; the flag on an already-mapped sha refuses;
+the flag on a fabricated commit carrying a file that never shipped refuses and names that file;
+the flag on a commit whose every path is byte-identical passes with nothing changed downstream;
+the flag on both real commits passes and adopts to the published head.
 
 **One line only you can settle**, and it is not a licence any more (D0184): the driver now
 executes D0176 ruling (2) at step 2, so `governance/policy.yaml` says `licence_defaults`
 Apache-2.0 for both keys and agrees with the `LICENSE` at the root — under your step-G
 signature, since no guard reads either key. What remains is that `~/git/tannen` keeps the
 un-rewritten history: whether the bare repo adopts the published one is a separate decision
-the driver does not make. Taking it costs a backup ref (`git tag
-backup/pre-publication-<date> master`) and a reset of the four worktrees; the excised bytes
-are unaffected either way, since they live outside git at `~/git/tannen/.reference/`.
+the driver does not make. **It was taken on 2026-09-08**: `~/git/tannen` now carries the
+published history, `master` = the published head, every pre-publication ref reachable under
+`refs/backup/pre-publication-2026-09-08/` (including `post-sitting-tip`, the tip the hand
+manoeuvre above moved off). The excised bytes were unaffected either way, since they live
+outside git at `~/git/tannen/.reference/`.
 
 ## The bytes are not lost
 

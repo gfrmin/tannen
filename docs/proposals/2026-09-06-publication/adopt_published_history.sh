@@ -18,18 +18,29 @@
 # refs/backup/pre-publication-<date>/ BEFORE anything moves, so the old history stays reachable
 # and `git log refs/backup/...` resolves every pre-publication SHA in all 186 decision records.
 #
+# THE ESCAPE, AND WHY IT IS NARROW (D0193). The post-sitting guard below asks one question:
+# is this commit in the published history? A commit replayed in the REWRITE CLONE rather than
+# here answers no — its content shipped, its sha did not, and no amount of re-running fixes
+# that. --accept-unmapped <sha> is the operator asserting exactly that, once per commit, and
+# it is not taken on trust: the script re-derives the commit's paths and checks each one
+# against the published head, refusing if the content is not actually there. It is an
+# assertion the script can CHECK, not a --force.
+#
 #   adopt_published_history.sh --from <url|path> --ci-green [--repo <bare>] [--dry-run]
+#                              [--accept-unmapped <sha>]...
 #
 set -euo pipefail
 
-SRC="" ; CI_GREEN=0 ; DRY=0 ; REPO=""
+SRC="" ; CI_GREEN=0 ; DRY=0 ; REPO="" ; ACCEPT=()
 while [ $# -gt 0 ]; do
     case "$1" in
         --from)     SRC="$2"; shift 2 ;;
         --repo)     REPO="$2"; shift 2 ;;
         --ci-green) CI_GREEN=1; shift ;;
         --dry-run)  DRY=1; shift ;;
-        *) echo "usage: $0 --from <url|path> --ci-green [--repo <bare>] [--dry-run]" >&2; exit 2 ;;
+        --accept-unmapped) ACCEPT+=("$2"); shift 2 ;;
+        *) echo "usage: $0 --from <url|path> --ci-green [--repo <bare>] [--dry-run]" >&2
+           echo "                              [--accept-unmapped <sha>]..." >&2; exit 2 ;;
     esac
 done
 
@@ -128,7 +139,63 @@ if [ -n "$OLD_MASTER" ]; then
     while read -r c; do
         remap "$c" >/dev/null 2>&1 || AFTER="$AFTER $c"
     done < <(git -C "$REPO" rev-list master --not "$NEW_HEAD")
-    if [ -n "$AFTER" ]; then
+    # D0193 — the escape, for the one case the recipe above cannot reach. If the replay happened
+    # in the REWRITE CLONE (which is where the sitting's own late fixes get made), the content is
+    # in the published history under a sha that was never in this repository, and re-running can
+    # never satisfy the guard: there is nothing left to replay. --accept-unmapped names such a
+    # commit. It is NOT a --force — it is an assertion with a positive control, because the whole
+    # reason this guard exists is that "the refs moved" is not the same claim as "the work is
+    # there". Each accepted commit's own paths are re-derived here and looked up at the published
+    # head, and a path whose content did not actually ship refuses the flag.
+    for a in ${ACCEPT[@]+"${ACCEPT[@]}"}; do
+        asha=$(git -C "$REPO" rev-parse -q --verify "$a^{commit}") \
+            || die "--accept-unmapped $a does not name a commit in $REPO"
+        case " $AFTER " in
+            *" $asha "*) ;;
+            *) die "--accept-unmapped $a ($(git -C "$REPO" log -1 --format='%h %s' "$asha")) is not
+one of the commits this guard stops on. Either it is already in the published history — in which
+case drop the flag, nothing is being dropped — or it is not on master at all. A flag that names
+the wrong commit must not pass silently: it would read as cover for the commit that IS at risk." ;;
+        esac
+        # `--no-renames` so every path shows as plain A/M/D; a rename read as one line would
+        # leave the old path unexamined.
+        STAT=$(git -C "$REPO" diff-tree --no-commit-id --name-status --no-renames -r "$asha")
+        [ -n "$STAT" ] || die "--accept-unmapped $a touches no paths, so there is nothing to check.
+An empty diff makes this flag vacuous, which is exactly the shape of check this guard exists to
+avoid; refusing rather than passing on a measurement that could not have failed."
+        # Newline-separated, not space: these hold PATHS, and a path with a space in it must not
+        # turn one entry into two in the report that justifies accepting the flag.
+        same=0 ; nchanged=0 ; changed="" ; missing=""
+        while IFS=$'\t' read -r st path; do
+            pub=$(git -C "$REPO" rev-parse -q --verify "$NEW_HEAD:$path" 2>/dev/null || true)
+            if [ "$st" = D ]; then
+                if [ -z "$pub" ]; then same=$((same+1))
+                else missing="$missing$path  (deleted here, still present there)"$'\n'; fi
+            elif [ -z "$pub" ]; then
+                missing="$missing$path"$'\n'
+            elif [ "$pub" = "$(git -C "$REPO" rev-parse "$asha:$path")" ]; then
+                same=$((same+1))
+            else
+                nchanged=$((nchanged+1)); changed="$changed$path"$'\n'
+            fi
+        done <<< "$STAT"
+        if [ -n "$missing" ]; then
+            note "not present at the published head:"
+            printf '%s' "$missing" | sed 's/^/      /'
+            die "--accept-unmapped $a claims this commit's work is already published, and it is not.
+The paths above are missing there. This is the flag doing its job: it accepts a sha mismatch, never
+a content one."
+        fi
+        [ "$same" -gt 0 ] || die "--accept-unmapped $a: not one of this commit's paths matches the
+published head byte for byte. Every one of them was changed further downstream, which may be true
+and innocent, but it means nothing here demonstrates the work actually shipped. Check by hand and,
+if it did, say so in the adoption's own record rather than with this flag."
+        note "accepted unmapped $(git -C "$REPO" log -1 --format='%h %s' "$asha")"
+        note "   $same path(s) byte-identical at the published head, $nchanged changed further downstream"
+        [ -n "$changed" ] && printf '%s' "$changed" | sed 's/^/      changed since: /'
+        AFTER=$(printf '%s\n' $AFTER | grep -vx "$asha" | tr '\n' ' ' || true)
+    done
+    if [ -n "${AFTER// /}" ]; then
         note "on master, but not in the published history:"
         for c in $AFTER; do note "   $(git -C "$REPO" log -1 --format='%h %s' "$c")"; done
         set -- $AFTER
@@ -141,8 +208,11 @@ satisfy this guard; being in the published history is what does (D0192):
     git -C $REPO cherry-pick $(set -- $AFTER; echo "$*" | tr ' ' '\n' | tac | tr '\n' ' ')
     git -C $REPO branch -f master post-publication
     git -C $REPO push origin master
-(each cherry-pick pays the pre-commit hooks). The published repository is unaffected either
-way; this script has moved nothing yet."
+(each cherry-pick pays the pre-commit hooks). If instead the replay already happened somewhere
+this repository cannot see — in the rewrite clone, typically — there is nothing left to replay:
+pass --accept-unmapped <sha> per commit and the content is checked against the published head
+instead (D0193). The published repository is unaffected either way; this script has moved
+nothing yet."
     fi
 fi
 declare -A NEWTIP
