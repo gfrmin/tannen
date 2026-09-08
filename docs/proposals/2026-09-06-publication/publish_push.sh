@@ -46,7 +46,9 @@ note "tags:        $(git -C "$WORK" tag | tr '\n' ' ')"
 say "Refusing to publish something that is not the sitting's output"
 [ -z "$(git -C "$WORK" status --porcelain)" ] || die "$WORK has uncommitted changes"
 N=$(git -C "$WORK" for-each-ref --format=x refs/heads | wc -l)
-[ "$N" = 1 ] || die "$WORK has $N branches; the sitting leaves exactly one (D0186)"
+# This is the guard that caught D0189: the sitting's own publish_shape left four branches,
+# and refusing here cost a diagnosis instead of a public repository with the wrong shape.
+[ "$N" = 1 ] || die "$WORK has $N branches; the sitting leaves exactly one, master (D0186, D0189)"
 [ "$(git -C "$WORK" rev-parse --abbrev-ref HEAD)" = master ] \
     || die "$WORK is not on master; the first push decides the public default branch"
 git -C "$WORK" ls-tree --name-only HEAD receipts/ | grep -q 'REWRITE-' \

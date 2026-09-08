@@ -1,0 +1,70 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0191
+title: "CI's first-ever run failed because the repository advertises a Python floor it has never been able to meet, and only a machine that was not the builder's could see it"
+tier: A
+date: "2026-09-08"
+risk_flags: ["public-surface"]
+decision: >-
+  `.python-version` pins `3.13`, so every environment resolves the interpreter the frozen law
+  suite was written against instead of whatever the host happens to offer. It is an unfrozen
+  path, which is the only reason this fix is available to a builder at all.
+  .
+  THE DEFECT. `pyproject.toml` declares `requires-python = ">=3.12"`. The frozen M1 replay
+  law cannot pass on 3.12. `tests/laws/m1/test_l1_replay.py` runs its fixture in fresh
+  interpreters via `python -c "<source>"` — deliberately, so that hash-order dependence is
+  reachable rather than theoretical — and the kernel hashes a transform's SOURCE TEXT before
+  admitting it to a graph (BRIEF §5.1). On 3.12 `inspect.getsource` cannot recover source for
+  code entered with `-c`, so `transform.register` raises
+  `TransformError: 'pipeline': source text is unavailable`. On 3.13 the same call returns the
+  source and all four nodes pass. Measured directly, both interpreters, one probe:
+  3.13.14 prints `SOURCE AVAILABLE`; 3.12.13 prints `NO SOURCE: could not get source code`.
+  .
+  HOW IT SURFACED, which is the part worth keeping. `make verify` has been green on this
+  machine for every milestone, and this machine has 3.13.14. The GitHub runner resolved
+  CPython 3.12.3 — Ubuntu's system interpreter, which satisfies `>=3.12` — and
+  `check_decisions` reported two records whose pytest binding does not resolve
+  (D0100, D0101, both binding the same file). Nothing else on the runner was red:
+  `check_manifest` OK, `check_concepts` OK, the checkout with `fetch-depth: 0` correct. The
+  claim ">=3.12" was never true and could not be falsified by any local run, because a local
+  run never chose 3.12. This is precisely what publishing was for.
+  .
+  WHAT THIS FIX DOES NOT DO. It pins the toolchain; it does not correct the false claim.
+  `pyproject.toml` is a FROZEN path (`MANIFEST.sha256`), so `requires-python` cannot be
+  raised to `>=3.13` by a builder. Until it is, the package metadata still tells an installer
+  that 3.12 will work, and it will not. **That correction is queued for the next boundary
+  sitting, where frozen paths can change.** Recorded here rather than left implicit, because
+  a pin that makes a red thing green while the untrue statement survives is exactly the shape
+  of a fix that gets forgotten.
+  .
+  Note that `uv sync --frozen` on the runner must now DOWNLOAD 3.13 rather than use the
+  system interpreter. That is uv's default behaviour for a `.python-version` it cannot
+  satisfy locally, and the workflow is frozen, so it could not have been passed `-p 3.13`
+  instead even if that were preferable.
+rationale: >-
+  Tier A: one new unfrozen file, one record. No frozen path edited, no guard changed, no
+  signature made.
+  .
+  Pinning rather than relaxing the law. The law is right and is frozen; the kernel's demand
+  for source text is BRIEF §5.1 and is the point. The fixture's technique — defining the
+  pipeline in `-c` — is what carries the version dependence, and per this repo's own rule a
+  frozen law that turns out to be wrong is superseded by a NEW file at a boundary, never
+  edited in place. Nothing here is wrong enough to need that: the law passes on the
+  interpreter it was frozen against, and the honest fix is to say which interpreter that is.
+  .
+  The general finding is about where a claim can be falsified. `requires-python` is a
+  statement about environments the builder does not have, and no amount of local green can
+  test it. The same is true of the CI workflow itself, which had never executed anywhere
+  before today. Both were first exercised by the act of publishing, and both had a defect.
+reversibility: >-
+  Deleting `.python-version` and this record; every environment then resolves whatever
+  interpreter it finds, which is the state that produced the red run.
+status: accepted
+bindings_count: 1
+bindings:
+  - type: file
+    target: .python-version
+    strength: enforced
+    detail: >-
+      The pin itself: `3.13`, resolved by uv in CI and locally, verified to turn the four
+      failing L1.15 nodes green on a clone of the published bytes.
+links: ["D0190", "D0189", "D0176", "D0111"]

@@ -1,0 +1,54 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0192
+title: "The replay recipe printed by yesterday's new guard could not have satisfied that guard, because a cherry-pick's new sha is no more in the map than the original was"
+tier: A
+date: "2026-09-08"
+risk_flags: ["governance-paths"]
+decision: >-
+  The post-sitting-commit guard in `adopt_published_history.sh` now asks whether a commit is
+  in the PUBLISHED HISTORY (`git rev-list master --not "$NEW_HEAD"`), not merely whether the
+  rewrite map knows it. Its message says the order out loud: replay onto the published head,
+  **push**, and only then adopt.
+  .
+  THE DEFECT, in the fix written hours earlier. D0190 added a guard that refuses adoption
+  when `master` carries a commit the published map does not know, and printed a recipe:
+  cherry-pick the outstanding commits onto the published head, move `master`, re-run. That
+  recipe cannot pass the guard it is printed by. A cherry-pick produces a NEW commit with a
+  NEW sha, which is not a key in the rewrite map either — so the second run refuses exactly
+  as the first did, naming the replayed commits instead of the originals. The guard was
+  correct about the hazard and wrong about the remedy, and would have read as a loop.
+  .
+  Asking about the published history instead is right for both states and not only for this
+  one. Before publication the histories are disjoint, so `--not "$NEW_HEAD"` excludes nothing
+  and every local commit is tested against the map: the two post-sitting commits are named,
+  as they should be. After the replay is PUSHED, those commits are in the published history,
+  the exclusion removes them, and the guard falls silent — because the thing it was worried
+  about has actually been fixed rather than renamed.
+  .
+  Found by reasoning about the recipe while writing it out for the owner, not by running it —
+  which is worth stating plainly, because everything else in this package was found by
+  running something. The rehearsal that would have caught it (`rehearse_adoption.sh`) is the
+  one that can no longer run (D0189).
+rationale: >-
+  Tier A: one file under `docs/proposals/`, one record. Nothing signed, no frozen path
+  touched. The guard still only ever refuses; it moves nothing.
+  .
+  D0045 forbids editing a decided record, so this is a new one rather than a correction to
+  D0190. D0190's finding — that adoption would silently drop post-sitting work — stands
+  exactly as recorded; only its remedy was wrong.
+  .
+  Third instance of the pattern D0190 itself named: a rule correct about the state it was
+  written against and silent about the state that comes next. Here the next state was the one
+  the rule's own instructions produce, which is the sharpest version of it so far.
+reversibility: >-
+  Reverting the `--not "$NEW_HEAD"` and the message, and this record.
+status: accepted
+bindings_count: 1
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/adopt_published_history.sh
+    strength: enforced
+    detail: >-
+      The refusal now excludes commits already in the published history, and its message
+      states the replay -> push -> adopt order with the push in the printed recipe.
+links: ["D0190", "D0189", "D0187", "D0045"]

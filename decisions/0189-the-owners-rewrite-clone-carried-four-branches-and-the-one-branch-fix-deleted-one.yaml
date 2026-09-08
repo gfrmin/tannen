@@ -1,0 +1,139 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0189
+title: "The owner's rewrite clone came out of the sitting carrying four branches, because the one-branch fix deleted only the branch HEAD happened to be on — and the rehearsal could not see it, for the third time and the same reason"
+tier: A
+date: "2026-09-08"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  `publish_shape` deletes EVERY branch in the rewrite clone that is not `master`, not just
+  the one that was checked out, using `git branch -d` and never `-D` — the refusal of an
+  unmerged branch IS the merge proof, and an unexpected branch must stop the sitting rather
+  than have its commits dropped silently. It records each deletion in a `shape` file beside
+  the step breadcrumb. The owner's ruling, given on being shown the four: publish only
+  `master`, with everything merged into it.
+  .
+  THE DEFECT, found at the owner's real sitting — the first one this package's rehearsals did
+  not find first. D0186 established that the published clone carries one branch named
+  `master`, and wrote `publish_shape` to make it so. That function creates `master`, checks
+  it out, and deletes `$cur`, the branch HEAD arrived on. Measured on the sitting's actual
+  output at `/var/tmp/tannen-rewrite.NzJIPj`: `m0 m1 m2 master`. It deleted `m3` and left
+  three.
+  .
+  D0186's stated mechanism was half right and the half that was wrong is the interesting one.
+  `git filter-repo` does not simply DROP remote-tracking refs — it converts `refs/remotes/
+  origin/*` into local branches. It dropped them in the harness because the harness clones a
+  clone of a worktree, which carried only the branches the harness had put there. The owner's
+  repository is a bare repo with five branches and four worktrees, so its clone carried five
+  remote refs, and filter-repo made five local branches out of them.
+  .
+  NOTHING WAS PUBLISHED WRONG, because the guard written for exactly this refused:
+  `publish: STOP — /var/tmp/tannen-rewrite.NzJIPj has 4 branches; the sitting leaves exactly
+  one (D0186)`. D0188's push script checks the shape it is handed instead of trusting the
+  driver that produced it, and that is the whole return on writing it. The sitting stopped
+  one step from the push, with the irreversible middle already done and correct.
+  .
+  THE FIXTURE WAS UNLIKE THE THING IT STOOD FOR, AGAIN — the third instance, and D0186's own
+  record is where the first two are written down. D0186 fixed the fixture by adding ONE
+  branch, `master`, which made the create-branch path unreachable and the delete-one-branch
+  path exercised. Two branches minus one deleted is one branch, so
+  "the rewritten clone carries exactly one branch" passed — for a clone that had exactly one
+  branch too many, never three. The check was right, the fixture could not make it fail, and
+  the pass carried no information. That is the same shape as the two failures D0186 records,
+  produced by the fix for them.
+  .
+  THE CHECK NOW HAS A POSITIVE CONTROL. The harness gives its clone two extra sibling
+  branches, so the rewrite clone arrives with four and `publish_shape` must delete three; and
+  a new check asserts the driver recorded at least two deletions. The driver STATES what it
+  deleted, in a file, the way it already states which step it reached — the harness does not
+  learn the driver's state by parsing the driver's prose. A one-branch clone now fails the
+  control instead of passing the guarantee.
+  .
+  WHAT WAS DONE TO THE CLONE, and what it cost. `git branch -d m0 m1 m2` — all three
+  accepted, which is git asserting they are merged into master; `git log --branches --not
+  master` was empty before and after; all 91 commits and all 8 tags still reachable from
+  `master`. One thing IS lost and is recorded rather than glossed: the branch tips sat 5, 2
+  and 2 commits AHEAD of their `m0-close`, `m1-close` and `m2-close` tags, so those three
+  commits are no longer named by any ref. They remain in `master`'s history. No replacement
+  tag was made: every tag must verify under `check_tag_signers` against the repinned trust
+  root, and an unsigned marker tag would redden a guard to preserve a label.
+  .
+  HOW THE FIX WAS VERIFIED, AND WHY NOT BY THE REHEARSAL. The rehearsal can no longer run
+  this sitting end to end against this repository, and finding that out is the other half of
+  this record. Step 5b derives the scrub expressions by reading
+  `concepts/provenance-ref-grammar.yaml` at PRE_HEAD and asserting exactly one source whose
+  repo names renavon. The sitting has now HAPPENED: commit A removed that source and left
+  `omits: [renavon]` in its place, so the assertion finds 0 and the driver stops —
+  `publication: STOP — could not derive the scrub expressions`. The sitting is not idempotent
+  past its own first commit, and a re-run would have to start from a tree that predates it
+  (`3f8634b`), not from the tree as it stands. That was never stated anywhere, and the
+  driver's abort text does not say it.
+  .
+  So the branch fix is verified at the level of the function instead, against the real bytes
+  extracted from the driver rather than a re-implementation of them. Measured, all three:
+  a synthetic clone shaped like the owner's (`m0 m1 m2 m3 master`) comes out of the fixed
+  `publish_shape` as `master` alone, HEAD on master, with four lines in the shape file; the
+  SAME fixture through the version committed at `3de45cc` comes out as `m0 m1 m2 master`,
+  which is the owner's clone reproduced exactly and is the defect watched failing; and a
+  clone carrying a branch with a commit master does not have stops the sitting —
+  `DIE: branch 'stray' … is not merged into master — refusing to drop it` — with the branch
+  still there afterwards.
+  .
+  The aborted rehearsal was not wasted, because the new control is what reported the
+  abort's consequence: the run stopped before step 5c, so the rewrite clone never reached
+  `publish_shape` and `the rewritten clone carries exactly one branch` PASSED — on a clone
+  that had one branch because nothing had happened to it. `and publish_shape actually had
+  siblings to delete` failed in the same run. That is the check catching a vacuous pass on
+  the first occasion it could, which is the entire reason it exists.
+rationale: >-
+  Tier A: one file under `docs/proposals/`, one harness, one record. No guard in the tracked
+  tree changed, no frozen or custody-set path touched, no signature made, nothing pushed. The
+  clone at `/var/tmp/tannen-rewrite.NzJIPj` is disposable by construction — it is regenerated
+  by re-running the sitting — so editing its refs is not a repository change.
+  .
+  `-d` rather than `-D` is the substance of the fix, not a detail of it. `-D` on a list
+  computed from `for-each-ref` would delete whatever the clone happened to contain, including
+  a branch carrying work `master` does not have; `-d` turns that case into a stop. The
+  sitting has no business deciding, at its last step, that a branch it did not expect is
+  disposable.
+  .
+  On the fixture, three times is a pattern and not an accident. Each fix made the fixture
+  resemble the owner's repository in the one respect the last defect turned on, which is
+  precisely enough to make the next unlikeness invisible. The durable form is the one added
+  here: a check that the dangerous work actually happened, next to the check that its outcome
+  is right. "Exactly one branch" and "three branches were deleted to get there" fail
+  independently, and a fixture that cannot reach the path now reddens the second.
+  .
+  This is also the answer to the question D0183 left open — what a green rehearsal still
+  cannot prove. It could not prove this, and the real sitting cost nothing to find it,
+  because the failure landed on a guard instead of on GitHub.
+reversibility: >-
+  Reverting the loop to the single `$cur` deletion, the fixture's two sibling branches, the
+  control, and this record. The published repository's branch shape is decided at the push
+  and can be changed afterwards on GitHub in one command; the local repository's five
+  branches are untouched by any of it, and the three deleted refs existed only in a
+  disposable clone.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publication_sitting.sh
+    strength: enforced
+    detail: >-
+      `publish_shape` deletes every non-master branch with `branch -d`, dies on an unmerged
+      one, and appends each deletion to the sitting's `shape` file.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/rehearse_publication.sh
+    strength: enforced
+    detail: >-
+      The clone gains two sibling branches so the rewrite clone arrives with four, plus the
+      positive control that publish_shape recorded at least two deletions — without which
+      "exactly one branch" passes vacuously. Note that this harness can no longer carry a
+      run past step 5b on this repository: the sitting it rehearses has been performed, and
+      step 5b asserts a withdrawal that commit A has already made.
+  - type: file
+    target: docs/proposals/2026-09-06-publication/publish_push.sh
+    strength: enforced
+    detail: >-
+      The one-branch guard that refused the sitting's output, unchanged: it is the reason
+      this defect cost a diagnosis rather than a public repository with four branches.
+links: ["D0188", "D0187", "D0186", "D0185", "D0183", "D0182", "D0176", "D0111", "D0116"]

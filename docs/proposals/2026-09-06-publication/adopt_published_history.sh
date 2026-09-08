@@ -117,6 +117,34 @@ say "Resolving every local ref (still nothing moved)"
 # guards go red, and the repository looks broken when it is merely at the wrong commit.
 # So master, and any branch that was sitting on master's tip, takes the PUBLISHED head.
 OLD_MASTER=$(git -C "$REPO" rev-parse -q --verify master 2>/dev/null || true)
+# D0190 — the rule above assumes master IS the sitting's commit A. That stopped being true the
+# moment a commit landed after the sitting, and D0189's own commit did exactly that, the same
+# morning. Taking the published head then DISCARDS every post-sitting commit from master. The
+# backup refs below would still hold them, so nothing is destroyed — but master would come out
+# short and nothing would say so, which is the silent half of a data loss. Any commit on master
+# the published map does not know is post-sitting work: stop, and let it be replayed.
+if [ -n "$OLD_MASTER" ]; then
+    AFTER=""
+    while read -r c; do
+        remap "$c" >/dev/null 2>&1 || AFTER="$AFTER $c"
+    done < <(git -C "$REPO" rev-list master --not "$NEW_HEAD")
+    if [ -n "$AFTER" ]; then
+        note "on master, but not in the published history:"
+        for c in $AFTER; do note "   $(git -C "$REPO" log -1 --format='%h %s' "$c")"; done
+        set -- $AFTER
+        die "master carries $# commit(s) made AFTER the sitting, which adoption would drop.
+Replay them onto the published head, PUSH, and only then re-run this script — a cherry-pick
+gets a NEW sha that is no more in the map than the original was, so replaying alone does not
+satisfy this guard; being in the published history is what does (D0192):
+    git -C $REPO branch post-publication $NEW_HEAD
+    git -C $REPO checkout post-publication
+    git -C $REPO cherry-pick $(set -- $AFTER; echo "$*" | tr ' ' '\n' | tac | tr '\n' ' ')
+    git -C $REPO branch -f master post-publication
+    git -C $REPO push origin master
+(each cherry-pick pays the pre-commit hooks). The published repository is unaffected either
+way; this script has moved nothing yet."
+    fi
+fi
 declare -A NEWTIP
 for b in $(git -C "$REPO" for-each-ref --format='%(refname:strip=2)' refs/heads); do
     old=$(git -C "$REPO" rev-parse "$b")

@@ -1,0 +1,68 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0190
+title: "Adoption would have silently dropped every commit made after the sitting, because the rule that master takes the published head was written when master WAS the sitting's last commit"
+tier: A
+date: "2026-09-08"
+risk_flags: ["governance-paths"]
+decision: >-
+  `adopt_published_history.sh` refuses when `master` carries any commit the published
+  history's map does not know. Such commits are post-sitting work; adoption would move
+  `master` to the published head and leave them reachable only from the backup refs. The
+  script names each one and prints the cherry-pick sequence that replays them onto the
+  published head, and it does this before it has moved anything.
+  .
+  THE DEFECT. D0187 established two rules — a historical branch resolves through the map, and
+  `master` takes the published head, because the sitting's own commits A and C exist only in
+  the published history and have no pre-publication counterpart to map from. That is right,
+  and the reasoning behind it is unchanged. What it silently assumed is that `master` IS
+  commit A. It was, for exactly one day. D0189's commit landed on `master` the following
+  morning — the fix for the branch shape, written while preparing this same publication — and
+  from that moment "take the published head" meant "discard D0189".
+  .
+  Nothing would have been destroyed: the script backs every ref up under
+  `refs/backup/pre-publication-<date>/` before it moves anything, and it says so. But `master`
+  would have come out one commit short with nothing announcing it, and the record of why the
+  published repository has one branch would have been the thing missing. A loss you have to
+  notice yourself is the half of a data loss that guards are for.
+  .
+  MEASURED, BOTH DIRECTIONS, against a bare copy of the real repository and the REAL rewrite
+  clone as the published side. With `master` at D0189's commit: `adopt: STOP — master carries
+  1 commit(s) made AFTER the sitting`, the commit named in full, `master` unmoved and zero
+  backup refs written — it stops before it touches anything. With `master` reset to commit A:
+  the run completes, `m0 m1 m2` resolve through the map, `m3` and `master` take the published
+  head, 13 refs are backed up, all 8 tags are replaced, exit 0.
+  .
+  That second run is worth more than the guard. It is a full adoption against the actual
+  rewritten history, with the real attestation verifying under `tannen-rewrite` for
+  `owner@tannen` and the real 90-commit map — where `rehearse_adoption.sh` builds its
+  published side synthetically. It also had to be done this way, because
+  `rehearse_adoption.sh` can no longer run: it produces its published side by calling
+  `rehearse_publication.sh --keep`, and that now stops at step 5b for the reason D0189
+  records — the sitting it rehearses has already happened.
+rationale: >-
+  Tier A: one file under `docs/proposals/`, one record. No guard in the tracked tree changed,
+  nothing signed, nothing pushed.
+  .
+  Refusing rather than replaying automatically. The script could cherry-pick the outstanding
+  commits itself, but each one pays the pre-commit hooks, any of them can conflict against a
+  rewritten tree, and the result would be new commits made by a script the owner is running
+  once, at the end of a long sitting, to fix up refs. Naming them and printing the four
+  commands keeps the judgement where it belongs and costs one re-run.
+  .
+  The general shape, and it is the third time in three days: a rule that is correct about the
+  state it was written against, and silent about the state that comes next. D0186 assumed the
+  clone had one extra branch. D0189 assumed the sitting could be re-run. This assumed master
+  had not moved. None of the three was wrong when written.
+reversibility: >-
+  Deleting the guard block and this record. It only ever refuses; it moves nothing, and the
+  published repository is not involved either way.
+status: accepted
+bindings_count: 1
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-06-publication/adopt_published_history.sh
+    strength: enforced
+    detail: >-
+      The post-sitting-commit refusal, between resolving the refs and backing them up, with
+      the replay recipe in its message.
+links: ["D0189", "D0187", "D0186", "D0176", "D0111"]

@@ -79,6 +79,14 @@ custodian and the brief_row probe are green on the rewritten history; the pin co
 policy equals the measured count; nothing is left uncommitted in either clone; and the real
 repository's HEAD and tree are untouched (a positive control, not a promise).
 
+**The rehearsal stopped working once the sitting happened, and that is not a defect (D0189).**
+Step 5b derives the strings to scrub from history by reading the fourth sibling's citation at
+PRE_HEAD and asserting exactly one renavon source is there. Commit `3de45cc` — the sitting's
+own commit A — removed that source and wrote `omits: [renavon]` in its place, so a run against
+the tree as it stands now aborts with `could not derive the scrub expressions`. **A re-run of
+the sitting must start from a tree that predates it (`3f8634b`), not from HEAD.** The sitting
+is not idempotent past its own first commit, and nothing else says so.
+
 **What a green run proves:** step order, quoting, every patch applying and every frozen row
 refreshed, the rewrite, the re-tagging, the attestation, and a green gate on rewritten
 objects. **What it cannot prove:** custody — the throwaway key attests to nothing; GitHub's
@@ -234,7 +242,7 @@ because the custodian that writes it checks the floor first.
 | 1 | attention receipt at the pre-rewrite HEAD (the receipt's date is read *here*, not at start) | owner ×1 |
 | A | commit (hooks ~20 min) | |
 | 5 | fresh `--no-local` clone; `filter-repo --invert-paths … --replace-text …`; commit-map checks (no dropped commits, pairs = commits) — **no deletion commit first**: it would be pruned as empty | |
-| 5c | the clone gets a venv, hooks, `gpg.format ssh`; `publish_shape` gives it **exactly one branch, `master`** (D0186 — a clone of a worktree has none, and filter-repo drops the remote-tracking refs) | |
+| 5c | the clone gets a venv, hooks, `gpg.format ssh`; `publish_shape` gives it **exactly one branch, `master`** by deleting every other one with `branch -d` (D0186, D0189 — filter-repo converts the remote-tracking refs, so the clone can arrive with all five) | |
 | 6 | all 8 tags re-created at their original dates from their original messages (signature block stripped), verified; `trust_root.object` repinned; `FOUNDING_TAGS` and `DELEGATIONS.md` follow `m0-laws-freeze`; rows refreshed; `check_tag_signers` | owner ×4, builder ×4 |
 | 7 | `receipts/REWRITE-<date>.md`: the complete commit map **and** the tag map, signed under `tannen-rewrite` | owner ×1 |
 | 8 | `gen_custody`; custody signed (policy unchanged since G) | owner ×1 |
@@ -257,6 +265,18 @@ recovery would have made `m3` the public default branch. `publish_shape` creates
 checks it out and removes the milestone branch, so the published repository carries one
 branch. Nothing is lost: every milestone branch is an ancestor of master, and every milestone
 is marked by a signed tag that is published.
+
+**And why it needed a second pass (D0189).** That mechanism was half wrong, and the half that
+was wrong is why the owner's real sitting produced a clone carrying `m0 m1 m2 master`.
+`filter-repo` does not drop remote-tracking refs; it *converts* them to local branches. It
+dropped them in the rehearsal only because the harness clones a clone that had no others to
+convert. The owner's bare repo has five branches, so the rewrite clone got five — and
+`publish_shape` deleted one of them, the branch HEAD arrived on. `publish_push.sh` refused the
+result, which is what it is for. It now deletes every branch that is not `master`, with
+`git branch -d` and never `-D`: an unmerged branch stops the sitting instead of losing its
+commits, and that refusal is the merge proof. The harness's clone now carries two extra
+sibling branches, and a check asserts at least two deletions actually happened — otherwise
+"exactly one branch" passes for a clone that never had two.
 
 ## Running it (D0188)
 
@@ -290,6 +310,12 @@ owner-signed D0115 and executed by D0176. It requires `--yes`, the driver never 
 `--dry-run` prints every command without running one.
 
 ## After the push: adopting the published history (D0187)
+
+**First, replay anything committed after the sitting (D0190).** `master` moved on after commit
+A — D0189 and D0190 are themselves on it — and adoption puts `master` at the published head,
+so those commits would be left behind in the backup refs with nothing saying so. The script
+now refuses, names them, and prints the cherry-pick sequence. Replay them onto the published
+head, fast-forward `master`, then re-run it.
 
 `adopt_published_history.sh --from <url> --ci-green` points this repository at the published
 history. Run it **after the push and after CI is green** — it refuses without `--ci-green`,

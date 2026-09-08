@@ -72,6 +72,7 @@ CLONE="$WORK/repo"
 RW="$WORK/rw"                        # the driver's $TANNEN_REWRITE_WORK
 SITTING="$WORK/sitting"              # the driver's $TANNEN_SITTING_SCRATCH
 STEPFILE="$SITTING/steps"            # ...and the breadcrumb it appends a step to
+SHAPEFILE="$SITTING/shape"           # ...and what publish_shape says it deleted (D0189)
 LOG="$WORK/transcript.txt"
 STAMPED="$WORK/transcript.stamped"   # same lines, each prefixed with elapsed seconds
 SILENCE_LIMIT=25                     # seconds the driver may be quiet without saying so
@@ -97,6 +98,14 @@ git -C "$CLONE" config commit.gpgsign false
 # fix was harmless on the create-branch path and would have deleted the owner's milestone
 # branch on the master-exists path, and this clone could not tell the two apart.
 git -C "$CLONE" branch master HEAD 2>/dev/null && :
+# ...and the real repository has FOUR more besides (m0-m3). The owner's rewrite clone came
+# out of filter-repo carrying `m0 m1 m2 master` — a clone of a WORKTREE of a multi-branch
+# repo converts the remote-tracking refs to local branches, where the clone-of-a-clone this
+# harness used to build simply dropped them. So publish_shape's one-branch guarantee was
+# tested for three runs against a fixture that had nothing to delete, and the defect it was
+# written to prevent shipped anyway (D0189). Give the fixture the siblings.
+git -C "$CLONE" branch rehearsal-sibling-a HEAD~1 2>/dev/null && :
+git -C "$CLONE" branch rehearsal-sibling-b HEAD~2 2>/dev/null && :
 git -C "$CLONE" config tag.gpgsign false
 note "cloned $(git -C "$CLONE" rev-parse --short HEAD) with $(git -C "$CLONE" tag | wc -l) tag(s)"
 
@@ -448,6 +457,11 @@ if [ -d "$RW/.git" ]; then
     check "nothing was left uncommitted in the rewritten clone" test -z "$(in_rw git status --porcelain)"
     check "the rewritten clone carries exactly one branch" \
         equal "$(in_rw git for-each-ref --format=%\(refname\) refs/heads | wc -l)" "1"
+    # The positive control for the line above: a clone that arrived with one branch would
+    # pass it without publish_shape doing anything, which is exactly how D0189 shipped.
+    # The driver states what it deleted; the harness does not parse the driver's prose.
+    check "and publish_shape actually had siblings to delete (not a vacuous pass)" \
+        test "$(cat "$SHAPEFILE" 2>/dev/null | grep -c '^deleted ' || true)" -ge 2
     check "and that branch is master, so the public default is master" \
         equal "$(in_rw git rev-parse --abbrev-ref HEAD)" "master"
     NEW_RECEIPT=""

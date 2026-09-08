@@ -169,7 +169,7 @@ publish_shape() {   # <dir> — THE REWRITE CLONE ONLY: exactly one branch, and 
     # narration said `push -u origin master`: that fails with `src refspec master does not
     # match any`, and the natural recovery — pushing the milestone branch — makes `m3` the
     # public default. Never call this on the repository you are sitting in.
-    local d="$1" cur
+    local d="$1" cur b others
     cur=$(git -C "$d" rev-parse --abbrev-ref HEAD)
     if ! git -C "$d" rev-parse -q --verify master >/dev/null 2>&1; then
         run git -C "$d" branch master HEAD \
@@ -183,12 +183,31 @@ publish_shape() {   # <dir> — THE REWRITE CLONE ONLY: exactly one branch, and 
         run git -C "$d" branch -f master HEAD && note "master fast-forwarded to HEAD in $d"
     fi
     [ "$cur" = master ] || run git -C "$d" checkout -q master || die "could not switch $d to master"
-    if [ "$cur" != master ] && git -C "$d" rev-parse -q --verify "$cur" >/dev/null 2>&1; then
-        run git -C "$d" branch -D "$cur" >/dev/null \
-            && note "removed '$cur' from $d — the published repository carries ONE branch, master"
-        note "Nothing is lost: every milestone branch is an ancestor of master and every"
-        note "milestone is marked by a signed tag. Keep it instead by deleting that line."
+    # D0189 — measured at the owner's real sitting, and by no rehearsal before it. The clone
+    # can carry MORE than one extra branch. filter-repo DROPS remote-tracking refs when the
+    # source is a clone-of-a-clone (what the harness builds), but CONVERTS them to local
+    # branches when the source is a worktree of a multi-branch repo (what the owner has) —
+    # so the owner's rewrite clone came out with `m0 m1 m2 master`, this deleted only the
+    # one branch HEAD had been on, and publish_push.sh refused the result. Delete EVERY
+    # branch that is not master, not just $cur.
+    others=$(git -C "$d" for-each-ref --format='%(refname:short)' refs/heads/ | grep -vx master || true)
+    for b in $others; do
+        # `branch -d`, never `-D`: it refuses an unmerged branch, so a branch holding commits
+        # master does not have STOPS the sitting instead of dropping them silently. That
+        # refusal is the merge proof; nothing here asserts ancestry separately.
+        run git -C "$d" branch -d "$b" >/dev/null \
+            || die "branch '$b' in $d is not merged into master — refusing to drop it"
+        note "removed '$b' from $d — the published repository carries ONE branch, master"
+        # Stated, not inferred: the harness must be able to see that this loop had work to
+        # do, or "the clone carries exactly one branch" passes for a clone that never had two.
+        [ -n "${SHAPE:-}" ] && printf 'deleted %s\n' "$b" >> "$SHAPE"
+    done
+    if [ -n "$others" ]; then
+        note "Nothing is lost: git refused any branch not already merged into master, and"
+        note "every milestone is marked by a signed tag. Keep them instead by deleting"
+        note "this loop — but then publish_push.sh's one-branch guard must go too."
     fi
+    return 0
 }
 # Owner edits as data, not keystrokes. Each editlet is idempotent and asserts its anchor.
 edit() {   # <name> <dir> <python source on stdin>
@@ -229,7 +248,9 @@ SCRATCH="${TANNEN_SITTING_SCRATCH:-$( [ "$DRY" = 1 ] && echo "<scratch dir>" \
 # keyboard, and to rehearse_publication.sh, which must not learn the driver's state by
 # parsing the driver's prose (BRIEF §2: one implementation, not two).
 STEPS=""
-if [ "$DRY" != 1 ]; then STEPS="$SCRATCH/steps"; : > "$STEPS"; fi
+SHAPE=""
+if [ "$DRY" != 1 ]; then STEPS="$SCRATCH/steps"; : > "$STEPS"
+                        SHAPE="$SCRATCH/shape"; : > "$SHAPE"; fi
 note "publication sitting, $TODAY_START, at $ROOT$( [ "$DRY" = 1 ] && printf ' (DRY RUN)')"
 note "scratch, and its steps file recording how far this run got: $SCRATCH"
 
