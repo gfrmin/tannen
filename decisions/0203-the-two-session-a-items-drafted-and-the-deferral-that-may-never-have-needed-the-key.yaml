@@ -1,0 +1,128 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0203
+title: "Ruling (3) discharged: the two Session-A items drafted, three of seven falsity claims refuted, and the measurement that the owner-key residue on the spec supersession is empty"
+tier: A
+date: "2026-09-09"
+risk_flags: ["governance-paths"]
+decision: >-
+  OWNER RULING (3) OF 2026-09-09 (D0201) IS DISCHARGED ON THE DRAFTING SIDE. Both deferred
+  Session-A items are drafted at
+  `docs/proposals/2026-09-04-m3-boundary-sitting/SUPERSESSIONS.md`. Nothing is installed:
+  `docs/specs/m3.md` is frozen (exact-field match at `MANIFEST.sha256:76`; `sha256sum -c`
+  OK, byte-intact) and is not touched.
+  .
+  BOTH FIRST DRAFTS WERE REFUTED, WHICH IS THE RESULT WORTH RECORDING. Each item was
+  attacked by two independent reviewers — one on correctness, one testing whether the
+  "owner territory" classification is even true — and both returned `sound: false` on what
+  they were handed. THREE OF SEVEN proposed falsifications in item 1 are NOT shown false
+  and are not carried: `docs/specs/m3.md:202` (an empty tick moves nothing — correctly
+  scoped, and its proposed replacement contradicted the corrected :339), `:324` (the
+  six-argument `advance` signature — incomplete, not false, and never claimed exhaustive),
+  and `:318` (the `deltaop/1` params — incomplete; `replay` is a top-level descriptor key
+  beside `params`). A correction to something that was never wrong is worse than no
+  correction, and a supersession carrying three such claims would have frozen new prose
+  asserting falsity that does not exist. Item 2's first-draft loader SILENCED THE GUARD IT
+  EXISTS TO SERVE, and was likewise discarded rather than repaired in place.
+  .
+  FOUR FALSIFICATIONS SURVIVE, and one of them is new. `:335-337` — the frozen triple
+  `(state_ref, ledger_ref, sorted delta refs)` names three inputs where a node's first tick
+  has two, and `derivation_id` normalises the WHOLE input list rather than the delta refs
+  inside a fixed tuple (`src/tannen/kernel/derivation.py:32`,
+  `src/tannen/incremental.py:523-524`). `:337-338` — "a pure function of those inputs" was
+  false when frozen, since a step was also a function of the module-level registry, and is
+  true today only because of D0197, which the sentence cannot name. `:339` — "replaying a
+  stream hits traces", already ruled false by the owner at D0171 ruling (1). AND, NEW:
+  `:444`, the §10 law-table row for L3.15, REPEATS "a replayed stream hits traces"
+  VERBATIM. Correcting the body and leaving the summary table is the D0049 shape exactly —
+  a corrected artifact with a stale index — and it was found only because the draft was
+  attacked rather than read. Verified safe to correct in a differently-named file:
+  `tests/test_laws_runner.py:50` reads only `docs/specs/<milestone>.md`, so a corrected row
+  elsewhere cannot desync `test_discovery_matches_the_frozen_spec_table`.
+  .
+  AND THE MEASUREMENT THE RULING ASKED FOR, WHICH CAME BACK LOUD: THE OWNER-KEY RESIDUE ON
+  THE SPEC SUPERSESSION IS EMPTY. Verified independently, not relayed. (a)
+  `MANIFEST.sha256` DOES NOT LIST ITSELF — `awk '$2=="MANIFEST.sha256"'` returns zero rows,
+  so the manifest is not frozen. (b) `governance/custody.sha256` carries ZERO `docs/`
+  paths, ZERO `tests/laws` paths, and not the manifest either — frozen and custody-set are
+  different sets and the spec is in only one. (c) BRIEF §9.1 author-key territory is a
+  CLOSED THREE-PATH SET at `BRIEF.md:164` — `scripts/custodian.sh`, `allowed_signers`,
+  `tests/poison/` — and a spec is not among them. (d) `governance/tier-c.yaml:87` states
+  the manifest "is builder-maintained and GROWS AT EVERY LAW FREEZE", and `:152` that
+  "nothing signs the manifest". (e) BOTH PRECEDENTS RUN THIS WAY: D0128, the only
+  supersession this repo has executed, and D0161, the only prior falsified-frozen-prose
+  case, are each `tier: A`, `accepted`, and UNSIGNED — no `.sig` beside either.
+  .
+  SO THE CLASSIFICATION IS D0194 ONE LAYER UP. There, a substring match against a poison
+  fixture's own `pyproject.toml` turned builder work into ceremony and cost a milestone.
+  Here a TIER LABEL does the same. The owner's actual quoted words on this item are two
+  sentences and neither mentions the key — D0171 ruling (1), "the gap between what's frozen
+  and what's true is exactly where the next D0049 will hide", and D0201 ruling (3), "frozen
+  prose known to be false is precisely how D0049 happened". Both are arguments for acting
+  SOONER. The "owner territory" framing is builder-authored, in D0171's preamble, its
+  `reversibility` field, and D0201:49. The irreversibility argument offered there proves too
+  much: D0045 makes EVERY decision field immutable, so if un-un-recordability opened a door,
+  all 202 records would be Tier C — and the doors are a closed list of five at
+  `governance/tier-c.yaml:19-28`.
+  .
+  THE SUPERSESSION IS NEVERTHELESS NOT EXECUTED, AND THAT IS DELIBERATE. D0171 states in
+  terms that it "waits for the signature rather than being executed under the standing
+  delegation". That sentence is an owner ruling of record, and a builder audit concluding
+  the ruling rests on a builder's own mislabel is not authority to set the ruling aside —
+  it is authority to ASK. Per D0045 this record cannot amend D0171; it is the new record
+  that carries the correction, and the release is the owner's word. The question is put in
+  SUPERSESSIONS.md and here: item 1 costs one new file in an unsealed directory, one
+  appended manifest row, one comment and one Tier-A record — the D0128 shape — and if that
+  is builder work it can land this week rather than at a fourth boundary.
+rationale: >-
+  Recorded because the refutation stage earned its cost twice over and that is the
+  transferable finding. Seven falsity claims were proposed and three were wrong; had the
+  draft been read rather than attacked, this milestone would have frozen NEW prose asserting
+  falsehoods about `:202`, `:324` and `:318` — manufacturing exactly the frozen-versus-true
+  gap the ruling exists to close, while reporting the ruling discharged. That is the
+  repository's standing failure mode — a green verdict measuring the wrong thing — appearing
+  for the twelfth recorded time, and the first time in a governance artifact rather than in
+  a guard.
+  .
+  The `:444` finding is the same lesson in miniature. Three sessions have now read the §7
+  passage and none noticed the §10 table restating it, because the table is where a reader
+  goes to look something up rather than to check it. A supersession that fixed the body and
+  left the row would have been recorded as complete and would have left the false sentence
+  in the more-read location.
+  .
+  Filed Tier A because everything here is drafting and measurement: no artifact moves, no
+  frozen path is touched, and the one act with consequence is deliberately withheld pending
+  the owner's word. Flagged `governance-paths` so it surfaces in the exception-only digest,
+  since its most useful content is a question and a question nobody reads is a deferral by
+  another name — which is precisely how this item reached its third boundary.
+reversibility: >-
+  Fully reversible: two proposal documents and this record, none of them enforcing anything.
+  The withheld act — writing the corrected prose as a new file and appending its manifest
+  row — is itself reversible in the ordinary sense (the file can be deleted, the row
+  removed) and is only "one-way" in the sense that the decision record documenting it cannot
+  be un-recorded, which D0045 makes true of every record in the repository and therefore
+  cannot be what distinguishes a door.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/SUPERSESSIONS.md
+    strength: documentary
+    detail: >-
+      Ruling (3)'s deliverable, carrying the surviving corrected text, the three refuted
+      claims kept visible on D0063's precedent, and the owner-key measurement.
+  - type: file
+    target: docs/specs/m3.md
+    strength: documentary
+    detail: >-
+      The subject. Frozen at `m3-laws-freeze` and byte-intact — verified by `sha256sum -c`
+      against `MANIFEST.sha256:76` while drafting, so the record attests the file was not
+      touched. Documentary and must remain so: the correction lands as a NEW file, never as
+      an edit to this one.
+  - type: file
+    target: decisions/0171-the-m3-conferral-rulings.yaml
+    strength: documentary
+    detail: >-
+      The ruling this record corrects without amending (D0045). Its sentence "waits for the
+      signature rather than being executed under the standing delegation" is why the
+      supersession is drafted and withheld rather than landed.
+links: ["D0201", "D0171", "D0128", "D0161", "D0194", "D0045", "D0049", "D0197", "D0174"]
