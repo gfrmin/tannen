@@ -1,0 +1,97 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0205
+title: "required_tags derived from the frozen specs, drafted with its poison fixture — the enumeration that lags every boundary, and the sitting step that exists to patch it"
+tier: A
+date: "2026-09-09"
+risk_flags: ["governance-paths"]
+decision: >-
+  DRAFTED, NOT INSTALLED, at
+  `docs/proposals/2026-09-04-m3-boundary-sitting/TAG-ROLES-DERIVED.md`. This is D0202's one
+  substantive recommendation and D0095 half (2), whose own record says it "is applied by
+  NOTHING, which is why step 11 of every sitting still adds that boundary's tags by hand".
+  Drafted now, before the M3 sitting, because both targets are frozen AND custody-set: if it
+  is not on the table when the owner sits, step 11 survives another whole boundary.
+  .
+  THE RULE. `brief-freeze` always; `<m>-laws-freeze` for every milestone with a
+  `docs/specs/<m>.md`; `<m>-close` for every milestone whose SUCCESSOR has a spec — because
+  a successor's Session A cannot precede its predecessor's boundary sitting, which is BRIEF
+  §8's own ordering rather than a new constraint.
+  .
+  THE POSITIVE CONTROL, WHICH IS WHY THIS IS A RULE AND NOT A GUESS: run against the tree
+  today the derivation produces EXACTLY the eight tags the hand-maintained list contains —
+  `brief-freeze`, four `mN-laws-freeze` for m0-m3, and three `mN-close` for m0-m2 — with no
+  drift in either direction, and all eight verified present in the tree. The enumeration was
+  already trying to express this rule; it simply could not extend itself. Under the
+  derivation, when `docs/specs/m4.md` lands at M4 Session A, `m3-close` becomes required
+  automatically. That is the lag closed by construction rather than by somebody remembering
+  under the owner's key.
+  .
+  WHY IT IS NOT CIRCULAR, which is the whole design question. The obvious wrong derivation —
+  "require the tags that exist" — is vacuous, since detecting a DELETED tag is the entire
+  job. This rule reads `docs/specs/*.md`, and every one of those files is frozen in
+  `MANIFEST.sha256` (:2, :45, :66, :76). Deleting a spec to shed a requirement reddens
+  `check_manifest` first, on a missing frozen path, IN A DIFFERENT GUARD — so no single edit
+  silences both. Adding a fake `docs/specs/m9.md` requires a tag that cannot exist and fails
+  loudly. The rule errs toward requiring MORE, never fewer, which is the correct direction
+  for a floor.
+  .
+  THE ENUMERATION IS REFUSED RATHER THAN MERELY UNUSED. `required_tags` stays in
+  `tag-roles.yaml` as an empty key, and a non-empty value is a red gate naming the entries
+  to remove. Deleting the key outright would let a future editor re-add a hand list and get
+  a green run — the regression would be invisible, which is the shape D0095 has now lagged
+  at three consecutive boundaries.
+  .
+  WHAT IT BUYS: deleting step 11 from the M4 driver removes one `make verify` leg, one round
+  of pre-commit hooks, one commit, and THE SECOND OF THE TWO OWNER CUSTODY SIGNATURES —
+  measured against the M3 rehearsal, ~30 minutes and one signature moment per boundary, for
+  ever. WHAT IT COSTS, stated because D0199 is the standing lesson: it edits a custody-set
+  guard, and a guard nobody has watched failing is a silent floor failure. It must land WITH
+  its poison fixture — a tree carrying specs m0-m4 and every tag except `m3-close`, which
+  the guard must fail on, naming `m3-close` and not merely returning non-zero. Both halves
+  are owner work at the same sitting: `tests/poison/` is BRIEF §9.1 author-key territory.
+  .
+  AND STEP 11 IS NOT DELETED FROM THIS SITTING'S DRIVER. This boundary still needs it:
+  `m3-close` does not exist until step 10 mints it, and the derivation does not require
+  `m3-close` until `docs/specs/m4.md` exists. The deletion belongs to the M4 driver, which
+  is also where D0201 ruling (4)'s receipt reordering lands — one rework of the ceremony,
+  not two.
+rationale: >-
+  Drafted rather than landed because both targets are frozen and custody-set —
+  `governance/tag-roles.yaml` and `scripts/check_tag_signers.py` each appear in
+  `MANIFEST.sha256` and in `governance/custody.sha256`, verified by exact-path match rather
+  than substring grep (the D0191 error). Unlike D0204's prose supersession, the residue here
+  is genuinely the owner's: the guard cannot be superseded forward, because a second copy of
+  a guard is two guards.
+  .
+  The watched-failing-first order is written into the draft rather than left to the sitting,
+  and it starts with a NEGATIVE control that must PASS: run the guard against the fixture
+  BEFORE installing the derivation, and it reports green, because the hand list does not
+  contain `m3-close` and so nothing is missing. That passing run is the defect demonstrated
+  rather than argued, and it is the step D0199 was written because someone skipped.
+reversibility: >-
+  Fully reversible today: one proposal document and this record, neither enforcing anything.
+  Once installed it is reversible too — restore the enumeration, drop the fixture — but that
+  costs a sitting, because both files are custody-set and their hashes move.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/TAG-ROLES-DERIVED.md
+    strength: documentary
+    detail: >-
+      The draft: the rule, the eight-for-eight positive control, the non-circularity
+      argument, both hunks, the fixture and the order it is watched failing in.
+  - type: file
+    target: governance/tag-roles.yaml
+    strength: documentary
+    detail: >-
+      The enumeration to be retired, at :46-54. Documentary and must stay so until the
+      sitting — the file is frozen and custody-set, so no builder act may touch it.
+  - type: file
+    target: scripts/check_tag_signers.py
+    strength: documentary
+    detail: >-
+      The reader, at :151. Frozen and custody-set. A guard cannot be superseded forward the
+      way prose can (D0204): two copies of a guard are two guards, so this one waits for the
+      key.
+links: ["D0202", "D0201", "D0095", "D0171", "D0199", "D0191", "D0204"]

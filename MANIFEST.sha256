@@ -86,6 +86,8 @@ e701cdeff31c8bb4202da7f0dbf67d00c2f25216d23f3aeee6d3d3cf01d61f5a  tests/laws/m3/
 b671ca777ae85cdd73bf60da6f36221564a3dd32c7c1b53048005adcf7a77c1e  tests/laws/m3/test_l3_executor.py
 aa547ae13435f3fd641697a56b18f5053269080ebf477d79909df852df2fb425  tests/laws/m3/test_l3_differential.py
 
+07bd6e858ed7b0aa00ead99edb5128969f4a2b299ac870ec364d7cbca7681491  docs/specs/m3-corrections.md
+
 # --- supersession notes (D0106 ruling 2; D0128) ------------------------------
 # tests/laws/m1/test_l1_rel.py
 #   RETIRED, ONE node: test_l1_5_mixing_semirings_is_refused_by_name.
@@ -101,6 +103,19 @@ aa547ae13435f3fd641697a56b18f5053269080ebf477d79909df852df2fb425  tests/laws/m3/
 #   (The Session A spelling of this note named `governance/superseded-laws.yaml`, a
 #   file that has never existed; the registry has been `governance/laws.yaml`
 #   throughout. Corrected here rather than left to mislead — D0135.)
+#
+# docs/specs/m3.md
+#   SUPERSEDED FORWARD, FOUR SENTENCES, no node retired. The frozen file is retained
+#   and unedited; docs/specs/m3-corrections.md carries the claims at their true
+#   strength. §7's input triple names three inputs where a first tick has two and
+#   hides a binary node's operand-order collision (RT-M3-03); §7's "pure function of
+#   those inputs" omitted the module-level registry (RT-M3-01, narrowed by D0197);
+#   §7's "replaying a stream hits traces" was ruled false by the owner (D0171 ruling
+#   1) because `advance` consults the trace and by default writes none; and §10's
+#   L3.15 row repeats that last claim verbatim, which is the D0049 shape and was
+#   found only by attacking the correction rather than reading it (D0203).
+#   NOT the laws.yaml machinery: prose has no node to retire, and D0161 holds that
+#   running the node-retirement half against prose is a category error. Record: D0204.
 6a41270900c17ec2943157b80e21108fa83ac61bffebff41c55eb6cc37145fe4  governance/tier-c.yaml
 3b7eca1046095151e2cd58ff665e4a7e96f9ceb7ddb53e938986417a51196c7c  governance/schemas/evidence-record.schema.json
 46741f08a678df9a6062c153750ef6f1eb2665b0227fe06f0c62c08f25d720e7  tests/poison/oracle-shadow-model/bootstrap_shadow_model.py
