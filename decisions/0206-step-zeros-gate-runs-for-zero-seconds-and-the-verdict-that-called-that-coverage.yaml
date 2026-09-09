@@ -1,0 +1,103 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0206
+title: "Step 0's precondition gate runs for zero seconds, and three committed claims said otherwise — the correction, and the proxy detector written while making it"
+tier: A
+date: "2026-09-09"
+risk_flags: ["governance-paths"]
+decision: >-
+  CORRECTION, per D0045 as a new record rather than an edit. D0200 and the M3 proposal
+  README each claimed the `--from head` rehearsal ran THREE `make verify` legs against the
+  worktree run's two, and that step 0's precondition gate was "finally exercised". BOTH ARE
+  FALSE. Measured from the kept stamped transcript: step 0's gate announces "about 35
+  minutes" and runs from ELAPSED SECOND 0 TO ELAPSED SECOND 0. The only two real gates are
+  at 826s (step 9) and 3577s (step 11).
+  .
+  WHY IT IS ZERO, WHICH THE REPOSITORY ALREADY KNEW. `scripts/check_manifest.py` is the
+  FIRST recipe line of the `verify` target. The `cp` that installs the milestone's driver is
+  custody drift on a custody-set member, so `check_manifest` fails, `make` stops, and
+  `check_decisions`, the pytest suite, the laws report and `lint-imports` never run. This is
+  recorded at `docs/SITTING.md:36-38` and was ruled at D0151: "The precondition can be
+  established before the copy or not at all." A later session re-derived the opposite and
+  wrote it into a README twice and a decision record once, and was corrected only by the
+  transcript.
+  .
+  THE ARITHMETIC WAS IN HAND AND WENT UNREAD. 146m36s against 144m43s is a difference of
+  about two minutes. An additional `make verify` leg costs eighteen. The claim of a third
+  leg was inconsistent with a number quoted in the same paragraph, and the inconsistency
+  survived a commit and a push.
+  .
+  THE VERDICT LINE WAS ITSELF A PROXY, which is the finding worth keeping. The check added
+  in D0200 to close the RESUMED coverage gap printed `step 0 ran its precondition gate
+  (RESUMED=0)`. That is TRUE — the code path is entered, and entering it is how the tenth
+  defect surfaced — and it READS as "the gate was exercised", which is false. A guard
+  reporting that a step was REACHED, in the vocabulary of a guard reporting that a step
+  MEASURED SOMETHING, is the same defect this milestone has now recorded twelve times, this
+  time inside the fix written for it. The harness now measures instead: it reports the
+  gate's elapsed seconds and whether any pytest summary appeared before step 1, and says in
+  terms that it established nothing when none did.
+  .
+  AND THE DETECTOR WRITTEN TO MEASURE THAT WAS ITSELF A PROXY, caught only by running the
+  control. Its first spelling counted lines matching `/ passed/` between the gate
+  announcement and step 1, and returned 1 for a gate that ran no tests: it had matched the
+  TITLE OF D0117 in the Tier-C queue step 0 prints. Anchored to `/^[0-9]+ passed/` it
+  returns 0, against the two real summaries later in the same transcript. THREE detectors in
+  one session matched a proxy rather than the state — the `check_laws` fixture rename, the
+  step-0 gate verdict, and this counter — and all three were caught by running a positive
+  control rather than by reading. The rule earns restating: a detector is not evidence until
+  it has been run against a case whose answer is known.
+  .
+  WHAT `--from head` DID AND DID NOT BUY, stated so the certification is not overclaimed. It
+  DID enter step 0's code path, which no prior run had, and that is how the step-0
+  `check_manifest` drift surfaced (D0200's tenth defect). It DID NOT verify anything there.
+  The RESUMED coverage gap is therefore closed in the sense that the branch is executed and
+  OPEN in the sense that the precondition it exists to establish is not established by
+  running the driver at all — it is established by `make verify` BEFORE the `cp`, or not at
+  all. Five rehearsal paths remain green and the driver remains READY; what changes is the
+  claim about what the fifth path proved.
+  .
+  ALSO CORRECTED: the `--from head` run's gates report 840 passed, 1 skipped, 1 xfailed —
+  not the 841 recorded for the earlier worktree run. The difference is the `norecursedirs`
+  exclusion of the poison payload landing between the two runs, which is that fix appearing
+  in a verdict rather than being argued for.
+rationale: >-
+  Recorded rather than quietly fixed because the false claim was committed and pushed, and
+  because a repository whose stated purpose is provenance cannot correct its own record by
+  overwriting it. D0045 forbids the edit; this is the record.
+  .
+  Kept blunt about the mechanism of the error because the mechanism is the reusable part.
+  The driver's own line — "green except the custody set, which is this sitting's step 7 —
+  continuing" — is true, and reads like something stronger: it means no unexpected failure
+  appeared in a run that got three lines in. `docs/SITTING.md` says exactly that, in those
+  words, and this session did not read it before writing the opposite. The repository had
+  the answer; the session preferred its own inference. That is worth a record even though
+  the code change is six lines.
+  .
+  Filed Tier A: it corrects prose and a harness verdict, touches no frozen or custody-set
+  path, and enacts nothing. Flagged `governance-paths` so it reaches the exception-only
+  digest, since a correction nobody reads leaves the wrong claim standing.
+reversibility: >-
+  Fully reversible; nothing is signed and no frozen byte moves. The corrected claims are
+  measurements, and the measurements are reproducible from the kept transcript at
+  `/tmp/tannen-rehearsal-JrwxXx/transcript.stamped` for as long as that clone survives, and
+  from any future `--from head` run thereafter.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: enforced
+    detail: >-
+      The verdict now measures step 0's gate — elapsed seconds, and whether any anchored
+      pytest summary preceded step 1 — and states that it established nothing when none did.
+      Enforced because the harness runs this on every rehearsal and prints the result; the
+      anchored counter was proved against the kept transcript, returning 0 where the
+      unanchored spelling returned 1.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/README.md
+    strength: documentary
+    detail: >-
+      Carries the correction where a reader of the certification will meet it: the banner's
+      leg count, the measured paragraph, and a new section stating that step 0's gate
+      establishes nothing and that the precondition is established before the `cp` or not at
+      all.
+links: ["D0200", "D0201", "D0151", "D0045", "D0199", "D0117"]

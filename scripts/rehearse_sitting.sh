@@ -461,7 +461,30 @@ if present 'so this is a RESUMED sitting' "$LOG"; then
     note "NOTE: step 0 took the RESUMED path, so its precondition gate was NOT exercised."
     note "      Only --from head starts from a clean tree and runs it."
 else
-    note "step 0 ran its precondition gate (RESUMED=0)"
+    # AND "IT RAN" IS NOT "IT MEASURED SOMETHING". Step 0's gate is announced as 35 minutes and
+    # completes in zero seconds: check_manifest.py is the FIRST recipe line of the verify target,
+    # the cp that installs the driver is custody drift on a custody-set member, so make stops
+    # there and check_decisions, the pytest suite, the laws report and lint-imports never run
+    # (D0151; docs/SITTING.md:36-38). Reporting only "the gate ran" let this harness's own author
+    # read coverage into a three-line run and write it into the README twice. Measure it.
+    GATE0_SECS=$(awk -F'\t' '/\[waiting\] the full gate:/ && !armed { start = $1; armed = 1; next }
+                              armed && /== Step 1 / { print $1 - start; exit }' "$STAMPED" 2>/dev/null)
+    # ANCHORED, and that is not style: a bare / passed/ matched D0117's TITLE in the Tier-C
+    # queue step 0 prints, and reported the empty gate as having run a suite. Third proxy-
+    # matching detector in one session; caught only by running the control.
+    GATE0_TESTS=$(awk '/\[waiting\] the full gate:/ { armed = 1 }
+                       armed && /== Step 1 / { exit }
+                       armed && /^[0-9]+ passed/ { n++ }
+                       END { print n + 0 }' "$LOG")
+    note "step 0 entered its precondition gate (RESUMED=0) and it ran for ${GATE0_SECS:-?}s"
+    if [ "${GATE0_TESTS:-0}" -eq 0 ]; then
+        note "      IT ESTABLISHED NOTHING — no pytest summary before step 1. check_manifest is"
+        note "      verify's first recipe line and the driver cp is custody drift, so make stopped"
+        note "      before the suite, check_decisions, the laws report and lint-imports. The"
+        note "      precondition is established BEFORE the cp or not at all (docs/SITTING.md:23)."
+    else
+        note "      and it reached the suite, so the precondition was genuinely established here."
+    fi
 fi
 check "the real repo's HEAD is untouched"                equal "$ROOT_HEAD_BEFORE" "$(git -C "$ROOT" rev-parse HEAD)"
 check "the real repo's working tree is untouched"        equal "$ROOT_STATUS_BEFORE" "$(root_state)"

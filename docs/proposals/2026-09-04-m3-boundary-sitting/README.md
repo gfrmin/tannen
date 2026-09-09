@@ -89,9 +89,10 @@ about this repository. Recorded as D0200.
 > that finally executes step 0's precondition gate (2026-09-09).**
 > Runs are not coverage (`docs/SITTING.md`): only a green run clears the driver. The two full
 > rows ran with **no** `TANNEN_SITTING_FAST`, so every `make verify` leg and both rounds of
-> commit hooks executed — two legs from the worktree, three from head, where step 0's
-> precondition gate is the extra one. The three FAST rows say nothing about those legs and
-> are kept because each one found a distinct defect.
+> commit hooks executed — **two** legs on every path, at steps 9 and 11. An earlier draft of
+> this banner said the `--from head` row runs three; it does not, and the correction matters —
+> see "step 0's gate establishes nothing" below. The three FAST rows say nothing about those
+> legs and are kept because each one found a distinct defect.
 >
 > | Path | Verdict | Found |
 > |---|---|---|
@@ -107,9 +108,12 @@ about this repository. Recorded as D0200.
 > `[TANNEN_SITTING_FAST] NOT RUN:` lines anywhere in the transcript; `m3-close` minted at step
 > 10 and verified as `owner@tannen`; custody re-signed; the receipt taken before the tag.
 > **The sitting makes TWO commits**, step 9's and step 11's, so budget two rounds of hooks.
-> The `--from head` run costs **three** `make verify` legs rather than two, because step 0's
-> precondition gate is no longer skipped — 146m36s against 144m43s, for one extra gate and
-> two more verdict checks.
+> The `--from head` run costs 146m36s against the worktree run's 144m43s. That ~2 minutes is
+> **not** an extra gate — it is step 0's aborted gate plus two more verdict checks. Measured
+> from the stamped transcript: step 0's gate runs from elapsed second 0 to elapsed second 0.
+> Its own two real gates ran **840 passed, 1 skipped, 1 xfailed** in 19m42s (step 9) and
+> 18m25s (step 11) — 840 rather than the worktree run's 841 because `norecursedirs` now
+> excludes the poison payload. That fix is visible in a verdict rather than argued for.
 >
 > Expected non-fatal lines, so a real anomaly stays distinguishable. On either decline path the
 > driver prints `sitting: STOP — the tree is not clean…`, which is step 10's D0051 guard
@@ -249,6 +253,26 @@ one layer up — the absence of a line is not evidence of absence.
 Steps 1, 2, 3, 4, 4b–4j, 5b and 8b are **already-applied no-ops** at M3, verified by evaluating
 each step's own detector against the tree. They are kept, not deleted: the loop is idempotent,
 and skipping by detection is how the sitting stays safe to re-run.
+
+## Step 0's gate establishes nothing, and the verdict must not imply otherwise
+
+`docs/SITTING.md:36-38` already measured this and D0151 recorded it; this section exists
+because a later session (this one) re-derived the opposite and had to be corrected by the
+transcript. **`check_manifest.py` is the FIRST recipe line of the `verify` target.** The `cp`
+that installs the driver is custody drift on a custody-set member, so `check_manifest` fails,
+`make` stops, and `check_decisions`, the pytest suite, the laws report and `lint-imports`
+never run. Measured in the kept `--from head` transcript: the gate announces "about 35
+minutes" and runs from **elapsed second 0 to elapsed second 0**. The two real gates are at
+826s (step 9) and 3577s (step 11).
+
+So `--from head` closes the RESUMED coverage gap in the sense that step 0's code path is
+*entered* — which is how the tenth defect surfaced — and does **not** close it in the sense
+that anything is verified there. The driver's own line, `green except the custody set, which
+is this sitting's step 7 — continuing`, is true and reads like something stronger: it means no
+unexpected failure appeared in a run that got three lines in.
+
+**The precondition is established before the `cp` or not at all** — which is why
+`docs/SITTING.md:23` puts `make verify` first, and why step 0's offer does not replace it.
 
 ## The floor audit, and what it refused to change
 
