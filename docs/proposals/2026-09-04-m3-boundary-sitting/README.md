@@ -85,15 +85,17 @@ about this repository. Recorded as D0200.
 
 # `boundary_sitting.sh` — the M3 driver
 
-> **READY — all four paths green, including the full non-FAST gate (2026-09-09).**
-> Runs are not coverage (`docs/SITTING.md`): only a green run clears the driver. The full
-> accept row ran with **no** `TANNEN_SITTING_FAST`, so both `make verify` legs and both rounds
+> **READY — all five paths green, including the full non-FAST gate and the `--from head` run
+> that finally executes step 0's precondition gate (2026-09-09).**
+> Runs are not coverage (`docs/SITTING.md`): only a green run clears the driver. The two full
+> rows ran with **no** `TANNEN_SITTING_FAST`, so both `make verify` legs and both rounds
 > of commit hooks executed. The three FAST rows say nothing about those legs and are kept
 > because each one found a distinct defect.
 >
 > | Path | Verdict | Found |
 > |---|---|---|
 > | **full accept, no FAST** | **18/18 ok, RC=0, 144m43s** | step 5's guaranteed `check_decisions` failure reported as an anomaly; the poison payload collected by the real suite |
+> | **`--from head`, full accept** | **20/20 ok, RC=0, 146m36s** | step 0's gate reports `check_manifest: FAIL` — the driver's own custody drift; and the harness rehearses the *M2* driver unless `TANNEN_REHEARSE_DRIVER` is set |
 > | FAST accept | 19/19 ok, RC=0 | — |
 > | FAST accept (first pass) | 1 FAIL | D0199's binding named the pre-move fixture path |
 > | `--abort-at 19 --abort-step 9` | 10/10 ok, RC=0 | `die()` told a dirty tree it was clean |
@@ -104,6 +106,9 @@ about this repository. Recorded as D0200.
 > `[TANNEN_SITTING_FAST] NOT RUN:` lines anywhere in the transcript; `m3-close` minted at step
 > 10 and verified as `owner@tannen`; custody re-signed; the receipt taken before the tag.
 > **The sitting makes TWO commits**, step 9's and step 11's, so budget two rounds of hooks.
+> The `--from head` run costs **three** `make verify` legs rather than two, because step 0's
+> precondition gate is no longer skipped — 146m36s against 144m43s, for one extra gate and
+> two more verdict checks.
 >
 > Expected non-fatal lines, so a real anomaly stays distinguishable. On either decline path the
 > driver prints `sitting: STOP — the tree is not clean…`, which is step 10's D0051 guard
@@ -114,14 +119,47 @@ about this repository. Recorded as D0200.
 > the harness asserts the block carries those three known violations and nothing else, and
 > suppresses it only while that holds.
 >
-> **A COVERAGE GAP THESE RUNS DO NOT CLOSE, stated because a green run that skipped a step is
-> not the same as one that ran it.** Every run above executes in `--from worktree` mode, which
+> On a `--from head` run there is a second such line, and only there: step 0's precondition
+> gate prints `check_manifest: FAIL (1 violation(s))` naming `custody drift:
+> scripts/boundary_sitting.sh`. The driver under test has just been copied over a custody-set
+> member and is not re-signed until step 7, so the gate is correct and the driver answers
+> `green except the custody set, which is this sitting's step 7 — continuing`. **The owner's
+> own `cp` produces exactly this**, so it is what a real sitting shows. Same discipline: the
+> harness asserts that drift is the *only* violation in the block and suppresses nothing else
+> — a frozen-path violation there is a stop, not a note. Both tolerances now also say when
+> they were **not** exercised, so a run that never reached the gate cannot report the same
+> green as one that inspected a real block and found it clean.
+>
+> **THE COVERAGE GAP THE FIRST FOUR RUNS LEFT, AND HOW IT CLOSED — stated because a green run
+> that skipped a step is not the same as one that ran it.** The first four runs above execute
+> in `--from worktree` mode, which
 > applies the working tree as a patch — a tracked modification — so step 0's clause (a) sets
 > `RESUMED=1` on every one of them and the precondition gate is **skipped, not exercised**.
 > Measured in each kept clone: the transcript carries "so this is a RESUMED sitting", never
 > the gate offer. Closing it needs `--from head`, which clones a committed repo; head mode
 > does not copy untracked files, so it can only run once this work is committed. That is also
 > the order the owner will use, since a sitting starts from a committed tree.
+>
+> **`--from head` needs `TANNEN_REHEARSE_DRIVER`, and silently tests the wrong file without
+> it.** In worktree mode the harness picks up the working tree's driver; in head mode it uses
+> the *committed* `scripts/boundary_sitting.sh`, which is still byte-identical to the M2 copy.
+> Measured: the first `--from head` attempt printed `driver under test:
+> scripts/boundary_sitting.sh, unmodified since HEAD` and was rehearsing the M2 driver. The
+> harness invokes it as `boundary_sitting.sh m3`, so `MILESTONE` is correct and only the
+> `$PROPOSALS_M2` paths are wrong — which is D0152 item 6 exactly, and it could well have run
+> green. The invocation that closes the gap is:
+>
+> ```
+> TANNEN_REHEARSE_DRIVER=$PWD/docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh \
+>     scripts/rehearse_sitting.sh --from head --answers y --keep
+> ```
+>
+> Step 0's clause (a) filters `scripts/boundary_sitting.sh` out of its own dirty check for this
+> reason, so the harness copying the driver in does not itself read as a resumed sitting.
+>
+> **Closed 2026-09-09** on `45f4dfe`: `RESUMED=0`, the gate ran, and running it is what
+> surfaced the `check_manifest` line described above — a line no rehearsal had ever printed,
+> because no rehearsal had ever reached the gate that prints it.
 
 The committed `scripts/boundary_sitting.sh` is byte-identical to the M2 sitting's copy
 (blob `ff043f9`, and `governance/custody.sha256:17` matches its bytes). The owner copies
@@ -171,6 +209,8 @@ reasoned about.
 | The verdict prints the prompt map | So the next run's `--abort-at N` is chosen from a measurement. |
 | The gate check is FAST-aware | Under `TANNEN_SITTING_FAST` the verdict would otherwise spend forty minutes proving a gate green that the driver had just skipped. |
 | **Step 5's guaranteed `check_decisions` failure is named, not tolerated** | Step 5 installs a poison fixture, so the custody floor is red until step 7 re-signs it and `DECISIONS.md` is stale until step 9 — the failure is a certainty, and it was being reported in the section whose goal is to be empty. Adding the line to the tolerance list would have been the wrong fix: it is the **same line D0199's binding defect surfaced on**, so a blanket skip would have hidden the only defect these rehearsals have caught. The verdict asserts the block carries the three known violations and nothing else, and suppresses the line only while that holds. Verified against the kept transcript and against a doctored copy carrying rehearsal 1's actual D0199 violation — named, red, and left visible. |
+| **Step 0's `check_manifest` failure is named, not tolerated** | Only a `--from head` run reaches step 0's gate, so this line first appeared on 2026-09-09 and landed in the section whose goal is to be empty. It is the harness's own doing — the driver under test is copied over `scripts/boundary_sitting.sh`, a custody-set member, and step 7 is where that gets re-signed — and the owner's `cp` does the same thing, so it is faithful rather than an artifact. Tolerated only while the custody drift on that one path is the block's *only* violation; an injected `frozen path BRIEF.md does not match its manifest hash` was watched being caught, named, and disarming the suppression. |
+| **Neither tolerance may pass vacuously** | Both the step-5 and step-0 blocks above were written to pass when their failure is absent — so a run that never reached the gate reported the same green as one that examined a real block. That is the sixth guard in this driver and harness to measure a proxy instead of the state. Each now counts its input first and prints which case it is in. |
 | **The verdict says which path step 0 took** | Which path step 0 took is a fact about what the run *covered*. In `--from worktree` mode the tree is applied as a patch, so `RESUMED=1` and the precondition gate is skipped on every worktree run ever made; a verdict silent about that lets a green run imply coverage it does not have. It now says so, or confirms `RESUMED=0`. |
 
 ## Which steps a rehearsal actually exercises

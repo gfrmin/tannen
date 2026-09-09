@@ -479,15 +479,54 @@ FAST_SKIPS=$(grep -c 'TANNEN_SITTING_FAST' "$LOG" || true)
 CD_MID_KNOWN='^  - decisions/0063-[^:]*\.yaml: binding does not resolve — pytest node fails: tests/test_governance_scripts\.py$'
 CD_MID_KNOWN="$CD_MID_KNOWN"'|^  - decisions/0177-[^:]*\.yaml: binding does not resolve — pytest node fails: tests/test_governance_scripts\.py::test_check_passes_on_real_tree$'
 CD_MID_KNOWN="$CD_MID_KNOWN"'|^  - DECISIONS\.md is stale'
-CD_MID_EXTRA=$(awk '
-      /== Step 7/              { exit }
-      /^check_decisions: FAIL/ { inblock = 1; next }
-      inblock && /^  - /       { print; next }
-      inblock                  { inblock = 0 }' "$LOG" | grep -vE "$CD_MID_KNOWN" || true)
-CD_MID_OK=0; [ -z "$CD_MID_EXTRA" ] && CD_MID_OK=1
-check "the pre-step-7 check_decisions failure is only the known step-5 transient" \
-    test -z "$CD_MID_EXTRA"
-[ -z "$CD_MID_EXTRA" ] || printf '%s\n' "$CD_MID_EXTRA" | sed 's/^  - /     /'
+
+# A TOLERANCE THAT WAS NEVER EXERCISED IS NOT EVIDENCE. Both blocks below pass trivially when
+# the failure they tolerate did not occur at all — and a run that skipped the gate entirely
+# then reports the same green as a run that inspected a real block and found it clean. That is
+# the sixth time in this driver and its harness that a guard has measured a proxy instead of
+# the state, so each one counts its input first and says which case it is in.
+pre7_fails() {   # <FAIL-line regex> -> how many such lines appear before step 7
+    awk -v pat="$1" '/== Step 7/ { exit } $0 ~ pat { n++ } END { print n + 0 }' "$LOG"
+}
+pre7_unknown() { # <FAIL-line regex> <known-detail regex> -> detail lines outside the known set
+    awk -v pat="$1" '
+      /== Step 7/        { exit }
+      $0 ~ pat           { inblock = 1; next }
+      inblock && /^  - / { print; next }
+      inblock            { inblock = 0 }' "$LOG" | grep -vE "$2" || true
+}
+
+CD_MID_OK=0
+if [ "$(pre7_fails '^check_decisions: FAIL')" -gt 0 ]; then
+    CD_MID_EXTRA=$(pre7_unknown '^check_decisions: FAIL' "$CD_MID_KNOWN")
+    [ -z "$CD_MID_EXTRA" ] && CD_MID_OK=1
+    check "the pre-step-7 check_decisions failure is only the known step-5 transient" \
+        test -z "$CD_MID_EXTRA"
+    [ -z "$CD_MID_EXTRA" ] || printf '%s\n' "$CD_MID_EXTRA" | sed 's/^  - /     /'
+else
+    note "NOTE: no check_decisions failure before step 7, so that tolerance was not exercised."
+fi
+
+# STEP 0's PRECONDITION GATE RUNS check_manifest AGAINST A TREE THE HARNESS HAS JUST EDITED:
+# the driver under test is copied over scripts/boundary_sitting.sh, a custody-set member, and
+# is deliberately NOT re-signed — step 7 is where that happens. So the gate reports custody
+# drift on exactly that path, and the driver answers "green except the custody set, which is
+# this sitting's step 7 — continuing". The owner's real sequence is the same `cp`, so this is
+# what a real sitting shows too. It had never been seen before 2026-09-09 because only a
+# --from head run reaches this gate: everywhere else RESUMED=1 skips it. Tolerate the one
+# path, and nothing else — a frozen-path violation here is a stop, not a note.
+CM_PRE_KNOWN='^  - custody drift: scripts/boundary_sitting\.sh changed since the custody file was written\.'
+CM_PRE_OK=0
+if [ "$(pre7_fails '^check_manifest: FAIL')" -gt 0 ]; then
+    CM_PRE_EXTRA=$(pre7_unknown '^check_manifest: FAIL' "$CM_PRE_KNOWN")
+    [ -z "$CM_PRE_EXTRA" ] && CM_PRE_OK=1
+    check "the pre-step-7 check_manifest failure is only the driver's own custody drift" \
+        test -z "$CM_PRE_EXTRA"
+    [ -z "$CM_PRE_EXTRA" ] || printf '%s\n' "$CM_PRE_EXTRA" | sed 's/^  - /     /'
+else
+    note "NOTE: step 0's gate reported no check_manifest failure, so that tolerance was not"
+    note "      exercised. Only --from head reaches that gate (RESUMED=0)."
+fi
 
 if [ "$ABORT_AT" -gt 0 ]; then
     # ------------------------------------------------- the single-decline path
@@ -620,10 +659,11 @@ say "Unexpected failure lines in the transcript (empty is the goal)"
 # every prompt, and either way step 10's refusal is the run working. Only an accept run has
 # no business printing one, and there the check above catches it.
 DECLINES=0; { [ "$ABORT_AT" -gt 0 ] || [ "$ANSWER" = n ]; } && DECLINES=1
-awk -v declined="$DECLINES" -v cdok="$CD_MID_OK" '
+awk -v declined="$DECLINES" -v cdok="$CD_MID_OK" -v cmok="$CM_PRE_OK" '
   declined > 0 && /^sitting: STOP/ { next }
   /== Step 7/ { strict = 1 }
   cdok > 0 && strict == 0 && /^check_decisions: FAIL/ { next }
+  cmok > 0 && strict == 0 && /^check_manifest: FAIL/ { next }
   /fails its poison as required/ { next }
   # The driver SHOWS the owner unified diffs of the custodian and of ci.yml, and those
   # diffs contain the guard source that prints the FAIL lines. Source code being displayed
