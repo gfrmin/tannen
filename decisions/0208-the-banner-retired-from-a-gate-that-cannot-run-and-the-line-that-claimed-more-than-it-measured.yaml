@@ -1,0 +1,100 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0208
+title: "Ruling (2) executed: step 0 stops advertising a gate the cp makes vacuous, reports which guards it reached, and names its mechanism only in the regime that ran it"
+tier: A
+date: "2026-09-10"
+risk_flags: ["governance-paths"]
+decision: >-
+  STEP 0'S ANNOUNCEMENT NOW ASKS THE TREE WHICH CASE IT IS IN. `docs/SITTING.md` installs the
+  driver with a `cp`; `scripts/boundary_sitting.sh` is a custody-set member; `check_manifest.py`
+  is the first recipe line of the `verify` target. So in the ordinary sitting `make` stops at
+  line one and the gate is over in seconds — measured at rehearsal as elapsed second 0 to
+  elapsed second 0, seven lines of output (D0151, D0206). The driver advertised half an hour
+  for it. A new helper, `driver_custody_current()`, compares the driver's own bytes against
+  their row in `governance/custody.sha256` — the whole-line fixed-string match that is the
+  comparison itself rather than a proxy for one — and the banner branches on the answer.
+  .
+  THE CONTINUATION LINE NOW REPORTS WHAT THE RUN REACHED. "Green except the custody set, which
+  is this sitting's step 7 — continuing" is true and reads far stronger; it cost this
+  proposal's README two committed claims that the gate had been exercised. The driver now
+  counts `^check_[a-z_]+: (OK|FAIL)` lines in the captured output and says how many of
+  `verify`'s six guards the run reached, and prints the reassuring form ONLY when an anchored
+  `^[0-9]+ passed` shows the suite actually ran. The anchoring is load-bearing and was already
+  paid for once: an unanchored `/ passed/` matched D0117's TITLE in the Tier-C queue this same
+  step prints, and reported an empty gate as having run a suite. `check_decisions` captures its
+  own pytest output (`scripts/check_decisions.py:211-214`, `capture_output=True`), so the only
+  line of that shape reaching the log is `verify`'s own `uv run pytest -q` — verified by
+  positive control, not assumed.
+  .
+  THERE ARE THREE REGIMES, NOT TWO, AND THE FIRST DRAFT OF THIS FIX COMMITTED THE ERROR IT
+  CORRECTS. Under `TANNEN_SITTING_FAST` the gate is `custodian.sh --check-only` and `make` is
+  never invoked, so the drift explanation — correct for every full run — would have been the
+  correction asserting a mechanism its own run did not exercise. Caught by reading the verdict
+  of the rehearsal that was supposed to prove the fix. Both the driver and the harness now name
+  the mechanism only in the regime that ran it.
+  .
+  THE ORDERING HALF LANDED IN `docs/SITTING.md`, on the owner's instruction that the fix belongs
+  there rather than in the driver. The precondition is now stated prescriptively — established
+  before the `cp` or not at all — with the mechanism, the measurement and what the post-`cp`
+  gate DOES establish: `check_manifest`'s whole verdict, frozen paths, seals, required
+  signatures and `tier-c.yaml` consistency, minus the driver's own expected drift. That is
+  worth having; it is not the precondition, and the driver no longer says it is.
+  .
+  AND THE HARNESS ASSERTS ALL OF IT, WATCHED FAILING FIRST. Two checks were added to
+  `scripts/rehearse_sitting.sh` and run against the UNMODIFIED driver's own `--from head`
+  transcript before the driver was touched: the banner check failed on the real line
+  (`[waiting] the full gate: about about 35 minutes …`) and the continuation check found zero
+  occurrences of the honest text. Then, with the driver patched, both went green on a fast
+  accept run. Two further defects surfaced only by doing it in that order: the harness's
+  existing gate-0 detectors were anchored on the very banner string the driver was about to
+  stop printing — so the fix would have blinded the detector that caught the defect while the
+  verdict stayed green — and the continuation assertion, first gated on the drifted-banner
+  text alone, would have silently stopped asserting anything the moment a fast run took the
+  other branch. Both are re-anchored on all three announcements.
+  .
+  ONE COSMETIC DEFECT FELL OUT OF THE SAME READ. The line said "about about 35 minutes":
+  `waiting "…about $VERIFY_ETA"` over a value that already began "about". It survived five
+  rehearsals and sat in the transcript this session measured the zero-second gate from.
+rationale: >-
+  The ruling is the owner's and its terms are quoted in D0207. What is recorded here is that
+  the fix was made the way the defect was found — by running it and reading the output — rather
+  than by reasoning about the source, because every defect in this neighbourhood has been of
+  the kind that reading cannot see. Three of the four things corrected in this record were
+  found by looking at a verdict, not at a diff.
+  .
+  Filed Tier A: `docs/SITTING.md`, the proposal driver draft and `scripts/rehearse_sitting.sh`
+  are all outside `MANIFEST.sha256` and outside the custody set — checked against both files,
+  not assumed — so this is ordinary builder work needing no key and no door.
+  .
+  The consequence for the sitting is stated in D0207 and is not free: the driver changed, so
+  D0068's precondition resets and the accept path is re-run end to end before the ceremony.
+  Ruling (5) of 2026-09-09 ships the ceremony as rehearsed; that is only true of bytes a
+  rehearsal has actually covered.
+reversibility: >-
+  Fully reversible by one commit. Nothing frozen, signed or custody-held is touched; no guard
+  is removed and the two additions are assertions, which fail closed. The direction of every
+  change is from a claim to a measurement, so the worst case of reverting is the return of a
+  sentence that overstates what its run established.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/SITTING.md
+    strength: documentary
+    detail: >-
+      The ordering half, where the owner put it: the precondition is established before the
+      `cp` or not at all, with the measurement that makes the alternative untenable.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      `driver_custody_current()`, the three-regime announcement, and the continuation line that
+      counts the guards the run reached. Documentary until the owner installs the draft.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      The two verdict checks that hold the driver to the ruling, plus the re-anchoring that
+      keeps the gate-0 detectors pointed at all three announcements instead of at the one
+      string the fix removes.
+links: ["D0207", "D0206", "D0151", "D0117", "D0068", "D0069", "D0199"]

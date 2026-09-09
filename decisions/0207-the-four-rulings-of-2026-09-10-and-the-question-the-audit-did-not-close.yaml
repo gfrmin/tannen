@@ -1,0 +1,104 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0207
+title: "Four rulings of 2026-09-10: D0202 accepted with an addendum, step 0's banner retired, the enumeration rule reaches prose, and 2026-09-09's rulings (2)-(5) stand"
+tier: C
+date: "2026-09-10"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE OWNER RULED FOUR TIMES ON 2026-09-10, ON THE FLOOR AUDIT (D0202) AND ON THE ZERO-SECOND
+  GATE (D0206). Recorded verbatim, in the owner's numbering:
+  .
+  (1) "D0202 accepted; my ruling (1) was wrong and the refutation is on the record. One
+  addendum: state explicitly whether pushing BEFORE the signing window was considered and why
+  it is refused — the audit refuted substitution, not reordering, and the file should say so."
+  .
+  (2) "Step 0: fix in docs/SITTING.md's ordering, not the driver. Reword the driver's
+  continuation line to claim only what it established (no unexpected failure in a run that
+  reached three lines). The 35-minute banner must not appear on a gate that cannot run."
+  .
+  (3) "Extend the enumeration rule to prose: load-bearing counts and ETAs in generated or
+  operator-facing documents are derived at generation time or not stated. The 24/26 and
+  three-legs errors are the same defect class in a medium no guard covers."
+  .
+  (4) "Rulings (2)-(5) of 2026-09-09 stand: split the ceremony by consequence, draft the two
+  deferred Session-A items before M4 Session A, D0148 item 5 ruled as stated, rehearse and
+  proceed with the M3 driver as built."
+  .
+  THE OWNER ALSO ACCEPTED THAT THEIR OWN PRIOR RULING WAS REFUTED, IN TERMS: "an owner's
+  ruling, issued with some confidence, was tested against measurement and returned refuted
+  with receipts." That is recorded here because the protocol's cost is only justified by
+  outcomes of this shape, and a governance layer whose records never show the owner losing an
+  argument is not measuring anything.
+  .
+  WHAT IS QUEUED TO THE SITTING RATHER THAN EXECUTED. Ruling (3) amends a STANDING RULE whose
+  parent — D0171 ruling (3), against guards depending on hand-maintained enumerations — is
+  itself Tier C and still unsigned. A builder cannot widen an unsigned rule, so the amended
+  wording joins D0171 in the boundary queue and is signed with it or not at all. Its
+  consequences are landed now under Tier A (D0209), because the rule's parent is already the
+  repository's practice whether or not its record carries a signature yet.
+  .
+  RULING (4) MAKES ONE SEQUENCING CONSEQUENCE EXPLICIT, and it is the one that costs. Ruling
+  (5) of 2026-09-09 said the ceremony ships as rehearsed; ruling (2) of 2026-09-10 then orders
+  a change to the driver's step 0. Those are compatible only if the change is re-rehearsed:
+  D0068 makes a green rehearsal the precondition for a real sitting, and "the count of runs is
+  not coverage — only a green run clears the driver" (docs/SITTING.md). The driver is
+  therefore re-run end to end on the accept path before the sitting, and the README's banner
+  says which bytes that run covered.
+rationale: >-
+  Filed Tier C and blocked-on-owner in the shape D0171 established and D0201 repeated: the
+  rulings are the owner's, the record carries them verbatim so a later reader compares against
+  the words rather than a paraphrase, and the builder's executions hang off it as separate
+  Tier-A records that can be read for what changed rather than for what was decided.
+  .
+  Ruling (1)'s addendum is NOT executed as an edit to D0202. D0045 makes decision fields
+  immutable and has no exception for an addendum the owner asked for — the correction is a new
+  record (D0210) plus a section in the audit document D0202 binds to, which is the artifact the
+  owner's phrase "the file" can reach without violating the rule. That reading is stated here
+  so the next session does not discover the tension and resolve it the other way.
+  .
+  Ruling (2) is split across two artifacts on the owner's own instruction — the ORDERING fix
+  in `docs/SITTING.md`, the CLAIM fix in the driver — and both are landed under D0208. Ruling
+  (3)'s guard is landed under D0209. Neither needs a key: `docs/SITTING.md`, the proposal
+  driver draft, `scripts/rehearse_sitting.sh` and `tests/test_operating_manual.py` are all
+  outside `MANIFEST.sha256` and outside the custody set, checked rather than assumed.
+reversibility: >-
+  The rulings themselves are the owner's to revise and nothing here is one-way. The queued
+  half — amending D0171 ruling (3) to reach prose — is a constitution-adjacent change and is
+  reversible only in the sense that a later record can narrow it again; it removes no guard and
+  weakens no floor, which is the direction that fails safe. Everything executed under it is
+  ordinary builder work on unfrozen paths and revertible by one commit.
+status: blocked-on-owner
+bindings_count: 4
+bindings:
+  - type: file
+    target: docs/SITTING.md
+    strength: documentary
+    detail: >-
+      Ruling (2)'s ordering half: the precondition is established before the `cp` or not at
+      all, now stated prescriptively rather than described as a defect, and the heading's
+      three-fold-stale ETA replaced under ruling (3).
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Ruling (2)'s claim half: step 0 no longer advertises a gate the `cp` makes vacuous, and
+      its continuation line reports which of `verify`'s six guards the run reached. Documentary
+      because a proposal draft binds nothing until the owner installs it at step 6.
+  - type: pytest
+    target: tests/test_operating_manual.py::test_a_step_count_stated_in_prose_matches_the_driver_it_describes
+    strength: enforced
+    detail: >-
+      Ruling (3), made executable for the one count that actually rotted. Watched failing
+      against the real README with the real historical value (24 against 26) before being
+      watched green, per CONTRIBUTING.md.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      Where ruling (2) is actually enforced against the driver: two verdict checks, that no
+      full-gate ETA is promised for a gate the `cp` makes vacuous and that the continuation
+      line claims only what the run established. Both were watched failing against the
+      unmodified driver's own `--from head` transcript before the driver was touched.
+      Documentary rather than enforced: this harness is not in `make verify` — which is
+      RT-M3-06's point, and the driver's step 4k offers to fix it.
+links: ["D0201", "D0202", "D0206", "D0171", "D0068", "D0045", "D0148", "D0069", "D0151"]

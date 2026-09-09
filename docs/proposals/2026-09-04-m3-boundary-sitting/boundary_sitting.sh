@@ -146,7 +146,26 @@ CURRENT_STEP="(before step 0)"
 # twenty-minute promise concludes it is hung — which is precisely what happened at the M0
 # sitting, twice, before the driver ever reached its first question (D0069). The promise
 # has to be the measurement.
-VERIFY_ETA="about 35 minutes (842 tests; pytest alone is ~19 of them — measured at 33m31s on 2026-09-09)"
+# RULING (3) OF 2026-09-10 reaches this line: "load-bearing counts and ETAs in generated or
+# operator-facing documents are derived at generation time or not stated." This was a
+# hand-maintained count in the most operator-facing text the ceremony has, and the class it
+# belongs to has already rotted twice in this proposal alone — M2's "712 tests" survived into
+# this draft's first cut after the suite reached 842, and the README's step count sat at 24
+# for three steps after they landed. Neither was catchable by any guard: prose is not
+# executable, which is exactly why the rule has to reach it.
+#
+# So the COUNT is derived at the moment it is printed. `pytest --collect-only -q` costs 1.2s
+# measured, against a gate of half an hour, so carrying it by hand was never a saving. The
+# WALL CLOCK cannot be derived without running the thing it predicts, so it is stated as what
+# it is — a dated measurement on named hardware — and never as a bare prediction that reads
+# like one. `set -uo pipefail` is on and `set -e` is not, so a failed collection leaves `n`
+# empty and the caller still gets a sentence.
+verify_eta() {
+    local n
+    n=$(uv run pytest --collect-only -q 2>/dev/null | awk '/tests? collected/ { print $1; exit }')
+    printf '%s tests; last measured end to end at 33m31s on a clean tree (builder machine, 2026-09-09)' \
+        "${n:-an unknown number of}"
+}
 
 # The `return 0` is load-bearing: without it say() returns the status of its last command,
 # and a caller under `set -e` would abort on a step header.
@@ -183,8 +202,28 @@ die()  { printf '\nsitting: STOP — %s\n' "$*" >&2
              # 2026-09-09 by rehearsing exactly that decline: the advice was wrong in the one
              # situation this message exists for. `git status` costs nothing and cannot be
              # wrong about it.
+             # AND THE TREE IS NOT THE WHOLE ACCOUNT OF THIS CEREMONY. Asking git status
+             # instead of the step number was the right correction and an incomplete one: a
+             # minted, owner-signed close tag lives OUTSIDE the working tree. Four die() sites
+             # are downstream of `git tag -s` — the verify-tag check on the next line, and step
+             # 11's projection, custodian and `make verify` failures — and step 10 has just
+             # required the tree to be clean, so all four take the CLEAN branch and tell an
+             # owner "nothing is half-applied" while their own signature stands over a sitting
+             # that failed. The likeliest of the four is step 11's final gate going red at the
+             # close, which is exactly the moment the advice matters. Found 2026-09-10, by
+             # asking what a mid-ceremony push would strand and discovering the ceremony
+             # already strands it. `git rev-parse` costs nothing and cannot be wrong about it.
+             tree_is_the_whole_story=1
+             if git rev-parse -q --verify "refs/tags/$MILESTONE-close" >/dev/null 2>&1; then
+                 tree_is_the_whole_story=0
+                 printf '%s-close IS MINTED and owner-signed. That act is done, re-running does not undo\nit, and this run stopped AFTER the milestone was closed. Read what failed before\ndoing anything else; do not treat this as a place to resume from.\n' "$MILESTONE" >&2
+             fi
              if [ -z "$(git status --porcelain 2>/dev/null)" ]; then
-                 printf 'The tree is CLEAN: this sitting'"'"'s work is committed and nothing is half-applied.\nThis is a coherent place to stop; re-run to resume.\n' >&2
+                 if [ "$tree_is_the_whole_story" = 1 ]; then
+                     printf 'The tree is CLEAN: this sitting'"'"'s work is committed and nothing is half-applied.\nThis is a coherent place to stop; re-run to resume.\n' >&2
+                 else
+                     printf 'The tree is CLEAN, so there is nothing uncommitted to undo — but the tag above is\nnot in the tree, and it is what this run left behind.\n' >&2
+                 fi
              else
                  printf 'The tree is DIRTY: edits are in the WORKING TREE, uncommitted, and the custody floor\nstays RED until step 7 signs it. Re-run to resume, or undo with:\n    git checkout -- . && git clean -fd\n' >&2
              fi
@@ -279,6 +318,15 @@ manifest_row_current() {  # <path> -> true when MANIFEST.sha256's row matches th
     local want
     want=$(sha256sum "$1") || return 1
     grep -qxF "$want" MANIFEST.sha256
+}
+driver_custody_current() {  # true when THIS driver's bytes match the row custody.sha256 was signed over
+    # governance/custody.sha256 rows are `sha256sum` output verbatim, exactly as
+    # MANIFEST.sha256's are, so a whole-line fixed-string match is the comparison itself and
+    # not a proxy for one. This is the question "will step 0's gate get past check_manifest",
+    # asked directly of the state rather than inferred from the step number.
+    local want
+    want=$(sha256sum scripts/boundary_sitting.sh) || return 1
+    grep -qxF "$want" governance/custody.sha256
 }
 readme_row_absent() {     # <fixture> -> true when README.md carries no TABLE ROW for it
     # THE ANCHOR IS THE LEADING PIPE, and that is the whole fix (D0131 item 1). The M1
@@ -416,7 +464,36 @@ if confirm "Run 'make verify' now (recommended — nothing should be signed over
     # rehearsal mappings all have to say "under TANNEN_SITTING_FAST=1". Asking the question
     # and then skipping the work keeps the prompt sequence identical in both modes, so an
     # --abort-at index means the same thing fast or slow.
-    waiting "the full gate: about $VERIFY_ETA. It streams below; nothing to do but watch."
+    # THE BANNER MUST NOT APPEAR ON A GATE THAT CANNOT RUN (owner ruling 2, 2026-09-10).
+    # docs/SITTING.md installs this driver with a cp, `scripts/boundary_sitting.sh` is a
+    # custody-set member, and `check_manifest.py` is the FIRST recipe line of the verify
+    # target — so in the normal case make stops at line one and the gate below is over in
+    # seconds. The previous spelling advertised half an hour for it, and the advertisement
+    # is what let this proposal's own README claim twice that the gate had been exercised
+    # (D0151, D0206). Ask the tree which case this is instead of announcing one of them.
+    #
+    # The old line also read "about about 35 minutes" — `waiting "…about $VERIFY_ETA"` over
+    # a value that already began "about" — through five rehearsals and into the transcript
+    # nobody read that closely. Both halves of that sentence are the same defect.
+    # Three cases, because there are three, and the announcement has to name the one it is
+    # in. Collapsing them is how the old single banner came to describe a run that does not
+    # happen — which is the defect this whole branch exists to correct.
+    if [ "$FAST" = 1 ]; then
+        note "The gate below is the custodian alone: TANNEN_SITTING_FAST is set, so make"
+        note "verify does not run here at all. Rehearsal only — it establishes nothing about"
+        note "the suite, and the harness counts every skip so a fast run cannot read as full."
+    elif driver_custody_current; then
+        waiting "the full gate: $(verify_eta). It streams below; nothing to do but watch."
+    else
+        note "This driver's bytes do not match its row in governance/custody.sha256. That is"
+        note "the cp that installed it, and it is drift on a custody-set member — so"
+        note "check_manifest, verify's FIRST recipe line, fails and make stops there. What"
+        note "runs below is that one guard: frozen paths, seals, required signatures and"
+        note "tier-c consistency, all of it, minus this file's own expected drift. It is NOT"
+        note "the suite, and it is not the precondition — the 'make verify' you ran BEFORE"
+        note "the cp is the only one that could establish that (D0151, D0206; docs/SITTING.md)."
+        waiting "the floor check only — seconds. The full gate it stands in for is $(verify_eta)."
+    fi
     verify_log=$(mktemp -t tannen-verify.XXXXXX)
     if [ "$FAST" = 1 ]; then
         skipping_gate "make verify at step 0 — the cheap floor still runs below"
@@ -432,7 +509,34 @@ if confirm "Run 'make verify' now (recommended — nothing should be signed over
         unexpected=$(unexpected_failures "$verify_out")
         [ -z "$unexpected" ] || die "verify is red — fixing it is builder work; sign nothing yet:
 $unexpected"
-        note "green except the custody set, which is this sitting's step 7 — continuing"
+        # AND THE CONTINUATION LINE CLAIMS ONLY WHAT THIS RUN ESTABLISHED (same ruling).
+        # "green except the custody set" is true and reads like something much stronger: it
+        # means no unexpected failure appeared, in a run that in the ordinary case got nine
+        # lines in. Which case this was is a fact about the output, so read it there. The
+        # pytest anchor is `^[0-9]+ passed` and the anchoring is not style — an unanchored
+        # / passed/ matched D0117's TITLE in the queue this same step prints, and reported
+        # an empty gate as having run a suite. check_decisions captures its own pytest
+        # output (scripts/check_decisions.py:211-214, capture_output=True), so the only
+        # line of this shape that can reach the log is verify's own `uv run pytest -q`.
+        gate_guards=$(printf '%s\n' "$verify_out" | grep -cE '^check_[a-z_]+: (OK|FAIL)')
+        if printf '%s\n' "$verify_out" | grep -qE '^[0-9]+ passed'; then
+            note "green except the custody set, which is this sitting's step 7 — continuing"
+        else
+            note "no unexpected failure — and that is ALL this established. The run reached"
+            note "$gate_guards of verify's six guards and never reached the suite, so"
+            note "check_decisions, pytest, the laws report and lint-imports did not run here."
+            # AND THE CAUSE IS NAMED ONLY WHERE IT WAS OBSERVED. Under FAST the gate is the
+            # custodian alone and `make` never ran, so blaming check_manifest here would be
+            # this correction committing the error it corrects — asserting a mechanism the
+            # run did not exercise. Two regimes, two sentences, neither guessed.
+            if [ "$FAST" = 1 ]; then
+                note "The gate was the custodian alone (TANNEN_SITTING_FAST), by request."
+            else
+                note "make stopped at check_manifest, which is where this driver's own custody"
+                note "drift is seen."
+            fi
+            note "The precondition is the 'make verify' from before the cp (D0151, D0206)."
+        fi
     fi
 fi
 fi
@@ -2522,7 +2626,7 @@ stop_after 8b
 # ---------------------------------------------------------------- 9. gate + receipt
 say "Step 9 — regenerate, verify, and take the attention receipt"
 "$PY" -I -P scripts/gen_projections.py || die "projection generation failed"
-waiting "the full gate again, now over everything this sitting changed: about $VERIFY_ETA"
+waiting "the full gate again, now over everything this sitting changed: $(verify_eta)"
 if [ "$FAST" = 1 ]; then
     skipping_gate "make verify at step 9 — the custodian still runs, and it writes the receipt"
     bash scripts/custodian.sh --check-only || die "custody floor red at step 9"
@@ -2655,7 +2759,7 @@ fi
 # Neither DECISIONS.md nor CONCEPTS.md is in MANIFEST.sha256 or the custody set, so this
 # disturbs no seal and no signature — checked, not assumed — and the commit below picks it up.
 "$PY" -I -P scripts/gen_projections.py || die "projection generation failed"
-waiting "the last full gate, with the close tag in the required set: about $VERIFY_ETA"
+waiting "the last full gate, with the close tag in the required set: $(verify_eta)"
 if [ "$FAST" = 1 ]; then
     skipping_gate "make verify at step 11 — the custodian still runs"
     bash scripts/custodian.sh --check-only || die "custody floor red at the close"

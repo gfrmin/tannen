@@ -415,14 +415,28 @@ stopped_cleanly() {
     check "and said WHERE it stopped"                  present '^reached: step ' "$LOG"
     check "it exited 1, not some other status"         test "$DRIVER_RC" -eq 1
     check "no silence over ${SILENCE_LIMIT}s went unannounced" speaks_up "$STAMPED"
+    # THE TAG QUESTION IS NOT THE TREE QUESTION, and nesting it inside the dirty branch made
+    # it unaskable in the one case where it matters. Four of the driver's die() sites sit
+    # downstream of `git tag -s`, over a tree step 10 has just required to be clean — step
+    # 11's final `make verify` going red at the close is the likeliest — so on all four the
+    # tree branch says "clean" and the tag check never runs. Ask the refs first, every abort.
+    if in_clone git rev-parse -q --verify "refs/tags/$MILESTONE-close" >/dev/null 2>&1; then
+        note "  it stopped with $MILESTONE-close ALREADY MINTED — an owner signature stands"
+        check "the driver said the close tag is minted"      present "$MILESTONE-close IS MINTED" "$LOG"
+        check "and did not call that nothing half-applied"   absent 'nothing is half-applied' "$LOG"
+    else
+        # Deliberately a note, not a check: the branch condition just established this, so a
+        # green line here would assert what the `if` decided. That is the shape this milestone
+        # has recorded a dozen times, and it does not get to reappear in the verdict that finds it.
+        note "  $MILESTONE-close was not minted, so the working tree is the whole account"
+    fi
     if [ -z "$(in_clone git status --porcelain)" ]; then
-        note "  it stopped AFTER committing: the tree is clean, nothing to undo"
+        note "  it stopped AFTER committing: the tree is clean, nothing uncommitted to undo"
         check "the driver said the tree is clean"      present 'The tree is CLEAN' "$LOG"
     else
         note "  it stopped BEFORE committing: edits are in the working tree by design"
         check "the driver said the tree is dirty"      present 'The tree is DIRTY' "$LOG"
         check "and gave the undo"                      present 'git checkout -- \. && git clean -fd' "$LOG"
-        check "$MILESTONE-close was NOT minted"        bash -c "! ( cd '$CLONE' && git rev-parse -q --verify refs/tags/$MILESTONE-close >/dev/null )"
     fi
 }
 # Gaps between consecutive output lines, minus the ones the driver announced. A waiting()
@@ -467,23 +481,60 @@ else
     # there and check_decisions, the pytest suite, the laws report and lint-imports never run
     # (D0151; docs/SITTING.md:36-38). Reporting only "the gate ran" let this harness's own author
     # read coverage into a three-line run and write it into the README twice. Measure it.
-    GATE0_SECS=$(awk -F'\t' '/\[waiting\] the full gate:/ && !armed { start = $1; armed = 1; next }
-                              armed && /== Step 1 / { print $1 - start; exit }' "$STAMPED" 2>/dev/null)
+    # THE ANCHOR COVERS BOTH SPELLINGS ON PURPOSE. This scan used to key on "[waiting] the
+    # full gate:", which is exactly the banner owner ruling (2) of 2026-09-10 removes from a
+    # drifted step 0 — so the fix for the driver would have silently blinded the detector
+    # that caught the driver, and the verdict would have gone from measuring zero seconds to
+    # measuring nothing while printing the same green. Fourth detector-versus-proxy episode
+    # in this milestone, and the first one caught BEFORE it shipped.
+    GATE0_SECS=$(awk -F'\t' '/\[waiting\] the (full gate:|floor check only)|The gate below is the custodian alone/ && !armed { start = $1; armed = 1; next }
+                              /== Step 1 / { if (armed) print $1 - start; exit }' "$STAMPED" 2>/dev/null)
     # ANCHORED, and that is not style: a bare / passed/ matched D0117's TITLE in the Tier-C
     # queue step 0 prints, and reported the empty gate as having run a suite. Third proxy-
     # matching detector in one session; caught only by running the control.
-    GATE0_TESTS=$(awk '/\[waiting\] the full gate:/ { armed = 1 }
-                       armed && /== Step 1 / { exit }
+    GATE0_TESTS=$(awk '/\[waiting\] the (full gate:|floor check only)|The gate below is the custodian alone/ { armed = 1 }
+                       /== Step 1 / { exit }
                        armed && /^[0-9]+ passed/ { n++ }
                        END { print n + 0 }' "$LOG")
     note "step 0 entered its precondition gate (RESUMED=0) and it ran for ${GATE0_SECS:-?}s"
     if [ "${GATE0_TESTS:-0}" -eq 0 ]; then
-        note "      IT ESTABLISHED NOTHING — no pytest summary before step 1. check_manifest is"
-        note "      verify's first recipe line and the driver cp is custody drift, so make stopped"
-        note "      before the suite, check_decisions, the laws report and lint-imports. The"
-        note "      precondition is established BEFORE the cp or not at all (docs/SITTING.md:23)."
+        note "      IT ESTABLISHED NOTHING — no pytest summary before step 1, so neither"
+        note "      check_decisions, the suite, the laws report nor lint-imports ran there."
+        # NAME THE MECHANISM ONLY WHERE IT WAS OBSERVED. Under FAST the step-0 gate is the
+        # custodian and `make` is never invoked, so the check_manifest explanation — correct
+        # for every full run — would be this note asserting a cause it did not see. That is
+        # the exact error the driver line beneath it was just corrected for; a verdict that
+        # repeats it about the driver would be worth nothing.
+        if grep -q 'NOT RUN: make verify at step 0' "$LOG"; then
+            note "      (TANNEN_SITTING_FAST: the gate was the custodian alone, so this run says"
+            note "      nothing about where a real make verify would have stopped.)"
+        else
+            note "      make stopped at check_manifest, verify's first recipe line, where the cp"
+            note "      that installed the driver shows as custody drift."
+        fi
+        note "      The precondition is established BEFORE the cp or not at all (D0151, D0206)."
     else
         note "      and it reached the suite, so the precondition was genuinely established here."
+    fi
+    # OWNER RULING (2), 2026-09-10: "the 35-minute banner must not appear on a gate that
+    # cannot run", and the continuation line must claim only what it established. Both are
+    # step-0 text and therefore this harness's business. The banner assertion is
+    # unconditional: a rehearsal always cps the driver into the clone, so the custody drift
+    # that makes the gate vacuous is present on every run this harness can make. The
+    # continuation line only exists if the owner accepted the gate, so it is asserted only
+    # when the driver announced it was running one.
+    check "no full-gate ETA was promised for a gate the cp makes vacuous" \
+        absent '\[waiting\] the full gate:' "$LOG"
+    # THE GATE IS ENTERED IN TWO REGIMES AND BOTH PRINT THE CONTINUATION LINE. Gating this
+    # on the drifted-banner text alone would have silently stopped asserting it the moment a
+    # FAST run took the other branch — the same shape as the anchor bug two blocks up, found
+    # the same way: by reading the verdict of the run that was supposed to prove the fix.
+    if present '\[waiting\] the floor check only' "$LOG" || present 'NOT RUN: make verify at step 0' "$LOG"; then
+        check "the gate's continuation line claims only what the run established" \
+            present 'that is ALL this established' "$LOG"
+    else
+        note "NOTE: step 0's gate was declined or skipped, so the continuation line it prints"
+        note "      was not exercised. Only an accepted, non-FAST step-0 gate reaches it."
     fi
 fi
 check "the real repo's HEAD is untouched"                equal "$ROOT_HEAD_BEFORE" "$(git -C "$ROOT" rev-parse HEAD)"

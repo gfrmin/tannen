@@ -1,0 +1,120 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0210
+title: "Ruling (1)'s addendum: a pre-signing push has nothing to carry, forcing one needs the flag D0181 refused, and the useful push is the one before the sitting that nothing checks"
+tier: A
+date: "2026-09-10"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  OWNER RULING (1) OF 2026-09-10 ACCEPTED D0202 AND NAMED THE GAP: the audit refuted
+  SUBSTITUTION and never considered REORDERING — pushing before the signing window, so that
+  "no remote can witness this" becomes a fact about the ceremony's order rather than about the
+  ceremony. Eight claims across four angles were raised and adversarially attacked; as in the
+  main audit, all eight were refuted. The section is appended to the audit as §8 and the answer
+  is summarised here.
+  .
+  THE FRAMING IS OFF BY SIX SIGNATURES. "Before the signing window" has no referent inside the
+  ceremony: the owner's key is first used at STEP 3 on `governance/policy.yaml`, again at step
+  3b, twice in step 4c and once in step 4h — six owner-key signature sites before step 7's
+  custody signature. The only point genuinely before the window is step 0, whose tree is the
+  pre-sitting HEAD.
+  .
+  AND THERE IS NOTHING TO PUSH. The driver has exactly two commit sites, both after step 7:
+  step 9 and step 11. Every act of steps 0-8b writes uncommitted working-tree state, and `git
+  push` moves refs and objects, not a working tree. This is structural rather than incidental —
+  each artifact is signed as a byte string at the moment it is written, so the signature
+  precedes any commit that could carry it.
+  .
+  MANUFACTURING SOMETHING TO PUSH IS REFUSED ONE LAYER EARLIER, BY A RULE THE OWNER HAS ALREADY
+  DECLINED TO BEND. A non-empty pre-signing push requires adding a commit to the irreversible
+  middle, and that commit cannot be taken: `.pre-commit-config.yaml` runs `check_manifest.py`,
+  whose `main()` calls `check_custody` unconditionally BEFORE the `--staged` branch, and
+  `check_custody` fails on precisely the drift the ceremony creates by construction. Forcing it
+  needs `--no-verify`, which D0181 refused for a real commit even under a direct owner ruling.
+  If it were forced, `git add -A` would sweep that drift into public history and `ci.yml` — `on:
+  push:`, no branch filter — would publish a red verdict on the ceremony's middle while the
+  owner was still sitting.
+  .
+  ONE VARIANT SURVIVES STRUCTURALLY AND IS REFUSED ON THE ABORT PATH. A push at the seam between
+  step 9's commit and step 10's tag needs no invented commit and no red floor. It is refused
+  because it would be the ceremony's first published act, and the two failures immediately
+  downstream — the owner declining the close tag, and `verify-tag` failing after `git tag -s`
+  succeeded — would strand a never-closed sitting on public `master`. Today no abort leaves
+  anything beyond this machine. The refusal is therefore a price, not an impossibility, and the
+  price is the abort path.
+  .
+  THE FINDING THAT RUNS THE OTHER WAY IS THE USEFUL ONE, AND IT IS QUEUED. The audit's §3(a)
+  makes an attack family conditional on ignorance: a pre-push rewrite "is invisible to a remote
+  that has not received the prior state." Pushing the pre-sitting HEAD BEFORE the ceremony
+  delivers exactly that state and closes family (a) — the only one of the six a remote can
+  close. That is not a reordering; it is ordinary builder habit performed beforehand. AND
+  NOTHING ENFORCES IT: measured 2026-09-10, the driver contains zero occurrences of `git fetch`,
+  `git push`, `ls-remote` or any remote-tracking ref, `docs/SITTING.md` uses the words push,
+  origin and remote zero times, and no guard consults a remote. The property was FALSE for over
+  twenty-seven hours on 2026-09-09 by this repository's own reflog — `origin/master` sat at
+  `2bb4954` from 15:10 on 2026-09-08 until 18:55 the next day, which is the window the audit was
+  written in and the state §3(a) describes. The recommendation is one comparison at step 0: the
+  sitting refuses to start unless `origin` already holds HEAD.
+  .
+  IT IS NOT LANDED, AND THE REASON IS THE OWNER'S OWN. It is an ADDITION to the ceremony, and
+  the standing objection of 2026-09-09 is exactly to additions that are each individually
+  correct — "that's a ratchet with no release." Whether a boundary sitting may depend on the
+  network at all is the owner's call: it would be the first step of the ceremony that fails when
+  the network does. Queued to the boundary with the rest.
+  .
+  A LIVE DEFECT WAS FOUND ON THE WAY AND IS FIXED HERE. Asking what a mid-ceremony push would
+  strand exposed what the ceremony already strands. `die()` branched on `git status --porcelain`
+  alone, and the working tree was never a complete account of a sitting: a minted, owner-signed
+  close tag lives outside it. FOUR `die()` sites are downstream of `git tag -s` — `verify-tag`,
+  and step 11's projection, custodian and `make verify` failures, the last much the likeliest —
+  and step 10 has just required the tree to be clean, so all four printed "nothing is
+  half-applied. This is a coherent place to stop" over a signed close tag. The rehearsal harness
+  could not catch it either: its `<milestone>-close was NOT minted` assertion sat inside the
+  DIRTY branch, unreachable in exactly the case that matters. The driver now asks the refs
+  before the tree and says what the run left behind; the harness asks the tag question on every
+  abort, in both branches, and the negative case is a note rather than a check because the
+  branch condition has already decided it.
+rationale: >-
+  The owner asked for one paragraph so the file would not later read as closing a question it
+  did not consider. It is recorded as a NEW record rather than appended to D0202 because D0045
+  makes decision fields immutable and states no exception for an addendum the owner requested;
+  the analysis goes into the audit document D0202 binds to, which is the artifact the phrase
+  "the file" reaches without breaking the rule (reasoning stated in D0207).
+  .
+  The result is a second null result on the claims and a non-null one on the enquiry. That is
+  worth separating: the eight claims died, but two things came out of killing them — a priced
+  refusal instead of a bare one, and a load-bearing property that turned out to be held by habit
+  and to have lapsed for a day the week it mattered. Neither would have been found by answering
+  the owner's question yes or no.
+  .
+  Filed Tier A. The driver draft and `scripts/rehearse_sitting.sh` are outside `MANIFEST.sha256`
+  and outside the custody set; nothing signed or frozen is touched and no key is used. The one
+  recommendation that would change the ceremony is queued rather than taken, for the reason
+  stated above.
+reversibility: >-
+  The analysis changes nothing and removes nothing. The `die()` fix adds a ref lookup and a
+  branch; the worst case of reverting it is the return of a sentence that tells an owner nothing
+  is half-applied while their signature stands over a failed sitting. The step-0 remote
+  precondition is not taken, so there is nothing to reverse there — only a queued question.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/FLOOR-AUDIT.md
+    strength: documentary
+    detail: >-
+      Section 8, the reordering analysis the owner asked for, kept beside the substitution
+      audit it does not repeat. Documentary because an audit binds to nothing enforceable —
+      the property D0202 already noted makes "unenforced" the wrong instrument here.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      `die()` asking the refs before the tree. The four sites downstream of `git tag -s` now
+      say what the run left behind instead of calling a signed close tag "nothing half-applied".
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      `stopped_cleanly()` with the tag question hoisted out of the dirty branch, so it is asked
+      on every abort rather than only on the aborts where the answer was already known.
+links: ["D0207", "D0202", "D0181", "D0176", "D0115", "D0045", "D0051", "D0068"]

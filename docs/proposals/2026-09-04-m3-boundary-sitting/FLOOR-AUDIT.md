@@ -137,3 +137,85 @@ Four records, in this order. No record is ever hand-edited (D0045); corrections 
 If the remote's role is to change — enabling rulesets, or treating CI as a required check — add **R5, owner edit and re-signature of `governance/policy.yaml`** under namespace `tannen-policy`, aligning `in_repo_mechanics` with the now-public origin (D0195 item 3, D0115, D0176). It is in `required_signatures` and custody-set, though not in `MANIFEST.sha256`.
 
 Signer for every signature above: `owner@tannen` only. DELEGATIONS.md forecloses the alternative — the builder's signature attests builder action under recorded instruction and cannot mint an owner attestation. Timing: a boundary sitting (BRIEF.md:174). Until then all four queue without blocking anything (BRIEF.md:195). Order at the sitting is the driver's existing order: step 0 gate → owner-shown diffs → step 7 custody signature → step 8 Tier-C signatures → step 9 receipt → step 10 close tag.
+
+---
+
+## 8. THE QUESTION THIS AUDIT DID NOT ASK: REORDERING, NOT SUBSTITUTION
+
+Added 2026-09-10 on owner ruling (1), which accepted §1–§7 and then named the gap: the audit
+refuted **substitution** — a remote guard standing in for a local one — and never considered
+**reordering**, pushing before the signing window so that "no remote can witness this" becomes
+a fact about the ceremony's order rather than about the ceremony. Eight claims were raised
+across four angles and every one was refuted, as in the main audit. What follows is what
+survived the refutations.
+
+**(1) The framing is off by six signatures.** "Before the signing window" has no referent
+inside the ceremony. The owner's key is first used at **step 3**, on `governance/policy.yaml`,
+and is used again at step 3b, twice in step 4c and once in step 4h — six owner-key signature
+sites before step 7's custody signature. The signing window opens minutes in. The only point
+that is genuinely "before" it is step 0, and the tree at step 0 is the pre-sitting HEAD.
+
+**(2) There is nothing to push.** The driver has exactly two commit sites, both after step 7:
+step 9 and step 11. Everything steps 0–8b do — six owner signatures, step 5's poison fixtures,
+step 6's custodian install, step 7's custody signature — writes **uncommitted working-tree
+state**, and `git push` moves refs and the objects they reach, not a working tree. A push
+inserted anywhere before step 9 carries nothing the sitting produced. This is structural, not
+incidental: the artifacts are signed as byte strings the moment they are written, and the
+signature precedes any commit that could carry them.
+
+**(3) Manufacturing something to push is refused one layer earlier, by a rule the owner has
+already declined to bend.** To make a pre-signing push non-empty the ceremony must add a commit
+to its irreversible middle. That commit cannot be taken: `.pre-commit-config.yaml` runs
+`check_manifest.py`, whose `main()` calls `check_custody` **unconditionally, before** the
+`--staged` branch, and `check_custody` fails on precisely the drift the ceremony creates by
+construction — the `cp`'d driver, the swapped custodian. Forcing it requires `--no-verify`,
+which **D0181 refused for a real commit even under a direct owner ruling**, sequencing to a
+sitting instead. The reordering therefore terminates on the repository's own standing refusal.
+
+**(4) And if it were forced, the publication would be of a red tree.** `git add -A` would sweep
+the deliberate drift into public history; `ci.yml` is `on: push:` with no branch filter and
+checks out the commit, so the first thing the world would learn about the sitting is a red
+verdict on its middle — while the owner is still sitting.
+
+**(5) One variant survives structurally, and is refused on the abort path.** A push at the
+seam between step 9's commit and step 10's tag needs no invented commit and no red floor: step
+9 has committed, step 10's own guard has just required the tree to be clean, so that commit
+contains the whole sitting. It is refused because it would be the ceremony's **first published
+act**, and the two failures immediately downstream — the owner declining the close tag, or
+`verify-tag` failing after `git tag -s` succeeded — would strand a never-closed sitting on
+public `master`. Today no abort leaves anything beyond this machine. That property is worth
+more than a witness to a tree, and it is the honest answer to the owner's question: not
+impossible, priced, and the price is the abort path.
+
+**(6) The finding that runs the other way, and it is the useful one.** §3(a) above makes an
+attack family conditional on ignorance: a pre-push rewrite "is invisible to a remote **that has
+not received the prior state**." Pushing the pre-sitting HEAD *before* the ceremony delivers
+exactly that prior state, and so closes family (a) — the only one of the six that a remote can
+close. That is not a reordering of the ceremony at all; it is ordinary builder habit performed
+before it starts. **And nothing enforces it.** The driver contains no `git fetch`, no `git
+push` and no reference to any remote-tracking ref; `docs/SITTING.md` does not use the words
+push, origin or remote once; no guard consults a remote. It is therefore true by habit and was
+**false for over twenty-seven hours on 2026-09-09**, by this repository's own reflog —
+`origin/master` sat at `2bb4954` from 15:10 on 2026-09-08 until 18:55 the following day, the
+window in which this audit was written and which §3(a) describes as "the four commits `m3`
+currently carries above `origin/master`."
+
+The recommendation is one comparison at step 0: the sitting refuses to start unless `origin`
+already holds `HEAD`. It costs a `git ls-remote`, it makes a load-bearing property into a
+checked one, and it is the only thing in this whole line of enquiry that the remote actually
+buys. **It is queued, not landed.** It is an addition to the ceremony, and the owner's standing
+objection of 2026-09-09 is precisely to additions that are each individually correct: "that's a
+ratchet with no release." Whether a boundary sitting may depend on the network at all is the
+owner's call, not the builder's — it would be the first step of the ceremony that fails when
+the network does.
+
+**(7) A live defect, found on the way.** Asking what a mid-ceremony push would strand exposed
+what the ceremony already strands. `die()` branches on `git status --porcelain` alone, and the
+working tree was never a complete account: a minted, owner-signed close tag lives outside it.
+Four `die()` sites are downstream of `git tag -s` — `verify-tag`, and step 11's projection,
+custodian and `make verify` failures, the last being much the likeliest — and step 10 has just
+required the tree to be clean, so all four printed *"nothing is half-applied. This is a
+coherent place to stop."* over a signed close tag. The rehearsal harness could not catch it
+either: its `"$MILESTONE-close was NOT minted"` assertion sat inside the **dirty** branch. Both
+are fixed (D0210): the driver asks the refs before the tree, and the harness asks the tag
+question on every abort.

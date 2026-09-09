@@ -1,0 +1,90 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0209
+title: "Ruling (3) executed: a count stated in prose is derived or it is checked, and the driver's ETA stops being a number somebody typed"
+tier: A
+date: "2026-09-10"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE STANDING RULE AGAINST HAND-MAINTAINED ENUMERATIONS NOW REACHES PROSE. D0171 ruling (3)
+  bars a GUARD from depending on a hand-maintained list. Owner ruling (3) of 2026-09-10 extends
+  it: "load-bearing counts and ETAs in generated or operator-facing documents are derived at
+  generation time or not stated." The amended wording is queued to the boundary with its
+  unsigned parent (D0207); the consequences are landed here, because the parent rule is already
+  this repository's practice whether or not its record yet carries a signature.
+  .
+  THE INSTANCES ARE ALL LOCAL AND ALL RECENT. The M3 proposal README described the driver as
+  having 24 steps for three commits after it grew its 25th and 26th. The driver advertised
+  "712 tests" from M2 into this milestone's draft after the suite reached 842, and "35-40
+  minutes" for a gate that is seven lines. `docs/SITTING.md` carried "~30 minutes per milestone"
+  in its title from M0 until today, against a rehearsal that measured the driver at 100 minutes
+  (D0202) — a three-fold understatement in the first line an owner reads, in the class of error
+  that made an owner kill the driver twice for looking hung (D0069). Not one was catchable:
+  prose is not executable, so the enumeration rule had no purchase on it.
+  .
+  THE DRIVER'S COUNT IS NOW DERIVED AT THE MOMENT IT IS PRINTED. `VERIFY_ETA`, a string
+  constant, becomes `verify_eta()`, which reads the count from `pytest --collect-only -q`.
+  Measured cost: 1.2 seconds, against a gate of half an hour — carrying the number by hand was
+  never a saving. The WALL CLOCK cannot be derived without running the thing it predicts, so it
+  is stated as what it is, a dated measurement on named hardware, and never as a bare
+  prediction. The same distinction is applied to `docs/SITTING.md`'s heading: the figure is
+  given once, with its date and the run it came from, rather than in the title as a promise.
+  .
+  AND THE ONE COUNT THAT CANNOT BE DERIVED INTO ITS DOCUMENT IS CHECKED INSTEAD. A README is
+  not generated, so "derive it at generation time" has no purchase there either; the available
+  move is to make the claim falsifiable. `tests/test_operating_manual.py` gains a detector that
+  pairs every boundary-sitting proposal's README with the driver beside it — the pairing is
+  GLOBBED, not listed, so a new milestone is covered the day its directory exists, which is the
+  parent rule applied to the guard's own input set — and fails when a step count stated in prose
+  disagrees with the `^say "Step ` headers the driver actually announces. Measured today: M1
+  announces 15 steps, M2 22, M3 26. Those three numbers are the ratchet the owner named, and
+  they are now derived rather than asserted.
+  .
+  WATCHED FAILING, TWICE, AND ON REAL INPUTS. Two fixture controls establish that the detector
+  discriminates (26-against-24 fires; 26-against-26 is quiet), and a third asserts the real
+  corpus is non-empty — the failure mode this milestone has recorded a dozen times is a guard
+  whose input set is empty passing for the same reason a correct one does. Beyond the fixtures,
+  the real README was temporarily reverted to its historical "all 24 steps" and the detector
+  fired against the real tree with the message an author would need, then went green on restore.
+rationale: >-
+  A rule that only ever applies to code leaves the operator-facing surface — the surface an
+  owner actually reads before spending an afternoon and a key — as the one place a stale number
+  can live indefinitely. Every count corrected here was true when written, which is precisely
+  what makes the class invisible: nobody writes a wrong number, they write a right one and stop
+  looking.
+  .
+  The guard is deliberately narrow. It checks step counts against drivers, because that is the
+  count that demonstrably rotted and the one with an unambiguous derivation. Test counts and
+  wall clocks are handled at the source instead — derived in the driver, dated in the document —
+  because a guard that fired on every test added would be answered by deleting the sentence
+  rather than by fixing the number, and the sentence is there for D0069's reason.
+  .
+  Filed Tier A: `tests/test_operating_manual.py`, `docs/SITTING.md` and the proposal draft are
+  outside `MANIFEST.sha256` and outside the custody set, checked against both.
+reversibility: >-
+  Fully reversible. The guard adds four test nodes and removes nothing; the driver's derivation
+  falls back to a sentence without a number if collection fails, so no path gains a way to
+  abort that it did not have. Reverting restores hand-maintained figures, which is the state
+  this record exists to leave.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: tests/test_operating_manual.py::test_a_step_count_stated_in_prose_matches_the_driver_it_describes
+    strength: enforced
+    detail: >-
+      The rule made executable for the count that rotted. Globs the proposal directories rather
+      than listing them, so it does not itself become the defect it detects.
+  - type: pytest
+    target: tests/test_operating_manual.py::test_the_step_count_detector_catches_the_readme_that_went_stale
+    strength: enforced
+    detail: >-
+      The watched failure, reproducing the real 26-against-24 state. Its sibling
+      `..._is_quiet_when_they_agree` holds the other direction, and
+      `..._reads_a_non_empty_input` holds the corpus.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      `verify_eta()`, replacing the string constant that carried "712 tests" across a milestone.
+      Documentary until the owner installs the draft at step 6.
+links: ["D0207", "D0171", "D0202", "D0206", "D0069", "D0194", "D0199"]

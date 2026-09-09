@@ -85,14 +85,24 @@ about this repository. Recorded as D0200.
 
 # `boundary_sitting.sh` — the M3 driver
 
-> **READY — all five paths green, including the full non-FAST gate and the `--from head` run
-> that finally executes step 0's precondition gate (2026-09-09).**
-> Runs are not coverage (`docs/SITTING.md`): only a green run clears the driver. The two full
-> rows ran with **no** `TANNEN_SITTING_FAST`, so every `make verify` leg and both rounds of
-> commit hooks executed — **two** legs on every path, at steps 9 and 11. An earlier draft of
-> this banner said the `--from head` row runs three; it does not, and the correction matters —
-> see "step 0's gate establishes nothing" below. The three FAST rows say nothing about those
-> legs and are kept because each one found a distinct defect.
+> **NOT YET CLEARED FOR THESE BYTES — re-rehearsal of the accept path in flight
+> (2026-09-10).** The five green paths below cleared the driver as it stood on 2026-09-09.
+> Owner ruling (2) of 2026-09-10 then changed step 0 (D0208), and `docs/SITTING.md`'s standing
+> rule is that runs are not coverage: **only a green run clears the driver, and it clears the
+> bytes it ran.** The table stays because each row still names a defect that run found; it no
+> longer says READY, because it did not execute this file. The banner flips back when the full
+> non-FAST accept path is green against these bytes, and this note is the record that it was
+> not simply carried forward.
+>
+> An earlier banner also claimed this driver's `--from head` row "finally executes step 0's
+> precondition gate". It does not, and D0206 retracts it: the gate runs from elapsed second 0
+> to elapsed second 0 and reaches none of the suite. That sentence had already been corrected
+> in the body and survived here, which is its own small instance of the thing this proposal
+> keeps finding — see "step 0's gate establishes nothing" below.
+>
+> The two full rows ran with **no** `TANNEN_SITTING_FAST`, so every `make verify` leg and both
+> rounds of commit hooks executed — **two** legs on every path, at steps 9 and 11. The three
+> FAST rows say nothing about those legs and are kept because each one found a distinct defect.
 >
 > | Path | Verdict | Found |
 > |---|---|---|
@@ -184,7 +194,9 @@ reasoned about.
 | **Step 6 diffs against `$PROPOSALS_M3/custodian.sh`** | **D0152 item 6**, and at M3 worse than the skip it caused at M2. Measured: the live custodian and the M1 draft now differ, so the step takes the *else* branch and offers a draft **older** than what is installed — reverting `FOUNDING_TAGS` to its pre-rewrite pin, restoring an inline receipt loop D0176 delegated away, and deleting three poison invocations whose fixtures are still on disk. Hunk 1c would then redden those three at step 7, where tolerances stop. |
 | **Step 4f's guard tests all three files its decline branch reverts** | **D0152 item 2, D0153 artifact 1.** The guard read `Makefile`; the revert wrote `Makefile`, `ci.yml` and `test_law_validation.py`. Any state where the first landed and the others did not read as "already applied" for ever — which is exactly the tree we are in, and why ci.yml's comment was lost by a concurrent run and never re-offered. The apply block is now per-file and idempotent, and refuses only a file in neither the pre- nor post-state. |
 | **An `flock` on a lockfile keyed to the worktree** | **D0152 item 4.** A boundary sitting is a one-run ceremony and nothing said so. Two accidental concurrent runs produced all three of D0153's artifacts. FD 9 is held for the life of the process, so the kernel releases it on exit, `die`, or kill — there is no stale lock to clean up. A rehearsal clone has a different path and so a different lock. |
-| `VERIFY_ETA` re-measured; `842 tests`, not `712` | **D0154 item 9.** The suite grew 18% since the promise was written, and D0069 is the reason it matters: an owner watching a still terminal against a stale promise concludes it hung and kills the driver, which has now happened twice. Step 0's "the gate takes the better part of a minute — 174 tests" is moved to the past tense rather than deleted: the failure it describes is forty times *easier* to hit now. |
+| **`VERIFY_ETA` becomes `verify_eta()`, deriving the count live** | **D0154 item 9.** The suite grew 18% since the promise was written, and D0069 is the reason it matters: an owner watching a still terminal against a stale promise concludes it hung and kills the driver, which has now happened twice. Step 0's "the gate takes the better part of a minute — 174 tests" is moved to the past tense rather than deleted: the failure it describes is forty times *easier* to hit now. |  **Superseded 2026-09-10 by owner ruling (3) (D0209):** re-measuring a constant is the same maintenance the rule forbids, and the constant had already carried `712` across a milestone. The count now comes from `pytest --collect-only -q` at the moment it is printed — 1.2s measured, against a gate of half an hour — and the wall clock is stated as a dated measurement rather than a bare prediction. The old line also read *"about about 35 minutes"*, through five rehearsals. |
+| **Step 0 asks the tree whether its gate can run at all** | **Owner ruling (2) of 2026-09-10, D0208.** `docs/SITTING.md` installs this file with a `cp`; `scripts/boundary_sitting.sh` is custody-set; `check_manifest.py` is `verify`'s first recipe line. So in the ordinary sitting `make` stops at line one and the gate is over in seconds — measured at rehearsal as elapsed second 0 to elapsed second 0. The driver advertised half an hour for it, and that advertisement is what let this README claim twice that the gate had been exercised. New `driver_custody_current()` compares the driver's own bytes to their row in `governance/custody.sha256` and the announcement branches on the answer, in three regimes rather than two: FAST (the custodian alone), current bytes (the real gate), drifted bytes (the floor check, seconds). |
+| **Step 0's continuation line reports which guards the run reached** | **Same ruling.** *"Green except the custody set — continuing"* is true and reads far stronger. The driver now counts `^check_[a-z_]+: (OK\|FAIL)` lines in the captured output and prints the reassuring form only when an anchored `^[0-9]+ passed` shows the suite actually ran. The anchor is not style: an unanchored `/ passed/` matched **D0117's title** in the Tier-C queue this same step prints, and reported an empty gate as having run a suite. `check_decisions` captures its own pytest output (`scripts/check_decisions.py:211-214`), so the only line of that shape that reaches the log is `verify`'s own — verified by positive control. |
 | **New: a step breadcrumb at `$TANNEN_SITTING_SCRATCH/steps`** | `say()` appends every header it prints. A `die` is `exit 1` with no trap, so this is the only thing that can state how far a run got — to the owner, and to the harness, which must not learn the driver's state by parsing the driver's prose (BRIEF §2). Step 0's header is renamed `Step 0 — …` so an abort inside it is distinguishable from a run that wrote no breadcrumb. |
 | **New: `die()` says where it stopped and what to undo** | Two regimes, and they differ either side of step 9's commit: after it the tree is clean and there is nothing to undo; before it every edit is in the working tree and the custody floor is RED by construction. An owner stopped mid-ceremony should not have to work out which one they are in. |
 | **New: `TANNEN_SITTING_FAST=1`** | Every rehearsal to date cost one to two hours, which is why the abort path had never once been executed. This skips the three long gates and the commit hooks and runs every step in ~10 minutes. Each skip prints a `[TANNEN_SITTING_FAST] NOT RUN:` line and the harness counts them, so a fast run cannot be mistaken for a full one. `check_decisions` is skipped **whole** — it has no cheap half, and the one env var that would shorten it is RT-08, which disables binding resolution *while still printing green*. |

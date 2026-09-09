@@ -1,4 +1,15 @@
-# SITTING — the boundary-sitting checklist (owner, ~30 minutes per milestone)
+# SITTING — the boundary-sitting checklist (owner)
+
+> **How long it takes, and why that is not in the title.** This line read "~30 minutes
+> per milestone" from M0 until 2026-09-10, while the M3 rehearsal measured the driver at
+> **100 minutes** end to end, of which roughly 55 are owner attention and the rest are
+> three `make verify` gates and the pre-commit rounds (D0202). A three-fold understatement
+> in a heading is not a cosmetic error: D0069 is the record of an owner killing the driver
+> twice because a stale promise made a live run look hung. Owner ruling (3) of 2026-09-10
+> settles the general case — *load-bearing counts and ETAs in operator-facing documents
+> are derived at generation time or not stated* — so the figure is given here once, as a
+> measurement carrying the date and the run it came from, and the driver derives its own
+> test count live rather than carrying one.
 
 The opening sitting (`docs/OPENING.md`) happens once. A **boundary sitting** happens at
 each milestone boundary (BRIEF §9.1 point 3) and does four kinds of work, in this order:
@@ -25,15 +36,27 @@ cp docs/proposals/<date>-<milestone>-boundary-sitting/boundary_sitting.sh script
 bash scripts/boundary_sitting.sh <milestone>
 ```
 
-**`make verify` goes first, and step 0's offer does not replace it** (D0151).
-`scripts/boundary_sitting.sh` is a custody-set member, so the `cp` is custody drift, and
-`check_manifest.py` is the FIRST recipe line of the `verify` target — it fails, `make` stops,
-and `check_decisions`, the whole pytest suite, the laws report and `lint-imports` never run.
-Step 0 then prints *"green except the custody set, which is this sitting's step 7 —
-continuing"*, which is true and reads like something stronger: it means no unexpected
-failure appeared in a run that got three lines in. Measured at rehearsal, step 0's gate —
-advertised as 35-40 minutes — completed in **zero seconds**. The precondition can be
-established before the copy or not at all.
+**`make verify` goes first, and step 0's offer does not replace it** (D0151, D0206). The
+ordering above is the whole of the fix and it is not a convenience: the precondition is
+established **before** the `cp` or it is not established at all.
+
+Why, mechanically. `scripts/boundary_sitting.sh` is a custody-set member, so the `cp` is
+custody drift; `check_manifest.py` is the FIRST recipe line of the `verify` target; it fails,
+`make` stops, and `check_decisions`, the pytest suite, the laws report and `lint-imports`
+never run. Measured at rehearsal, step 0's gate ran from **elapsed second 0 to elapsed second
+0** and produced seven lines of output.
+
+Until 2026-09-10 the driver advertised that gate as half an hour and then reported *"green
+except the custody set, which is this sitting's step 7 — continuing"* — a sentence that is
+true and reads like something far stronger. It cost this proposal's own README two committed
+claims that the gate had been exercised. Owner ruling (2) of 2026-09-10 settles it: **the
+banner must not appear on a gate that cannot run**, and the continuation line must claim only
+what it established. The driver now asks the tree which case it is in — it compares its own
+bytes against `governance/custody.sha256` — and in the ordinary post-`cp` case announces
+seconds rather than half an hour, then reports how many of `verify`'s six guards the run
+actually reached. What that gate genuinely establishes is `check_manifest`'s whole verdict —
+frozen paths, seals, required signatures, `tier-c.yaml` consistency — minus the driver's own
+expected drift. That is worth having. It is not the precondition, and it no longer says it is.
 
 **Running `bash scripts/boundary_sitting.sh <milestone>` without that `cp` runs the previous
 milestone's driver against this milestone** — for M2 that is a 1216-line divergence — and it

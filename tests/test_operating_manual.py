@@ -307,3 +307,98 @@ def test_the_floor_detector_is_quiet_when_they_agree(tmp_path: Path) -> None:
     """The other direction. A detector that fires either way is not a detector."""
     root = _fake_python_metadata(tmp_path, floor="3.13", pinned="3.13")
     assert declared_python_floor(root) == pinned_interpreter(root)
+
+
+# ------------------------------------------------------------- counts stated in prose
+# Owner ruling (3) of 2026-09-10 extends the standing rule against hand-maintained
+# enumerations (D0171 ruling 3) from guards to PROSE: "load-bearing counts and ETAs in
+# generated or operator-facing documents are derived at generation time or not stated."
+#
+# The instance was this repository's own M3 boundary-sitting README, which described the
+# driver as having 24 steps for three commits after it grew its 25th and 26th — in the one
+# document whose distinguishing virtue is measuring rather than asserting. Its sibling defect
+# landed the same week: the driver advertised "35-40 minutes" and "712 tests" for a gate that
+# is 842 tests and, after the cp that installs it, seven lines. Nothing could catch either.
+# Prose is not executable, so the enumeration rule had no purchase on it.
+#
+# This is the purchase. The pairing is derived, not listed: every boundary-sitting proposal
+# directory holds its own driver beside its own README, so the glob finds the pairs and a
+# new milestone is covered the day its directory exists. `say "Step ` at column zero is the
+# driver's own step header — the same anchor its --abort-at breadcrumb counts — so this
+# compares the prose against the artifact rather than against another summary of it.
+
+#: "all 26 steps" and "a 26-step ceremony" are the two shapes these READMEs actually use.
+_STEP_CLAIM = re.compile(r"\b(?:all\s+)?(\d+)[- ]steps?\b")
+
+
+def driver_step_count(driver: Path) -> int:
+    """How many steps a boundary driver announces, counted from the driver."""
+    return len(re.findall(r'^say "Step ', driver.read_text(), re.MULTILINE))
+
+
+def _sitting_proposals(root: Path = ROOT) -> list[tuple[Path, Path]]:
+    """(driver, README) for every boundary-sitting proposal that has both."""
+    pairs = []
+    for driver in sorted(root.glob("docs/proposals/*boundary-sitting/boundary_sitting.sh")):
+        readme = driver.with_name("README.md")
+        if readme.exists():
+            pairs.append((driver, readme))
+    return pairs
+
+
+def test_a_step_count_stated_in_prose_matches_the_driver_it_describes() -> None:
+    """A README that names a step count names the right one.
+
+    The failure this prevents is not a typo. A stale count in the proposal README is the
+    surface an owner reads to decide whether the ceremony they are about to run is the one
+    that was rehearsed, and it was wrong by two for three commits without anything noticing
+    (D0206's neighbourhood, owner ruling (3) of 2026-09-10)."""
+    pairs = _sitting_proposals()
+    assert pairs, "no boundary-sitting proposal directories found — this guard reads nothing"
+    wrong = []
+    for driver, readme in pairs:
+        actual = driver_step_count(driver)
+        for claimed in _STEP_CLAIM.findall(readme.read_text()):
+            if int(claimed) != actual:
+                wrong.append(f"{readme.relative_to(ROOT)} says {claimed} steps; "
+                             f"{driver.relative_to(ROOT)} announces {actual}")
+    assert not wrong, (
+        "a step count stated in prose disagrees with the driver it describes:\n  "
+        + "\n  ".join(wrong)
+        + "\nDerive it or drop it — do not re-type it (owner ruling (3), 2026-09-10)."
+    )
+
+
+def _fake_proposal(tmp_path: Path, steps: int, claimed: int) -> Path:
+    d = tmp_path / "docs" / "proposals" / "2099-01-01-mX-boundary-sitting"
+    d.mkdir(parents=True)
+    body = "".join(f'say "Step {i} — something"\n' for i in range(steps))
+    (d / "boundary_sitting.sh").write_text("#!/usr/bin/env bash\n" + body)
+    (d / "README.md").write_text(f"The driver walks all {claimed} steps.\n")
+    return tmp_path
+
+
+def test_the_step_count_detector_catches_the_readme_that_went_stale(tmp_path: Path) -> None:
+    """The real defect reproduced: a driver at 26, a README still saying 24. Watched failing
+    here, because a guard nobody has seen fail is not yet a guard (CONTRIBUTING.md)."""
+    root = _fake_proposal(tmp_path, steps=26, claimed=24)
+    (driver, readme), = _sitting_proposals(root)
+    assert driver_step_count(driver) == 26
+    assert _STEP_CLAIM.findall(readme.read_text()) == ["24"]
+
+
+def test_the_step_count_detector_is_quiet_when_they_agree(tmp_path: Path) -> None:
+    """The other direction. A detector that fires either way is not a detector."""
+    root = _fake_proposal(tmp_path, steps=26, claimed=26)
+    (driver, readme), = _sitting_proposals(root)
+    assert [int(c) for c in _STEP_CLAIM.findall(readme.read_text())] == [driver_step_count(driver)]
+
+
+def test_the_step_count_detector_reads_a_non_empty_input() -> None:
+    """And the input set is non-empty in the REAL tree, not only in a fixture. A guard whose
+    corpus is empty passes for the same reason a correct one does — the failure mode this
+    milestone recorded a dozen times."""
+    pairs = _sitting_proposals()
+    assert len(pairs) >= 3, f"expected every milestone's proposal; found {len(pairs)}"
+    counts = {driver.parent.name: driver_step_count(driver) for driver, _ in pairs}
+    assert all(n > 0 for n in counts.values()), counts
