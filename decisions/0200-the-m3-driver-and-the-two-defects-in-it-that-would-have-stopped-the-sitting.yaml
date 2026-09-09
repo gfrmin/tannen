@@ -1,0 +1,318 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0200
+title: "The M3 driver, and the two defects in it that would have stopped the sitting"
+tier: A
+date: "2026-09-09"
+risk_flags: [governance-paths]
+decision: >-
+  `docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh` is the M3 sitting's
+  driver: the committed M2 driver plus +715/-126 lines, 1950 to 2573. Three steps are new
+  (3b, 4k, 4l), four carried defects are fixed, and four rehearsal mechanisms are ported from
+  the publication harness. `scripts/rehearse_sitting.sh` gains the harness half (+181/-9).
+  .
+  TWO OF THE FIXES ARE NOT HOUSEKEEPING — THE DRIVER AS COMMITTED WOULD HAVE STOPPED THIS
+  SITTING, and both were reproduced against the live tree rather than reasoned about.
+  .
+  (1) STEP 5's D0141 RETARGET GUARD FIRES TODAY AND `die`s (D0152 item 1). Its guard asks
+  whether `decisions/0141-*.yaml` still MENTIONS `fixture-candidates/oracle-shadow-model` —
+  and the replacement text this same block writes says "retargeted from
+  docs/redteam/fixture-candidates/oracle-shadow-model/ by that same step". The guard is
+  satisfied by the sentence recording that the work was done, so it re-arms on its own
+  success. Measured: both clauses are true now, and the python then finds `src.count(old) ==
+  0` for the text it means to replace, exits, and reaches `|| die`. That is where both of
+  D0153's concurrent runs stopped. The guard now tests the POST-state — does the record NAME
+  the installed path — which is D0152's own prescribed fix and the shape the step's
+  neighbours already use. D0152 forbids the alternative by name: rewording D0141's detail so
+  the old grep stops matching would make the bug unreproducible without fixing it.
+  .
+  It is the same defect `readme_row_absent()` was written to close, eighty lines earlier in
+  the same step: prose satisfying a grep meant for enforcement. Three instances now live in
+  this one file — step 2's docstring anchor, step 5's README rows, and this.
+  .
+  (2) STEP 6 POINTED AT A CUSTODIAN DRAFT OLDER THAN THE INSTALLED FILE. `$PROPOSALS_M1`,
+  carried forward verbatim from the M1 driver. At M2 that produced a silent skip and left the
+  sitting's own new fixture without its poison line (D0152 item 6). At M3 it is worse than a
+  skip: measured, the live custodian and the M1 draft now differ, so the guard takes the ELSE
+  branch and OFFERS a reversion — `FOUNDING_TAGS` back to its pre-rewrite pin, an inline
+  receipt loop D0176 delegated to `check_receipts.py`, and three publication poison
+  invocations deleted while their fixtures stay on disk. The M3 draft's own hunk 1c would
+  then redden those three at step 7, where tolerances stop and `custodian --check-only ||
+  die` is unconditional: the sitting would die in its irreversible middle over a floor its
+  own new guard had reddened. Retargeted to `$PROPOSALS_M3`.
+  .
+  (3) STEP 4f's SKIP-GUARD READ A STRICT SUBSET OF WHAT ITS DECLINE BRANCH REVERTS (D0152
+  item 2). It grepped `Makefile`; the revert wrote `Makefile`, `.github/workflows/ci.yml` and
+  `tests/test_law_validation.py`. Any state where the first landed and the others did not
+  reads as "already applied" for ever — which is the tree we are in, because a second
+  concurrent run of the driver reverted ci.yml's comment and the subset guard then guaranteed
+  it was never re-offered (D0153 artifact 1). The guard now tests all three, and the apply
+  block is per-file: each edit reports ALREADY / APPLIED / REFUSED, and refuses only a file in
+  neither the pre- nor the post-state, so a partial application is completable rather than
+  skipped. The same edit corrects ci.yml's header, which claims the file has never run and
+  that adding a remote is an unopened Tier-C door (D0195 item 2) — one frozen file, one edit,
+  one manifest row, because two separate edits would leave the second failing its own
+  `count(old) != 1` assertion against bytes the first had changed.
+  .
+  (4) THE SITTING HAD NO LOCK (D0152 item 4). An `flock` on a lockfile keyed to a hash of the
+  worktree path, FD 9 held for the life of the process so the kernel releases it on exit,
+  `die` or kill. Keyed on the worktree because the thing that must not happen twice is two
+  runs against ONE tree; a rehearsal clone has a different path and so a different lock. When
+  `flock(1)` is absent the driver says the guard is NOT ARMED rather than proceeding quietly.
+  .
+  THREE NEW STEPS. 3b offers both of D0195 item (3)'s shapes for `policy.yaml`'s push clause,
+  which grants Tier A over pushing to a PRIVATE origin and excludes every other while this
+  origin is public — the record says the choice is the owner's, so the step does not choose.
+  4k puts `scripts/rehearse_sitting.sh` in the custody set (RT-M3-06): the driver is
+  custody-set, D0068 makes a green rehearsal its precondition, and the harness that produces
+  that rehearsal is covered by nothing. 4l corrects six passages in
+  `tests/poison/oracle-shadow-model/README.md`, which still opens "**needs patch**" and says
+  it is "staged here and not in tests/poison/" from inside tests/poison/ (D0152 item 5).
+  .
+  FOUR MECHANISMS PORTED FROM THE PUBLICATION HARNESS, and one correction to how they were
+  described. `--abort-at N` is NOT a driver flag and N is not a step number: it lives entirely
+  in the rehearsal harness, where N is a 1-based PROMPT index into the generated answers file.
+  The driver-side knobs are separate — `TANNEN_SITTING_FAST=1` (skip the three long gates and
+  the commit hooks; ~10 minutes instead of two hours) and `TANNEN_SITTING_STOP_AFTER=<step>`
+  (exit 3 after a named step, called after all 24). `say()` now appends every header it prints
+  to a breadcrumb outside the repository, `die()` reads it back to say where it stopped and
+  which of two regimes the tree is in, and the harness reads it too rather than parsing the
+  driver's prose. The harness gains the isolation positive control the boundary side only ever
+  claimed in a comment.
+  .
+  ONE DELIBERATE IMPROVEMENT ON THE PORT. The publication driver spells its fast path
+  `if FAST ... elif confirm ...`, so under FAST the confirm never reads an answer and every
+  later prompt index shifts — which is why its rehearsal mappings all have to be qualified
+  "under TANNEN_SITTING_FAST=1". This driver asks the question in both modes and skips only
+  the work, so an `--abort-at` index means the same thing fast or slow.
+  .
+  AND ONE FAST PATH DELIBERATELY NOT TAKEN. `check_decisions` is skipped WHOLE under FAST and
+  the transcript says so. There is no cheap half — measured, its `--help` offers only `--root`
+  and `--today` — and the one environment variable that would shorten it,
+  `TANNEN_CHECK_DECISIONS_NESTED=1`, is RT-08: it disables binding resolution entirely while
+  still printing green. A knob that makes a guard lie is not a fast path.
+  .
+  A FIFTH DEFECT, FOUND BY THE FIRST REHEARSAL AND NOT BY ANY READING OF THE DRIVER. D0199 —
+  written earlier in this same session — binds to
+  `docs/redteam/fixture-candidates/check-laws-dropped-successor/governance/laws.yaml`, and step
+  5 `git mv`s that tree into `tests/poison/`. The binding stops resolving the instant the
+  fixture lands, which is EXACTLY the shape D0141 had at M2 and which step 5 already carries a
+  retarget block for. Writing a new fixture's record, in the session that also fixed D0141's
+  retarget guard, the same defect was reproduced one record along.
+  .
+  HOW IT SURFACED IS THE INTERESTING PART. The driver's own binding check at the end of step 5
+  exists to catch precisely this and would have stopped the sitting with "a decision binding
+  stopped resolving when the fixtures moved". Under `TANNEN_SITTING_FAST` that check is skipped
+  whole, so the sitting completed green — and the HARNESS's independent post-condition then
+  failed instead. Two routes to the same fact, and the fast run disabled only one of them.
+  .
+  A SIXTH, IN THE HARNESS, VISIBLE ONLY BECAUSE THE FIFTH FIRED. That post-condition was one
+  check piping `check_decisions` into `grep -q "0 queued"`, so any failure of that guard printed
+  `FAIL no Tier-C door is left unsigned`. All four doors WERE signed; the message sent the
+  reader to `decisions/` to look for an unsigned record that did not exist. It is now two
+  checks from one run — `check_decisions is green` and `no Tier-C door is left queued` — and it
+  prints the offending binding lines by name, because a sitting MOVES files and a binding
+  naming a pre-move path is the recurring shape (D0141 at M2, D0199 at M3).
+  .
+  THE ABORT PORT DOES NOT TRANSFER, AND REHEARSING IT IS WHAT SAID SO. Every confirm in
+  `publication_sitting.sh` is spelled `confirm "..." || die "stopped at your request"`, so one
+  `n` is exit 1 and its harness asserts exactly that. MEASURED in this driver: **zero** confirm
+  sites die on decline; all 42 are `if confirm; then ... else note "declined"; fi`, because
+  declining is a supported answer and every step reverts its own edits. So `--abort-at N` here
+  means DECLINE ONE PROMPT, and a ported verdict asserting exit 1 and `sitting: STOP` would have
+  failed on every run that worked. The verdict now MEASURES the exit status and branches.
+  .
+  There is exactly one prompt that stops this sitting, and only indirectly: declining step 9's
+  commit leaves the tree dirty, and step 10 then refuses to tag over it (D0051, RT-M2-06 D2).
+  Rehearsed at prompt #19 — stopped at step 10, exit 1, tree dirty, `m3-close` not minted.
+  .
+  AND THAT REHEARSAL FOUND THE DEFECT IT EXISTS TO FIND. `die()`'s recovery advice branched on
+  whether step 9 appeared in the breadcrumb, as a proxy for "has committed". Step 9's commit is
+  a confirm the owner may decline, so the run that declined it, was stopped by step 10, and
+  most needed the advice was told: "The sitting had already committed (step 9): the tree is
+  clean and there is nothing to undo" — printed one line under its own `sitting: STOP — the
+  tree is not clean`. Two directly contradictory sentences, in the message an owner reads at
+  the moment they have been stopped. It now asks `git status`, which costs nothing and cannot
+  be wrong about it. THIS IS THE THIRD TIME IN THIS ONE RECORD that a guard tested a proxy
+  instead of the state it cared about (the D0141 guard, step 4f's subset, and now this).
+  .
+  THREE DEFECTS IN THE HARNESS, ALL FOUND BY RUNNING IT AND ALL IN CODE ADDED THIS SESSION.
+  (a) The line added to NAME offending bindings is a bare `grep` under `set -euo pipefail`, so
+  on the first run that had none to name it exited 1 and killed the verdict — printing RC=1
+  over a run whose every check had passed. The SUCCESS case broke it. (b) The prompt-map awk
+  silently dropped its first group: `prev` is assigned from `$2`, a FIELD, so awk keeps it a
+  "strnum" and comparing it against the string constant `""` coerces both to numbers — step 0's
+  id is literally `0`, so `0 != 0` is false and prompts 1-3 vanished. An operator choosing
+  `--abort-at 2` would have found no step for it. Fixed by concatenating `$2 ""` to force a
+  genuine string, verified against three inputs including a numeric-only step sequence. (c) The
+  transcript scan reported the driver's own expected `sitting: STOP` as an unexpected failure
+  line on every decline run — teaching an operator to skim the one section where the genuinely
+  unexpected shows up.
+  .
+  A FOURTH HARNESS DEFECT, AND THE OLDEST: THE `--answers n` VERDICT ASSERTED THE OPPOSITE OF
+  THE CORRECT OUTCOME. It checked `exit 0` and `no sitting: STOP` for every non-accept run. But
+  declining everything declines step 9's commit, while step 9 runs `gen_projections` and the
+  full custodian UNCONDITIONALLY — they are not confirms, and the custodian writes and signs
+  the receipt — so the tree is necessarily dirty by step 10, where D0051's guard correctly
+  refuses to tag over work no commit contains. A fully declined sitting MUST stop.
+  .
+  That assertion was true when written and was falsified by RT-M2-06 D2, which added the
+  dirty-tree refusal at the M2 boundary; the check was never re-examined, so it has been
+  asserting the wrong outcome ever since. It reported two FAILs against a run that behaved
+  perfectly. Both decline paths now share one `stopped_cleanly()` implementation asserting
+  what a stop must leave behind: it said so, it said where, exit 1, and — on the uncommitted
+  side — a dirty tree, the undo instruction, and no close tag.
+  .
+  A COVERAGE GAP NAMED RATHER THAN PAPERED OVER. Every rehearsal run in this session used
+  `--from worktree`, which applies the working tree to the clone as a patch. That is a TRACKED
+  modification, so step 0's clause (a) sets `RESUMED=1` and the precondition gate is skipped —
+  on every run, including the full non-FAST one. Measured in each kept clone: the transcript
+  carries "so this is a RESUMED sitting" and never the gate offer, so step 0's `make verify`
+  branch, and this milestone's FAST arm inside it, have not been executed at all. A green
+  verdict over a skipped step is the exact shape this project keeps rediscovering, so it is
+  recorded here rather than left for a reader to infer from the absence of a line. It closes
+  with a `--from head` run once this work is committed, which is also the state a real sitting
+  starts from.
+  .
+  `VERIFY_ETA` RE-MEASURED (D0154 item 9): `make verify` green end to end in 33m31s over 842
+  tests, pytest alone 19m16s (840 passed, 1 skipped, 1 xfailed), 2026-09-09. The suite grew
+  18% since M2 and pytest got FASTER in absolute terms, so the total barely moved — which is
+  why the comment's old framing, "the number only ever grows", is replaced. It would have
+  licensed writing a larger figure without measuring.  .
+  A SEVENTH DEFECT, IN WHAT THE SITTING INSTALLS RATHER THAN IN THE DRIVER — AND THE OBVIOUS
+  FIX FOR IT WAS WRONG. D0199's fixture is the first tree under `tests/poison/` whose payload
+  matches `test_*.py`, and `pyproject.toml` sets `testpaths = ["tests"]` with no `python_files`
+  override. Measured in the kept rehearsal clone: installing it takes the real suite from 842
+  nodes to 843. The extra node is `test_l1_7_a_law_that_was_retired`, whose body is a
+  docstring, so it passes for free — a permanently green, assertion-free test in the collected
+  suite, in a file whose own docstring says it is "parsed statically and never executed".
+  .
+  RENAMING THE PAYLOAD OUT OF `test_*.py` BREAKS THE FIXTURE SILENTLY. It was drafted, applied,
+  and reverted. `check_laws` finds law DEFINITIONS by globbing `test_*.py`, so the renamed tree
+  defines no laws at all, and the fixture's own documented positive control — `successor:
+  "L1.7"`, a law the tree does define, must return OK — flipped to FAIL. The negative case still
+  failed, still carrying the marker `which no law file defines` that `scripts/custodian.sh`
+  greps for, so the custodian would have gone on printing "guard 'check_laws' fails its poison
+  as required" over a fixture that had stopped testing the successor rule and started testing
+  "this tree contains no law files". One fixture, one reason, collapsed into a tautology that
+  still ticks green. Caught only by running the POSITIVE control the fixture's README documents;
+  the negative control the custodian runs was satisfied throughout.
+  .
+  Excluded structurally instead: `norecursedirs` in `pyproject.toml` now skips any `poison`
+  directory. Measured against the installed layout in the kept clone — 843 back to 842, exactly
+  one node removed and none added. It costs a descriptor move (`pyproject.toml` is in
+  `HARNESS_FILES`, so all 52 laws went STALE and the evidence was regenerated), and it buys the
+  class rather than the instance: the next poison payload will be broken ON PURPOSE, and
+  collecting one is a red suite saying nothing about this repository.
+  .
+  AN EIGHTH, IN THE HARNESS'S REPORTING, WHERE THE TEMPTING FIX WOULD HAVE HIDDEN THE ONE DEFECT
+  THESE REHEARSALS HAVE ACTUALLY CAUGHT. The full run's "unexpected failure lines" section —
+  the section whose stated goal is to be empty — reported `check_decisions: FAIL (3
+  violation(s))` from step 5. That failure is guaranteed: step 5 installs a poison fixture, so
+  the custody floor is red until step 7 re-signs it, and DECISIONS.md is stale until step 9
+  regenerates. Adding the line to the position-bounded tolerance list would have silenced it,
+  and it is the SAME LINE D0199's binding defect surfaced on in rehearsal 1. The harness now
+  asserts the block carries those three known violations and nothing else, and suppresses the
+  line only while that assertion holds. Verified both ways against the kept transcript,
+  including a doctored copy carrying rehearsal 1's actual D0199 violation: it is named, the
+  check goes red, and the line stays visible.
+  .
+  THE FULL NON-FAST REHEARSAL IS GREEN (2026-09-09). Driver exit 0 in 100 minutes; harness total
+  144m43s; all 18 verdict checks ok; zero unexpected failure lines. Both `make verify` gates ran
+  in full — 841 passed / 1 skipped / 1 xfailed, 18m12s at step 9 and 18m49s at step 11 — with no
+  `TANNEN_SITTING_FAST` marker anywhere in the transcript. `m3-close` minted at step 10 and
+  verified as owner@tannen, custody set re-signed, receipt taken before the tag. One correction
+  to how the sitting was described earlier in this record: it makes TWO commits, not one — step
+  9's and step 11's — so an owner should budget two rounds of pre-commit hooks.
+
+rationale: >-
+  FOUR DEFECTS IN THIS SESSION'S OWN NEW CODE WERE FOUND BY RUNNING IT AND NONE BY READING
+  IT, which is the fourth generation of the lesson D0196, D0198 and D0199 each recorded
+  separately, and the reason every python block here was executed against a sandbox copy with
+  a negative control before it was trusted.
+  .
+  A marker string in step 4f spanned the docstring's line break, so it matched nothing and the
+  step refused a file that was already correct. Step 4k appended a duplicate custody row on a
+  second run — its outer shell guard would have caught it, but D0143 records the same
+  single-point-of-failure shape in the M2 driver's step 4i and the conclusion was that every
+  heredoc refuses on its own. Step 4l rewrote a DATED TRANSCRIPT — a record of a run actually
+  made on 2026-09-01, when the fixture really was staged where the transcript says — while
+  leaving that transcript's output quoting the old path: both a falsified record and an
+  internally inconsistent one. Only its header changes now, to say why its paths differ. And
+  the first spelling of the FAST path for `check_decisions` invented a `--skip-pytest` flag
+  that does not exist, with a fallback to the full run: the transcript would have claimed a
+  skip while paying the full ten minutes.
+  .
+  The first attempt to test step 4f extracted the wrong heredoc — an earlier step's — and all
+  three of its "controls" failed identically with a FileNotFoundError about a file none of
+  them was about. Had the traceback not been read, run 3 would have been recorded as a
+  negative control passing. A control that fails for the wrong reason is not a control.
+  .
+  WHAT IS NOT DRAFTED, AND WHY. `docs/specs/m3.md`'s falsified passages (D0171 ruling 1,
+  RT-M3-03, RT-M3-01's residue) and the package-qualified import in the frozen M3 law files
+  (RT-M3-04's real fix, now recommended at three consecutive boundaries) both need new frozen
+  prose that nobody has written. A driver step offering an edit it does not have would be
+  worse than no step. D0148 item 5 likewise: D0148 says outright that fixing the receipt
+  ordering changes the order the receipt-then-tag argument depends on (D0071), which is the
+  owner's judgement and not an edit a builder should slip into a driver.
+  .
+  ONE CONFLICT IS SURFACED RATHER THAN RESOLVED. Hunks 3 and 4 of the custodian draft
+  implement D0154 items 4 and 3, which D0171 ruling (4) defers to a later sitting. D0171 is
+  unsigned, so nothing is in force and this is not a violation; but the install is whole-file,
+  so it is a question the sitting must answer either way, and answering it by not noticing is
+  the failure mode. Step 6 states it and hands it to the owner, with the argument for
+  including hunk 4 (it fixes a `prev_head` that is read and never assigned, so every receipt
+  this project has taken records its predecessor as "(none recorded)").
+reversibility: >-
+  Fully reversible: nothing here is installed. The driver, its rows file and the README are
+  drafts under docs/proposals/, in neither MANIFEST.sha256 nor governance/custody.sha256, and
+  the sitting's first act is the owner copying the driver over scripts/boundary_sitting.sh.
+  Every step reverts its own edits on a declined confirmation, and the three new steps follow
+  that pattern. `scripts/rehearse_sitting.sh` is edited in place because it is in neither set
+  today — step 4k proposes to change that, from which point it moves only at a sitting.
+status: accepted
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      The driver itself. Documentary and it must stay so until the owner runs it: a drafted
+      patch awaiting owner application enforces nothing, which is the distinction D0052's
+      `strength` field exists to make.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/poison-readme-rows.md
+    strength: documentary
+    detail: >-
+      Step 5's table row for check-laws-dropped-successor, in the M1 and M2 rows files' shape.
+      Its leading-pipe anchor is what `readme_row_absent()` greps for, so the row and the
+      guard that decides whether to append it were checked against each other.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/README.md
+    strength: documentary
+    detail: >-
+      The run sheet: what this copy changes versus the committed driver, with the record that
+      filed each defect; the queue as drafted into steps; and what is deliberately absent.
+  - type: file
+    target: pyproject.toml
+    strength: enforced
+    detail: >-
+      `norecursedirs` keeps `tests/poison/` out of collection. Enforced rather than
+      documentary because the config IS the mechanism — there is no separate guard to bind to,
+      and the alternative that would have needed one (renaming each payload) was measured to
+      break the fixture it was meant to protect.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      The harness half — --abort-at, the isolation positive control, the breadcrumb readers,
+      and the milestone-in-flight derived from tags rather than defaulted to m0, which named a
+      finished milestone and so was always wrong.
+links:
+  - decisions/0152-everything-the-m2-sittings-machinery-got-wrong-and-why-every-fix-is-the-owners.yaml
+  - decisions/0153-two-runs-of-a-one-run-ceremony-and-an-evidence-root-outside-gitignore.yaml
+  - decisions/0154-the-m3-boundary-sitting-queue.yaml
+  - decisions/0171-the-m3-conferral-rulings.yaml
+  - decisions/0174-m3-red-team-findings.yaml
+  - decisions/0195-three-items-publication-left-with-no-queue-to-land-in.yaml
+  - decisions/0196-the-m3-custodian-draft-had-gone-stale-and-would-have-reverted-the-publication-sitting.yaml
+  - decisions/0199-the-guard-that-can-retire-a-frozen-law-had-never-been-watched-failing.yaml
+  - decisions/0143-the-m2-sitting-queue-drafted-into-the-driver.yaml

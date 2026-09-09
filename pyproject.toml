@@ -40,6 +40,25 @@ packages = ["src/tannen"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+# tests/poison/ HOLDS DELIBERATELY BROKEN TREES — fixtures the custody guards are run
+# against, not tests. Nothing under it had ever matched `test_*.py`, so nothing was ever
+# collected and the question never arose. The M3 fixture for `check_laws` (D0154 item 7) is
+# the first whose payload does, and a rehearsal measured the real suite going 842 -> 843,
+# the extra node being an assertion-free function that passes for free.
+#
+# The next payload may not be inert. A poison tree is broken ON PURPOSE, so collecting one
+# is a red suite saying nothing about this repo — excluded structurally, once, rather than
+# by naming each future payload around pytest.
+#
+# NOT FIXED BY RENAMING THE PAYLOAD out of `test_*.py`: `check_laws` finds law DEFINITIONS by
+# globbing `test_*.py`, so a renamed payload stops being a law file and the fixture's own
+# positive control flips from OK to FAIL — measured 2026-09-09, and it would have gone
+# unnoticed because the negative case still fails and still prints the marker the custodian
+# greps for. The fixture would have kept its green tick while testing a tautology.
+#
+# The pytest defaults are restated because this key REPLACES them rather than extending them.
+norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "poison"]
+
 # Import contracts (BRIEF §5.3: no hidden IO; §1/§2: no cross-repo imports).
 
 # Import contracts live in governance/importlinter.toml, NOT here: this file is outside

@@ -33,23 +33,81 @@
 #                                                   # already fixed — read its failures
 #                                                   # against HEAD, not against your tree.
 #   scripts/rehearse_sitting.sh --answers n --keep  # the decline-everything path
+#   scripts/rehearse_sitting.sh --abort-at 12       # accept everything up to prompt 12,
+#                                                   # then decline ONE — the path an owner
+#                                                   # most wants rehearsed and the one this
+#                                                   # harness could not express until M3.
+#   TANNEN_SITTING_FAST=1 scripts/rehearse_sitting.sh --abort-at 12
+#                                                   # the same, in about ten minutes: the
+#                                                   # driver skips the three long gates and
+#                                                   # the commit hooks, and says so on every
+#                                                   # line it skips.
+#
+# WHY --abort-at, AND WHY IT IS NOT --answers n. `--answers n` declines the FIRST prompt, so
+# the run stops before it has done anything and every step after it is unexercised. The
+# failure an owner actually fears is the other one: something looks wrong in the irreversible
+# middle, they answer n, and the sitting has to leave the repository in a state they can
+# reason about. Until this flag existed that path had never once been executed — for either
+# driver — and when the publication harness finally ran it, it found that the answer differs
+# either side of the sitting's first commit (D0184). Two regimes, and the driver now says
+# which one it is in.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 
-MODE=worktree ANSWER=y KEEP=0 MILESTONE=m0 ALLOW_PREEXISTING_CLOSE=0
+# THE MILESTONE IN FLIGHT IS DERIVED, NOT DEFAULTED. This was `MILESTONE=m0`, and because
+# m0-close has existed since the first sitting, every unargumented rehearsal ever run took
+# D0120's refusal branch or — before D0120 — silently skipped steps 10 and 11 while the
+# verdict printed green off a tag the clone was cloned with. A default that names a finished
+# milestone is a default that is always wrong.
+#
+# The milestone in flight is the one whose laws are frozen and whose close tag is not yet
+# minted, and git already knows both facts. Derived rather than enumerated, per D0171 ruling
+# (3): no guard may depend on a hand-maintained enumeration. If none matches — every
+# milestone closed — the derivation yields empty and the run stops rather than guessing.
+milestone_in_flight() {
+    local t n
+    for t in $(git tag -l 'm*-laws-freeze' | sort -V -r); do
+        n="${t%-laws-freeze}"
+        git rev-parse -q --verify "refs/tags/$n-close" >/dev/null 2>&1 || { printf '%s' "$n"; return 0; }
+    done
+    return 1
+}
+MODE=worktree ANSWER=y KEEP=0 MILESTONE="" ALLOW_PREEXISTING_CLOSE=0 ABORT_AT=0
+ABORT_STEP="${TANNEN_ABORT_STEP:-}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --from)      MODE="$2"; shift 2 ;;
         --answers)   ANSWER="$2"; shift 2 ;;
         --milestone) MILESTONE="$2"; shift 2 ;;
+        --abort-at)  ABORT_AT="$2"; shift 2 ;;
+        --abort-step) ABORT_STEP="$2"; shift 2 ;;
         --keep)      KEEP=1; shift ;;
         --allow-preexisting-close) ALLOW_PREEXISTING_CLOSE=1; shift ;;
-        *) echo "usage: $0 [--from head|worktree] [--answers y|n] [--milestone mN] [--keep] [--allow-preexisting-close]" >&2
+        *) echo "usage: $0 [--from head|worktree] [--answers y|n] [--milestone mN]" >&2
+           echo "          [--abort-at N [--abort-step ID]] [--keep] [--allow-preexisting-close]" >&2
            exit 2 ;;
     esac
 done
 case "$MODE" in head|worktree) ;; *) echo "--from must be head or worktree" >&2; exit 2 ;; esac
+case "$ABORT_AT" in ''|*[!0-9]*) echo "--abort-at takes a prompt index (1-based)" >&2; exit 2 ;; esac
+if [ -z "$MILESTONE" ]; then
+    MILESTONE=$(milestone_in_flight) || {
+        echo "every milestone with a laws-freeze tag also has a close tag, so there is" >&2
+        echo "nothing in flight to rehearse. Pass --milestone explicitly if you mean to." >&2
+        exit 2; }
+fi
+# --abort-at asserts WHERE it expects to land, and the verdict checks the assertion. The
+# harness deliberately does not compute the step from the prompt index: several confirms are
+# inside conditionals, so the mapping depends on repo state, and a harness that derived it
+# would be a second copy of the driver's control flow living out here (BRIEF §2). State the
+# expectation, let the run refute it.
+if [ "$ABORT_AT" -gt 0 ] && [ -z "$ABORT_STEP" ]; then
+    echo "--abort-at also needs --abort-step ID (or TANNEN_ABORT_STEP): the step you expect" >&2
+    echo "prompt #$ABORT_AT to fall in. The verdict checks it, which is the whole point —" >&2
+    echo "a run that lands somewhere else has told you something." >&2
+    exit 2
+fi
 
 say()  { printf '\n\033[1m-- %s\033[0m\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
@@ -58,7 +116,47 @@ WORK=$(mktemp -d "${TMPDIR:-/tmp}/tannen-rehearsal-XXXXXX")
 CLONE="$WORK/repo"
 LOG="$WORK/transcript.txt"
 STAMPED="$WORK/transcript.stamped"   # same lines, each prefixed with elapsed seconds
+SITTING="$WORK/sitting"              # the driver's $TANNEN_SITTING_SCRATCH
+STEPFILE="$SITTING/steps"            # ...and the breadcrumb it appends a step to
+PROMPTFILE="$SITTING/prompts"        # ...and "<prompt index> <step>", one line per prompt
+mkdir -p "$SITTING"
 SILENCE_LIMIT=25                     # seconds the driver may be quiet without saying so
+
+# ISOLATION, AS A POSITIVE CONTROL RATHER THAN A PROMISE. The header above says nothing here
+# touches the real repo; until M3 nothing checked it, and "the driver never writes under
+# $ROOT" was a claim of exactly the kind this project refuses everywhere else. Record the
+# real repository's state BEFORE the driver runs and compare after.
+#
+# Tracked changes come from `status --porcelain --untracked-files=no`; untracked ones from a
+# separate `ls-files --others --exclude-standard`, so .venv and other ignored noise never
+# enter. The allowlist exists because a builder legitimately drafts under docs/, decisions/
+# and digest/ while a two-hour run is going, and their edits are not the driver's — it is
+# scoped to where THIS repo's builder writes, not copied from elsewhere. The trailing
+# `|| true` keeps grep's empty-match exit 1 from killing the function under set -e.
+ROOT_HEAD_BEFORE=$(git -C "$ROOT" rev-parse HEAD)
+root_state() { git -C "$ROOT" status --porcelain --untracked-files=no
+               git -C "$ROOT" ls-files --others --exclude-standard \
+                   | grep -vE '^(docs|decisions|digest)/' || true; }
+ROOT_STATUS_BEFORE=$(root_state)
+# A bare FAIL on the isolation check reads as "the driver wrote into your repository", which
+# is alarming and usually wrong — the common cause is the operator editing the tree in another
+# window during the run. Name the difference rather than leaving it to be guessed.
+root_state_diff() {
+    local now; now=$(root_state)
+    [ "$ROOT_STATUS_BEFORE" = "$now" ] && return 0
+    note "what differs (before -> after). If you edited the tree while this ran, it is you:"
+    diff <(printf '%s\n' "$ROOT_STATUS_BEFORE") <(printf '%s\n' "$now") | sed 's/^/     /' | head -20
+    note "the driver never writes under $ROOT; HEAD is checked separately and above."
+}
+# Which step a run reached is the DRIVER's fact, so the driver states it: say() appends every
+# header it prints to $TANNEN_SITTING_SCRATCH/steps and these read it. Scraping the
+# transcript for header text would be a second copy of the driver's step vocabulary living
+# out here — BRIEF §2's duplication-is-drift — and when the publication harness tried that,
+# the pattern was wrong, grep matched nothing, and under `set -euo pipefail` the failing
+# substitution killed the harness mid-verdict instead of failing one check (D0184). Hence
+# `|| true` at every bare substitution below.
+last_step()    { awk '/^Step /{last=$2} END{print last}' "$STEPFILE" 2>/dev/null; }
+reached_step() { awk -v s="$1" '$1=="Step" && $2==s {f=1} END{exit !f}' "$STEPFILE" 2>/dev/null; }
 cleanup() { [ "$KEEP" = 1 ] || rm -rf "$WORK"; }
 trap cleanup EXIT
 
@@ -241,12 +339,25 @@ PY
 SHIM
 chmod +x "$WORK/apply-brief-amendment"
 
-say "Running the driver — $(printf '%s' "$ANSWER") to every prompt, transcript at $LOG"
+if [ "$ABORT_AT" -gt 0 ]; then
+    say "Running the driver — y to every prompt except #$ABORT_AT (expected: step $ABORT_STEP)"
+else
+    say "Running the driver — $(printf '%s' "$ANSWER") to every prompt, transcript at $LOG"
+fi
 # Answers come from a FILE, not from `yes |`: a pipe that outlives the driver dies of
 # SIGPIPE, and under pipefail that becomes the pipeline's status. The obvious spelling of
 # the file — `yes "$ANSWER" | head -n 2000` — has the same defect one step earlier, and
 # took out the first rehearsal run before the driver started. No pipe, no signal.
-awk -v a="$ANSWER" 'BEGIN { for (i = 0; i < 2000; i++) print a }' > "$WORK/answers"
+# 1-BASED, and it has to be: index 0 would name no prompt. With ABORT_AT=0 — the default —
+# no i ever equals it, so the same line still produces the uniform answers file.
+# bash prints a `read -p` prompt only when stdin is a terminal, so nothing marks the prompts
+# in the transcript; the verdict identifies where the abort landed from the driver's own
+# breadcrumb, not by counting prompts in prose.
+if [ "$ABORT_AT" -gt 0 ]; then
+    awk -v n="$ABORT_AT" 'BEGIN { for (i = 1; i <= 2000; i++) print (i == n ? "n" : "y") }' > "$WORK/answers"
+else
+    awk -v a="$ANSWER" 'BEGIN { for (i = 0; i < 2000; i++) print a }' > "$WORK/answers"
+fi
 # Every line is also written with the second it arrived, because WHEN the driver spoke is
 # a fact about the sitting and the plain transcript cannot hold it. `$( )` around a
 # minutes-long command produces a perfect transcript and a terminal that shows nothing at
@@ -261,9 +372,14 @@ stamp() {   # stdin -> stdout unchanged; a copy with elapsed seconds to $1
     done
 }
 set +e
+# TANNEN_SITTING_FAST is NOT set here: it is inherited from the caller's environment if the
+# operator set it, and a fast run must be the operator's explicit choice, never a default the
+# harness quietly supplies. The driver prints a [TANNEN_SITTING_FAST] line for every gate it
+# skips, and the verdict below counts them, so a fast run cannot be mistaken for a full one.
 ( cd "$CLONE" && env \
     SSH_AUTH_SOCK= \
     TANNEN_OWNER_KEY="$KEY" \
+    TANNEN_SITTING_SCRATCH="$SITTING" \
     EDITOR="$WORK/apply-brief-amendment" \
     PAGER=cat \
     TERM=dumb \
@@ -288,6 +404,27 @@ in_clone() { ( cd "$CLONE" && "$@" ); }
 # `check "…" ! grep …` execs a program literally named `!` and reports a failure that is
 # only ever the check's own. Negation needs a function.
 absent() { ! grep -q "$1" "$2"; }
+present() { grep -q "$1" "$2"; }
+equal()   { [ "$1" = "$2" ]; }
+# A sitting that STOPS is not a sitting that failed — this driver's confirms are all
+# decline-and-continue, so the only way a decline stops it is step 10 refusing to tag over
+# the dirty tree step 9's declined commit left (D0051, RT-M2-06 D2). Both decline paths
+# assert the same post-conditions, so they share one implementation.
+stopped_cleanly() {
+    check "it said so, rather than dying silently"     present 'sitting: STOP' "$LOG"
+    check "and said WHERE it stopped"                  present '^reached: step ' "$LOG"
+    check "it exited 1, not some other status"         test "$DRIVER_RC" -eq 1
+    check "no silence over ${SILENCE_LIMIT}s went unannounced" speaks_up "$STAMPED"
+    if [ -z "$(in_clone git status --porcelain)" ]; then
+        note "  it stopped AFTER committing: the tree is clean, nothing to undo"
+        check "the driver said the tree is clean"      present 'The tree is CLEAN' "$LOG"
+    else
+        note "  it stopped BEFORE committing: edits are in the working tree by design"
+        check "the driver said the tree is dirty"      present 'The tree is DIRTY' "$LOG"
+        check "and gave the undo"                      present 'git checkout -- \. && git clean -fd' "$LOG"
+        check "$MILESTONE-close was NOT minted"        bash -c "! ( cd '$CLONE' && git rev-parse -q --verify refs/tags/$MILESTONE-close >/dev/null )"
+    fi
+}
 # Gaps between consecutive output lines, minus the ones the driver announced. A waiting()
 # line ARMS tolerance for the rest of its step and the next step header disarms it, rather
 # than covering only the gap immediately below it: a slow command that streams — the gate
@@ -312,10 +449,83 @@ silences() {
 }
 speaks_up() { [ -z "$(silences "$1")" ]; }
 
-check "the driver ran to completion (exit 0)"            test "$DRIVER_RC" -eq 0
-check "no step aborted the sitting"                      absent 'sitting: STOP' "$LOG"
-check "no silence over ${SILENCE_LIMIT}s went unannounced"     speaks_up "$STAMPED"
-if [ "$ANSWER" = y ]; then
+# Every run, whichever path: the driver must have left a breadcrumb, and it must not have
+# written into the real repository. These two are the harness's own claims about itself, and
+# until M3 neither was checked.
+check "the driver left a step breadcrumb at all"         test -s "$STEPFILE"
+# WHICH PATH STEP 0 TOOK IS A FACT ABOUT WHAT THIS RUN COVERED, and a verdict that does not
+# say it lets a green run imply coverage it does not have. In --from worktree mode the
+# working tree is applied as a patch, which is a tracked modification, so step 0's clause (a)
+# sets RESUMED=1 and the precondition gate is SKIPPED on every worktree run ever made. Say so.
+if present 'so this is a RESUMED sitting' "$LOG"; then
+    note "NOTE: step 0 took the RESUMED path, so its precondition gate was NOT exercised."
+    note "      Only --from head starts from a clean tree and runs it."
+else
+    note "step 0 ran its precondition gate (RESUMED=0)"
+fi
+check "the real repo's HEAD is untouched"                equal "$ROOT_HEAD_BEFORE" "$(git -C "$ROOT" rev-parse HEAD)"
+check "the real repo's working tree is untouched"        equal "$ROOT_STATUS_BEFORE" "$(root_state)"
+root_state_diff
+FAST_SKIPS=$(grep -c 'TANNEN_SITTING_FAST' "$LOG" || true)
+[ "$FAST_SKIPS" -eq 0 ] || note "NOTE: $FAST_SKIPS gate(s) were SKIPPED (TANNEN_SITTING_FAST). This run says nothing about them."
+
+# STEP 5 INSTALLS A POISON FIXTURE, so the custody floor is legitimately red until step 7
+# re-signs it and DECISIONS.md is stale until step 9 regenerates: the check_decisions the
+# driver runs at step 5 is EXPECTED to fail, and it reported that failure as an anomaly on
+# every accept run ever made. Adding the line to the position-bounded tolerance below would
+# have been the WRONG fix: it is the same line D0199 failed on in rehearsal 1, so a blanket
+# skip would have hidden the only defect these rehearsals have so far caught. Name the
+# transient instead, assert the block carries nothing beyond it, and let anything else through.
+CD_MID_KNOWN='^  - decisions/0063-[^:]*\.yaml: binding does not resolve — pytest node fails: tests/test_governance_scripts\.py$'
+CD_MID_KNOWN="$CD_MID_KNOWN"'|^  - decisions/0177-[^:]*\.yaml: binding does not resolve — pytest node fails: tests/test_governance_scripts\.py::test_check_passes_on_real_tree$'
+CD_MID_KNOWN="$CD_MID_KNOWN"'|^  - DECISIONS\.md is stale'
+CD_MID_EXTRA=$(awk '
+      /== Step 7/              { exit }
+      /^check_decisions: FAIL/ { inblock = 1; next }
+      inblock && /^  - /       { print; next }
+      inblock                  { inblock = 0 }' "$LOG" | grep -vE "$CD_MID_KNOWN" || true)
+CD_MID_OK=0; [ -z "$CD_MID_EXTRA" ] && CD_MID_OK=1
+check "the pre-step-7 check_decisions failure is only the known step-5 transient" \
+    test -z "$CD_MID_EXTRA"
+[ -z "$CD_MID_EXTRA" ] || printf '%s\n' "$CD_MID_EXTRA" | sed 's/^  - /     /'
+
+if [ "$ABORT_AT" -gt 0 ]; then
+    # ------------------------------------------------- the single-decline path
+    # THE PUBLICATION HARNESS'S SEMANTICS DO NOT TRANSFER, and porting them unexamined would
+    # have produced a verdict that failed on every run. Every confirm in publication_sitting.sh
+    # is spelled `confirm "..." || die "stopped at your request"`, so one `n` is exit 1. In THIS
+    # driver all 42 confirms are `if confirm; then ... else note "declined"; fi` — declining is
+    # a supported answer that leaves the step un-applied and the sitting running, which is the
+    # whole reason every step reverts its own edits. Measured: zero `confirm ... || die` sites.
+    #
+    # So `--abort-at N` here means DECLINE ONE PROMPT, and the run's exit status is a fact to
+    # measure, not to assert. There is exactly one prompt that stops the sitting, and only
+    # indirectly: declining step 9's commit leaves the tree dirty, and step 10 then refuses to
+    # tag over it — `[ -z "$(git status --porcelain)" ] || die` — because a close tag over an
+    # uncommitted sitting attests a commit that does not contain it (D0051, RT-M2-06 D2). That
+    # is the most valuable single decline to rehearse, and the verdict recognises it by name.
+    LAST_STEP=$(last_step || true)
+    say "Verdict — ONE PROMPT DECLINED: n at prompt #$ABORT_AT"
+    PROMPT_STEP=$(awk -v n="$ABORT_AT" '$1==n{print $2}' "$PROMPTFILE" 2>/dev/null || true)
+    note "prompt #$ABORT_AT fell in step ${PROMPT_STEP:-<not reached>}; the run's last step was ${LAST_STEP:-<none>}"
+    check "the prompt map agrees with --abort-step"       equal "$PROMPT_STEP" "$ABORT_STEP"
+
+    if [ "$DRIVER_RC" -eq 0 ]; then
+        check "no silence over ${SILENCE_LIMIT}s went unannounced" speaks_up "$STAMPED"
+        note "regime: the sitting CONTINUED — this driver treats a decline as an answer, not a stop"
+        check "it ran to the end"                         equal "$(awk 'END{print}' "$STEPFILE" 2>/dev/null || true)" "The sitting is closed"
+        check "and printed no STOP"                       absent 'sitting: STOP' "$LOG"
+        check "the declined step said so in the transcript" present 'declined' "$LOG"
+    else
+        note "regime: the sitting STOPPED"
+        stopped_cleanly
+    fi
+elif [ "$ANSWER" = y ]; then
+    # These three are the floor for any non-abort run and must not be lost in the branching:
+    # a completed sitting exits 0, prints no STOP, and never goes quiet without saying so.
+    check "the driver ran to completion (exit 0)"        test "$DRIVER_RC" -eq 0
+    check "no step aborted the sitting"                  absent 'sitting: STOP' "$LOG"
+    check "no silence over ${SILENCE_LIMIT}s went unannounced" speaks_up "$STAMPED"
     check "$MILESTONE-close was minted by THIS run"      test "$CLOSE_TAG_PREEXISTED" -eq 0
     check "$MILESTONE-close exists"                      in_clone git rev-parse -q --verify "refs/tags/$MILESTONE-close"
     check "$MILESTONE-close verifies as owner@tannen"    in_clone git -c gpg.format=ssh \
@@ -330,10 +540,62 @@ if [ "$ANSWER" = y ]; then
     check "this sitting took a fresh attention receipt" test -n "$NEW_RECEIPT"
     check "and signed it"                                test -f "$NEW_RECEIPT.sig"
     check "the custodian is green with no tolerances"    in_clone bash scripts/custodian.sh --check-only
-    check "the gate is green end to end"                 in_clone make verify
+    # Under a fast run the driver skipped its own gates, so a verdict that then spends
+    # forty minutes proving the gate green has thrown away the reason for running fast.
+    # The cheap floor still runs, and the check says which one it was.
+    if [ "${TANNEN_SITTING_FAST:-0}" = 1 ]; then
+        check "the custody floor is green (make verify skipped: FAST)" \
+                                                         in_clone bash scripts/custodian.sh --check-only
+    else
+        check "the gate is green end to end"             in_clone make verify
+    fi
     check "nothing was left uncommitted"                 test -z "$(in_clone git status --porcelain)"
-    check "no Tier-C door is left unsigned"              in_clone bash -c \
-              '.venv/bin/python -I -P scripts/check_decisions.py | grep -q "0 queued"'
+    # ONE RUN, TWO NAMED FACTS. This was a single check piping check_decisions into
+    # `grep -q "0 queued"`, so ANY failure of that guard — a binding that stopped resolving, a
+    # stale projection, a schema error — printed "FAIL no Tier-C door is left unsigned" and
+    # sent the reader to decisions/ looking for an unsigned door.
+    #
+    # On 2026-09-09 it did precisely that. Every Tier-C door WAS signed; the real defect was
+    # that D0199's binding named the fixture path step 5 had just `git mv`d away, so
+    # check_decisions never reached the summary line the grep was looking for (D0200). The
+    # check was right to fail and wrong about why, which is this project's most familiar
+    # failure mode wearing a verdict's clothing.
+    CD_LOG="$WORK/check_decisions.txt"
+    note "running check_decisions in the clone — the verdict's own long leg, about 10 minutes"
+    in_clone bash -c '.venv/bin/python -I -P scripts/check_decisions.py' > "$CD_LOG" 2>&1
+    CD_RC=$?
+    check "check_decisions is green in the sitting's own tree"   test "$CD_RC" -eq 0
+    check "no Tier-C door is left queued"                        present '0 queued' "$CD_LOG"
+    # Name the bindings that broke, if any: a sitting MOVES files, and a binding pointing at
+    # a pre-move path is the recurring shape (D0141 at M2, D0199 at M3).
+    # `|| true` IS LOAD-BEARING, and it was missing for exactly one run. Under
+    # `set -euo pipefail` a grep that matches NOTHING exits 1, so this line — added to name
+    # offending bindings — killed the harness on the first run that had none to name. The
+    # verdict died between "no Tier-C door is left queued" and the three checks after it,
+    # printing RC=1 over a run whose every check had passed. The SUCCESS case broke it, which
+    # is D0184's lesson arriving by a different door on the same day it was quoted.
+    grep -E 'binding does not resolve' "$CD_LOG" | head -5 | sed 's/^/     /' || true
+    # The breadcrumb underwrites the green verdict too: a run that stopped early and still
+    # satisfied every check above would be caught here, because only the last line of a
+    # completed sitting is this one.
+    check "and recorded every step through the last one" \
+        equal "$(awk 'END{print}' "$STEPFILE" 2>/dev/null || true)" "The sitting is closed"
+else
+    # --answers n DECLINES EVERYTHING, INCLUDING STEP 9'S COMMIT, so this run cannot complete
+    # and asserting that it does is a defect in the verdict, not the driver. Step 9 runs
+    # gen_projections and the full custodian unconditionally — they are not confirms, and the
+    # custodian WRITES AND SIGNS the receipt — so the tree is necessarily dirty by step 10,
+    # where the D0051 guard correctly refuses to mint a close tag over work no commit contains.
+    #
+    # The harness asserted `exit 0` and `no sitting: STOP` here for every run, which was true
+    # while nothing refused a dirty tree. RT-M2-06 D2 added that refusal at the M2 boundary and
+    # this check was never re-examined: it has been asserting the opposite of the correct
+    # outcome ever since. Measured 2026-09-09, two FAILs on a run that behaved perfectly.
+    say "Verdict — EVERY prompt declined"
+    note "a fully declined sitting MUST stop at step 10: step 9's receipt is written"
+    note "unconditionally, so the tree is dirty and D0051 forbids tagging over it"
+    stopped_cleanly
+    check "it got as far as step 10 before stopping" reached_step 10
 fi
 
 # Failures the driver PRINTED but did not stop on are the interesting ones: a sitting that
@@ -349,8 +611,19 @@ if ! speaks_up "$STAMPED"; then
 fi
 
 say "Unexpected failure lines in the transcript (empty is the goal)"
-awk '
+# On a --abort-at run the driver's own `sitting: STOP` is the EXPECTED outcome, not an
+# anomaly: the verdict above has already checked that it is present, says which step it
+# names, and confirms the tree state that goes with it. Left in this scan it reported the
+# run's whole purpose as an unexpected failure, which is how a rehearsal teaches an operator
+# to skim past this section — and this section is where the genuinely unexpected shows up.
+# Both decline paths expect a STOP: --abort-at N declines one prompt, --answers n declines
+# every prompt, and either way step 10's refusal is the run working. Only an accept run has
+# no business printing one, and there the check above catches it.
+DECLINES=0; { [ "$ABORT_AT" -gt 0 ] || [ "$ANSWER" = n ]; } && DECLINES=1
+awk -v declined="$DECLINES" -v cdok="$CD_MID_OK" '
+  declined > 0 && /^sitting: STOP/ { next }
   /== Step 7/ { strict = 1 }
+  cdok > 0 && strict == 0 && /^check_decisions: FAIL/ { next }
   /fails its poison as required/ { next }
   # The driver SHOWS the owner unified diffs of the custodian and of ci.yml, and those
   # diffs contain the guard source that prints the FAIL lines. Source code being displayed
@@ -362,6 +635,24 @@ awk '
       if (strict || $0 !~ /custody set hashes do not verify|custody\.sha256\.sig absent|custody floor violated|make: \*\*\* \[Makefile/)
           printf "%d:%s\n", NR, $0
   }' "$LOG" | head -30
+
+if [ -s "$PROMPTFILE" ]; then
+    say "Prompt map — which prompt index fell in which step"
+    note "Choose --abort-at N from THIS, not from counting confirm sites: several are inside"
+    note "conditionals, so the mapping depends on repo state. N is 1-based and counts the"
+    note "driver's pause() prompts as well as its confirm() ones — both read a line."
+    # `have` rather than `prev != ""`, and that is not style. `prev` is assigned from $2, a
+    # FIELD, so awk keeps it a "strnum": compared against the string constant "" it coerces
+    # BOTH to numbers, and step 0's id is literally "0", so `0 != 0` is false and the entire
+    # first group vanishes. Measured: the map printed step 3b onward and silently omitted
+    # prompts 1-3, which are step 0's — so an operator picking --abort-at 2 would have found
+    # no step in the map for it. A flag cannot be coerced.
+    awk '{ s = $2 "" }
+         s != prev { if (have) printf "     step %-5s prompts %s-%s\n", prev, start, last
+                     prev = s; start = $1; have = 1 }
+         { last = $1 }
+         END { if (have) printf "     step %-5s prompts %s-%s\n", prev, start, last }' "$PROMPTFILE"
+fi
 
 say "Transcript: $LOG (timed copy: $STAMPED)"
 [ "$KEEP" = 1 ] && note "clone kept at $CLONE" || note "(--keep to inspect the clone)"

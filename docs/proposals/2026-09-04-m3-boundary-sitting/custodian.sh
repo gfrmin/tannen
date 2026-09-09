@@ -2,7 +2,7 @@
 # scripts/custodian.sh — the guard of the guards (BRIEF §9.1 custody floor).
 #
 # THIS COPY is docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh: the live file
-# plus six delimited hunks (`--- M3 DRAFT HUNK n ---`), each mapped to a D0154 queue item.
+# plus seven delimited hunks (`--- M3 DRAFT HUNK n ---`), each mapped to a D0154 queue item.
 # The owner installs it at the M3 sitting's step 6, after reading the diff. It is a
 # proposal: it enforces nothing until installed.
 #
