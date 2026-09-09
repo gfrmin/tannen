@@ -85,14 +85,19 @@ about this repository. Recorded as D0200.
 
 # `boundary_sitting.sh` — the M3 driver
 
-> **NOT YET CLEARED FOR THESE BYTES — re-rehearsal of the accept path in flight
-> (2026-09-10).** The five green paths below cleared the driver as it stood on 2026-09-09.
-> Owner ruling (2) of 2026-09-10 then changed step 0 (D0208), and `docs/SITTING.md`'s standing
-> rule is that runs are not coverage: **only a green run clears the driver, and it clears the
-> bytes it ran.** The table stays because each row still names a defect that run found; it no
-> longer says READY, because it did not execute this file. The banner flips back when the full
-> non-FAST accept path is green against these bytes, and this note is the record that it was
-> not simply carried forward.
+> **CLEARED FOR THESE BYTES — sha256 `00c66cfe9af8e9fd…92ca595`, full non-FAST accept path
+> green on 2026-09-10.** `--from head --answers y`: **22/22 ok, RC=0, 2h24m12s**, 26 steps
+> through step 11, `m3-close` minted and verifying as `owner@tannen`, both commits made, the
+> step-9 gate green end to end (`844 passed, 1 skipped, 1 xfailed in 1103.48s`).
+>
+> The banner names a **sha256**, not a date, and that is the point. Ruling (2) of 2026-09-10
+> changed step 0 (D0208), which retired the five green paths below as clearance for *this*
+> file — `docs/SITTING.md`'s standing rule is that runs are not coverage: **only a green run
+> clears the driver, and it clears the bytes it ran.** A banner naming the bytes cannot be
+> inherited by an edit; a banner naming a date can, and had been.
+>
+> The rows below are kept because each still names a defect its run found. Only the row marked
+> **clearance** covers these bytes.
 >
 > An earlier banner also claimed this driver's `--from head` row "finally executes step 0's
 > precondition gate". It does not, and D0206 retracts it: the gate runs from elapsed second 0
@@ -106,6 +111,7 @@ about this repository. Recorded as D0200.
 >
 > | Path | Verdict | Found |
 > |---|---|---|
+> | **clearance — `--from head`, full accept, no FAST, sha256 `00c66cf…`** | **22/22 ok, RC=0, 2h24m12s** | the run that clears these bytes (D0208's step 0, D0210's `die()`). Its two new checks both fired non-vacuously: the driver took the drift branch, so `[waiting] the full gate:` is absent and `that is ALL this established` is present |
 > | **full accept, no FAST** | **18/18 ok, RC=0, 144m43s** | step 5's guaranteed `check_decisions` failure reported as an anomaly; the poison payload collected by the real suite |
 > | **`--from head`, full accept** | **20/20 ok, RC=0, 146m36s** | step 0's gate reports `check_manifest: FAIL` — the driver's own custody drift; and the harness rehearses the *M2* driver unless `TANNEN_REHEARSE_DRIVER` is set |
 > | FAST accept | 19/19 ok, RC=0 | — |
@@ -137,9 +143,13 @@ about this repository. Recorded as D0200.
 > On a `--from head` run there is a second such line, and only there: step 0's precondition
 > gate prints `check_manifest: FAIL (1 violation(s))` naming `custody drift:
 > scripts/boundary_sitting.sh`. The driver under test has just been copied over a custody-set
-> member and is not re-signed until step 7, so the gate is correct and the driver answers
-> `green except the custody set, which is this sitting's step 7 — continuing`. **The owner's
-> own `cp` produces exactly this**, so it is what a real sitting shows. Same discipline: the
+> member and is not re-signed until step 7, so the gate is correct. **The owner's
+> own `cp` produces exactly this**, so it is what a real sitting shows. Until 2026-09-10 the
+> driver answered `green except the custody set, which is this sitting's step 7 — continuing`;
+> ruling (2) retired that line (D0208) because it read as reassurance about a suite that had
+> not run. It now reports what the run reached — measured in the clearance run: *"no unexpected
+> failure — and that is ALL this established. The run reached 1 of verify's six guards and
+> never reached the suite."* Same discipline: the
 > harness asserts that drift is the *only* violation in the block and suppresses nothing else
 > — a frozen-path violation there is a stop, not a note. Both tolerances now also say when
 > they were **not** exercised, so a run that never reached the gate cannot report the same
@@ -285,6 +295,17 @@ unexpected failure appeared in a run that got three lines in.
 
 **The precondition is established before the `cp` or not at all** — which is why
 `docs/SITTING.md:23` puts `make verify` first, and why step 0's offer does not replace it.
+
+> **Both sentences above describe the driver as it stood on 2026-09-09; ruling (2) of
+> 2026-09-10 changed both (D0208).** The "about 35 minutes" banner is gone — a full-gate ETA
+> must not be promised for a gate the `cp` makes vacuous — and the continuation line no longer
+> says `green except the custody set`. Measured in the clearance run of 2026-09-10, step 0 now
+> names the drift, says what the one guard covers, states that it is **not** the precondition,
+> and waits on *"the floor check only — seconds"*; the continuation line reports *"no
+> unexpected failure — and that is ALL this established. The run reached 1 of verify's six
+> guards and never reached the suite."* The count of guards is derived from the run, not
+> written down. The paragraphs are kept in the present tense they were found in, because the
+> finding is the record — this note is the correction.
 
 ## The floor audit, and what it refused to change
 
