@@ -1,0 +1,179 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0201
+title: "The M3-close conferral: five rulings — a floor audit takes precedence over further driver hardening, the ceremony splits by consequence, and D0148 item 5 is ruled after four boundaries"
+tier: C
+date: "2026-09-09"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE OWNER RULED IN CONVERSATION ON 2026-09-09, after reading an independent review of the
+  M3 driver and its rehearsals, and before the sitting. Recorded here verbatim in substance
+  and UNSIGNED, on D0171's precedent and for D0171's stated reason: the rulings are
+  instructions the builder acts on immediately where the act is reversible, and the Tier-C
+  half — composing the sitting, narrowing the custody set, superseding frozen prose — is
+  authoritative only once this record carries the owner's signature at a sitting. A record
+  of rulings is not the key that enacts them (D0063), and a Tier-C record without a
+  signature is not accepted (D0064).
+  .
+  THE REVIEW'S CENTRAL OBSERVATION, recorded because it is the reason the rulings exist and
+  it generalises past this milestone: "every boundary, the ceremony grows because the
+  previous ceremony's defects justified new guards, and each addition was individually
+  correct. That is a ratchet with no release." The M3 driver is 26 steps and ~100 minutes,
+  a full rehearsal 146, and the boundary needs two rehearsals plus the run — roughly six and
+  a half hours of ceremony for one milestone. The owner's framing: "you are now maintaining
+  two systems, and only one of them is tannen."
+  .
+  (1) COMMISSION A FLOOR-SIMPLIFICATION AUDIT, Session-A shaped, TAKING PRECEDENCE OVER
+  FURTHER DRIVER HARDENING. Which custody guards, receipt-chain mechanics and
+  history-integrity checks are made redundant by a protected remote with required signature
+  verification, now that the remote is public? Target: a smaller custody set and a shorter
+  ceremony. The owner's argument: "that's the one change that removes mechanism instead of
+  adding it, and it's now available where it wasn't at M0." DONE — see D0202 and
+  `docs/proposals/2026-09-04-m3-boundary-sitting/FLOOR-AUDIT.md`. The audit returns a NULL
+  RESULT on the custody set and a positive one on the ceremony; the owner's own instruction
+  was that a null result stated plainly is a good outcome.
+  .
+  (2) SPLIT THE CEREMONY BY CONSEQUENCE. A short signing ceremony for the irreversible acts
+  — custody re-signature, close tag, Tier-C signatures — with the reversible batch applied
+  and verified beforehand by the builder under existing delegation. "If the reason that
+  can't happen is that fixtures live in author-key territory, then the right fix is to
+  narrow the custody set to what actually needs the key, which is the same audit as (1)."
+  ANSWERED BY THE AUDIT, and not in the direction the ruling anticipated: the blocker is not
+  custody-set membership and narrowing the set is refused, but the ceremony still shortens
+  by ~35 minutes and one owner signature per boundary via a different route (D0202).
+  .
+  (3) DRAFT THE TWO DEFERRED SESSION-A ITEMS BEFORE M4 SESSION A rather than letting them
+  roll again: the falsified passages in `docs/specs/m3.md` (superseded forward under the
+  D0128 mechanism), and the package-qualified import in the frozen M3 law files — the latter
+  now recommended at THREE consecutive boundaries. The owner's reason, which is D0171
+  ruling (1)'s reason restated: "frozen prose known to be false is precisely how D0049
+  happened." IN PROGRESS as builder drafting; installation stays owner territory.
+  .
+  (4) D0148 ITEM 5 IS RULED, after four boundaries in the queue as a pure judgement call:
+  MOVE THE RECEIPT BEHIND THE COMMIT CONFIRM. The owner's argument: "a signed receipt for a
+  sitting that was abandoned attests to presence at something that did not happen, which is
+  worse than reordering the receipt-then-tag argument." Measured at
+  `docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh:2523-2543`: step 9 runs
+  `custodian.sh`, which writes AND SIGNS `receipts/<date>.md`, three commands BEFORE the
+  `confirm "Commit the sitting so far?"` at :2539. Decline that prompt and the signed
+  receipt already exists.
+  .
+  RULING (4)'s CORRECT IMPLEMENTATION IS TO MOVE THE CONFIRM EARLIER, NOT THE RECEIPT LATER,
+  and the distinction is load-bearing. Moving the receipt after the COMMIT would leave it
+  outside the commit that step 10's close tag attests, so the tag would name a commit not
+  containing the receipt. Moving it after the CONFIRM keeps the receipt inside the commit,
+  keeps it ahead of the close tag — so D0071's receipt-then-tag argument survives intact and
+  only the receipt-versus-commit order changes — and yields no receipt at all on a declined
+  sitting, which is the whole point.
+  .
+  RULING (4)'s EDGE CASE, PUT TO THE OWNER AND ANSWERED 2026-09-09: a sitting whose every
+  step is already a no-op leaves the tree clean, so a commit-gated receipt would never be
+  taken. Asked whether an owner attending a no-op sitting should still get a receipt, the
+  owner ruled NO — "a receipt needs an act". The dirty-tree test therefore gates both the
+  commit and the receipt, and a quiet boundary lets the receipt clock go stale, which under
+  BRIEF §9.1 blocks Tier-B work until the next sitting that does something. That
+  consequence is intended, not incidental.
+  .
+  (5) REHEARSAL OF THE M3 DRIVER AS IT STANDS: PROCEED. "The ceremony ships as built for
+  this boundary; the simplification lands before M4's." The rehearsal is already complete —
+  five paths green, D0200 — so this ruling reads as: do not hold the M3 boundary for the
+  audit or the simplification. THE BUILDER'S READING OF (4) AGAINST (5), stated so the owner
+  can refuse it: ruling (4) settles the judgement and this record discharges its "record the
+  reordering against D0071 explicitly" instruction, but the driver is NOT edited for this
+  boundary, because any edit voids the five-path certification at a cost of ~146 minutes of
+  re-rehearsal and ruling (5) says the ceremony ships as built. The change lands with the
+  ruling (1)/(2) rework, which restructures step 9 regardless. The residual risk accepted by
+  that reading, stated plainly: if the M3 sitting is abandoned after step 9's custodian run,
+  a signed receipt will attest to a sitting that did not complete. If the owner would rather
+  pay the re-rehearsal, the change is small and specified above.
+  .
+  THREE CLAIMS IN THE REVIEW ARE CORRECTED, because a ruling recorded on a false premise
+  propagates. (a) "The design target was five minutes a week" — THERE IS NO WEEKLY MINUTE
+  FIGURE ANYWHERE IN THIS REPOSITORY. Searched at HEAD and at `brief-freeze` across BRIEF,
+  policy, decisions, docs and DELEGATIONS. The only owner-time figures written down are
+  `docs/OPENING.md:1` ("the opening-sitting checklist (owner, ~10 minutes)") and
+  `docs/OPENING.md:15` ("~5 minutes" to inspect the trust root). The accretion complaint
+  stands on `governance/policy.yaml:48-49` instead — "deference spends owner attention,
+  which is the one resource the autonomy protocol exists to conserve" — which is a firmer
+  footing than an invented target. (b) "The driver now has 24 steps" — it has TWENTY-SIX
+  (`grep -c '^say "Step '`), and this record's own proposal README repeated the 24 at :187
+  while its live/no-op split at :219-220 sums to 25. Both are corrected. (c) "A protected
+  remote with required signature verification" describes UNBUILT WORK: measured 2026-09-09,
+  `branches/master/protection` returns 404 and `rulesets` returns `[]`, and commits are
+  unsigned (`commit.gpgsign=false`, every commit `%G? = N`). Ruling (1) asked which guards a
+  facility makes redundant; the facility does not exist yet, and D0202 records what building
+  it would and would not buy.
+rationale: >-
+  Filed Tier C on D0171's reasoning, which applies unchanged: the tier determines visibility,
+  the digest's "Requires owner" section is a query over Tier-C records, and a Tier-A record
+  carrying owner-key items is invisible in the one section the owner is committed to reading.
+  That blindness is the recorded defect D0154, D0191 and D0195 each cost a milestone to.
+  Rulings (2), (3) and (4) all end in owner-key acts — composing the sitting, superseding
+  frozen prose, editing a rehearsed driver — so this record belongs where the owner will
+  find it.
+  .
+  Recorded with the rulings' ARGUMENTS and not merely their outcomes, following D0063 and
+  D0171: each turned on a reason the builder had not made. That a ceremony's growth is a
+  ratchet with no release, and that the release valve has to be commissioned deliberately
+  because no clause widens anything automatically. That an audit removing mechanism
+  outranks further hardening that adds it. And that a false attestation of presence is a
+  worse defect than an inelegant ordering — which is the argument that finally moved D0148
+  item 5 after four boundaries of deferral, and it moved it because it reframed the item
+  from an ordering question into a truthfulness question.
+  .
+  The three corrections are recorded rather than quietly applied because two of them are
+  the repository's own recurring failure mode pointed at itself. The "24 steps" figure was
+  the builder's, repeated from a README the builder wrote and never recounted — a claim
+  true when written and false since, which is the exact class D0191 and `ci.yml`'s header
+  belong to. The five-minutes-a-week target was never true: it is a plausible number that
+  reads like a citation, and the review reasoned from it to a conclusion that happens to be
+  sound on other grounds. Both were caught by measurement, not by reading.
+reversibility: >-
+  Rulings (1) and (3) are pure builder work and fully reversible — an audit and two drafts,
+  neither enacting anything. Ruling (5) reverses nothing because it changes nothing. Ruling
+  (4) is reversible as recorded here and becomes one-way only when a driver actually ships
+  with the new order and a receipt is signed under it; that is why this record settles the
+  judgement while deliberately not editing the driver. Ruling (2) is the one whose eventual
+  execution is hard to undo: a ceremony that stops taking an owner signature at a step
+  cannot retroactively have taken it, so the audit's recommendation to delete step 11
+  (D0202) waits for a signature rather than being executed under the standing delegation.
+status: blocked-on-owner
+bindings_count: 5
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/FLOOR-AUDIT.md
+    strength: documentary
+    detail: >-
+      Ruling (1)'s deliverable. Documentary because an audit enforces nothing: it is a
+      finding the owner rules on, and its recommendations each carry their own record.
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Ruling (4)'s target — step 9 at :2523-2543, where the receipt is signed three commands
+      before the commit confirm. Documentary and it MUST stay documentary for this boundary:
+      the driver is certified across five rehearsal paths (D0200) and any edit voids that
+      certification, so ruling (5) keeps the file as rehearsed.
+  - type: file
+    target: governance/tier-c.yaml
+    strength: documentary
+    detail: >-
+      Rulings (1) and (2)'s subject: `custody.set`, the 26 patterns resolving to 75 paths
+      the audit was commissioned to shrink. The audit refuses every removal, so this binding
+      records a question answered rather than a change pending.
+  - type: file
+    target: docs/specs/m3.md
+    strength: documentary
+    detail: >-
+      Ruling (3)'s first target, and D0171 ruling (1)'s before it — the same falsified
+      passages, now at their second consecutive boundary. Frozen at `m3-laws-freeze`; no
+      builder act may touch it, so the correction is drafted as new text and installed
+      under the owner's key.
+  - type: file
+    target: governance/policy.yaml
+    strength: documentary
+    detail: >-
+      The footing the accretion complaint actually rests on, replacing the invented weekly
+      target: :48-49, "deference spends owner attention, which is the one resource the
+      autonomy protocol exists to conserve." Also the file whose `in_repo_mechanics` clause
+      still excludes the push this repository now performs after every commit.
+links: ["D0171", "D0148", "D0071", "D0154", "D0200", "D0202", "D0063", "D0064", "D0128", "D0045"]

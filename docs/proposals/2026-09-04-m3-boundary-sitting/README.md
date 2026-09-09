@@ -88,9 +88,10 @@ about this repository. Recorded as D0200.
 > **READY — all five paths green, including the full non-FAST gate and the `--from head` run
 > that finally executes step 0's precondition gate (2026-09-09).**
 > Runs are not coverage (`docs/SITTING.md`): only a green run clears the driver. The two full
-> rows ran with **no** `TANNEN_SITTING_FAST`, so both `make verify` legs and both rounds
-> of commit hooks executed. The three FAST rows say nothing about those legs and are kept
-> because each one found a distinct defect.
+> rows ran with **no** `TANNEN_SITTING_FAST`, so every `make verify` leg and both rounds of
+> commit hooks executed — two legs from the worktree, three from head, where step 0's
+> precondition gate is the extra one. The three FAST rows say nothing about those legs and
+> are kept because each one found a distinct defect.
 >
 > | Path | Verdict | Found |
 > |---|---|---|
@@ -183,7 +184,7 @@ reasoned about.
 | **New: a step breadcrumb at `$TANNEN_SITTING_SCRATCH/steps`** | `say()` appends every header it prints. A `die` is `exit 1` with no trap, so this is the only thing that can state how far a run got — to the owner, and to the harness, which must not learn the driver's state by parsing the driver's prose (BRIEF §2). Step 0's header is renamed `Step 0 — …` so an abort inside it is distinguishable from a run that wrote no breadcrumb. |
 | **New: `die()` says where it stopped and what to undo** | Two regimes, and they differ either side of step 9's commit: after it the tree is clean and there is nothing to undo; before it every edit is in the working tree and the custody floor is RED by construction. An owner stopped mid-ceremony should not have to work out which one they are in. |
 | **New: `TANNEN_SITTING_FAST=1`** | Every rehearsal to date cost one to two hours, which is why the abort path had never once been executed. This skips the three long gates and the commit hooks and runs every step in ~10 minutes. Each skip prints a `[TANNEN_SITTING_FAST] NOT RUN:` line and the harness counts them, so a fast run cannot be mistaken for a full one. `check_decisions` is skipped **whole** — it has no cheap half, and the one env var that would shorten it is RT-08, which disables binding resolution *while still printing green*. |
-| **New: `TANNEN_SITTING_STOP_AFTER=<step>`, exit 3** | A partial run inspected in minutes rather than hours, and it cannot read as green: the harness checks the status. Called after all 24 steps. |
+| **New: `TANNEN_SITTING_STOP_AFTER=<step>`, exit 3** | A partial run inspected in minutes rather than hours, and it cannot read as green: the harness checks the status. Called after all 26 steps. |
 | **New step 3b — the push clause** | **D0195 item (3).** `in_repo_mechanics` grants Tier A over pushing to a *private* origin and excludes every other, and this origin is public: read literally, the act this repo performs after every commit is excluded from the tier that authorises it. D0195 offers two shapes and says the choice is the owner's, so the step offers both rather than choosing. |
 | **New step 4k — `rehearse_sitting.sh` into the custody set** | **RT-M3-06.** The driver is custody-set; the harness whose whole purpose is to run it before the owner's key does is in neither the custody set nor the manifest, and D0068 makes a green rehearsal the driver's precondition. `check_drift.py` is also outside the set; no record asks for it, so it is named but not offered. |
 | **New step 4l — a fixture whose README says it is not installed** | **D0152 item 5.** `tests/poison/oracle-shadow-model/README.md` still opens "**needs patch**", says it is "staged here and not in `tests/poison/`" from inside `tests/poison/`, and offers two commands whose `PYTHONPATH` names a deleted directory. Frozen *and* custody-set, so this is the only place it could be corrected. The dated "Verified" transcript is **left intact** — it is evidence of a run actually made, and rewriting it would falsify the record; only its header changes, to say why its paths differ. |
@@ -215,9 +216,12 @@ reasoned about.
 
 ## Which steps a rehearsal actually exercises
 
-Measured from a kept clone's transcript, not asserted. Eleven steps do live work at M3;
-fourteen are already-applied no-ops that run only their "already applied — skipped" branch,
-which is the sitting staying safe to re-run rather than dead weight.
+Measured from a kept clone's transcript, not asserted. The driver has **26** `say "Step …"`
+headers — an earlier draft of this file said 24, and the figure was never recounted after the
+three new steps landed. Step 0 is the precondition gate and applies nothing. Of the remaining
+25, eleven do live work at M3 and fourteen are already-applied no-ops that run only their
+"already applied — skipped" branch, which is the sitting staying safe to re-run rather than
+dead weight.
 
 | | Steps |
 |---|---|
@@ -245,6 +249,17 @@ one layer up — the absence of a line is not evidence of absence.
 Steps 1, 2, 3, 4, 4b–4j, 5b and 8b are **already-applied no-ops** at M3, verified by evaluating
 each step's own detector against the tree. They are kept, not deleted: the loop is idempotent,
 and skipping by detection is how the sitting stays safe to re-run.
+
+## The floor audit, and what it refused to change
+
+`FLOOR-AUDIT.md` in this directory answers the owner's ruling (1) of 2026-09-09: which custody
+guards does a public remote make redundant? **None.** Thirty-five substitution claims across
+seven mechanism families, each adversarially refuted; zero survived. The decisive measurement
+is that `grep -rn 'git push' scripts/ Makefile` returns nothing — the sitting signs the custody
+set, the receipt and the close tag against a tree the remote has never seen, so the window
+holding every irreversible act is the one window no remote can witness. The ceremony still
+shortens by ~35 minutes and one owner signature per boundary, by deriving `required_tags`
+instead of maintaining it by hand, which deletes step 11 outright. Recorded as D0202.
 
 ## What is NOT in this driver, and why
 

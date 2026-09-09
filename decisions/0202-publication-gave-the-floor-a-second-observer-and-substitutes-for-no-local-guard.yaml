@@ -1,0 +1,145 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0202
+title: "Publication gave the floor a second observer and substitutes for no local guard: thirty-five substitution claims, zero survivors, and the ceremony shortens by a different route"
+tier: A
+date: "2026-09-09"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  THE FLOOR-SIMPLIFICATION AUDIT COMMISSIONED BY D0201 RULING (1) RETURNS A NULL RESULT ON
+  THE CUSTODY SET. Seven mechanism families were surveyed — the custody set, the custodian's
+  guards, the receipt chain, history integrity, GitHub's actual capability, the ceremony
+  split by consequence, and the constitutional constraints — and every redundancy claim was
+  then attacked by an independent reviewer instructed to default to "refuted" when uncertain.
+  THIRTY-FIVE CLAIMS WERE RAISED AND THIRTY-FIVE WERE REFUTED. No member of the custody set
+  is removed. The full audit is
+  `docs/proposals/2026-09-04-m3-boundary-sitting/FLOOR-AUDIT.md`.
+  .
+  THE PREMISE WAS PARTLY COUNTERFACTUAL AND THAT MATTERS. Measured 2026-09-09:
+  `GET /repos/gfrmin/tannen/branches/master/protection` returns 404, `GET .../rulesets`
+  returns `[]`, `commit.gpgsign=false`, and every commit reports `%G? = N`. A protected
+  remote with required signature verification is unbuilt work, not a facility to spend
+  against.
+  .
+  AND IF IT WERE BUILT IT WOULD VERIFY A DIFFERENT TRUST ROOT. GitHub's "Verified" badge
+  attests that a signature matches a key registered to a GitHub ACCOUNT. This repository's
+  trust root is `ssh-keygen -Y verify -f allowed_signers` against two deliberately distinct
+  principals, `builder@tannen` and `owner@tannen` (D0015), separated so that an
+  author-signed artifact "verifies only against `owner@tannen`, so a builder signature can
+  never satisfy it" (`allowed_signers:3-5`). One GitHub account pushes both roles; GitHub
+  cannot tell them apart and has no notion of the namespaces — `tannen-custody`,
+  `tannen-policy`, `tannen-decision`, `tannen-receipt`, `tannen-rewrite` — that separate
+  presence from authorisation. Substituting the one for the other is what BRIEF §9.1's
+  "authorisation attaches to the artifact of record, never to a report about it" forbids.
+  .
+  THERE IS ALSO A STRUCTURAL BAR, and it is the repository's own: D0063 ruling (3), quoted
+  at `scripts/custodian.sh:18-25` — "THE FLOOR MAY DEPEND ONLY ON TOOLS THE OS PROVIDES AND
+  PATHS NAMED LITERALLY." `gh` is not OS-provided, requires a credential, and returns a
+  third party's assertion. A remote may be a second observer; it may not become a term in
+  the floor's verdict. The binding vocabulary makes the same point in paperwork: any in-repo
+  assertion about branch protection can only be `documentary`, so relying on a remote
+  control converts an enforced binding into one that detects nothing.
+  .
+  THE DECISIVE FACT IS THAT NOTHING PUSHES. `grep -rn 'git push' scripts/ Makefile` returns
+  nothing, and the boundary driver has no push step. The sitting signs the custody set, the
+  receipt and the close tag against a local working tree the remote has never seen, so the
+  window in which the ceremony's every irreversible act occurs is precisely the window no
+  remote can witness. Four further attack families survive any remote configuration: local
+  ref deletion is not a remote event (`git tag -d brief-freeze` pushes nothing, and empties
+  `bless_epoch` at `scripts/custodian.sh:81-83`); a tree-content attack is a legal
+  fast-forward that satisfies every proposed rule while deleting `Makefile:44`, the only
+  path by which the custodian runs; the topic-branch launder rewrites an unprotected
+  milestone branch and merges forward, leaving master append-only; and a trust-root re-issue
+  can carry a genuinely valid signature, caught only by the object-hash pin at
+  `governance/tag-roles.yaml:16-19`. Finally, offline third-party verification is the stated
+  point of publishing (D0176): a clone contains no protection state at all, so every guard
+  removed on the strength of a remote control is a guard a stranger loses entirely — and a
+  control the constrained party can switch off from this machine's own keyring is not a
+  trust root.
+  .
+  THE CEREMONY SHORTENS ANYWAY, BY A ROUTE THE RULING DID NOT ANTICIPATE. The blocker on
+  D0201 ruling (2)'s split is not custody-set membership, so narrowing the set would not
+  have bought it. Owner attention is ~55 minutes of the ~100-minute run and should not
+  shrink — step 8 alone is 600 lines of Tier-C records read in full, which is the attention
+  the protocol exists to spend. The clock is elsewhere: two `make verify` legs at 18m12s and
+  18m49s in the rehearsal clone, and pre-commit rounds at ~12 minutes each. The recommended
+  cut is to DERIVE `required_tags` from the boundary tags instead of maintaining it by hand
+  (`governance/tag-roles.yaml:47-55`, read at `scripts/check_tag_signers.py:151`) — which is
+  D0095 half (2), still "applied by NOTHING", and honours D0171 ruling (3)'s standing rule
+  against hand-maintained enumerations. Deriving it DELETES STEP 11 of every future sitting,
+  and with it one verify leg, one hook round, one commit, and the second of the two owner
+  custody signatures: ~100 minutes to ~55-65, and four owner signature moments instead of
+  five, for ever, with no guard removed.
+  .
+  ONE ADDITION TO THE CUSTODY SET IS RECOMMENDED, WIDENING RATHER THAN NARROWING:
+  `scripts/rehearse_sitting.sh` (RT-M3-06, already drafted as the driver's step 4k). It is
+  the harness whose green output is D0068's precondition for the real sitting, it is in
+  neither `MANIFEST.sha256` nor the custody set, and it already writes `owner@tannen` lines
+  into a clone's `allowed_signers` — one `$CLONE`-for-`$ROOT` slip launders the trust root
+  with every gate green.
+  .
+  ONE RECOMMENDATION IS REFUSED AND THE REFUSAL IS THE POINT. Moving driver steps 4f and 4k
+  into builder pre-work between sittings would require narrowing
+  `governance/policy.yaml:62-63`, the clause forbidding builder edits to frozen or signed
+  files. That clause is strictly broader than BRIEF door 5 and is the genuine release valve
+  on offer — but the pre-commit frozen-path hook currently PREVENTS those edits, and after
+  narrowing a guard-weakening edit would be live until someone noticed, with a stale custody
+  signature as detection rather than prevention. The payback is four prompts and under five
+  minutes. That trade is refused.
+rationale: >-
+  Recorded so that the next session does not re-litigate this, and so that a future proposal
+  to lean on the remote has to argue against a written finding rather than against silence.
+  The question was a good one and it was the owner's own — publication genuinely did change
+  what is available — but the answer is that it changed the number of observers, not the
+  number of guards, and those are different quantities. Publishing bought a second witness
+  to what is pushed; the ceremony's irreversible acts all happen before anything is pushed.
+  .
+  Filed Tier A rather than C because nothing here is a door: it is a measurement and a
+  refusal to change anything. Both `risk_flags` are set so it surfaces in the exception-only
+  digest, since a null result that nobody reads is indistinguishable from a question nobody
+  asked. The bindings are documentary by necessity — an audit binds to nothing enforceable,
+  which is exactly the property that made the "unenforced" count the wrong instrument to
+  read this record by.
+  .
+  The one substantive recommendation, deriving `required_tags`, is NOT executed here. It
+  edits a custody-set guard, and D0199 is the standing lesson that a guard nobody has
+  watched failing is a silent floor failure — so it must land with its own poison fixture,
+  and `tests/poison/` is BRIEF §9.1 author-key territory. It is therefore queued to the
+  sitting rather than landed, which is the same shape as every other item this milestone
+  discovered and could not close.
+reversibility: >-
+  Fully reversible: this record changes no artifact and removes nothing. Its recommendations
+  each need their own record and the owner's key before anything moves. The custody-set
+  addition and the `required_tags` derivation are the two that eventually touch signed
+  state, and both widen or derive rather than narrow — the directions that fail safe.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/FLOOR-AUDIT.md
+    strength: documentary
+    detail: >-
+      The audit itself, kept in full so the refutations can be read against the claims they
+      killed — D0063's precedent for keeping the questions beside the answers.
+  - type: file
+    target: governance/tier-c.yaml
+    strength: documentary
+    detail: >-
+      `custody.set`: the 26 patterns resolving to 75 paths that the audit examined member by
+      member and declined to shrink. Documentary because the finding is that this file does
+      not change.
+  - type: file
+    target: governance/tag-roles.yaml
+    strength: documentary
+    detail: >-
+      `required_tags` at :47-55, the hand-maintained enumeration whose derivation is the
+      audit's one substantive recommendation and the change that deletes step 11. Cannot be
+      enforced from here: the derivation is unwritten and its poison fixture is author-key
+      territory.
+  - type: file
+    target: scripts/rehearse_sitting.sh
+    strength: documentary
+    detail: >-
+      The recommended ADDITION to the custody set (RT-M3-06). Documentary because a builder
+      cannot enrol a path in a set the owner signs — the driver's step 4k offers it, and
+      this record is the argument for accepting.
+links: ["D0201", "D0063", "D0068", "D0095", "D0171", "D0176", "D0199", "D0015", "D0115"]
