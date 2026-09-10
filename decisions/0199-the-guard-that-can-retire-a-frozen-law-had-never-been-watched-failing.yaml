@@ -77,12 +77,17 @@ status: accepted
 bindings_count: 2
 bindings:
   - type: file
-    target: docs/redteam/fixture-candidates/check-laws-dropped-successor/governance/laws.yaml
-    strength: documentary
+    target: tests/poison/check-laws-dropped-successor/governance/laws.yaml
+    strength: enforced
     detail: >-
-      The defect itself — the supersession naming a successor no law file defines. Documentary
-      and it must stay so until the owner installs the tree under `tests/poison/`: a fixture
-      outside the corpus is unsealed and unmanifested, and enforces nothing.
+      The defect itself — the supersession naming a successor no law file defines. INSTALLED at
+      the M3 boundary sitting, step 5, and retargeted from
+      docs/redteam/fixture-candidates/check-laws-dropped-successor/ by that same step. It was
+      staged outside `tests/poison/` until then because a fixture outside the corpus is unsealed
+      and unmanifested; from the sitting on it is sealed, manifested, and exercised by
+      `scripts/custodian.sh`'s `poison check_laws` line on every run, which is the whole point
+      of D0154 item (7) — the guard that can retire a frozen law had never been watched failing
+      by the custody floor.
   - type: file
     target: docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh
     strength: documentary

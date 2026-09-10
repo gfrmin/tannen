@@ -55,7 +55,7 @@ reversibility: >-
   after tannen has carried it into public history is a rewrite of a public repository, which is
   what D0176 cost the last time it was necessary. Nothing in this record is irreversible today:
   the bytes still exist, untracked, until the owner moves them.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: file
     target: decisions/0195-three-items-publication-left-with-no-queue-to-land-in.yaml

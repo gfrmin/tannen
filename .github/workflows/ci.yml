@@ -3,10 +3,22 @@
 # signer-role table, the receipt chain and the owner-signed custody set, and NONE of
 # those can be checked out of a shallow clone — which is why fetch-depth matters below.
 #
-# This file has never actually run: the repo has no remote (D0061 rationale, and the
-# reason `make verify` on one machine is currently the whole enforcement surface).
-# Adding a remote is a Tier-C door in its own right (external-bytes); when it opens, the
-# justification is the receipt chain's need for an unrewritable witness, not backup.
+# Since the M2 boundary the gate also runs scripts/check_laws.py directly: every frozen
+# law file declares how it was validated, and every retired law names a live successor and
+# a decision record (D0129, D0131 item 4). It reached the gate before this only from
+# tests/test_law_validation.py — the file RT-M2-02's attack on the supersession registry
+# edits, so a guard reachable only through the thing it guards.
+#
+# THIS FILE NOW RUNS. It first ran on 2026-09-08, against the published repository. The
+# paragraph that stood here until the M3 boundary sitting said the opposite: that the file
+# "has never actually run: the repo has no remote", and that adding one was "a Tier-C door
+# in its own right". Both halves were true when written and both were false long before
+# anyone read them again — the door was opened by D0115 and walked through by D0176's
+# publication sitting. `make verify` on one machine is no longer the whole enforcement
+# surface, and that matters beyond bookkeeping: D0191 asserted a Python floor that no local
+# run could falsify and CI falsified it on its first pass (D0194). A claim only one machine
+# can check is a claim this project should not rest on. Filed as D0195 item (2), corrected
+# here because this file is frozen and custody-set and a sitting is the only place it moves.
 name: ci
 on:
   push:

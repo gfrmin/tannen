@@ -1,8 +1,9 @@
-# `oracle-shadow-model/` — **needs patch** — the M2 differential oracle answers to a name, not an identity
+# `oracle-shadow-model/` — the M2 differential oracle answers to a name, not an identity
 
 **Guard:** `src/tannen/laws/plugin.py`'s `LawEvidencePlugin.pytest_collection_modifyitems`
-(`_oracle_shadow_problem`), **as widened by RT-M2-01**. Against the shipped check this fixture
-does not bite, which is why it is staged here and not in `tests/poison/`.
+(`_oracle_shadow_problem`), **as widened by D0142** in answer to RT-M2-01. Against the check as
+it stood when this fixture was written it did not bite, which is why it was staged outside
+`tests/poison/`; D0142 shipped first, and the M2 boundary sitting then installed it here.
 
 **Intended violation:** a decoy `_model.py`, faithfully re-exporting the real frozen M2 model
 (`tests/laws/m2/_model.py`), primed into `sys.modules['_model']` by a `-p`-loaded bootstrap
@@ -22,12 +23,14 @@ law files. `tests/` is not a sealed directory (`governance/tier-c.yaml:77-80` se
 **Command that must exit non-zero** (against the widened check, run from the repo root):
 
 ```sh
-env PYTHONPATH=docs/redteam/fixture-candidates/oracle-shadow-model \
+env PYTHONPATH=tests/poison/oracle-shadow-model \
     uv run pytest -p bootstrap_shadow_model tests/laws/m2/test_l2_differential.py \
     -k test_l2_9 -q
 ```
 
-**Verified** (2026-09-01, against the **shipped** check — i.e. the fixture reproduces the hole):
+**Verified** (2026-09-01, against the **shipped** check — i.e. the fixture reproduces the hole).
+The paths in this transcript are the pre-installation ones, because that is where the fixture
+was when it was run; it moved to `tests/poison/` at the M2 boundary sitting:
 
 ```
 $ env PYTHONPATH=docs/redteam/fixture-candidates/oracle-shadow-model TANNEN_NO_EVIDENCE=1 \
@@ -52,8 +55,8 @@ the decoy, L2.9 becomes vacuous and the whole M2 suite is still green, with the 
 check_manifest: OK — frozen paths intact; seals unbroken; custody set current; …
 ```
 
-**Patch this fixture needs before installation** — `src/tannen/laws/plugin.py`, replacing the
-single-name constants at lines 50-51:
+**The patch this fixture needed, and which shipped before it was installed** (D0142,
+2026-09-01) — `src/tannen/laws/plugin.py`, replacing the single-name constants:
 
 ```python
 #: Oracle modules imported by bare name from frozen law files, per milestone directory.
@@ -76,7 +79,12 @@ installation under `tests/poison/` is owner work.
 catches only the shadow shapes reachable through those exact names. The actual fix is
 package-qualified imports in the frozen files — which needs new files and manifest rows under
 CLAUDE.md's do-not-edit-a-frozen-law rule. RT-M1-01 said the same thing at M1 and it was not
-done; RT-M2-01 is the cost of that.
+done; RT-M2-01 is the cost of that. **RT-M3-04 said it a third time**, at the M3 boundary, and
+showed the next shape the hazard takes: a decoy that sets `__file__` to the frozen path walks
+past an identity check made of one string comparison. That produced a third fixture
+(`oracle-shadow-spoofed/`, installed 2026-09-07) and, again, not the fix. Three boundaries have
+now chosen the cheaper defence; whoever reads this at M4 should treat the recommendation as
+standing and overdue, not as new.
 
 **Consider also sealing `tests/`.** Every reproduction of this finding, and of RT-M1-01 before
 it, depends on `tests/` itself accepting a new file with no manifest row.

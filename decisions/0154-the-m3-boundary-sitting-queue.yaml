@@ -110,7 +110,7 @@ reversibility: >-
   item 6 is how a critical fixture reached the sealed corpus with the custody floor
   never running it. Item (1) left undone once more would make that two sittings in a
   row.
-status: blocked-on-owner
+status: accepted
 bindings_count: 4
 bindings:
   - type: file

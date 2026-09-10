@@ -93,7 +93,7 @@ reversibility: >-
   the one-way half: superseding frozen prose writes a new frozen artifact and marks the old
   one superseded, and the supersession itself cannot be un-recorded — which is why it waits
   for the signature rather than being executed under the standing delegation.
-status: blocked-on-owner
+status: accepted
 bindings_count: 5
 bindings:
   - type: file

@@ -55,7 +55,6 @@ in_repo_mechanics:
     - branching, rebasing, fast-forwarding and resetting refs that carry no signature
     - regenerating projections and digests
     - installing or updating dev dependencies already pinned in pyproject.toml
-    - pushing to a private origin already configured in this repo
   excludes:
     # NOT in-repo mechanics. Nothing here is relaxed by the list above.
     - creating, moving or deleting any git tag (custody; DELEGATIONS.md, D0049)
@@ -63,7 +62,6 @@ in_repo_mechanics:
       file (governance/policy.yaml itself included)
     - adding a git remote, or changing the visibility of an existing one
       (Tier-C door external-bytes)
-    - pushing to any remote other than a private origin already configured here
 
 # Citation pins the concept registry must account for (D0115 mechanism (a), D0176).
 # NOT derived from concepts/ — see scripts/check_concepts.py. Raise or lower this only

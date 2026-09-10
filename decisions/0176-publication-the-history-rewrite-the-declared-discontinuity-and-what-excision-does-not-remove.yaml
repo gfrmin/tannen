@@ -154,7 +154,7 @@ reversibility: >-
   the price of the excision and it is paid knowingly. The mitigation is that the
   discontinuity is legible — one signed file, a complete map, and this record — rather than
   a gap someone has to notice.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: file
     target: docs/proposals/2026-09-06-publication/README.md

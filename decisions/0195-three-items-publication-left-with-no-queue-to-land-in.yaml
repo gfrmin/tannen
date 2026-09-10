@@ -83,7 +83,7 @@ reversibility: >-
   published and untrue for as long as it goes unrecorded, and item (3) leaves every push resting
   on a clause that excludes it — a gap that reads, to anyone auditing the repository from
   outside, exactly like a rule being ignored.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file

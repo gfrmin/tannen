@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 # scripts/custodian.sh — the guard of the guards (BRIEF §9.1 custody floor).
+#
+# THIS COPY is docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh: the live file
+# plus seven delimited hunks (`--- M3 DRAFT HUNK n ---`), each mapped to a D0154 queue item.
+# The owner installs it at the M3 sitting's step 6, after reading the diff. It is a
+# proposal: it enforces nothing until installed.
+#
+# REBASED onto the live file on 2026-09-08 (D0196). The 2026-09-04 draft was written
+# against the pre-publication custodian, and installing it verbatim would have REVERTED
+# three publication-sitting changes: FOUNDING_TAGS back to the pre-rewrite pin (breaking
+# check_tag_signers against the rewritten history), the 28-line inline receipt-chain loop
+# back over D0176's delegation to scripts/check_receipts.py, and the three publication
+# poison invocations (check_concepts_brief_row, check_decisions_retired_enforced,
+# oracle-shadow-spoofed) deleted. That last one interacts with hunk 1c: with the
+# invocations gone and the fixtures still on disk, the new completeness pass would have
+# reddened the floor at the sitting's step 7.
 # AUTHOR-KEY TERRITORY: this file, allowed_signers, tests/poison/, and their
 # MANIFEST.sha256 rows are owner-edited only (CLAUDE.md hard rules; Tier-C door
 # trust-root-changes).
@@ -60,11 +75,19 @@ else
 fi
 
 # 2. Custody set + CI config are manifested.
+# --- M3 DRAFT HUNK 3 (D0154 item 4; D0146 item 2) ----------------------------
+# `find` now excludes __pycache__, matching check_manifest.py:113's sealed-path rule. A
+# .pyc written into tests/poison/ by an ad-hoc import made THIS check red at `make
+# verify`'s last step, ~37 minutes in, while check_manifest stayed green — and the "not
+# manifested" message invited a manifest row for a gitignored, interpreter-versioned
+# file. The only correct response to a stray .pyc is deleting it; excluding the
+# directory here makes the two guards agree about what a sealed tree contains.
 manifested_ok=1
 for path in scripts/custodian.sh allowed_signers .github/workflows/ci.yml \
     DELEGATIONS.md governance/tier-c.yaml governance/tag-roles.yaml \
     scripts/check_tag_signers.py \
-    $(find tests/poison -type f | sort); do
+    $(find tests/poison -type f -not -path '*/__pycache__/*' | sort); do
+# --- end M3 DRAFT HUNK 3 -----------------------------------------------------
     if ! grep -q "  ${path}\$" MANIFEST.sha256; then
         bad "not manifested: $path"
         manifested_ok=0
@@ -142,9 +165,37 @@ require_sig governance/custody.sha256 tannen-custody
 "$PY" -I -P scripts/check_receipts.py || bad "receipt chain violated (scripts/check_receipts.py)"
 
 # 5. Guard liveness by poison: each guard must fail its fixture, for the right reason.
+# --- M3 DRAFT HUNK 1a (D0154 item 1; D0152 item 6; D0095 half (2)) -----------
+# poison() now RECORDS which tests/poison/ directories its invocation reaches, and the
+# completeness pass at hunk 1c refuses any installed fixture no line exercises. The M2
+# sitting installed oracle-shadow-model — manifest rows, custody rows, README row — and
+# the custodian ran every fixture but that one while printing "custody floor intact": a
+# hand-kept enumeration extended only at the moment its extender may not edit it (D0095's
+# shape). The enumerated invocations stay, because they are heterogeneous for reasons each
+# one's comment states; their COVERAGE becomes derived, the same move D0142 made for the
+# oracle map. Had this existed on 2026-09-03 the sitting would have failed loudly.
+POISON_SEEN=""
 poison() {
     local name="$1" marker="$2"
     shift 2
+    local fx
+    for fx in $(printf '%s\n' "$@" | grep -o 'tests/poison/[A-Za-z0-9_-]*' | sort -u); do
+        # A named fixture that is not on disk must not read as a weakened guard. Most
+        # guards return 0 over an absent tree — there is nothing to complain about — so
+        # `poison` would print "PASSED its poison fixture — the guard is weakened", which
+        # is the loudest possible way to say the wrong thing: it sends the reader to the
+        # guard when the fault is the corpus. This is hunk 1c's mirror image, and it was
+        # found by adding hunk 5's invocation before its fixture was installed.
+        if [ ! -d "$fx" ]; then
+            bad "guard '$name' names fixture $fx, which is NOT INSTALLED — the corpus is short a directory, not the guard weakened"
+            return
+        fi
+        case " $POISON_SEEN " in
+            *" $fx "*) : ;;
+            *) POISON_SEEN="$POISON_SEEN $fx" ;;
+        esac
+    done
+# --- end M3 DRAFT HUNK 1a (function body below unchanged) --------------------
     local out
     if out=$("$@" 2>&1); then
         bad "guard '$name' PASSED its poison fixture — the guard is weakened"
@@ -251,6 +302,56 @@ poison oracle-shadow-spoofed "answers with different code" \
     env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONPATH=tests/poison/oracle-shadow-spoofed \
     "$PY" -B -m pytest -p bootstrap_shadow_spoofed tests/laws/m3/test_l3_differential.py -q
 
+# --- M3 DRAFT HUNK 1b (D0154 item 1; D0152 item 6) ---------------------------
+# The fixture the M2 boundary sitting installed and never wired: oracle-shadow-model
+# (RT-M2-01, the M1->M2 pass's single CRITICAL finding). The same attack as oracle-shadow
+# one milestone on — a decoy `_model` primed into sys.modules by a -p bootstrap plugin,
+# ahead of frozen tests/laws/m2/test_l2_differential.py's bare `import _model as M`.
+# Every deviation from poison()'s usual form is oracle-shadow's, for oracle-shadow's
+# reasons: no -I -P (the attack IS PYTHONPATH; under -I the fixture's setup could never
+# run), -B (the decoy imports from inside a sealed directory), the literal venv
+# interpreter. No -k: D0142's widened guard aborts at collection, so there is nothing to
+# select. This line is what makes the custody FLOOR run it, not just an unfrozen test.
+poison oracle-shadow-model "RT-M2-01" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED PYTHONPATH=tests/poison/oracle-shadow-model \
+    "$PY" -B -m pytest -p bootstrap_shadow_model tests/laws/m2/test_l2_differential.py -q
+# --- end M3 DRAFT HUNK 1b ----------------------------------------------------
+
+# --- M3 DRAFT HUNK 5 (D0154 item 7; ruling (4)'s third in-scope item) --------
+# check_laws.py is the only custody-set guard with NEITHER a fixture nor an invocation:
+# `grep check_laws scripts/custodian.sh` is empty in the live file. It is the guard that
+# can retire a frozen law, so BRIEF §9.1's guard-liveness-by-poison discipline not
+# covering it is the gap with the longest reach. The fixture is a miniature tree whose
+# only defect is a supersession naming a successor no law file defines — D0154's own
+# suggested case, and D0106 ruling 2's rule that a retired claim must be carried forward.
+# It is installed at step 5, which runs BEFORE this file is installed at step 6; until
+# then this line refuses, which is the correct state for an invocation whose fixture is
+# not yet on disk.
+poison check_laws "which no law file defines" \
+    "$PY" -I -P scripts/check_laws.py --root tests/poison/check-laws-dropped-successor
+# --- end M3 DRAFT HUNK 5 -----------------------------------------------------
+
+# --- M3 DRAFT HUNK 1c (D0154 item 1; D0152 item 6; the derived half) ---------
+# Every directory under tests/poison/ must have been reached by some invocation above.
+# This is the loop that would have caught 2026-09-03. It runs BEFORE the FAIL check below,
+# so an unexercised fixture reddens the floor rather than being reported after it closes.
+poison_uncovered=0
+for dir in tests/poison/*/; do
+    fx=${dir%/}
+    case " $POISON_SEEN " in
+        *" $fx "*) : ;;
+        *) bad "fixture $fx is installed but NO poison invocation exercises it (D0152 item 6's shape)"
+           poison_uncovered=$((poison_uncovered+1)) ;;
+    esac
+done
+# The success line is CONDITIONAL, and that is not a detail. The first draft of this loop
+# printed it unconditionally, so a run that had just reported an unexercised fixture still
+# closed with "every installed fixture is exercised" — D0177's exact shape, in the guard
+# written to close D0152's. Caught by running the loop against a fabricated orphan rather
+# than by reading it, which is the whole argument for poison fixtures in one line.
+[ "$poison_uncovered" -eq 0 ] && say "poison coverage: every installed fixture is exercised"
+# --- end M3 DRAFT HUNK 1c ----------------------------------------------------
+
 if [ "$FAIL" -ne 0 ]; then
     bad "custody floor violated"
     exit 1
@@ -261,14 +362,26 @@ say "custody floor intact"
 if [ "${1:-}" != "--check-only" ]; then
     date_str=$(date +%F)
     receipt="receipts/${date_str}.md"
-    prev=$(ls -1 receipts/*.md 2>/dev/null | sort | tail -1)
+# --- M3 DRAFT HUNK 4 (D0154 item 3; D0153) -----------------------------------
+# The previous receipt is now the latest one THAT IS NOT the file being written, and its
+# HEAD is read from that file. Two defects, one fix. (a) The live spelling `sort | tail -1`
+# picks the receipt being written on any same-day re-run, and the guard below then dropped
+# the chain line entirely — silently, because check_receipts parses only `- HEAD:`.
+# (b) `prev_head` is never assigned ANYWHERE in the live file: the only occurrence is the
+# `${prev_head:-...}` read itself, because the loop that used to set it was deleted when
+# the receipt-chain check was delegated to scripts/check_receipts.py. So every receipt
+# written since renders "at (none recorded)" — receipts/2026-09-07.md shows it. The chain
+# line has been decorative since, and nothing noticed.
+    prev=$(ls -1 receipts/*.md 2>/dev/null | grep -vx "$receipt" | sort | tail -1)
     {
         echo "# Attention receipt — ${date_str}"
         echo
         echo "- HEAD: $(git rev-parse HEAD 2>/dev/null || echo '(unborn)')"
-        if [ -n "$prev" ] && [ "$prev" != "$receipt" ]; then
-            echo "- previous receipt: $(basename "$prev" .md) at ${prev_head:-(none recorded)}"
+        if [ -n "$prev" ]; then
+            prev_recorded=$(sed -n 's/^- HEAD: \([0-9a-f]\{7,40\}\)$/\1/p' "$prev" | head -1)
+            echo "- previous receipt: $(basename "$prev" .md) at ${prev_recorded:-(none recorded)}"
         fi
+# --- end M3 DRAFT HUNK 4 -----------------------------------------------------
         echo "- custodian: all checks green"
         echo "- consequence: Tier-B silence-as-consent is valid from this date until"
         echo "  the next milestone boundary + 7 days (BRIEF §9.1)."
@@ -280,10 +393,18 @@ if [ "${1:-}" != "--check-only" ]; then
            -n tannen-receipt "$receipt"; then
         say "attention receipt written and author-signed: $receipt (+ .sig)"
     else
+# --- M3 DRAFT HUNK 2 (D0154 item 2's third clause; D0152 item 3) -------------
         # An unsigned receipt is worse than no receipt: it attests to nothing while
         # looking like an attestation, and check_receipts would then redden every later
-        # run for a file this step should never have left behind.
-        rm -f "$receipt"
-        bad "receipt signing FAILED — $receipt removed, not left unsigned"
+        # run for a file this step should never have left behind. Two additions to the
+        # live spelling, which D0177 already brought this far. The `.sig` goes too: a
+        # stale signature over a removed file outlives the thing it signed. And the exit
+        # is non-zero, because a half-written receipt left behind is exactly what step 0
+        # of the sitting driver reads as a RESUMED sitting and skips its gate for
+        # (D0148 item 5) — so this must stop the run, not merely colour it.
+        rm -f "$receipt" "$receipt.sig"
+        bad "receipt signing FAILED (locked agent? declined touch?) — $receipt removed; re-run to retry"
+        exit 1
+# --- end M3 DRAFT HUNK 2 -----------------------------------------------------
     fi
 fi

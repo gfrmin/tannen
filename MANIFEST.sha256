@@ -116,12 +116,9 @@ aa547ae13435f3fd641697a56b18f5053269080ebf477d79909df852df2fb425  tests/laws/m3/
 #   found only by attacking the correction rather than reading it (D0203).
 #   NOT the laws.yaml machinery: prose has no node to retire, and D0161 holds that
 #   running the node-retirement half against prose is a category error. Record: D0204.
-6a41270900c17ec2943157b80e21108fa83ac61bffebff41c55eb6cc37145fe4  governance/tier-c.yaml
 3b7eca1046095151e2cd58ff665e4a7e96f9ceb7ddb53e938986417a51196c7c  governance/schemas/evidence-record.schema.json
 46741f08a678df9a6062c153750ef6f1eb2665b0227fe06f0c62c08f25d720e7  tests/poison/oracle-shadow-model/bootstrap_shadow_model.py
 3f627f2a9f5a4d970e901c671b3782ae9693a1f7be66824b0e09d4d6d3136f5e  tests/poison/oracle-shadow-model/_model.py
-01abc3f23f5a12e00bf60b57ab3c4f45e04e32b819305a9353eb90fa579e9814  tests/poison/oracle-shadow-model/README.md
-28a907967365e60e5e173b3c01bc12281cc7931c669db35f9d547559f33c7332  .github/workflows/ci.yml
 ed50c1e4f57df2f5ebf28a905ea0909bd726612011cc7f065ceddc49b68f6565  governance/schemas/concept-record.schema.json
 4faef933c4740d759856d843c19751ff3b028557c24729932c958cc6ed8f373f  governance/schemas/decision-record.schema.json
 6a137ded2c3361204f20011fc968e01ef0f56aa9c025c096416df027c3260729  tests/poison/check-concepts/governance/policy.yaml
@@ -134,7 +131,14 @@ aac72c57fdd453ec070db5d04b76bae02b3f52203265566d8a7e0deb96c4330b  tests/poison/c
 115cd9e606a3ff1d32e6a55be250de3b9a6e04db5b25eff7df3c94ce7faefea6  tests/poison/oracle-shadow-spoofed/bootstrap_shadow_spoofed.py
 2a4a4938d00e2e0059e3e502360592dc5b2fae8e74d7a886210f4023fabe6a30  tests/poison/oracle-shadow-spoofed/_delta_model.py
 cb9deb6765d0ada80fd9ecbfba48fa3979a518c83927da33bb47145d25ce411d  tests/poison/oracle-shadow-spoofed/README.md
-0147f55aba31763d4deaa3b4484e56fce20e786d4ce45b2300e5e0408818c970  tests/poison/README.md
 bbce3987ee3f2b31fe53533ed0a9cbea2cf3a879fd0429856344f1fbb53c276a  governance/tag-roles.yaml
-130232c58e3f0ab7dc74f2878ff286c2c4f476400357f20d288561fe8de6f581  scripts/custodian.sh
 44adfab27f74e8ecaea354df84e0ebf4c71e1f832e74121d5f4ab5112cf022ce  DELEGATIONS.md
+c2d5ce16ffa7a95ac9216ffc0a91ee8125b5cb679034d01aa305ba8e03d7b657  .github/workflows/ci.yml
+240a1a72b28951c217d2b18c597dd92699255a00bd40120d78f23f61ea5b78d1  governance/tier-c.yaml
+60d3cea3b4baf93da83f3eef4fa0feea1d14c82a9e542e18f1202435c871d1a5  tests/poison/oracle-shadow-model/README.md
+5be90e5f8c402fa8e2c96b68aee1c8393e6afb92e7bcc14438966dfb4837aaa3  tests/poison/check-laws-dropped-successor/decisions/0001-poison-the-record-that-retired-l1-7.yaml
+48a504009e8d3b71562990ef4c27e560f13a158fafcd5e1bb42c87fca99225e5  tests/poison/check-laws-dropped-successor/governance/laws.yaml
+8d49b78e72e4d66207da4fe949ea093e78af9171058eeed5044b31afe5b26f45  tests/poison/check-laws-dropped-successor/README.md
+45e70a92f4abf5fdda3e48b22999c8ce6a3d63406c2786f444c28c3d7e949a6f  tests/poison/check-laws-dropped-successor/tests/laws/m1/test_l1_poison.py
+76e4ea9b34c5db5798a2be77e005c52906c011c4d653da82c64ae39c40a7c8e4  tests/poison/README.md
+49b4966288b2704d623b07402193422abe5b7a173ab7714f43ed4dafadcbf1e1  scripts/custodian.sh

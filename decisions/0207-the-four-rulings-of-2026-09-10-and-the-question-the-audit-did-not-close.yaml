@@ -67,7 +67,7 @@ reversibility: >-
   reversible only in the sense that a later record can narrow it again; it removes no guard and
   weakens no floor, which is the direction that fails safe. Everything executed under it is
   ordinary builder work on unfrozen paths and revertible by one commit.
-status: blocked-on-owner
+status: accepted
 bindings_count: 4
 bindings:
   - type: file

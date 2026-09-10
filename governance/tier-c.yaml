@@ -133,6 +133,7 @@ custody:
     - scripts/gen_custody.py
     - scripts/opening_sitting.sh
     - scripts/boundary_sitting.sh
+    - scripts/rehearse_sitting.sh
     - tests/poison/**/*
 
 # Files whose owner signature is REQUIRED, not merely verified-if-present. RT-04: the

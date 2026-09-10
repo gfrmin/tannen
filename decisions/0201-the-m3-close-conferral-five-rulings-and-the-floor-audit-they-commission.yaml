@@ -136,7 +136,7 @@ reversibility: >-
   execution is hard to undo: a ceremony that stops taking an owner signature at a step
   cannot retroactively have taken it, so the audit's recommendation to delete step 11
   (D0202) waits for a signature rather than being executed under the standing delegation.
-status: blocked-on-owner
+status: accepted
 bindings_count: 5
 bindings:
   - type: file
