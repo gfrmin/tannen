@@ -1,0 +1,122 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0213
+title: "The M3 sitting's first builder follow-up: seventeen bindings upgraded across eleven Tier-A records, the poison suite wired to the fixture the sitting installed, and nine upgrades that stop at a signature"
+tier: A
+date: "2026-09-10"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE FIRST TWO OF THE THREE FOLLOW-UPS THE M3 BOUNDARY SITTING NAMED AT ITS CLOSE, both
+  Tier A and neither needing a signature: upgrade the bindings the sitting made enforceable,
+  and add the fixture it installed to tests/test_governance_scripts.py. D0045 is what makes
+  the first legal — a record's decision is immutable and its bindings are not, because
+  "attaching one when that artifact finally exists records history rather than rewriting it".
+  .
+  SEVENTEEN BINDINGS ACROSS ELEVEN RECORDS: thirteen raised from documentary to enforced,
+  seven of those also hardened from `file` to `manifest`, plus four new bindings. Five were
+  waiting on custodian hunks the sitting installed (D0146 hunk 3, D0152 hunks 2/1a/1b, D0153
+  hunk 4, D0172 hunk 1c, D0177 hunk 2); one on `.github/workflows/ci.yml`'s corrected header
+  and one on `tests/poison/oracle-shadow-model/README.md`, whose title said "needs patch" for
+  a whole milestone after the patch had shipped (both D0152); three on
+  `scripts/rehearse_sitting.sh` joining the custody set (D0149, D0150, D0202 — RT-M3-06); one
+  on the M3 driver replacing the M2 one at `scripts/boundary_sitting.sh` (D0152); and two on
+  `tests/poison/README.md`, whose missing row landed at the M2 sitting on 2026-09-03 and
+  which nobody upgraded for a milestone (D0122, D0140).
+  .
+  WHERE THE TYPE MOVED, IT MOVED FOR A MECHANISM. A `file` binding resolves by bare
+  existence, so it enforces nothing whatever its strength says; `file` became `manifest`
+  wherever the target carries a MANIFEST.sha256 row, because that row is what turns a revert
+  into a red check_manifest — `make verify`'s first recipe line — rather than a change nobody
+  can see. Two targets are custody-set but not manifested
+  (`scripts/boundary_sitting.sh`, `scripts/rehearse_sitting.sh`): they keep `type: file` and
+  say so in the binding, because what detects a revert there is check_custody's drift line
+  and no binding type names the custody set.
+  .
+  NINE MORE WERE PREPARED, MEASURED, AND REVERTED — they are the owner's, and D0214 queues
+  them. A Tier-C record's signature is over the file's whole bytes, so editing its bindings
+  invalidates it: after the nine edits, all five affected records failed `ssh-keygen -Y
+  verify` with `incorrect signature`, and check_decisions would have failed each as "Tier-C
+  record accepted without an owner signature". check_decisions.py:384-390 says this outright
+  and has since RT-06 — "a later binding change costs a re-signature: what was vouched for is
+  the file, not a summary of it". What no artifact says is the consequence for this
+  follow-up: the driver's closing note asks the builder to upgrade the bindings the sitting
+  made enforceable, and roughly a third of them cannot be reached without the key that just
+  left the room.
+  .
+  THE FIXTURE THE SITTING INSTALLED IS NOW IN THE SUITE TOO. `check-laws-dropped-successor/`
+  was installed at step 5 and wired into the custodian by hunk 5 in the same commit, and
+  reached `tests/test_governance_scripts.py` only afterwards, by hand — this record's own
+  work. It is now POISON row `check_laws`, and beside it a derived completeness pass that
+  walks `tests/poison/*/` and fails for any fixture no row and no dedicated test exercises,
+  and for any name the suite claims that is not installed. That is custodian hunk 1c reached
+  from plain `uv run pytest`, which is this file's own stated reason for existing: CI and a
+  builder run the suite many times a day and run the custodian at sittings.
+  .
+  FIVE UPGRADES WERE CONSIDERED AND REFUSED, each because the reason the binding gives is
+  still true, and refusing them is the point of grading strength at all.
+  `governance/policy.yaml#in_repo_mechanics.covers` (D0195) had its false push clause deleted
+  at the sitting, but the clause is still read by sessions and by no guard.
+  `governance/tag-roles.yaml` under D0171 ruling (3), D0172 finding (C), D0202 and D0205
+  stays documentary because `required_tags` is complete, not derived, and the derivation is
+  deferred to M4. `docs/specs/m3.md` (D0171 ruling (1)) stays documentary because the frozen
+  file still holds the false sentence by design — what carries the correction is D0204, not
+  an edit. `governance/policy.yaml#licence_defaults` (D0184) stays documentary for the reason
+  it was written with. And D0172 finding (G), the poison README table nothing checks, stays
+  open and is expected to: the only way to check that table is to read its prose, and no test
+  here may learn another artifact's state that way.
+rationale: >-
+  D0052 wrote the purpose down when it invented the grade: "the boundary sitting's entire
+  purpose is to convert a batch of documentary bindings into enforced ones, and no number
+  currently measures whether that happened". The number exists now — check_decisions prints
+  the enforced/documentary split — and this is the first time it has been made to move after
+  a sitting rather than before one.
+  .
+  D0122 and D0140 are the finding, not the footnote. Both are Tier A, both became upgradable
+  at the M2 sitting on 2026-09-03, and both sat for a milestone. No guard can find that: a
+  documentary binding names its condition in prose ("until the owner adds the row"), and the
+  standing rule that no test may learn another artifact's state by grepping its prose forbids
+  exactly the check that would notice the condition was met. So this is a follow-up that
+  cannot be automated, which is a different thing from one nobody has automated yet, and it
+  is worth recording which — a queue believed to be automatable is a queue nobody watches.
+  .
+  The completeness pass exists because the gap it closes recurred while this milestone was
+  closing it. Hunk 1c was written for D0154 item 1 after the M2 sitting installed
+  `oracle-shadow-model/` and wired it to nothing; the M3 sitting then installed
+  `check-laws-dropped-successor/`, wired it into the custodian, and left the pytest suite
+  blind to it for as long as it took a human to notice. The custodian would have caught that
+  at the next sitting. A builder running `uv run pytest` would not have.
+reversibility: >-
+  Fully reversible and additive. The binding upgrades change no immutable field — no
+  decision, rationale, reversibility, tier, date or status was touched (D0045) — and every
+  edited record is Tier A and unsigned, which is why these eleven could be edited at all. The
+  two tests are new functions in an unfrozen file; deleting them returns the suite to what it
+  was, with the custodian floor still covering both cases.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_guard_fails_its_poison[check_laws]"
+    strength: enforced
+    detail: >-
+      The POISON row this record adds, against the fixture the sitting installed. Watched
+      failing before it was trusted: pointed at a copy of the fixture with the supersession
+      removed, `check_laws.py` exits 0 and the row reports `guard 'check_laws' PASSED its
+      poison — weakened`, which is the assertion doing its work rather than a green nobody
+      has challenged.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_every_installed_fixture_is_exercised_by_this_suite"
+    strength: enforced
+    detail: >-
+      The derived completeness pass, both directions. Watched failing three times: on a
+      fabricated orphan directory under tests/poison/, on a name with no directory behind it,
+      and on a DEDICATED entry naming a test the module does not define. The third control is
+      what keeps that mapping from becoming the hand-maintained enumeration it exists to
+      prevent — a name there that no test defines is a claim, and the test refuses it.
+  - type: file
+    target: tests/test_governance_scripts.py
+    strength: enforced
+    detail: >-
+      The file both tests live in, and the POISON table the first extends. Named so a reader
+      arriving from the custodian's `poison check_laws` line finds the suite's half of the
+      same matrix.
+links: ["D0045", "D0052", "D0122", "D0140", "D0146", "D0149", "D0150", "D0152", "D0153",
+        "D0172", "D0177", "D0199", "D0202", "D0204", "D0205", "D0214"]

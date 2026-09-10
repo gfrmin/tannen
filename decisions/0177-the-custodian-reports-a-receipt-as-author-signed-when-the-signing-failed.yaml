@@ -92,10 +92,16 @@ bindings:
       The guard that DOES catch the consequence, one run late: an unsigned receipt in
       `receipts/` reddens the chain check. Bound so the bound on the blast radius is a
       measured property with a test behind it, not a reassurance in prose.
-  - type: file
+  - type: manifest
     target: scripts/custodian.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       Lines 283-285, the subject. Author-key territory, so the binding records where the
       defect is rather than claiming anything about it being fixed.
+      FIXED at the M3 boundary sitting on 2026-09-10 as hunk 2: a failed signature now
+      removes the receipt and its `.sig` and exits non-zero, so the run stops rather
+      than reporting author-signed over a file nothing signed. Upgraded to
+      `manifest`/enforced — the fix is in a frozen, custody-set file, so reverting it
+      reddens check_manifest instead of going unnoticed for a milestone, which is how
+      this defect survived to be found.
 links: ["D0176", "D0116", "D0112", "D0063", "D0154"]

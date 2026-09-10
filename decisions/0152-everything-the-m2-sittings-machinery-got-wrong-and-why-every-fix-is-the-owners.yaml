@@ -160,20 +160,28 @@ reversibility: >-
   What is NOT reversible is the queue skipping them: the M1 sitting's carry list is how
   RT-M2-01 reached M2 still open.
 status: accepted
-bindings_count: 4
+bindings_count: 5
 bindings:
   - type: file
     target: scripts/boundary_sitting.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       Carries items 1, 2 and 4 at the lines cited above. Documentary because the defects are
       IN this file and nothing detects them: item 1's guard reports "skipped" on the state it
       should refuse, item 2's guard reports "skipped" on a state it never wrote, and item 4
       is an absence. The file is custody-set (governance/custody.sha256:17), which is what
       makes all three the owner's to fix and this record's only available strength.
-  - type: file
+      ALL THREE FIXED in the M3 driver, installed over this path at the M3 boundary
+      sitting on 2026-09-10 (D0200): the retarget guard no longer re-arms on its own
+      success, step 4f's skip-guard reads every file its decline branch reverts, and the
+      ceremony takes a lock beside its transcript. Strength raised with the type left at
+      `file`, which is the honest ceiling: the path is custody-set but carries no
+      MANIFEST.sha256 row, so what detects a revert is check_manifest's check_custody —
+      `custody drift: <path> changed since the custody file was written` — and no
+      binding type names the custody set.
+  - type: manifest
     target: scripts/custodian.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       Carries item 3 at :283-285 and item 6's absence — the `poison` line for
       oracle-shadow-model that no draft ever contained. Documentary twice over: an unchecked
@@ -181,20 +189,47 @@ bindings:
       omits a fixture is silent by construction, since the omission's only symptom is a run
       that finishes sooner. Author-key territory (CLAUDE.md, BRIEF §9.1) bars the builder
       from adding either.
+      BOTH APPLIED at the M3 boundary sitting on 2026-09-10: item 3 as hunk 2 — a failed
+      receipt signature now removes the half-written receipt and its `.sig` and exits
+      non-zero — and item 6 as hunks 1a and 1b, the `poison` line for
+      oracle-shadow-model plus poison()'s refusal of a fixture that is named but not
+      installed. Upgraded from `file` to `manifest` and to enforced: the file is frozen
+      AND custody-set, so the row is what makes a silent revert impossible, which is
+      precisely what neither defect had while it stood.
   - type: manifest
     target: .github/workflows/ci.yml
-    strength: documentary
+    strength: enforced
     detail: >-
       The artifact item 2's loss is visible in. Named as `manifest` because the row is
       precisely why the builder cannot re-apply the lost comment: the file is frozen AND
       custody-set. Documentary rather than enforced — the row pins the CURRENT bytes, so it
       detects a future change but is indifferent to the edit that never landed.
-  - type: file
+      The edit LANDED at the M3 boundary sitting on 2026-09-10. Enforced from that date
+      for the reason this binding already gave: the row pins the CURRENT bytes, and the
+      bytes now carry the correction rather than the claim it was indifferent to.
+  - type: manifest
     target: tests/poison/oracle-shadow-model/README.md
-    strength: documentary
+    strength: enforced
     detail: >-
       Item 5's subject. Documentary: the file's prose is wrong and no guard reads prose. Note
       that D0141 binds this same path as `enforced` for a different claim — that the fixture
       it documents is exercised by tests/test_governance_scripts.py. Both are true; the
       fixture bites while its README says it cannot.
+      CORRECTED at the M3 boundary sitting on 2026-09-10: the `needs patch` title is
+      gone, the patch is described as shipped (D0142, 2026-09-01), the reproduction
+      command names the installed path, and the standing package-qualified-import
+      recommendation is marked overdue at its third boundary. Upgraded to
+      `manifest`/enforced, the same footing D0141's binding to this path already had.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_every_installed_fixture_is_exercised_by_this_suite"
+    strength: enforced
+    detail: >-
+      tests/test_governance_scripts.py's derived completeness pass, added 2026-09-10: it
+      walks tests/poison/*/ and fails for any fixture no POISON row and no dedicated
+      test exercises, and for any name the suite claims that is not installed. This is
+      custodian hunk 1c's check reached from plain `uv run pytest`, and it exists
+      because the gap recurred — the check_laws fixture was installed and wired into the
+      custodian in one commit and reached this suite only afterwards, by hand. Watched
+      failing on a fabricated orphan directory, on a name with no directory behind it,
+      and on a mapping naming a test the module does not define.
 links: [D0141, D0142, D0146, D0147, D0148, D0149, D0151, D0153]

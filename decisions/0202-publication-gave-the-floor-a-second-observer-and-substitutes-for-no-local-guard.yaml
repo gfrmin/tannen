@@ -137,9 +137,17 @@ bindings:
       territory.
   - type: file
     target: scripts/rehearse_sitting.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       The recommended ADDITION to the custody set (RT-M3-06). Documentary because a builder
       cannot enrol a path in a set the owner signs — the driver's step 4k offers it, and
       this record is the argument for accepting.
+      ACCEPTED at the M3 boundary sitting on 2026-09-10: the owner took step 4k's offer,
+      and the path is now in `custody.set` and in the signed
+      `governance/custody.sha256`. Raised to enforced — the harness that vouches for a
+      custody-set driver is vouched for in turn, which is the whole of RT-M3-06.
+      Strength raised with the type left at `file`, which is the honest ceiling: the
+      path is custody-set but carries no MANIFEST.sha256 row, so what detects a revert
+      is check_manifest's check_custody — `custody drift: <path> changed since the
+      custody file was written` — and no binding type names the custody set.
 links: ["D0201", "D0063", "D0068", "D0095", "D0171", "D0176", "D0199", "D0015", "D0115"]

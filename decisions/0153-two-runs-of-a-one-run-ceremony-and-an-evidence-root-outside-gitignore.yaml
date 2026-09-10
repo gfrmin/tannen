@@ -98,13 +98,19 @@ bindings:
       commit. The enforcing change, if one is wanted, belongs in the driver — refusing to
       commit an untracked directory the sitting did not create — and that is Tier C
       (D0152 item 4's neighbourhood).
-  - type: file
+  - type: manifest
     target: scripts/custodian.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       Artifact 2's sixth item, at :268 and :273. Documentary: the dropped line is invisible to
       every guard, including check_receipts, which parses only `- HEAD:`. Author-key
       territory, so queued rather than fixed.
+      APPLIED at the M3 boundary sitting on 2026-09-10 as hunk 4. `prev` now excludes
+      the receipt being written and `prev_recorded` is read out of that file, so the
+      chain line carries a real HEAD instead of the `at (none recorded)` every receipt
+      had rendered since the loop that set `prev_head` was deleted. Upgraded to
+      `manifest`/enforced — a line no guard parses is still a line a frozen-path row
+      pins, which is the only enforcement this defect admits.
   - type: file
     target: scripts/check_receipts.py
     strength: documentary

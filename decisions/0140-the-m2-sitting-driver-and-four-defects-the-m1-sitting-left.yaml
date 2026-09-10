@@ -110,13 +110,15 @@ bindings:
     detail: >-
       States what is missing (the red team, the queue's ready text), the 2026-09-07 receipt
       deadline, and the measured before/after for both new helpers.
-  - type: file
+  - type: manifest
     target: tests/poison/README.md
-    strength: documentary
+    strength: enforced
     detail: >-
       The index item one is about — correctly built, incorrectly described. The row it is
       missing is ready at
       docs/proposals/2026-08-27-m1-boundary-sitting/poison-readme-row-file-skip.md.
+      The missing row LANDED at the M2 boundary sitting on 2026-09-03 (step 5b).
+      Upgraded to `manifest`/enforced on 2026-09-10.
 links:
   - decisions/0131-the-m2-boundary-sitting-queue.yaml
   - decisions/0138-two-more-items-for-the-m2-boundary-sitting.yaml

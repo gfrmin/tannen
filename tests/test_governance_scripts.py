@@ -86,6 +86,21 @@ POISON = [
     ("check_decisions_retired_enforced",
      ["scripts/check_decisions.py", "--root", "tests/poison/check-decisions-retired-enforced"],
      "only a documentary binding may be retired"),
+    # Installed at the M3 boundary sitting (D0199), beside the custodian invocation that
+    # makes the floor run it (hunk 5). check_laws.py was the only custody-set guard with
+    # NEITHER a fixture nor a `poison` line — the one guard that can retire a frozen law,
+    # never watched failing. The fixture's single defect is a supersession naming a
+    # successor no law file defines (D0106 ruling 2: a claim retired with nothing carrying
+    # it forward is a claim dropped).
+    #
+    # tests/test_law_validation.py::test_check_laws_refuses_a_supersession_whose_successor_no_law_defines
+    # builds the same violation in a tmp_path tree, and the pair is kept deliberately for
+    # the reason the oracle-shadow pair is kept: that one is position-independent and
+    # needed no sitting to exist, this one proves the guard against the INSTALLED corpus
+    # and goes quiet the moment the fixture is removed.
+    ("check_laws",
+     ["scripts/check_laws.py", "--root", "tests/poison/check-laws-dropped-successor"],
+     "which no law file defines"),
 ]
 
 
@@ -516,3 +531,78 @@ def test_oracle_shadow_spoofed_fails_its_poison() -> None:
     )
     assert "answers with different code" in combined, combined
     assert "shadowed" in combined, combined
+
+
+#: Fixture directories exercised by a test of their own rather than by a POISON row,
+#: each mapped to the test that does it. These five deviate from POISON's shape for
+#: reasons documented at each test — the attack IS PYTHONPATH, so `-I -P` cannot be used;
+#: the decoy is imported from inside a sealed directory, so `-B` must be; the run is
+#: pytest rather than `--root`. The mapping is asserted in both directions below, so it
+#: cannot become the thing it exists to prevent: a name here that no test defines.
+DEDICATED = {
+    "lint-imports": "test_lint_imports_fails_its_poison",
+    "lint-imports-kernel": "test_lint_imports_kernel_fails_its_poison",
+    "oracle-shadow": "test_oracle_shadow_fails_its_poison",
+    "oracle-shadow-model": "test_oracle_shadow_model_fails_its_poison",
+    "oracle-shadow-spoofed": "test_oracle_shadow_spoofed_fails_its_poison",
+}
+
+
+def test_every_installed_fixture_is_exercised_by_this_suite() -> None:
+    """A fixture installed and never wired is a guard nobody watches fail.
+
+    This is scripts/custodian.sh's hunk 1c (D0154 item 1, D0152 item 6) as a pytest
+    check, for this file's own stated reason: the custodian is the floor, and this suite
+    runs the same matrix from plain `uv run pytest`, which CI and a builder run far more
+    often than they run the custodian. It exists because the gap it closes just happened
+    AGAIN — check-laws-dropped-successor/ was installed at the M3 boundary sitting on
+    2026-09-10, wired into the custodian by hunk 5 in the same commit, and reached this
+    file only afterwards, by hand. The custodian would have caught that; a builder
+    running the suite would not have.
+
+    Both directions, because each names a different fault and they are not the same bug:
+    a fixture on disk that nothing runs is a guard silently unwatched, while a name in
+    POISON or DEDICATED with no directory behind it is a row that PASSES vacuously —
+    poison() refuses exactly this in the custodian ("names fixture X, which is NOT
+    INSTALLED — the corpus is short a directory, not the guard weakened"), for exactly
+    the reason that a guard returns 0 over an absent tree and so reads as weakened when
+    the fault is the corpus.
+
+    __pycache__ is excluded the way check_manifest.py:113 and custodian hunk 3 exclude
+    it: a stray .pyc written by an ad-hoc import is a directory to delete, never a fixture
+    to wire, and having the three disagree about what a sealed tree contains is how
+    D0146's ~37-minute red run happened.
+    """
+    poison_root = REPO_ROOT / "tests" / "poison"
+    installed = {
+        d.name for d in poison_root.iterdir()
+        if d.is_dir() and d.name != "__pycache__"
+    }
+
+    covered: dict[str, str] = {}
+    for name, args, _marker in POISON:
+        for arg in args:
+            if arg.startswith("tests/poison/"):
+                covered[arg.split("/")[2]] = f"POISON[{name}]"
+    for fixture, test_name in DEDICATED.items():
+        assert callable(globals().get(test_name)), (
+            f"DEDICATED claims {fixture!r} is exercised by {test_name}(), which this "
+            "module does not define — the mapping has rotted into a claim about a test "
+            "that is not there"
+        )
+        covered[fixture] = f"{test_name}()"
+
+    unexercised = sorted(installed - covered.keys())
+    assert not unexercised, (
+        "fixture(s) installed under tests/poison/ that NO test in this suite exercises: "
+        f"{', '.join(unexercised)} — add a POISON row, or a test of its own plus a "
+        "DEDICATED entry. Installing a fixture the suite does not run leaves the guard "
+        "it was built to watch unwatched (D0152 item 6's shape)"
+    )
+    absent = sorted(covered.keys() - installed)
+    assert not absent, (
+        "this suite names fixture(s) that are NOT installed: "
+        + ", ".join(f"{n} (via {covered[n]})" for n in absent)
+        + " — the corpus is short a directory, not the guard weakened; a guard run "
+        "against an absent tree exits 0 and the row would pass vacuously"
+    )

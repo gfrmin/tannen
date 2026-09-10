@@ -74,7 +74,7 @@ reversibility: >-
   whose liveness rests entirely on an unsealed test, and the custodian returns to reporting an
   absent fixture as a weakened guard.
 status: accepted
-bindings_count: 2
+bindings_count: 4
 bindings:
   - type: file
     target: tests/poison/check-laws-dropped-successor/governance/laws.yaml
@@ -94,4 +94,26 @@ bindings:
     detail: >-
       Hunk 5 (the `poison check_laws` line) and hunk 1a's refusal of a fixture that is named
       but not installed. A drafted patch awaiting owner application enforces nothing (D0143).
+      Hunk 5 and hunk 1a were INSTALLED at the M3 boundary sitting on 2026-09-10. This
+      binding stays documentary all the same: the draft is a copy, and what runs is
+      scripts/custodian.sh. The two bindings below carry the enforcement it was standing
+      in for.
+  - type: manifest
+    target: scripts/custodian.sh
+    strength: enforced
+    detail: >-
+      Hunk 5 in its installed form, at :330-331: `poison check_laws "which no law file
+      defines"` against tests/poison/check-laws-dropped-successor. This is what makes
+      the custody FLOOR run the guard — the point of D0154 item (7). Frozen and
+      custody-set, so deleting the line is drift check_manifest reports.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_guard_fails_its_poison[check_laws]"
+    strength: enforced
+    detail: >-
+      The same matrix row from plain `uv run pytest`, added 2026-09-10 as the builder
+      half of this record's follow-up. It matters that both exist: the custodian is the
+      floor and is run at sittings, while CI and a builder run the suite many times a
+      day. Watched failing before it was trusted — pointed at a copy of the fixture with
+      the supersession removed, the guard exits 0 and the row reports `guard
+      'check_laws' PASSED its poison — weakened`.
 links: ["D0154", "D0171", "D0196", "D0198", "D0129", "D0106", "D0143"]

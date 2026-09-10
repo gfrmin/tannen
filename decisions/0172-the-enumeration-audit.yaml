@@ -134,7 +134,7 @@ reversibility: >-
   and the only reason it surfaced is that a ruling forced a sweep rather than another
   point fix.
 status: accepted
-bindings_count: 5
+bindings_count: 6
 bindings:
   - type: file
     target: src/tannen/laws/harness.py
@@ -163,10 +163,29 @@ bindings:
     detail: >-
       Finding (C): `required_tags`, 7 entries against 8 tags, third recurrence, and the one
       case where D0095's shallow-clone worry makes "derive AND assert" the right shape.
-  - type: file
+  - type: manifest
     target: scripts/custodian.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       Findings (D) and (G): 14 fixtures, 13 invocations, and a README table nothing checks.
       The derived completeness pass drafted for D0154 item 1 closes both at once.
+      Finding (D) CLOSED at the M3 boundary sitting on 2026-09-10: hunk 1c walks
+      `tests/poison/*/` and reddens the floor for any directory no `poison` invocation
+      reached, and hunk 1a refuses the mirror case, a row naming a fixture that is not
+      installed. Finding (G) is NOT closed and is not expected to be — the README table
+      can only be checked by reading its prose, and no test here may learn another
+      artifact's state that way. Upgraded to `manifest`/enforced for (D), with (G) named
+      as the residue rather than quietly folded into it.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_every_installed_fixture_is_exercised_by_this_suite"
+    strength: enforced
+    detail: >-
+      tests/test_governance_scripts.py's derived completeness pass, added 2026-09-10: it
+      walks tests/poison/*/ and fails for any fixture no POISON row and no dedicated
+      test exercises, and for any name the suite claims that is not installed. This is
+      custodian hunk 1c's check reached from plain `uv run pytest`, and it exists
+      because the gap recurred — the check_laws fixture was installed and wired into the
+      custodian in one commit and reached this suite only afterwards, by hand. Watched
+      failing on a fabricated orphan directory, on a name with no directory behind it,
+      and on a mapping naming a test the module does not define.
 links: [D0094, D0095, D0128, D0131, D0142, D0154, D0169, D0171]

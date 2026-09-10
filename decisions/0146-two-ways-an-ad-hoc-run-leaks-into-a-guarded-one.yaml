@@ -89,11 +89,17 @@ bindings:
     detail: "`TANNEN_ENV_VARS` and `child_env()`, and the three call sites that use it."
   - type: manifest
     target: scripts/custodian.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       Item (2)'s file, named at the path that holds it. Documentary and it must stay so
       until the owner applies the exclusion — the trust root is not builder-editable, and
       claiming otherwise would be the false report D0122 is about.
+      APPLIED at the M3 boundary sitting on 2026-09-10 as hunk 3: the `find` over
+      tests/poison/ now excludes `__pycache__`, matching check_manifest.py:113's
+      sealed-path rule, so the two guards agree about what a sealed tree contains.
+      Enforced from that date — the manifest row above pins the bytes that carry the
+      exclusion, so removing it is frozen-path drift and reddens check_manifest, `make
+      verify`'s first recipe line.
 links:
   - decisions/0092-the-receipt-clock-test-borrowed-its-boundary.yaml
   - decisions/0143-the-m2-sitting-queue-drafted-into-the-driver.yaml

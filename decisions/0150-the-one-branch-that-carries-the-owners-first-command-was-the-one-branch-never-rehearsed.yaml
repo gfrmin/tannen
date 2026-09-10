@@ -72,10 +72,19 @@ status: accepted
 bindings:
   - type: file
     target: scripts/rehearse_sitting.sh
-    strength: documentary
+    strength: enforced
     detail: >-
       Carries the deferred cp and the comment explaining why the order is load-bearing.
       Documentary: this file is deliberately outside the custody set and the manifest.
+      The stated reason is now FALSE, and the M3 boundary sitting is what falsified it:
+      on 2026-09-10 this path joined `governance/tier-c.yaml`'s `custody.set` and
+      `governance/custody.sha256` under the owner's signature (RT-M3-06, D0202). Its
+      content is enforced from that date — a change without a re-signature is custody
+      drift and reddens check_manifest. Strength raised with the type left at `file`,
+      which is the honest ceiling: the path is custody-set but carries no
+      MANIFEST.sha256 row, so what detects a revert is check_manifest's check_custody —
+      `custody drift: <path> changed since the custody file was written` — and no
+      binding type names the custody set.
   - type: file
     target: docs/SITTING.md
     strength: documentary

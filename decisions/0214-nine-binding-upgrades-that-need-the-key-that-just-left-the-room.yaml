@@ -1,0 +1,96 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0214
+title: "Nine binding upgrades the M3 sitting earned and no builder can apply: a Tier-C record's signature is over its bytes, so its bindings move only under the owner's key"
+tier: C
+date: "2026-09-10"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE M4 BOUNDARY SITTING, non-blocking (BRIEF §9.2): nothing here stops other
+  work, and it joins no earlier queue because M4 has none yet — this record is the first
+  item, and later ones link here the way D0195 linked to D0154.
+  .
+  D0213 executed the sitting's first follow-up across eleven Tier-A records. Nine further
+  upgrades were prepared against five Tier-C records, measured, and reverted. Each is
+  earned: the artifact the binding was waiting for is in the tree.
+  .
+  (1) D0131 -> `governance/tier-c.yaml`, `file` to `manifest`/enforced. Items (3) and (4):
+  `scripts/check_laws.py` and `governance/laws.yaml` joined `custody.set` at the M2 sitting
+  on 2026-09-03.
+  (2) D0131 -> `governance/tag-roles.yaml`, `file` to `manifest`/enforced. Item (5):
+  `required_tags` gained m1-laws-freeze and m2-laws-freeze at that same sitting.
+  (3) D0154 -> `scripts/custodian.sh`, `file` to `manifest`/enforced. All four items applied
+  as hunks 1a/1b/1c, 2, 4 and 3 on 2026-09-10.
+  (4) D0154 -> `scripts/boundary_sitting.sh`, `file`/enforced. Items (2) and (5) fixed in the
+  M3 driver installed over that path (D0200). The type stays `file`: the path is custody-set
+  and carries no MANIFEST.sha256 row, so what detects a revert is check_custody's drift line.
+  (5) D0154 -> `governance/tag-roles.yaml`, `file` to `manifest`/enforced. Item (6):
+  `required_tags` gained m3-laws-freeze and then m3-close.
+  (6) D0154 -> a NEW `pytest` binding on
+  `tests/test_governance_scripts.py::test_every_installed_fixture_is_exercised_by_this_suite`,
+  the builder half of item (1)'s completeness pass (D0213).
+  (7) D0171 -> `scripts/custodian.sh`, `file` to `manifest`/enforced. Ruling (4) executed in
+  full: item 1's poison line and completeness pass, item 7's `check_laws` fixture and its
+  invocation, item 2's receipt exit-status clause.
+  (8) D0176 -> `governance/tag-roles.yaml`, `file` to `manifest`/enforced. `trust_root.object`
+  was repinned at the publication sitting and `required_tags` is now complete.
+  (9) D0195 -> `.github/workflows/ci.yml`, `file` to `manifest`/enforced. Item (2)'s false
+  header was replaced on 2026-09-10.
+  .
+  THE RECOMMENDATION IS NOT "APPLY THESE NINE AT M4". It is that a sitting should upgrade a
+  Tier-C record's bindings in the same breath as it flips that record's status, BEFORE it
+  signs. The M3 driver already re-signs each queue record at step 4c; a binding upgrade
+  written into the same step costs one edit and no extra signature, and the window in which
+  it is possible is exactly that step. Applied to this sitting it would have closed seven of
+  the nine on the spot, and the two D0131 items would never have waited a milestone.
+rationale: >-
+  The mechanism is documented and the consequence is not. check_decisions.py:384-390 has said
+  since RT-06 that "the signature is over the record's whole bytes (D0063 ruling 2), which is
+  why a later binding change costs a re-signature: what was vouched for is the file, not a
+  summary of it". Measured rather than assumed: after the nine edits, D0131, D0154, D0171,
+  D0176 and D0195 each failed `ssh-keygen -Y verify -n tannen-decision` with `incorrect
+  signature`, and each verified again once reverted.
+  .
+  What follows from that is a hole in the sitting's own closing instruction. The driver ends
+  by asking the builder to "upgrade the bindings this sitting made enforceable" — and the
+  records most likely to have earned an upgrade are precisely the Tier-C queue records the
+  sitting just discharged, which are the ones a builder may not touch. The follow-up as
+  worded is unexecutable in about a third of its scope, and nothing anywhere says so. D0131
+  is the evidence that this is not hypothetical: its two upgrades have been earned since
+  2026-09-03 and were never available to the builder who was asked to make them.
+  .
+  Tier C rather than Tier A deliberately, for D0154's stated reason and D0195's precedent: a
+  Tier-A record carrying an owner-key item is invisible in the digest's "Requires owner"
+  section, and that blindness is what left D0191 and the three D0195 items with nowhere to
+  land. Nine owner-only edits recorded at Tier A would repeat it.
+reversibility: >-
+  One-way only in the sense every signature is: applying the nine means the owner re-signs
+  five records, and the previous signatures are superseded rather than destroyed — git holds
+  both the bytes and the old `.sig`. Declining costs nothing but leaves nine bindings
+  understating their enforcement, which the enforced/documentary split will keep reporting.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: decisions/0213-the-bindings-the-sitting-made-enforceable-and-the-wall-at-tier-c.yaml
+    strength: documentary
+    detail: >-
+      The eleven Tier-A upgrades this record is the remainder of, and the measurement that
+      produced it. Bound so a reader arriving at either finds both halves of one follow-up.
+  - type: file
+    target: scripts/check_decisions.py
+    strength: documentary
+    detail: >-
+      Lines 384-390: the comment that states the rule and the branch that enforces it, plus
+      TIER_C_UNSIGNED_OK at :73, which is why a `blocked-on-owner` record like this one needs
+      no signature to be legal while an `accepted` one does. Documentary: the guard enforces
+      the signature, not the upgrade, and there is nothing here for it to detect.
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Step 4c, where each Tier-C queue record is flipped and signed — the one window in which
+      these upgrades are cheap, and the place the recommendation above would land. Documentary
+      and it must stay so until the owner writes it in: the file is custody-set, and a
+      drafted change awaiting the owner's key enforces nothing (D0143).
+links: ["D0213", "D0045", "D0052", "D0063", "D0131", "D0154", "D0171", "D0176", "D0195",
+        "D0200", "D0205"]

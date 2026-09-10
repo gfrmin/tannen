@@ -136,14 +136,19 @@ bindings:
       (defect 4); check_manifest going green on BRIEF.md is what proves the row was not
       left stale, and governance/custody.sha256 carries the same hash under the owner's
       step-7 signature.
-  - type: file
+  - type: manifest
     target: tests/poison/README.md
-    strength: documentary
+    strength: enforced
     detail: >-
       The corpus index defect (3) left incomplete: no row for check-decisions-file-skip.
       Documentary, and it must stay documentary until the owner adds the row — claiming
       otherwise is the same false-report shape this record is about. The row text is
       ready at docs/proposals/2026-08-27-m1-boundary-sitting/poison-readme-row-file-skip.md.
+      The row LANDED at the M2 boundary sitting on 2026-09-03, in step 5b, right after
+      the patch it describes. Upgraded to `manifest`/enforced on 2026-09-10 — one
+      boundary later than it could have been, which is the shape this record is about
+      arriving in the follow-up queue rather than in a check: a follow-up no guard
+      tracks waits for someone to remember it.
   - type: file
     target: docs/proposals/2026-08-29-a-check-that-cannot-fail.md
     strength: documentary
