@@ -1,0 +1,74 @@
+id: D0212
+title: "D0195 item 1 ruled: a scoping document that reasons across the constellation boundary is a dependency, and tannen does not carry one"
+tier: C
+date: "2026-09-10"
+decision: >-
+  DECLINED. Owner ruling of 2026-09-10, asked and answered before the M3 sitting:
+  `.reference/SCOPE-under-routing.md` does not belong in tannen. It belongs in life-agent.
+  .
+  D0195 item 1 put the question the right way round — not "is this file harmful?" but "is a
+  scoping document that reasons across the boundary itself a dependency, and may tannen carry
+  one?" The ruling is that it is, and tannen may not. The document describes itself as
+  "Companion to: life-agent `DR-DECISION-1-action-space-and-utility.md` §9" and cites as its
+  provenance "decision D-12 of `../life-agent/docs/SESSION-RECORD-2026-09-05.md`". A companion
+  to another repo's decision record, deriving from another repo's session record, is that
+  repo's artifact wherever the bytes happen to sit. CLAUDE.md's first hard rule and BRIEF §2/§10
+  say IN EITHER DIRECTION, and the direction that is easy to miss is this one: tannen holding a
+  document that only makes sense beside life-agent's is tannen depending on life-agent, not the
+  reverse.
+  .
+  WHERE IT GOES: life-agent, which owns both documents it names. This ruling does not place it
+  there — writing into another repo of the constellation is not an act this repo authorises
+  itself to take, and the relocation is the owner's, performed in life-agent's own history.
+  .
+  WHAT THE SITTING DOES ABOUT IT: nothing, and that is not an oversight. The file is gitignored
+  and present in no commit of either the pre- or post-rewrite history, so there is nothing to
+  remove from tannen's record and nothing for a step of the driver to do. The enacting act is
+  the deletion of one untracked file from the working tree of `~/git/tannen` once a copy is
+  safe in life-agent. Deliberately NOT bound as a `file` binding below: the path does not exist
+  in a fresh clone or in CI, and D0195 is right that a binding which cannot resolve is a broken
+  guard rather than a strong one.
+  .
+  ONE CORRECTION THAT TRAVELS WITH IT: the document's line 11 reads "Repository status note:
+  tannen is private. It does not appear in any public-master…", false since 2026-09-08. On an
+  admission that line would have had to be fixed as a condition. On a decline it is life-agent's
+  to fix, and it is named here so the error does not simply move house unremarked.
+rationale: >-
+  The rule this applies is one of the five one-way doors, and the reason it is Tier C rather
+  than a builder judgement is that the question is what the rule MEANS, not whether it was
+  followed. A builder deciding by acting — quietly keeping the file, or quietly deleting it —
+  would be answering a constitutional question with a shell command.
+  .
+  The decline is the reading that costs least to be wrong about. If it is wrong, life-agent
+  holds a document that is merely filed in a slightly inconvenient place, and tannen can adopt
+  it later under a fresh record. If admission had been wrong, tannen would carry a
+  cross-boundary artifact that the constellation rule exists to prevent, and every future
+  session would read its presence as precedent.
+  .
+  Recorded as its own record rather than as an edit to D0195, per D0045 and per D0195's own
+  stated shape — "later M3 items arrive as their own records linking here, never as edits to
+  this one." D0195 items 2 and 3 are unaffected and are applied by the sitting at steps 4f
+  and 3b respectively.
+reversibility: >-
+  Reversible in one direction cheaply and in the other not at all, which is why the cheap
+  direction was chosen. Adopting the document later is a new record plus a commit. Un-declining
+  after tannen has carried it into public history is a rewrite of a public repository, which is
+  what D0176 cost the last time it was necessary. Nothing in this record is irreversible today:
+  the bytes still exist, untracked, until the owner moves them.
+status: blocked-on-owner
+bindings:
+  - type: file
+    target: decisions/0195-three-items-publication-left-with-no-queue-to-land-in.yaml
+    strength: documentary
+    detail: >-
+      The record this answers. Item 1 only; items 2 and 3 are applied by the sitting itself, at
+      steps 4f (ci.yml's header) and 3b (policy.yaml's in_repo_mechanics clause).
+  - type: file
+    target: CLAUDE.md
+    strength: documentary
+    detail: >-
+      The hard rule applied — "Never add a dependency on, or import from, any other repo of the
+      constellation (pkm, life-agent, credence, proplang, the Renavon monorepo). In either
+      direction." This ruling is a reading of "in either direction" for the case where the
+      artifact is prose rather than an import.
+links: ["D0195", "D0154", "D0045", "D0176", "D0207"]

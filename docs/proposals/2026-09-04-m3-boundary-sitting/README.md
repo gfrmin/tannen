@@ -13,6 +13,21 @@ Nothing here enforces anything. Every file is a draft the owner installs (or dec
 at the sitting, under the owner's key — `scripts/custodian.sh` is custody-set,
 author-key territory (BRIEF §9.1, CLAUDE.md hard rules).
 
+## For the owner, before you sit down
+
+Three things in this directory are for you rather than for the sitting:
+
+| File | What it is |
+|---|---|
+| `sitting-preflight.sh` | Read-only. Run it in `~/git/tannen` (**not** a worktree) **before** the `cp`. Checks the tree, the driver's sha256 against the cleared bytes, your key in ssh-agent (D0185 — without it you type the passphrase ~10 times), the custody floor, and whether `origin` already holds HEAD. `--with-gate` also runs `make verify`; without it the preflight says it has **not** seen a green gate rather than implying one. |
+| `AGENDA.md` | Every step and prompt, with the cost of answering **n**, and which steps use your key. |
+| `gen_agenda.py` | What generates `AGENDA.md` from the driver. Re-run it rather than editing the agenda — a hand-maintained list of the driver's prompts is exactly the class D0209 closed. |
+
+The ordering that matters, because nothing enforces it: **the precondition is the `make verify`
+you run BEFORE the `cp`.** The `cp` is custody drift on a custody-set member and `check_manifest`
+is `verify`'s first recipe line, so every gate after it stops in seconds without reaching the
+suite (D0151, D0206, D0208).
+
 ## `custodian.sh` — the draft, hunk by hunk
 
 The live `scripts/custodian.sh` plus seven delimited hunks (`--- M3 DRAFT HUNK n ---`),

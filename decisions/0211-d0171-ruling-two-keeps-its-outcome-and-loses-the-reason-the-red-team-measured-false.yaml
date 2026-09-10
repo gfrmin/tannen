@@ -1,0 +1,94 @@
+id: D0211
+title: "D0171 ruling (2) keeps its outcome and loses its reason: the type system catches nothing here, and the executor answers the swap from the trace"
+tier: A
+date: "2026-09-10"
+decision: >-
+  D0171 ruling (2)'s STATED PREMISE IS FALSE, and this record carries the correction so the
+  ruling can be signed without signing the reason. Owner ruling of 2026-09-10, asked and
+  answered before the sitting: "amend the premise, then sign."
+  .
+  The amendment is THIS RECORD and not an edit to D0171, because D0045 makes `decision` and
+  `rationale` immutable and states no exception for an unsigned record — "a change of mind is
+  a NEW record". The M3 driver's own step-8 note says amending "costs nothing now and costs a
+  supersession after", which reads as licence to edit in place; measured against D0045 it is
+  not, and the distinction it is reaching for is real but narrower: before signature a
+  correction is a plain record, after signature it is a supersession of signed bytes.
+  .
+  WHAT IS FALSE. Ruling (2) accepts order-insensitive `derivation_id` on the ground that
+  operand order is "a caller error the type system should catch, not the identity scheme."
+  RT-M3-03 tested the premise rather than the conclusion. Give both relations the same schema
+  and there is nothing to catch: `anti_join(A, B)` and `anti_join(B, A)` are different
+  questions, both legal, and they share one `step_id`
+  (`sha256:7e1fc9687080dbd8590c87ad345b6bc4f1e81598da1e91433097281c2f6f6a21`). The second call
+  returns the FIRST call's answer with `rebuilt=False` — the wrong result served as a cache
+  hit, no exception raised. With a fresh trace store the same call returns `[]` correctly, so
+  the trace is what corrupts it. This is RT-M3-01's disease in a second place.
+  .
+  WHAT STANDS. The ruling's OUTCOME is unchanged and is not weakened by the correction:
+  `derivation_id` stays order-insensitive and is not widened at M4. Widening it does invalidate
+  evidence across three milestones, and that price is real. The corrected ground is that THE
+  ASYMMETRY BELONGS TO THE OPERATOR, NOT TO THE IDENTITY SCHEME — not that a type system
+  intercepts it, which it demonstrably does not.
+  .
+  WHAT IS QUEUED, NOT DECIDED HERE. RT-M3-03's remedy is M4 work and needs a frozen law, so it
+  is named rather than taken: either fold role-named operands (`{"left": …, "right": …}`) into
+  the derivation for a non-commutative operator, so two orders are two derivations because they
+  are two different input values, or have `advance` refuse a bare positional pair for such an
+  operator. Either leaves m1 §8, L1.13 and every existing `deltaop/1` descriptor untouched.
+  .
+  AND ONE CONSTRAINT ON THAT REMEDY, from D0171's own ruling (3): the set of non-commutative
+  binary operators is today exactly `{anti_join}` — `union` and `join` are genuinely commutative,
+  so order-insensitivity is correct for them and the blanket rule is wrong only for `anti_join`.
+  That set MUST BE DERIVED, not written down. A hand-maintained list here would be the next
+  instance of the class ruling (3) was made to stop.
+rationale: >-
+  A ruling signed on a measured-false premise is worse than an unsigned one, because the
+  signature attests to the reasoning as well as the result. The window in which this costs a
+  single record rather than a supersession is open only until step 8 of the M3 sitting, which
+  is why it was raised before the sitting rather than at it.
+  .
+  Keeping the outcome while replacing its ground is the honest shape here, and it is worth being
+  explicit that this is not a rescue of a conclusion someone was attached to: the conclusion
+  survives on an argument RT-M3-03 itself supplies (the cost of invalidating three milestones of
+  evidence), and the finding's author reached the same view — "the ruling's conclusion may well
+  still be right; what is not right is the stated reason."
+  .
+  D0174 flagged this as urgent for exactly this reason. It has been urgent since 2026-09-05 and
+  is being answered five days later, at the last point where answering it is cheap.
+reversibility: >-
+  Fully reversible as a record. It changes no code, no frozen path and no descriptor; it corrects
+  the ground of a ruling whose outcome it leaves in place. If the M4 remedy shows the outcome
+  itself was wrong, that is a further record and, by then, a supersession of a signed D0171.
+status: accepted
+bindings:
+  - type: file
+    target: docs/redteam/2026-09-05-m3-boundary.md
+    strength: documentary
+    detail: >-
+      RT-M3-03, which specified the probe (P9) before running it — "a ruling was about to be
+      signed on an untested premise" — and printed both `step_id`s, the `rebuilt=False` flag and
+      the fresh-store control that isolates the trace as the corrupting element.
+  - type: file
+    target: decisions/0171-the-m3-conferral-rulings.yaml
+    strength: documentary
+    detail: >-
+      The record corrected. Its ruling (2) outcome stands; its stated premise does not. Bound
+      documentary rather than edited, per D0045 — the file's bytes are deliberately untouched.
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_binary_step_id_inherits_derivation_ids_order_insensitivity"
+    strength: documentary
+    detail: >-
+      The collision was already PINNED, and finding that changes what RT-M3-03 contributes. This
+      node asserts both halves of it in one place — `left.step_id == right.step_id` and
+      `left.state_ref != right.state_ref, "the two orders compute different things"` — and its
+      docstring is explicit that it is "a PIN, not a claim that this is ideal (D0167)" and that
+      "a caller that does [record] must not permute operands." So the repo knew the two orders
+      collide; what it had was an instruction to callers, not a guard. RT-M3-03's addition is the
+      consequence: the test calls `advance` WITHOUT `record=True`, so it never reaches the
+      trace-serving path where the collision stops being a shared id and becomes a wrong answer
+      returned as `rebuilt=False`. Documentary and not enforced, deliberately: this node pins the
+      behaviour the M4 remedy will change, so it is the thing that will say "a decision is being
+      reversed rather than a bug being fixed" — it cannot also be the regression guard against
+      the defect. That guard does not exist yet, and naming one that cannot fail for this reason
+      would be a binding that looks stronger than it is.
+links: ["D0171", "D0174", "D0167", "D0045", "D0207", "D0195", "D0084"]
