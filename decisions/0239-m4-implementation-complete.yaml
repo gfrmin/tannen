@@ -1,0 +1,86 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0239
+title: "M4 implementation complete: twenty-five frozen laws green with zero skips and fresh evidence, no frozen path touched, nothing spent — and the first draft carried nine defects the laws could not see"
+tier: A
+date: "2026-09-12"
+risk_flags: ["governance-paths", "spend"]
+decision: >-
+  Session B is complete under BRIEF §8's frozen-oracle protocol, against docs/specs/m4.md §12
+  item by item.
+  .
+  (1) `uv run pytest tests/laws/m4` is green with ZERO skips (182 nodes, run with TANNEN_NO_EVIDENCE=1).
+  (2) `uv run tannen laws report` shows fresh passing evidence for L4.1–L4.25, and for all 77
+  laws across M0–M4 — written by one deliberate refresh (`pytest tests/laws`, 726 passed, 1
+  xfailed, 77 records) after the last edit to anything a law descriptor covers. (3) `make
+  verify` is green at every step, each verdict line read (MAKE_EXIT=0): check_manifest,
+  check_concepts, check_decisions (238 records valid, 120 pytest bindings green, 0 unenforced),
+  check_tag_signers, check_receipts and check_laws OK; pytest 1166 passed, 1 skipped, 2 xfailed
+  in 25m44s — the skip and one xfail pre-existing (the S-pending conformance vector, the node
+  D0128 retired), the other xfail the retired swap pin; the laws report OK with 77 laws fresh;
+  lint-imports 3 kept, 0 broken; the custodian's custody floor intact, every guard failing its
+  poison. `lint-imports` keeps all three contracts, so the
+  kernel still imports no IO and no clock; frozen L4.9 proves the shell reaches the network only
+  through `tannen.oracles` and `tannen.r2` and a clock only through `tannen.oracles` and
+  `tannen.laws`. (4) `tests/test_law_validation.py` is green: the M4 model passes all eight
+  families and all thirteen mutants die by the check that names them. (5) The RT-M3-01 and
+  RT-M3-03 remedies have landed (D0231, D0232), and the unfrozen swap pin is retired under its
+  own record — as a strict xfail, because D0167 binds it enforced and a pytest binding cannot be
+  retired (D0232). (6) `governance/laws.yaml`'s `pending` list is still empty. (7) Every ceiling
+  in `budget.yaml` is still zero; the file is byte-identical. (8) The M4-close digest is
+  generated with this record.
+  .
+  THE KILL CRITERION WAS NOT TRIGGERED. L4.2–L4.5 — capture before read, invoke iff no
+  capture, replay-only by default, SpendGuard — and L4.19, M3's criterion carried forward,
+  passed on their first run against the shipped package, as did L4.13, the differential against
+  the frozen model.
+  .
+  WHAT THE LAWS COULD NOT SEE, AND IS THE THING MOST WORTH SAYING. The first complete draft
+  passed every frozen law and every unit test — and two independent review passes then found
+  nine defects in it (D0235), two reproduced: a fetched body whose bytes decoded as a
+  `capture/1` was served to a question nobody asked, and two racing sessions paid twice and
+  counted once. Neither was reachable by the frozen model's generators, which is why the
+  differential stayed green; each fix changes behaviour only in states the model never
+  produces, so it stayed green afterwards too. A green frozen suite is the protocol's
+  definition of done, and it was met; it is not a claim that the boundary is sound against an
+  adversarial world, and this record does not make one.
+  .
+  WHAT IS NOT DONE, AND IS NOT A GAP HERE. The M3→M4 boundary red team has not run: it needs a
+  context that did not write the implementation (D0104). The M4 sitting driver is not drafted
+  (its owed items are in docs/proposals/2026-09-11-m4-boundary-sitting/README.md). The owner
+  queue grows by one: D0238, SpendGuard admitting against whatever budget a caller loads, which
+  frozen L4.4/L4.5 forbid the builder to close — joining D0214, D0215, D0217, D0228 and D0229.
+  `m4` is not merged to master.
+rationale: >-
+  The D0101/D0139/D0170 counterpart for M4: the record that says, from measurements, that the
+  milestone's definition of done is met, what it rests on, and what it does not claim.
+reversibility: >-
+  A completion claim is refuted, not reversed: a later failure of any bound law makes this record
+  false and gets its own record.
+status: accepted
+bindings_count: 6
+bindings:
+  - type: pytest
+    target: tests/laws/m4/test_l4_boundary_differential.py
+    strength: enforced
+    detail: L4.13 — the package agrees with the frozen model on every step, value and transport count.
+  - type: pytest
+    target: tests/laws/m4/test_l4_spend.py
+    strength: enforced
+    detail: L4.5 — SpendGuard's rule and fold, the heart of §12's kill criterion.
+  - type: pytest
+    target: tests/laws/m4/test_l4_graph_superseding.py
+    strength: enforced
+    detail: L4.19 — M3's kill criterion, carried forward and bound from its bytes.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_every_mutant_dies_by_the_check_that_names_it"
+    strength: enforced
+    detail: The half that catches a law which cannot fail — all thirteen M4 mutants die by their named check.
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_the_report_over_the_real_repo_is_well_formed"
+    strength: enforced
+    detail: The report's law ids equal the frozen spec tables' — what makes "fresh evidence for L4.1–L4.25" measurable.
+  - type: manifest
+    target: docs/specs/m4.md
+    strength: enforced
+    detail: The spec whose §12 states the completion criteria this record claims.
+links: ["D0094", "D0104", "D0170", "D0218", "D0225", "D0227", "D0231", "D0232", "D0233", "D0234", "D0235", "D0236", "D0237", "D0238"]
