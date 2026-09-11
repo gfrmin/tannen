@@ -1,0 +1,147 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0215
+title: "Minting the close tag reddens the commit it attests: DECISIONS.md's attention-receipt line is computed from tags and the clock, and a commit can contain neither"
+tier: C
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE M4 BOUNDARY SITTING, non-blocking (BRIEF §9.2). It joins D0214, which
+  opened that queue.
+  .
+  THE FINDING, MEASURED: every close tag this project has minted points at a commit that
+  fails `make verify` today, and the tag itself is what fails it.
+  .
+  (1) m1-close points at c13d33c, m2-close at 805a301, m3-close at e33adf8. All three of
+  those commits carry the same shape of line in DECISIONS.md: "Attention receipt: **FRESH**
+  — receipt <date>.md fresh (no milestone boundary since)".
+  (2) check_decisions.py:459 compares that line against the verdict the current run
+  computes. The computation is scripts/_gov.py:300-306, whose `later` list comes from
+  boundary_tag_dates() at :211 — a shell-out to `git tag -l`. Tags are refs. No commit
+  contains one.
+  (3) So the instant step 10 mints the close tag, the line inside the commit step 10 has
+  just tagged becomes false, and stays false for good.
+  .
+  MEASURED ON M3 RATHER THAN INFERRED. CI run 34481481487 on e33adf8 failed with exactly
+  that violation, plus six pytest-binding failures downstream of it (D0063 and D0177 on
+  tests/test_governance_scripts.py; D0050, D0054, D0058 and D0062 on tests/test_tag_signers.py
+  — all innocent, all reporting the same stale projection). Run 34481481603 on a285f93, the
+  very next commit, passed. e33adf8's own pre-commit hooks were green when it was made: the
+  sitting could not have continued past step 9 otherwise. The commit did not change. The
+  tag set did.
+  .
+  THE SCOPE IS WIDER THAN THE TAG, and this is the part that costs. A commit is red on
+  this comparison whenever the verdict stored in its DECISIONS.md differs from the one its
+  own receipts yield against today's tags and today's date. There are two ways for that to
+  happen and between them they cover nearly all of history.
+  (i) The stored line says "no milestone boundary since" and a boundary tag dated on or
+  after that commit's newest receipt has since been minted. BOUNDARY_TAG_RE at _gov.py:25
+  matches brief-freeze, *-laws-freeze and *-close, so this is true of every commit older
+  than m3-close whose newest receipt predates 2026-09-10.
+  (ii) The stored line says "fresh until D" and today is past D — true of every commit more
+  than seven days behind its own boundary, from _gov.py:304.
+  So `git bisect run make verify`, the ordinary way to locate a regression in this repo,
+  fails immediately on a governance line for every commit outside a narrow window near the
+  tip, and says nothing whatever about the code being bisected.
+  .
+  CONTROL, run for this record and predicted before it was read. af41fe8 is not a sitting
+  commit at all — it is the ordinary commit before the sitting — and CI run 34434680220
+  passed on it on 2026-09-10. Its tree's newest receipt is 2026-09-07 and m3-close is dated
+  2026-09-10, so case (i) says the same run, re-run byte-identical on 2026-09-11, must now
+  fail computing "receipt 2026-09-07.md fresh until 2026-09-17 (boundary 2026-09-10 + 7d)"
+  against a stored "receipt 2026-09-07.md fresh (no milestone boundary since)".
+  IT DID, at 00:18:33Z on 2026-09-11, and the guard printed that string character for
+  character: check_decisions FAIL, 3 violations — the attention-receipt line plus D0063 and
+  D0177's pytest bindings, the same two innocents the M3 sitting's own failure dragged with
+  it. Nothing about af41fe8 changed between the two runs. m3-close was minted in between.
+  Greenness here is not a property of a commit.
+  .
+  THE RECOMMENDATION: stop storing a time-varying verdict in a projection that must match a
+  recomputation. DECISIONS.md should carry only what its commit contains — the latest
+  receipt's filename and whether it is signed — and the FRESH/STALE verdict, which has a
+  clock in it, should be rendered where a dated artifact can carry it honestly: digest/<date>.md,
+  which is generated per day and is never compared against a later recomputation.
+  check_decisions goes on computing the verdict and reporting it at run time; it stops
+  asserting that a tracked file agrees with it. That preserves what RT-M2-05 asked for (no
+  file may go on claiming FRESH after the receipt goes stale) by removing the claim from the
+  file that cannot keep it, rather than by checking it harder.
+rationale: >-
+  THIS IS D0095's LAG ONE LAYER DOWN, and the two should be read together. D0095 records
+  that required_tags "always lags by construction — a boundary tag is minted by the same
+  session that cannot then add it to the frozen, custody-set file that names it required".
+  That sentence describes this exactly: a boundary tag is an input to a file that has to be
+  committed before the tag exists. The difference is what closes the gap. D0095 accepts a
+  lag of one because the NEXT sitting closes it. Nothing closes this one — the commit is
+  immutable and the tag never moves — so the lag is permanent.
+  .
+  What makes it worth a record rather than a shrug is what a close tag is FOR. m3-close is
+  the artifact an auditor checks out to see the milestone as the owner signed it, and D0049
+  is why it is the owner who signs it. Checking it out and running the gate yields a
+  failure: on a governance line, in the guard that reads decision records, at the one commit
+  whose entire purpose is to be checked. The commit that IS green, a285f93, carries no tag
+  and is reachable only by knowing to look one commit further on.
+  .
+  THE CLOCK HALF WAS ANTICIPATED AND HALF-FIXED, which is why it survived. check_decisions.py:445
+  says outright that "`today` can never be a file, so the fix is not a wider hash; it is to
+  compare the CLAIM the projection makes against the one this run computes". That reasoning
+  is right about the failure it was aimed at — RT-M2-05's, a file asserting FRESH while every
+  guard stayed green — and the comparison it produced is correct at the tip and wrong
+  everywhere else in history. Comparing a stored claim against a live computation makes the
+  stored file's correctness a function of when it is read. boundary_tag_dates() then adds a
+  second input that is not even monotonic in the clock: it changes the moment a tag is minted.
+  .
+  FOUR REMEDIES CONSIDERED AND REJECTED, the first because it was tried first and is wrong.
+  (a) "Regenerate projections between the receipt and step 9's commit." This is the obvious
+  reading of the CI failure and it does not work: at that point the close tag does not exist,
+  so the regenerated line still says "no milestone boundary since". The driver already argues
+  it at boundary_sitting.sh:2757 — "REGENERATED HERE BECAUSE THERE IS NO EARLIER POINT WHERE
+  BOTH INPUTS EXIST."
+  (b) Reorder so the tag lands on step 11's commit instead. Step 10 requires a clean tree so
+  the tag attests a commit containing the sitting (:2664, D0051), and step 11's commit exists
+  only after the tag. Either order puts one of them first. It is a fixed point, not a
+  sequencing mistake.
+  (c) Evaluate the comparison "as of the commit". `today` is not a file, and "the tags as of
+  a commit" is not a defined thing — CI checks out a detached HEAD with every tag fetched.
+  (d) Skip the comparison when HEAD is not the branch tip: a guard that stands down in the
+  case it was built for.
+  .
+  TIER C RATHER THAN TIER A for the reason D0154, D0195 and D0214 all give. The remedy edits
+  scripts/_gov.py, scripts/check_decisions.py and scripts/gen_projections.py — custody.sha256
+  rows 16, 19 and 26, and none of the three in MANIFEST.sha256. Custody-set means a builder's
+  edit is custody drift and the re-signature is the owner's (D0143), so the whole remedy is
+  owner work. Filed at Tier A it would not appear in the digest's "Requires owner" section,
+  and that blindness is the thing D0154 was opened to fix.
+reversibility: >-
+  Reversible in both directions. The recommendation moves a rendered line between two
+  generated files; nothing is signed, nothing is deleted, and git holds every prior
+  rendering. Declining costs no work here and leaves three close tags — and every future one
+  — pointing at commits that fail the gate, a cost paid by whoever next audits a boundary
+  rather than by anyone present when it was decided.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: scripts/_gov.py
+    strength: documentary
+    detail: >-
+      Lines 300-306, the verdict this record is about, and boundary_tag_dates() at :211-224,
+      which is where a ref enters a computation whose output is written into a tracked file.
+      Documentary: the defect is live, so a guard that detected it would be red, and there is
+      nothing here yet for one to enforce.
+  - type: file
+    target: scripts/check_decisions.py
+    strength: documentary
+    detail: >-
+      The comparison at :459 and the comment at :445 that names the clock half and argues the
+      fix that produced it. Cited for both: the reasoning is sound about RT-M2-05 and is the
+      proximate cause of a projection that can only be correct at the tip.
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Step 10's clean-tree requirement at :2664 and step 11's argument at :2746-2760 that no
+      earlier regeneration point exists. Together they are the proof that this is structural:
+      the driver already knows both halves and neither it nor anything else says what they
+      imply for the commit the tag names. Documentary and must stay so — the file is
+      custody-set (D0143).
+links: ["D0214", "D0095", "D0018", "D0045", "D0049", "D0051", "D0063", "D0071", "D0143",
+        "D0147", "D0154", "D0177", "D0195", "D0200", "D0213"]
