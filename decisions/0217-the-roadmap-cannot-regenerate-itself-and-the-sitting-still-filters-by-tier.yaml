@@ -1,0 +1,88 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0217
+title: "Three custody-set lines the roadmap needs and a builder cannot write: the hook that regenerates it, the make target, and the sitting's tier filter"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE OWNER, non-blocking (BRIEF §9.2). Nothing here stops other work.
+  .
+  THIS RECORD IS TIER A AND `blocked-on-owner`, AND THAT PAIRING IS THE POINT. The decision
+  is fully reversible — three lines, each deletable — so by BRIEF §9.2 it is Tier A. It
+  still needs the owner's key, because all three files are custody-set. Under the existing
+  projections that combination is invisible: `gen_projections.py` and
+  `scripts/boundary_sitting.sh` both filter `tier == "C"` before they look at a status. This
+  record is the first use of the convention D0216 established, and it is deliberately about
+  the artifact that surfaces it, so the mechanism demonstrates itself: D0216 shipped
+  `ROADMAP.md` §3, and this is its first row.
+  .
+  (1) `.pre-commit-config.yaml` (custody row 2) — a `regen-roadmap` hook beside
+  `regen-projections`, entry `.venv/bin/python -I -P scripts/gen_roadmap.py`. Without it
+  `ROADMAP.md` is the only generated artifact in this repo that is checked but never
+  regenerated: every commit adding a decision record leaves it stale until someone types the
+  command. Worse than an inconvenience — a stale copy makes `check_decisions`' batched
+  pytest resolution fall back to one invocation per binding target.
+  (2) `Makefile` (custody row 6) — `gen_roadmap.py` in the `projections` target, so
+  `make projections` covers all three projections rather than two. The commit economics of
+  this repo make "run one more command by hand, every time" a rule that will be forgotten.
+  (3) `scripts/boundary_sitting.sh` — step 8 selects the sitting's queue with a `tier: C`
+  test BEFORE it greps `^status: blocked-on-owner$`. So a Tier-A record recorded
+  `blocked-on-owner` — this one — reaches `ROADMAP.md` and does NOT reach the sitting that
+  would discharge it. Until that filter reads status first, the convention D0216 created is
+  visible to a reader and invisible to the ceremony.
+  .
+  Item (3) is the load-bearing one and the others are conveniences. A queue the ceremony
+  cannot see is a queue that does not get worked.
+rationale: >-
+  The three lines are one change and should land in one motion, because they share a cause:
+  the builder-side half of a governance mechanism can be built without the owner, and its
+  wiring into the floor never can. D0216 took the builder half as far as it goes — generator,
+  artifact, five watched-failing controls — and stopped exactly here.
+  .
+  WHY NOT WAIT AND FOLD THIS INTO THE M4 SITTING SILENTLY. Because it would then be carried
+  as prose in a proposals README, which is the failure mode this milestone documented three
+  times over. Filed as a record it is queryable, and the artifact it is about prints it.
+  .
+  THE COST OF DECLINING IS KNOWN AND SMALL, WHICH IS WHY THIS IS NOT TIER C. Decline (1) and
+  (2) and `ROADMAP.md` still works; it just goes stale more often, and the test says so with
+  the literal command in its failure message. Decline (3) and the roadmap remains a reader's
+  artifact rather than the ceremony's, which is strictly better than the status quo where the
+  item is invisible to both. Nothing here is a one-way door: no signature is destroyed, no
+  history rewritten, and each line is deletable.
+  .
+  A NOTE ON THIS RECORD'S OWN STATUS, since it is the first of its kind. `status:
+  blocked-on-owner` at Tier A is schema-valid — the schema's only conditionals are "Tier B
+  requires veto_by" and "no bindings requires unenforced_reason", with no tier/status
+  coupling — and `check_decisions` branches on status only inside its Tier-C and Tier-B
+  arms, so nothing rejects it and nothing requires a signature for it. It renders in
+  DECISIONS.md as recorded. That was measured before this record was written, not after.
+reversibility: >-
+  Three added lines, each independently deletable, none of them a door. The only irreversible
+  thing in the vicinity is the owner's re-signature of `governance/custody.sha256` after the
+  two custody-set files change, and that is a routine motion the sitting performs anyway —
+  the driver already regenerates and re-signs custody at step 11.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: .pre-commit-config.yaml
+    strength: documentary
+    detail: >-
+      Where the `regen-roadmap` hook goes, beside `regen-projections`. Documentary because
+      the file is custody-set: a builder cannot add the hook, and a drafted one enforces
+      nothing (D0143).
+  - type: file
+    target: Makefile
+    strength: documentary
+    detail: >-
+      The `projections` target, which names two generators and should name three.
+      Custody-set (row 6).
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Step 8's queue selection, which tests tier before status and therefore cannot see this
+      record. Custody-set; the M4 driver is where it would change, alongside D0205's step-11
+      deletion and D0201 ruling (4)'s receipt reorder — one rework of the ceremony, not
+      three.
+links: ["D0216", "D0215", "D0214", "D0205", "D0201", "D0154", "D0143"]

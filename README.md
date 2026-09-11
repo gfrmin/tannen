@@ -53,6 +53,9 @@ indistinguishable from one where they were deleted. Clone with full history and 
 2. [`CLAUDE.md`](./CLAUDE.md) — the operating manual: how work is done here.
 3. [`DECISIONS.md`](./DECISIONS.md) — the decision log.
 4. [`CONCEPTS.md`](./CONCEPTS.md) — what is adopted from elsewhere, and at what grade.
+5. [`ROADMAP.md`](./ROADMAP.md) — open work, sorted by who can close it. Also generated,
+   from the same records plus the seal files; it carries nothing that varies with the
+   clock or the tag set, so it reads the same at any commit.
 
 ## Provenance of this history
 

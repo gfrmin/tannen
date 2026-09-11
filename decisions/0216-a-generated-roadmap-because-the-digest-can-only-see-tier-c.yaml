@@ -1,0 +1,138 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0216
+title: "ROADMAP.md is generated, not written: the digest's owner queue is a Tier-C query, and tiers classify reversibility rather than custody"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  A new generated projection, `ROADMAP.md`, rendered by `scripts/gen_roadmap.py` and kept
+  honest by `tests/test_roadmap.py`. It joins `DECISIONS.md` and `CONCEPTS.md` at the repo
+  root and is listed fifth in README's reading list.
+  .
+  THE DEFECT IT EXISTS TO CLOSE. `gen_projections.py` renders the digest's "Requires owner"
+  section with `if rec["tier"] != "C": continue`, and `boundary_sitting.sh` filters the same
+  way before it reads a status. But BRIEF §9.2 classifies tiers by REVERSIBILITY, not by
+  custody. A fully reversible Tier-A decision whose artifact is custody-set still needs the
+  owner's key, and it is invisible in the one section the owner is committed to reading.
+  That blindness cost a milestone three times (D0154, D0191, D0195), and both D0214 and
+  D0215 were filed Tier C to dodge it rather than because Tier C fit. §3 of the new artifact
+  queries `status: blocked-on-owner` at ANY tier.
+  .
+  THE CONVENTION THIS DEPENDS ON WAS MEASURED, NOT ASSUMED. A Tier-A record may carry
+  `status: blocked-on-owner`: the schema's only conditionals are "Tier B requires veto_by"
+  and "no bindings requires unenforced_reason" — there is no tier/status coupling
+  (`governance/schemas/decision-record.schema.json`, `allOf`, read directly). No schema
+  edit, no custody edit, no signature. D0217 is the first use.
+  .
+  THREE PROVENANCES AND NO FOURTH. Every line is CITED (a path plus a frozen file's
+  sha256), EXTRACTED (bytes copied verbatim from a named frozen file at generation time) or
+  QUERIED (computed from structured fields). There is no hand-written content channel — no
+  notes file, no prose YAML. A reader who wants to add to the roadmap must file a record.
+  §8 of the artifact prints its own blind spots.
+  .
+  THE INPUT CONTRACT IS D0215's RECOMMENDATION APPLIED PROSPECTIVELY. The generator may not
+  shell out to git, read the clock, or call any `_gov` helper taking `today`
+  (`receipt_state`, `effective_status`, `previous_metrics`) or reading refs
+  (`boundary_tag_dates`). So the roadmap reports `status` as recorded rather than effective,
+  `veto_by` as a date rather than a countdown, and current counts rather than a trend. Each
+  omission is named in the artifact so it reads as a decision rather than a gap. A `--today`
+  argument is accepted and ignored, existing only so a test can prove it inert.
+  .
+  WHAT IT FOUND ON ITS FIRST RUN. §5 asks which `type: file` bindings marked `documentary`
+  name a target that is ALREADY in `MANIFEST.sha256` — where a `manifest` binding would
+  resolve today and would detect an unfreeze. D0214 found nine of these by hand across five
+  records. The query finds 29: 14 sit on unsigned records and are builder-applicable now,
+  and 15 need the owner's key.
+rationale: >-
+  ENFORCEMENT LIVES IN THE PYTEST SUITE BECAUSE EVERYTHING ELSE IS THE OWNER'S. Wiring a
+  projection into `make projections` edits the `Makefile` (custody row 6); the regeneration
+  hook lives in `.pre-commit-config.yaml` (custody row 2); `gen_projections.py`, `_gov.py`
+  and every `check_*.py` are custody-set too. But `make verify` runs `uv run pytest`, and
+  `tests/` outside `tests/laws/**` and `tests/poison/**` carries no custody row — all 52 are
+  poison fixtures. So a test node enforces as hard as a guard and costs no signature. This
+  is the route D0213 used for the poison-coverage pass.
+  .
+  THE COST OF THAT ROUTE IS REAL AND IS D0217. Nothing regenerates this file: the builder
+  who added the generator could not add the hook that runs it. `ROADMAP.md` is therefore the
+  only generated artifact here that is checked but never regenerated, and a stale copy makes
+  `check_decisions`' batched pytest resolution fall back to one invocation per target. The
+  artifact says so in its own preamble, and the sentence is DERIVED — it reads
+  `.pre-commit-config.yaml` for a hook naming `gen_roadmap.py`, so it corrects itself when
+  the owner wires one rather than becoming the fourth stale claim this milestone produced.
+  .
+  FRESHNESS IS BYTE-EQUALITY, NOT A HEADER HASH, AND THAT IS STRONGER. `check_decisions`
+  compares an input-hash header, which cannot see a hand edit to the body —
+  `test_stale_projection_detected` records that exact hole for `CONCEPTS.md`. Here the test
+  re-renders and compares bytes, so a hand edit is caught. The price is that the check
+  trusts the generator, which is why the other controls exercise the generator's behaviour
+  independently of its output.
+  .
+  FIVE CONTROLS, EACH WATCHED FAILING BEFORE IT WAS TRUSTED (CONTRIBUTING.md: "a test that
+  has never been watched failing is not yet a test"). (1) Wiring `boundary_tag_dates` into
+  the generator and minting `m9-close` in the fixture repo reddened the tag control with
+  `CONTROL: 0 boundary` versus `CONTROL: 1 boundary` — D0215's shape reproduced on purpose.
+  (2) Making §3 filter `tier == "C"` reddened the queue control: a Tier-A record flipped to
+  `blocked-on-owner` did not appear. (3) Appending a line to `ROADMAP.md` reddened the
+  freshness control. (4) Declaring an untracked input reddened the tracked-files control.
+  (5) Declaring `README.md` as an input with no control reddened the completeness control.
+  .
+  TWO OF THOSE CONTROLS FOUND DEFECTS IN THE TESTS THEMSELVES, which is the argument for
+  running them. The input-is-load-bearing test compared whole rendered files and so passed
+  vacuously: the header carries a hash over every input, and §9 Sources prints each input's
+  sha256, so ANY perturbation moved the bytes whether or not the file was read. It now
+  compares §1 through §8 only. That fix immediately reddened a second case — the
+  `decisions/*.yaml.sig` control deleted the alphabetically-first signature, whose record
+  appears in no section, so it too proved nothing. It now derives a signature §5 depends on.
+  .
+  A THIRD DEFECT WAS FOUND BY THE GATE ITSELF, on this commit, and is worth recording
+  because it is the cheapest kind of wrong test: one that is red when it should be green.
+  The tracked-files control asserted that every declared input is listed by `git ls-files`.
+  But `ls-files` reports staged and committed paths, so the test reddened for every new
+  `decisions/*.yaml` between writing the record and staging it — most of a working session
+  — and the two records it named were D0216 and D0217 themselves. Trackedness was never the
+  property at stake. IGNOREDNESS is: an ignored path (`evidence/`, `.reference/`, `.venv/`)
+  is absent from a fresh clone, so reading one would render differently for the next person
+  exactly as DECISIONS.md renders differently once a tag is minted. The control now asks
+  `git check-ignore`, which does not move when a file is staged.
+reversibility: >-
+  Fully reversible: delete three new files and one README entry and nothing else changes.
+  No frozen or custody-set path is touched, no signature is involved, and no existing guard
+  or generator is modified. The artifact is additive — it answers a question no existing
+  projection answers and duplicates no section of the digest, which stays dated and
+  exception-only while this stays undated and complete over its query.
+status: accepted
+bindings_count: 6
+bindings:
+  - type: pytest
+    target: tests/test_roadmap.py::test_roadmap_is_fresh
+    detail: >-
+      Byte-equality against a fresh render. Watched failing by appending a line to
+      ROADMAP.md; stronger than the input-hash header because it sees body edits.
+  - type: pytest
+    target: tests/test_roadmap.py::test_the_output_does_not_move_with_the_tag_set
+    detail: >-
+      The D0215 control, in the shape D0215 measured: mint a boundary tag in a fixture repo
+      and assert the rendered bytes do not move. Watched failing with `boundary_tag_dates`
+      temporarily wired into the generator.
+  - type: pytest
+    target: tests/test_roadmap.py::test_a_tier_a_record_blocked_on_owner_reaches_the_queue
+    detail: >-
+      The blindness fix itself, asserted in both directions. Watched failing by making §3
+      filter `tier == "C"`, which is what the digest and the sitting driver both do.
+  - type: pytest
+    target: tests/test_roadmap.py::test_every_declared_input_reaches_the_body
+    detail: >-
+      Every declared input must move §1-§8, not merely the header hash and the Sources
+      table. Parametrised, with a derived completeness pass so a new input without a
+      control reddens rather than going quiet.
+  - type: file
+    target: scripts/gen_roadmap.py
+    detail: The generator. Its absence is the artifact's absence.
+  - type: file
+    target: .pre-commit-config.yaml
+    strength: documentary
+    detail: >-
+      The hook that would regenerate ROADMAP.md and does not exist. Documentary and it must
+      stay so until the owner writes it: the file is custody-set, and a drafted change
+      awaiting the owner's key enforces nothing (D0143). D0217 queues it.
+links: ["D0215", "D0214", "D0213", "D0154", "D0191", "D0195", "D0143", "D0106", "D0217"]
