@@ -1,0 +1,60 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0238
+title: "SpendGuard admits against whatever budget a caller loads: the checked-in budget.yaml and the policy envelope bind neither the API nor tannen run, the owner's policy says SpendGuard enforces the envelope from M4, and frozen L4.4/L4.5 require that it does not"
+tier: C
+date: "2026-09-12"
+risk_flags: ["spend"]
+decision: >-
+  QUEUED FOR THE OWNER, non-blocking (BRIEF §9.2). Found by this session's BRIEF §5 review of
+  the M4 implementation; not fixable by a builder, because the fix contradicts frozen laws.
+  .
+  THE GAP. `Oracles(store, mode=SPEND, budget=load_budget(x))` and `tannen run --spend --budget
+  <any file>` admit a call iff the budget THE CALLER NAMES has room. Nothing ties that budget to
+  the checked-in `budget.yaml` (every ceiling zero) or to `governance/policy.yaml`'s
+  `budget_envelopes` (M4: 0). A file naming a fresh `scope` also starts its fold from zero. Real
+  transports ship at M4, so with real credentials a caller can spend against a budget of their
+  own writing. BRIEF §4 says "SpendGuard (default-deny over a checked-in budget file)", §5.10
+  "engages SpendGuard against the budget file", and owner-signed `governance/policy.yaml:10-13`
+  says "budget.yaml's operational ceilings may never exceed the current milestone's envelope;
+  check_manifest enforces the zero-state consistency and SpendGuard enforces it operationally
+  from M4". That last clause is not true of the shipped SpendGuard.
+  .
+  WHY A BUILDER CANNOT CLOSE IT. The frozen laws spend against budgets of their own, far above
+  M4's zero envelope: L4.4's `test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call`
+  writes a temporary budget with ceilings of 10^6 and requires `tannen run --spend --budget` to
+  exit 0 with one transport call; L4.3, L4.5, L4.12 and L4.13 spend through
+  `load_budget(mapping)` with ceilings up to 10^12. Clamping either the API or the command to
+  the policy envelope, or requiring the checked-in file, fails those laws — and a frozen law is
+  never edited (CLAUDE.md). This also touches D0229 item (5), which found `check_manifest`
+  comparing ceilings against the maximum envelope over all milestones rather than the current
+  one; the two are the same promise failing at two places.
+  .
+  THE OPTIONS. (a) Supersede the spend laws forward so SpendGuard takes an envelope as an upper
+  bound on every ceiling — the laws would pass one explicitly, and `tannen run` would read the
+  current milestone's from `governance/policy.yaml`. (b) Leave the API as it is and make only
+  `tannen run` require the checked-in `budget.yaml` capped by the policy envelope — still a
+  supersession, of L4.4's third node. (c) Rule the budget a caller names to be the caller's act,
+  and correct `policy.yaml`'s sentence instead. Recommended: (a), at the mandatory pre-budget
+  sitting BRIEF §9.1 already requires for M4 — the one moment the envelope would first become
+  nonzero. Until then the gap is inert in this repository: nothing here holds credentials for a
+  real transport, every ceiling is zero, and no law or test reaches a network.
+rationale: >-
+  "Never spend beyond budget.yaml" is a hard rule on the builder, and it holds: this session
+  spent nothing. What the review found is that the PRODUCT does not yet enforce the same rule on
+  its own callers, and that the owner's own policy says it does. That is exactly the kind of
+  frozen-versus-true gap this repo records rather than smooths over.
+reversibility: >-
+  Every option is reversible until a nonzero envelope is signed; after that, a spend admitted
+  under the wrong rule is not reversible, which is why this is Tier C and flagged spend.
+status: blocked-on-owner
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m4/test_l4_modes.py
+    strength: enforced
+    detail: L4.4, frozen — its third node spends through tannen run against a budget of its own, which is what forbids the builder's fix.
+  - type: file
+    target: governance/policy.yaml
+    strength: documentary
+    detail: Lines 10-13, the sentence the shipped SpendGuard does not yet make true; owner-signed and custody-set.
+links: ["D0220", "D0228", "D0229", "D0235", "D0237"]

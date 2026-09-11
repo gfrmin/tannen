@@ -304,8 +304,20 @@ def test_a_replayed_step_is_served_from_the_trace_when_the_caller_records(tmp_pa
     assert served.state_ref == first.state_ref and served.delta_ref == first.delta_ref
 
 
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "reversed by D0232: a binary node's operand roles now enter its step's derivation "
+        "inputs (RT-M3-03, frozen L4.25). Strict, so reverting the remedy turns this red."
+    ),
+)
 def test_a_binary_step_id_inherits_derivation_ids_order_insensitivity(tmp_path) -> None:
-    """A PIN, not a claim that this is ideal (D0167). `derivation_id` is order-insensitive
+    """RETIRED by D0232 as a strict xfail rather than deleted: D0167 and D0211 bind this node,
+    and the conftest.py idiom (D0128) keeps a retirement a live assertion. Its body is the pin
+    exactly as it stood.
+
+    A PIN, not a claim that this is ideal (D0167). `derivation_id` is order-insensitive
     in its inputs by frozen M1 design (m1 §8, L1.13) and M1's own `Node(transform, inputs)`
     already has this property — `f(a, b)` and `f(b, a)` share a derivation id there too.
     §7 pins the same formula for a step, so a binary node's operand order is not part of
@@ -322,6 +334,47 @@ def test_a_binary_step_id_inherits_derivation_ids_order_insensitivity(tmp_path) 
     right = advance(r.store, r.traces, node, None, [b, a], Ledger.EMPTY)
     assert left.step_id == right.step_id
     assert left.state_ref != right.state_ref, "the two orders compute different things"
+
+
+def test_binary_operators_and_required_params_are_derived() -> None:
+    """The two names frozen L4.24/L4.25 quantify over (D0226). Both are READ OFF the
+    package's own arity and parameter tables, never listed (D0171 ruling (3), D0211) — so
+    this asserts the tables agree with each other and with the operator catalogue, and that
+    the three binary operators M3 knows of are among what is derived, without writing the
+    derived set down. Reached through the module inside the body so this file still
+    collects on a package that predates them."""
+    import tannen.incremental as inc
+
+    binary = inc.binary_operators()
+    assert {"join", "union", "anti_join"} <= set(binary)
+    assert list(binary) == sorted(binary), "a derived set is returned in one order"
+    for operator in binary:
+        node = DeltaNode(operator, **{p: ("k",) for p in inc.required_params(operator)})
+        assert node.arity == 2
+    assert set(inc._REQUIRED) == set(inc._ARITY) == set(inc.DELTA_OPERATORS)
+    with pytest.raises(OperatorError, match="not a delta operator"):
+        inc.required_params("nonsense")
+
+
+def test_every_binary_nodes_operand_roles_are_part_of_its_step_id(tmp_path) -> None:
+    """RT-M3-03's remedy (D0232; frozen as L4.25): a binary step names which input held which
+    role, so the two operand orders are two derivations. Quantified over the DERIVED binary
+    set with no operator exempted by name — which operators could safely share a step id
+    across a swap is an operator set, and D0211 forbids writing one down. `anti_join` keeps
+    the retired pin's positive control: its two orders really do compute different states,
+    so a shared id would have been a wrong answer, not a harmless cache hit."""
+    import tannen.incremental as inc
+
+    r = Runner(tmp_path)
+    a = r.store.put_value(ingest(r.store, SOURCE_A, ("k",), [{"k": 1}, {"k": 2}]).to_value())
+    b = r.store.put_value(ingest(r.store, SOURCE_B, ("k",), [{"k": 1}]).to_value())
+    for operator in inc.binary_operators():
+        node = DeltaNode(operator, **{p: ("k",) for p in inc.required_params(operator)})
+        left = advance(r.store, r.traces, node, None, [a, b], Ledger.EMPTY)
+        right = advance(r.store, r.traces, node, None, [b, a], Ledger.EMPTY)
+        assert left.step_id != right.step_id, f"{operator}: two operand orders share one step id"
+        if operator == "anti_join":
+            assert left.state_ref != right.state_ref, "the two orders compute different things"
 
 
 # ------------------------------------------------------------------ declaration doors
@@ -560,6 +613,35 @@ def test_a_reused_predicate_name_no_longer_mints_the_same_descriptor() -> None:
     assert honest != hostile, (
         "two different predicates under one name mint one descriptor, so a trace keyed by "
         "it serves the answer to a computation that was never run (RT-M3-01)"
+    )
+
+
+def _rt_m3_01_map(row):
+    return {"k": row["k"]}
+
+
+def test_a_map_out_schema_is_part_of_the_declared_node() -> None:
+    """RT-M3-01's residue (D0231; frozen as L4.23). One map body registered under one name
+    with two different out-schemas used to mint one descriptor, because the schema was
+    resolved from the registry at tick time and appeared in no declared form
+    (docs/specs/m3-corrections.md §1). Reset between the registrations for the reason the
+    predicate case above gives: that is what a new process does."""
+    import tannen.incremental as inc
+
+    saved_maps, saved_code = dict(inc.MAPS), dict(inc._CODE)
+    try:
+        inc.register_map("rt-m3-01-map", _rt_m3_01_map, ("k",))
+        declared_k = DeltaNode("map_rows", map_id="rt-m3-01-map").descriptor
+        del inc.MAPS["rt-m3-01-map"], inc._CODE[("map", "rt-m3-01-map")]
+        inc.register_map("rt-m3-01-map", _rt_m3_01_map, ("key",))
+        declared_key = DeltaNode("map_rows", map_id="rt-m3-01-map").descriptor
+    finally:
+        inc.MAPS.clear(), inc.MAPS.update(saved_maps)
+        inc._CODE.clear(), inc._CODE.update(saved_code)
+
+    assert declared_k != declared_key, (
+        "one map body under one name with two out-schemas minted one descriptor — the "
+        "schema a node's rows take is part of what the node computes (RT-M3-01)"
     )
 
 

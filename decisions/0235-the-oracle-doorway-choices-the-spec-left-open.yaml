@@ -1,0 +1,86 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0235
+title: "tannen.oracles, the choices the spec left open — and nine defects two review passes found in the first draft, two of them reproduced as a planted capture and a double payment counted once"
+tier: A
+date: "2026-09-12"
+risk_flags: ["spend", "public-surface"]
+decision: >-
+  docs/specs/m4.md §1–§4 pin the surface and the rules; L4.1–L4.13 check them against the frozen
+  model. Where a caller, a spec or the world can be wrong in a way the model never tries, the
+  package decides as follows, each pinned in `tests/test_oracles.py`.
+  .
+  THE CHOICES. (1) `Oracles(store, mode=…)` takes a `Mode` member — `oracles.SPEND` imported by
+  name is the one spelling that can call — and refuses a bare string; a budget must be what
+  `load_budget` returns. (2) A request is exactly its kind's variable part or `RequestError`,
+  before anything is scanned or written. (3) An LLM's `params.max_tokens` is checked when the
+  call is PRICED, at invocation — frozen L4.1 builds LLM oracles whose params carry none, and
+  each must still have a descriptor. (4) The world's answer is normalised to plain values or
+  refused as `MalformedResponse` AFTER the call: no capture, no value, the reservation standing
+  at its worst case. (5) The transport is handed a detached copy of the effective request. (6)
+  Oracles are immutable, their spec kept as canonical BYTES and decoded fresh on every read.
+  .
+  THE REVIEW FINDINGS, FIXED. Two independent passes over the first draft (a silent-failure
+  hunt and a BRIEF §5 review) found these; the first two were reproduced before being fixed.
+  (a) A FETCHED BODY COULD PLANT A CAPTURE. Bodies share the store's address space with tagged
+  values, and the scan decoded every object: a server returning the bytes of a well-formed
+  `capture/1` had it served to a question nobody asked — reproduced as a replay returning planted
+  content. A body that decodes as a tannen value is now refused (`MalformedResponse`): the world
+  never authors one. (b) TWO RACING SESSIONS PAID TWICE AND COUNTED ONCE: both computed the same
+  `attempt`, wrote byte-identical reservations, and the write-once store kept one. Reservations
+  and captures are now written EXCLUSIVELY (D0233); a session that finds its reservation held
+  calls nothing. (c) THE FOLD NOW CROSS-CHECKS: a capture must name a reservation in the store
+  and agree with it on kind, oracle, input key, scope and unit; captures naming one reservation
+  are SUMMED (a duplicate can only raise spend); a scope holding another unit is never converted;
+  anything the fold cannot read honestly makes spend unknowable and admission denies. (d) A
+  TRANSPORT'S `preflight` runs BEFORE admission, so what it could never send (a non-http uri, a
+  param shadowing the request, a server tool) is refused unspent instead of reserving a worst
+  case for a call that never left the machine. (e) CREDENTIALS: a Fetch header that carries one,
+  or a uri with user info, is refused, because both are recorded verbatim forever; refusals
+  name a header, never its value. (f) THE SPEC WAS MUTABLE behind its descriptor — `oracle.spec`
+  was a plain dict (a BRIEF §5.2 failure against its own docstring). (g) A stored integer past
+  Python's digit limit raised a plain ValueError that broke every later scan. (h) A capture or
+  body whose key already held other bytes returned a ref as if stored; now a failed write.
+  (i) `read` of a malformed capture raised KeyError; now `NotACapture`.
+  .
+  THE REAL TRANSPORTS (§1). Fetch over `http.client` (ordered, repeatable request headers;
+  redirects not followed). The Clock's `system_clock`. And the Claude Messages API through the
+  OFFICIAL Anthropic SDK's client, handed in — this DEPARTS from the plan's raw-HTTP draft on the
+  `claude-api` guidance, and means tannen takes no dependency on the SDK and never holds a key.
+  It records `stop_reason` beside the content blocks, refuses an Anthropic-defined (server) tool
+  before the call, and after it refuses any usage field beyond input and output tokens that
+  reports a nonzero count — by structure, not by a list of names (the first draft named two
+  cache fields, and review showed server-tool usage passing unpriced). A price-changing request
+  parameter is the caller's declaration: params and prices are both in the descriptor.
+  .
+  NOT DONE HERE, AND WHY. The silent-failure review also asked that `tannen run` refuse a
+  `--store` path that holds no store; frozen L4.4 runs `tannen run` against a fresh path and
+  expects it to work, so that is declined (D0237). The larger finding — that SpendGuard admits
+  against whatever budget a caller loads — is a frozen-law question and is queued (D0238). The
+  review fixes were written before their unit tests; the two worst were watched red first, (a)
+  by reproduction in this session and (b) by the reviewer's.
+rationale: >-
+  BRIEF §5 is the review gate: the shortest spelling must satisfy the discipline. Each choice
+  and fix removes a short path to a violation — spending by a typo, pricing an unbounded call, a
+  value entering without a capture, the world authoring a capture, spend counted once for two
+  calls, spend read as zero when it cannot be read. The kill criterion's laws (L4.2–L4.5) and the
+  differential against the frozen model (L4.13) pass with all of them in place: every fix changes
+  behaviour only in states the model's generators never produce.
+reversibility: >-
+  Reversible in code. The capture and reservation shapes are the frozen `capture/1` and the
+  spec's `reservation/1`; nothing here changes either.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: tests/test_oracles.py
+    strength: enforced
+    detail: Every choice and every review finding above, and the three transports through injected fakes.
+  - type: manifest
+    target: tests/laws/m4/test_l4_spend.py
+    strength: enforced
+    detail: L4.5, frozen — SpendGuard's rule and fold, which these choices must not weaken.
+  - type: manifest
+    target: tests/laws/m4/test_l4_capture.py
+    strength: enforced
+    detail: L4.2, frozen — capture before read.
+links: ["D0219", "D0220", "D0223", "D0227", "D0233", "D0236", "D0237", "D0238"]

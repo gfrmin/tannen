@@ -1,0 +1,71 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0232
+title: "RT-M3-03's remedy: every multi-input step names which input held which operand role, so a swap is a second derivation; the swap pin is retired as a strict xfail, not deleted"
+tier: A
+date: "2026-09-12"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE REMEDY docs/specs/m4.md §8 pins (D0211's first): `tannen.incremental.advance` appends, for
+  a node of more than one input, the ref of an `incroles/1` value — `{"tannen": "incroles/1",
+  "operands": [the input refs, in order]}`, written to the store so every ref a step id names
+  resolves — to the step's derivation inputs. The two operand orders are then two input values,
+  so two derivations, and `derivation_id`'s formula is untouched: owner-signed D0171 ruling (2)
+  stands.
+  .
+  EVERY BINARY NODE, `union` INCLUDED. `union`'s roles are interchangeable (linear, no
+  per-input state), so sharing its step id across a swap was sound. Exempting it would mean
+  writing down the set of operators whose roles are interchangeable, which D0211 forbids ("That
+  set MUST BE DERIVED, not written down"); the only cost of not exempting it is union's cache
+  hit across a swap. This DEPARTS from one sentence of frozen prose — docs/specs/m4.md §9 says
+  the remedy "changes step ids only for binary join/anti_join nodes" — and the departure is
+  harmless by that same paragraph's own finding, that no frozen node asserts a binary step id.
+  Recorded here rather than smoothed over.
+  .
+  DERIVED, NOT LISTED. `binary_operators()` reads the arity table; `required_params(op)` reads
+  the parameter table. Frozen L4.24/L4.25 quantify over both, and `test_l4_operand_roles.py`
+  calls `binary_operators()` at module level — so before the helpers existed it did not even
+  collect. Once they did, the frozen laws were WATCHED FAILING on the pre-remedy executor under a
+  scratch sentinel shim with evidence off: L4.25 for `join` and `anti_join` in both orders, four
+  nodes, each by its own assertion ("the trace served the other operand order's recorded
+  answer"); `union` passing; L4.21, L4.24 and the nine successors passing. After the remedy, all
+  67 carry-forward nodes pass and the frozen M3 laws are unchanged (integrals do not move).
+  .
+  THE PIN, RETIRED AS A STRICT XFAIL. `tests/test_incremental.py::test_a_binary_step_id_inherits_derivation_ids_order_insensitivity`
+  asserted the opposite and said of itself that it "is what says a decision is being
+  reversed". It cannot be deleted: D0167 binds it as an ENFORCED pytest node and D0211 as a
+  documentary one, and `scripts/check_decisions.py` (custody-set) can retire only a documentary
+  `file` binding. So its node id and body are unchanged and it carries
+  `xfail(strict=True, raises=AssertionError)` naming this record — the `conftest.py` idiom
+  D0128 uses for retired law nodes. A strict xfail exits 0 with no SKIP line, so both bindings
+  still resolve, and it stays a live assertion: revert the remedy and it XPASSes, which is red.
+  This reverses D0167's pinned property for binary nodes; D0167 and D0211 are not edited (D0045).
+rationale: >-
+  m3-corrections.md §1 states the requirement ("a node whose operand roles are not
+  interchangeable must carry those roles") and records that the executor did not meet it; D0226
+  froze the law and chose the remedy. What this record adds is the two choices the freeze left
+  to Session B — no exemption, and retirement by strict xfail — and the measurement that the
+  laws moved for the stated reason. The adversarial review of this session's plan is what found
+  that deleting the pin would have reddened check_decisions on the commit.
+reversibility: >-
+  Reversible in code: step ids are not persisted in any trace store in this repo. Reverting the
+  remedy fails frozen L4.25 and turns the retired pin's strict xfail red.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: pytest
+    target: "tests/test_incremental.py::test_every_binary_nodes_operand_roles_are_part_of_its_step_id"
+    strength: enforced
+    detail: Every derived binary operator's two orders are two step ids; anti_join keeps the old positive control.
+  - type: pytest
+    target: "tests/test_incremental.py::test_binary_operators_and_required_params_are_derived"
+    strength: enforced
+    detail: The two public names read off the package's own tables, and the tables agree.
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_binary_step_id_inherits_derivation_ids_order_insensitivity"
+    strength: enforced
+    detail: The retired pin, a strict xfail — XPASS (red) the moment the shared step id comes back.
+  - type: manifest
+    target: tests/laws/m4/test_l4_operand_roles.py
+    strength: enforced
+    detail: L4.25, frozen — the behavioural law this remedy satisfies.
+links: ["D0045", "D0128", "D0167", "D0171", "D0174", "D0211", "D0226"]

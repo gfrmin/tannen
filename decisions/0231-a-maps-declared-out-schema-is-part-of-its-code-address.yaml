@@ -1,0 +1,47 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0231
+title: "RT-M3-01 closed for maps: the out-schema a map declares is part of the map's code address, so one body under one name with two schemas is two nodes"
+tier: A
+date: "2026-09-12"
+risk_flags: []
+decision: >-
+  `tannen.incremental.register_map` now files a map under `_map_address(name, f, schema)` —
+  the content address of `{deltaop/1, the map's source address, the sorted out-schema}` —
+  instead of the source address alone. The address is what `_declared_params` writes into a
+  `map_rows` node's declared form as `map_code`, so the node's descriptor, and with it every
+  step id the trace is keyed by, moves when the schema moves.
+  .
+  WHY. D0197 closed RT-M3-01's predicate half and left the schema resolved from the registry at
+  tick time and named in no descriptor (docs/specs/m3-corrections.md §1). Frozen L4.23
+  (`tests/laws/m4/test_l4_code_address.py`) prints descriptors from fresh interpreters that
+  register one map body under one name with `("k",)` and with `("key",)`: WATCHED FAILING on the
+  pre-remedy code under a scratch sentinel shim with evidence off (its own assertion, "the
+  schema is resolved from the registry at tick time and is in no descriptor"), and passing
+  after. The unfrozen twin, `test_a_map_out_schema_is_part_of_the_declared_node`, was likewise
+  run red first.
+  .
+  THE SHAPE follows `_algebra_address`, which already folds a monoid's identity and witnesses
+  into its address: code a node names is addressed together with every fact that decides what
+  it computes. Every `map_rows` descriptor moves once, including the catalogue's `k-only`; no
+  frozen or unfrozen test pins a map descriptor's bytes (checked at the plan's adversarial
+  review), and no trace store is persisted anywhere.
+rationale: >-
+  The out-schema decides what a map node's rows are, so a descriptor that omits it cannot say
+  what the node computes — the one-derivation-one-output property L4.21 and L1.14 rest on.
+  Folding it into the code address rather than adding a separate declared field keeps
+  `_declared_params` uniform: every registry kind contributes exactly one `<kind>_code`.
+reversibility: >-
+  Reversible in code; reverting reopens RT-M3-01's residue and fails frozen L4.23. Descriptors
+  minted before this change are not in any persisted trace.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: pytest
+    target: "tests/test_incremental.py::test_a_map_out_schema_is_part_of_the_declared_node"
+    strength: enforced
+    detail: The in-process twin of L4.23's schema clause — two registrations, two descriptors.
+  - type: manifest
+    target: tests/laws/m4/test_l4_code_address.py
+    strength: enforced
+    detail: L4.23, frozen; its out-schema clause is the one this remedy moves from red to green.
+links: ["D0174", "D0197", "D0204", "D0226"]

@@ -1,0 +1,29 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0236
+title: "pyyaml becomes a runtime dependency, because load_budget reads the checked-in budget.yaml"
+tier: A
+date: "2026-09-12"
+risk_flags: []
+decision: >-
+  `pyproject.toml` `[project].dependencies` gains `pyyaml>=6,<7`, and `uv.lock` is regenerated:
+  the diff is pyyaml moving from the dev group into tannen's own requirements — pyyaml 6.0.3 was
+  already locked, and no other package moved. `tannen.oracles.load_budget(path)` parses the budget
+  file with `yaml.safe_load` (imported inside the function, so importing `tannen.oracles` does
+  not load it), which is how `tannen run --budget budget.yaml` reads the file SpendGuard admits
+  against. Loading the repo's own `budget.yaml` yields a budget with no scope and no unit, which
+  authorises nothing — measured, not assumed.
+rationale: >-
+  The budget file is YAML and is read by one other consumer (`scripts/check_manifest.py`,
+  custody-set) as YAML integers; a second format would be a second home for one shape.
+  `pyproject.toml` is neither frozen nor custody-set (D0194), so this is in-stack dependency work
+  — Tier A (BRIEF §9.2). It moves every law descriptor, which this session's single evidence
+  refresh covers.
+reversibility: Reversible; dropping it would make `load_budget` accept mappings only.
+status: accepted
+bindings_count: 1
+bindings:
+  - type: pytest
+    target: "tests/test_oracles.py::test_the_budget_file_as_frozen_at_m0_authorises_nothing"
+    strength: enforced
+    detail: Reads the real budget.yaml through load_budget and is refused even a free clock read.
+links: ["D0194", "D0220", "D0235"]

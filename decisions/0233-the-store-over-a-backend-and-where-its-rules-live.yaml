@@ -1,0 +1,55 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0233
+title: "The store over a backend: every rule stays in Store, LocalBackend is the M0 filesystem layout as an ObjectClient, a put leaves an existing object — even a squatter — where it is, and an exclusive put says when one was there"
+tier: A
+date: "2026-09-12"
+risk_flags: []
+decision: >-
+  `tannen.store.Store` is built from exactly one of a root or a backend (`Store(root)` keeps its
+  M0 meaning and is `Store(backend=LocalBackend(root))`; anything else is a `TypeError` by name).
+  A backend answers `put_if_absent`, `get`, `has` and `list` and nothing more. `LocalBackend` is
+  the M0 fanout layout unchanged — so `sha256sum` on a file still reproduces its address and the
+  whole-tree comparisons of L0.5/L0.6 hold — and writes the object and nothing else. `R2Backend`
+  wraps any `ObjectClient` and adds no rule of its own.
+  .
+  EVERY RULE STAYS IN STORE: the key layout `objects/<hex[:2]>/<hex[2:]>`, write-once, verify on
+  every read (`IntegrityError`), `MissingRef`, and `gc`'s refusal, the same text on every
+  backend. `Store` forwards no backend method, so putting a backend underneath grew no mutation
+  surface. Enumeration reports only keys in the pinned layout — a local `.tmp-*` file, or a
+  foreign key on a remote, is not an object.
+  .
+  A PUT LEAVES AN EXISTING OBJECT UNTOUCHED, EVEN A SQUATTER. `put_if_absent` answering False is
+  not checked against the bytes: write-once forbids replacing what is there, and verify-on-read
+  is what refuses a squatter. Frozen L4.11 depends on this — it puts over a squatter outside any
+  `try` — so raising at the put would have failed the law.
+  .
+  AN EXCLUSIVE PUT, AND A CREATE THAT IS EXCLUSIVE. Found by this session's silent-failure
+  review and reproduced there: the first draft's local create was check-then-replace, so two
+  processes could both "create" one object, and nothing surfaced a put that found its object
+  already present. Now `put_bytes(..., exclusive=True)` raises `AlreadyStored` when the object
+  was there, and the local create is exclusive at the filesystem — the bytes are synced to a
+  temporary file and hard-linked into place, which fails if the name exists — with the
+  directory entry fsynced (and a new fanout directory's parent), because a reservation that a
+  paid call depends on must survive a crash. `tannen.oracles` writes reservations and captures
+  this way (D0235). `Store.root` is the local directory, and on a remote store an
+  `AttributeError` by name.
+rationale: >-
+  Putting the rules in the backends would have made each backend a place a rule could be
+  forgotten; a backend that is only somewhere to keep bytes cannot weaken integrity, which is
+  the M0 rule that integrity is verification. The frozen M0–M3 laws and the unfrozen suites
+  that build `Store(root)` pass unchanged after both the refactor and the exclusive create.
+reversibility: >-
+  Reversible in code; the on-disk layout is byte-identical to M0's. A filesystem that cannot
+  hard-link would refuse local writes as OSError, which reads as a failed write, not a success.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: pytest
+    target: tests/test_store_backends.py
+    strength: enforced
+    detail: One-of construction, write-once, layout-only enumeration, squatter kept and refused, exclusive puts, the exclusive local create, no mutation surface.
+  - type: manifest
+    target: tests/laws/m4/test_l4_backend.py
+    strength: enforced
+    detail: L4.11, frozen — the remote store answers as the local one does.
+links: ["D0221", "D0228", "D0235"]

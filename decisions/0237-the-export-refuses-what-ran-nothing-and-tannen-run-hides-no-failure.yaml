@@ -1,0 +1,49 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0237
+title: "The export refuses a trace hit and a whole-node quarantine; tannen run finds modules beside it, prints a returned ref, treats a malformed target as a usage error, and lets every failure but the four named refusals propagate"
+tier: A
+date: "2026-09-12"
+risk_flags: ["public-surface"]
+decision: >-
+  THE EXPORT (`tannen.export.export`, docs/specs/m4.md §7). Frozen L4.10 pins that only a
+  `Layer.SERVE` node's output leaves, byte for byte. Two `Built`s have nothing honest to say and
+  are refused with `LayerError` by name: a `VerifyingTrace` hit, whose `layer` is None because
+  nothing ran — exporting it would trust a layer nobody observed; rebuild it with `AlwaysRebuild`
+  to export it — and a node that quarantined as a whole, which has no output.
+  .
+  `tannen run MODULE:CALLABLE --store PATH [--budget PATH] [--spend]` (§1). A target without
+  `:CALLABLE` is an argparse usage error (exit 2). The working directory is put on the import
+  path when it is not already there, as `python -m` does — run through the console script,
+  `sys.path[0]` is the venv's bin directory, and the first draft could not find a `pipeline.py`
+  sitting beside it (found by this session's code review; the laws hid it with
+  `syspath_prepend`). `--spend` with no `--budget` authorises nothing, and now says "no budget
+  was given" rather than blaming a budget's scope. A returned str — a capture ref — is printed.
+  The four refusals §1 names exit 1 with the class name on stderr; every other exception
+  PROPAGATES rather than collapse into an exit code that would read as a refusal.
+  .
+  DECLINED, WITH ITS REASON: the silent-failure review asked that `--store` refuse a path that
+  holds no store, so a typo does not silently open an empty one. Frozen L4.4 runs
+  `tannen run ... --store <fresh path>` in all three of its CLI nodes and expects the command to
+  work, so the refusal would fail a frozen law; it would need a supersession, and is not worth
+  one before a real user exists.
+rationale: >-
+  Each is the shorter spelling made safe (BRIEF §5): an export that trusted a trace hit's absent
+  layer, or a run that swallowed an arbitrary failure into exit 1, would each report something
+  that did not happen. The module-path fix is ergonomics the laws could not see.
+reversibility: Reversible in code.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: tests/test_export_cli.py
+    strength: enforced
+    detail: The two refused Builts, and the command line's behaviours above, the working-directory import included.
+  - type: manifest
+    target: tests/laws/m4/test_l4_export.py
+    strength: enforced
+    detail: L4.10, frozen.
+  - type: manifest
+    target: tests/laws/m4/test_l4_modes.py
+    strength: enforced
+    detail: L4.4 (and L4.8), frozen — including tannen run's three spellings, and the fresh-path store the declined finding would have refused.
+links: ["D0220", "D0222", "D0235", "D0238"]

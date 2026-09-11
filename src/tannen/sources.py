@@ -18,7 +18,7 @@ The effectful shell, deliberately outside `tannen.kernel`: `ingest` writes to th
 `lineage` reads from it. That is exactly why it lives here — the kernel imports no IO
 (contract `kernel-no-io`), and a source layer that crept into it would be caught there.
 
-This is **not** the capture layer. BRIEF P8's `capture` is oracles only and arrives at M4;
+This is **not** the capture layer. BRIEF P8's `capture` is oracles only and lives in `tannen.oracles`;
 `ingest` is deterministic and reads rows a caller already holds. A relation it returns
 enters at `decode` or `derive` like any other.
 

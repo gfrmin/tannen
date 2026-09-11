@@ -26,7 +26,7 @@ class LayerError(ValueError):
 
 
 class Layer(IntEnum):
-    CAPTURE = 0  # nothing — oracles only (M4)
+    CAPTURE = 0  # no operator: an oracle invocation, through tannen.oracles, is this layer
     SERVE = 1
     DECODE = 2
     DERIVE = 3

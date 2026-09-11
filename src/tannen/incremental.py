@@ -61,11 +61,14 @@ __all__ = [
     "MAPS",
     "MONOIDS",
     "PREDICATES",
+    "ROLES_TAG",
     "advance",
+    "binary_operators",
     "register_group",
     "register_map",
     "register_monoid",
     "register_predicate",
+    "required_params",
 ]
 
 #: The value tags this module mints. Versioned like every other tannen tag: a change of
@@ -74,6 +77,7 @@ DELTA_OP_TAG = "deltaop/1"
 INCSTATE_TAG = "incstate/1"
 INCSTEP_TAG = "incstep/1"
 LEDGER_TAG = "ledger/1"
+ROLES_TAG = "incroles/1"
 
 #: The operators a `DeltaNode` may declare: M1's eight, plus `source` for the node that
 #: consumes an `ingest_delta` result and maintains the ledger.
@@ -96,7 +100,9 @@ DELTA_OPERATORS: tuple[str, ...] = ("source",) + ops.OPERATORS
 #: Nothing was tampered with; the registry is simply not in `(descriptor, state, ledger,
 #: deltas)`. M1 has always hashed a transform's SOURCE TEXT (BRIEF §5.1, D0084) and refused
 #: a lambda for want of one; M3 read "a lambda has no content address" as a licence instead
-#: of a refusal. This map is that regression undone.
+#: of a refusal. This map is that regression undone. A map's address also covers the
+#: out-schema it declares (`_map_address`; L4.23, D0231) — D0197 closed the predicate half
+#: and left the schema resolved from the registry at tick time.
 _CODE: dict[tuple[str, str], str] = {}
 
 PREDICATES: dict[str, Callable[[Mapping[str, Any]], bool]] = {}
@@ -142,6 +148,16 @@ def _algebra_address(kind: str, name: str, algebra: Monoid) -> str:
     return content_address(parts)
 
 
+def _map_address(name: str, f: Callable[..., Any], schema: tuple[str, ...]) -> str:
+    """A row map's address: its source AND the out-schema it declares — `_algebra_address`'s
+    shape, applied to a map. The schema decides what the node's rows are, yet it was resolved
+    from the registry at tick time and sat in no descriptor, so one body registered with two
+    schemas minted one node (RT-M3-01's residue, docs/specs/m3-corrections.md §1; L4.23)."""
+    return content_address(
+        {"tannen": DELTA_OP_TAG, "map": _code_address("map", name, f), "schema": list(schema)}
+    )
+
+
 def _register(registry: dict, kind: str, name: str, value: Any, code: str) -> None:
     if not isinstance(name, str) or not name:
         raise OperatorError(f"a {kind} id is a non-empty str, not {name!r}")
@@ -169,7 +185,8 @@ def register_map(
     """Name a `map_rows` function together with the schema it declares."""
     if not callable(f):
         raise OperatorError(f"map {name!r}: {f!r} is not callable")
-    _register(MAPS, "map", name, (f, tuple(sorted(schema))), _code_address("map", name, f))
+    declared = tuple(sorted(schema))
+    _register(MAPS, "map", name, (f, declared), _map_address(name, f, declared))
     return name
 
 
@@ -330,6 +347,22 @@ _COLUMN_PARAMS = frozenset({"columns", "on", "by"})
 _ALWAYS_REPLAYS = frozenset({"distinct", "aggregate", "anti_join"})
 
 
+def binary_operators() -> tuple[str, ...]:
+    """The delta operators whose nodes take two inputs — read off `_ARITY`, never listed
+    (D0171 ruling (3), D0211). Frozen L4.24 and L4.25 quantify over exactly this."""
+    return tuple(sorted(operator for operator, arity in _ARITY.items() if arity == 2))
+
+
+def required_params(operator: str) -> tuple[str, ...]:
+    """The parameters a node of `operator` must declare (`aggregate`'s fold is one-of,
+    not required, so it is not among them)."""
+    if operator not in _REQUIRED:
+        raise OperatorError(
+            f"{operator!r} is not a delta operator; declared nodes are {list(DELTA_OPERATORS)}"
+        )
+    return _REQUIRED[operator]
+
+
 class DeltaNode:
     """A declared operator application. Two spellings of the same node are the same
     descriptor, and a different operand order or parameter is a different one.
@@ -482,12 +515,18 @@ def advance(
     returns always resolves.
 
     **Every step is its own derivation.** `step_id` is the existing `derivation_id` over
-    the node's descriptor and the step's content-addressed inputs — the state ref, the
-    ledger ref and the delta refs — and it holds as an identity because a step is a pure
-    function of exactly those. It inherits `derivation_id`'s frozen order-insensitivity
-    (m1 §8, L1.13): for a binary node the operand order is therefore NOT part of the step
-    id, which is the M1 property M1's own `Node(transform, inputs)` already has, carried
-    forward unchanged rather than quietly diverged from (D0167).
+    the node's descriptor and the step's content-addressed inputs — the delta refs, the
+    ledger ref, the state ref when there is one, and, for a node of more than one input, an
+    `incroles/1` value naming which input held which operand role. It holds as an identity
+    because a step is a pure function of exactly those. `derivation_id` normalises the order
+    of that whole list (m1 §8, L1.13), so before the roles value a binary node's two operand
+    orders were ONE step id, and `join` — whose state keeps its inputs by position — and
+    `anti_join`, which does not commute, were served each other's recorded answers
+    (RT-M3-03; docs/specs/m3-corrections.md §1; D0226). The roles value makes the two
+    orders two input values, so two derivations, with `derivation_id`'s formula unwidened
+    (D0171 ruling (2)). Every multi-input node carries it, `union` included: exempting the
+    operators whose roles happen to be interchangeable would be an operator set written
+    down, which D0211 forbids, and the cost is only union's cache hit across a swap (D0232).
 
     **The trace is consulted, and by default not written.** A recorded output that no
     longer resolves is not a cache miss — it raises `TraceIntegrityError`, the M1 rule
@@ -521,6 +560,12 @@ def advance(
     ledger_in = store.put_value(ledger.to_value())  # idempotent; makes the ref resolvable
 
     inputs = list(refs) + [ledger_in] + ([state_ref] if state_ref is not None else [])
+    if node.arity > 1:
+        # RT-M3-03 (D0226, D0232): name WHICH input held which operand role, so two orders
+        # are two input values and therefore two derivations. `derivation_id` is untouched
+        # (D0171 ruling (2)). Written, not merely addressed, for the ledger's reason above:
+        # every ref a step id names resolves.
+        inputs.append(store.put_value({"tannen": ROLES_TAG, "operands": list(refs)}))
     step_id = derivation_id(node.descriptor, inputs)
 
     recorded = traces.lookup(step_id)

@@ -17,7 +17,8 @@ BRIEF §4, §7). A shell module: it reads and writes the store and the trace dir
   transform declaring a narrower layer raises `LayerError` here, the one place that knows.
 
 `VerifyingTrace` is BRIEF §7's "degenerate governor whose prior is a dirty bit"; the
-Grade-S wire schema is deferred to M4 (D0088). `Node` and `Built` expose the M1-available
+Grade-S wire schema was deferred to M4 (D0088) and is deferred again, to M5 at the earliest
+(docs/specs/m4.md scope). `Node` and `Built` expose the M1-available
 subset of the Request fields: descriptors, inputs, and the staleness the trace computes.
 """
 

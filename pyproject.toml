@@ -8,7 +8,10 @@ requires-python = ">=3.13"
 # jsonschema is a runtime dependency because the laws runner CONSUMES the frozen
 # evidence-record schema rather than restating its shape in Python (BRIEF §2: a second
 # normative home for one shape is drift). Decision D0040.
-dependencies = ["jsonschema>=4.26,<5"]
+#
+# pyyaml is a runtime dependency from M4 because `tannen.oracles.load_budget` reads the
+# checked-in `budget.yaml` (docs/specs/m4.md §4). Decision D0236.
+dependencies = ["jsonschema>=4.26,<5", "pyyaml>=6,<7"]
 
 [project.scripts]
 tannen = "tannen.cli:main"
