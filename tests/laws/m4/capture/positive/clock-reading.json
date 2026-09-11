@@ -1,0 +1,16 @@
+{
+  "input_key": "sha256:2bbb4e236d78f2b191c0f3182b828125cc927c476832ee82925f0484996c8da4",
+  "kind": "clock",
+  "oracle": "sha256:04e487e088e2db6509b46d541c48a42721802647d626b5c5b54e929de1830216",
+  "price": 0,
+  "request": {
+    "label": "reading-0"
+  },
+  "reservation": "sha256:cdb76984fe291c62da4f9645e210845cd44aa35d1705810aacee2a31f0fcd1a4",
+  "response": {
+    "instant": "2026-09-11T00:00:43Z"
+  },
+  "scope": "M4",
+  "tannen": "capture/1",
+  "unit": "nano-usd"
+}

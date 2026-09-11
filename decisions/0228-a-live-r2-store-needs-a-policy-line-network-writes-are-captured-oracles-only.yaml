@@ -1,0 +1,36 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0228
+title: "A live R2 store needs a policy line: governance/policy.yaml allows network writes through captured oracles only, and a store write is not one"
+tier: C
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE M4 BOUNDARY SITTING, non-blocking (BRIEF §9.2). It joins D0214, which opened
+  that queue.
+  .
+  THE QUESTION. M4 builds and law-tests the R2 backend (D0221) against a frozen in-memory
+  client. Pointing it at a real bucket is a write of store content to a network service
+  outside a captured oracle. `governance/policy.yaml` says `external_surface.network_writes:
+  captured-oracles-only`, so today that write is refused by policy and is Tier-C door 2 ("bytes
+  leaving the repo boundary — network writes outside captured oracles"). Nothing in M4 needs
+  the answer: Session B can finish with the backend green against the fake.
+  .
+  WHAT THE OWNER IS ASKED. Whether, and on what terms, a store may write to R2: which bucket;
+  which credential (a task-scoped, least-privilege token rather than standing access); whether
+  the evidence stream's promised "durable home" (`.gitignore`, "arrives with R2 at M4") is the
+  same bucket; and the policy line that says so. The spec's L4.11 deliberately claims nothing
+  about a real client until then.
+rationale: >-
+  Filed before Session B rather than discovered at the sitting. Every one of the questions is
+  one-way in the sense the doors mean — bytes leave the machine — and the policy file that
+  answers them is owner-signed.
+reversibility: >-
+  Nothing is changed by filing it. Answering it changes an owner-signed file.
+status: blocked-on-owner
+bindings_count: 1
+bindings:
+  - type: config
+    target: "governance/policy.yaml#external_surface.network_writes"
+    strength: documentary
+    detail: The line whose value decides the question.
+links: ["D0214", "D0218", "D0221"]

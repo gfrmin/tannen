@@ -1,0 +1,65 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0220
+title: "SpendGuard: admission iff ceiling > 0 and spent + worst case fits; spend is a reserve-then-settle fold over the store, never a counter; money is an integer in a declared unit"
+tier: A
+date: "2026-09-11"
+risk_flags: ["spend"]
+decision: >-
+  The MECHANISM of SpendGuard, frozen as L4.4 and L4.5 (docs/specs/m4.md §4). The AMOUNT is
+  not decided here: every ceiling stays zero and raising one is Tier-C door 1.
+  .
+  (1) REPLAY-ONLY IS THE DEFAULT, and the refusal comes before the transport is touched. (2)
+  ADMISSION: the budget names a ceiling for the oracle's kind AND a total, the units match,
+  and for both `ceiling > 0 and spent + worst_case <= ceiling`. A zero ceiling therefore
+  refuses even a zero-priced call — `budget.yaml` has promised exactly that since the
+  opening, and the plain inequality would break the promise (kept as the mutant
+  `zero-means-free`). (3) THE WORST CASE is exact and declared before the call; an LLM's is
+  bounded by the UTF-8 bytes of the canonical effective request (a token is at least a byte)
+  plus `max_tokens`. (4) SPEND IS A FOLD: a `reservation/1` is written BEFORE the call and the
+  capture names it; spent = the settled price of each reservation's capture, or its worst
+  case if nothing settled it. So a second session cannot restart from zero
+  (`counter-not-fold`) and a paid call whose capture failed to write still counts
+  (`unreserved-call`). (5) A WORLD OVERRUN is recorded as reported and seen by the next
+  admission. (6) MONEY is an integer count of the budget's declared `unit`; nothing is a
+  float, and a unit mismatch is refused rather than converted.
+  .
+  THE BUDGET FILE'S SHAPE: top-level `scope` and `unit`, integer `ceilings` per kind plus
+  `total`. Ceilings stay YAML integers because `scripts/check_manifest.py` — custody-set, the
+  only other consumer — compares them numerically against the policy envelopes, and a decimal
+  string or a nested map would crash it. `budget.yaml` today names no scope and no unit, so it
+  refuses everything until an owner sitting says otherwise. A novel Clock read under
+  `--spend` needs a nonzero clock ceiling, and so an owner-signed envelope: stated in the spec
+  as a consequence, not hidden.
+rationale: >-
+  The fold is the one design in which "how much has been spent" has a single source of
+  truth that survives sessions, processes and a crash between the call and the write — the
+  life-agent pattern BRIEF §9 already applies to governance ("truth is the fold of the
+  records"), applied to money. A counter is the tempting spelling and fails the moment a
+  second session opens; a fold over captures alone fails the moment a capture write fails
+  after a paid call. Both were written as mutants before the rule was frozen, and both die by
+  named scenarios that run before any random draw. The first draft of the plan had stated
+  admission as `spent + worst <= ceiling` together with "zero refuses a free call"; the
+  independent review of that plan pointed out the two contradict each other, and the
+  `ceiling > 0` conjunct is the fix.
+reversibility: >-
+  The mechanism is reversible until spend exists; once reservations and captures sit in a
+  store, the fold that reads them is their meaning and changes only with a new tag. The
+  ceilings are not touched by this record at all.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: manifest
+    target: tests/laws/m4/test_l4_spend.py
+    strength: enforced
+    detail: L4.5 — every named scenario and drawn stream predicted step by step from the rule.
+  - type: manifest
+    target: tests/laws/m4/test_l4_modes.py
+    strength: enforced
+    detail: L4.4 — replay-only by default, in the API and at `tannen run`.
+  - type: config
+    target: "budget.yaml#ceilings"
+    strength: documentary
+    detail: >-
+      The ceilings this mechanism reads, all zero. Documentary: the mechanism does not
+      exist until Session B, and the amounts are the owner's (door 1).
+links: ["D0019", "D0024", "D0218", "D0219", "D0229"]

@@ -1,0 +1,76 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0225
+title: "SUPERSESSIONS.md item 2, executed: all nine M3 law files superseded forward, their oracle bound from the frozen bytes by file location, as L4 laws, with no laws.yaml entry — and a ratchet so no law file binds by bare import again"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  The second of the two deferred Session-A items (D0201 ruling (3), D0207), in the scope the
+  owner chose on 2026-09-11: all nine M3 law files, not one or two. SUPERSESSIONS.md drafted
+  it as "D0204", an id since taken by item 1.
+  .
+  WHAT LANDED. `tests/laws/m4/_frozen_bind.py`, the measured borrow-and-restore loader
+  (SUPERSESSIONS.md:311-349), with two rules written into it: never read `sys.modules`
+  before loading, and never leave a bare stem behind — M3's names are borrowed for the load,
+  as a PAIR because `_delta_subject.py` does its own bare import, and put back; M4's own
+  helpers live under a private dotted name. Nine successor files, L4.14–L4.22, each
+  restating one M3 file's claim; the M3 files are retained unedited and keep running, and the
+  poison fixtures keep naming them. No M4 law file contains a bare `import _…`.
+  .
+  THREE DEPARTURES FROM THE DRAFT, each measured. (1) L4 IDS, NOT L3. The evidence plugin
+  keys a run by law id alone (`src/tannen/laws/plugin.py:203`, filled at `:242`), so an
+  `L3.16` defined again under `m4/` merges into M3's own run and leaves M3's L3.16 "partly
+  run, no record". D0128's successor of L1.5 was likewise L2.2. (2) BUNDLES MERGED, by D0224.
+  (3) THE SUCCESSORS SKIP UNTIL SESSION B, by D0227, though they would pass today.
+  .
+  NO `governance/laws.yaml` ENTRY: a `superseded:` entry is a strict xfail and the M3 nodes
+  still pass; `tests/test_law_validation.py` pins the registry as it is. The supersession is
+  recorded where D0204 recorded its prose one — a `MANIFEST.sha256` note and this record.
+  .
+  THE GUARDS. `tests/test_laws_runner.py` now fails if any law file frozen after m3 binds a
+  frozen helper by bare import, derived by AST from the manifest's own rows (the legacy
+  residue, 19 files, is reported, never listed). And
+  `tests/test_governance_scripts.py::test_a_superseded_law_binds_its_oracle_from_the_frozen_bytes`
+  asserts the three properties SUPERSESSIONS.md measured — immune to a data decoy, the guard
+  not disarmed when both files are collected together, the decoys arriving — with its
+  children's evidence switched off and pointed at its own tmp dir: the plan's first draft
+  inherited `make verify`'s evidence root and would have written an M4 record from a stubbed
+  run, made M4 live, and reddened the report. The loader's disarm half was watched failing by
+  making it keep the bare name.
+  .
+  MEASURED BEFORE THE FREEZE against the shipped package (a scratch `-p` plugin supplying
+  M4's sentinel; evidence to a scratch store): all nine successors pass and each writes a
+  passing record under its L4 id.
+rationale: >-
+  The recommendation had sat at three consecutive boundaries (RT-M1-01, RT-M2-01, RT-M3-04)
+  while the residue grew 2 -> 10 -> 19 files. Doing all nine at once is the only spelling
+  that closes the class for M3 rather than for its most visible file, and it costs about 25
+  seconds of suite time. The kill criterion moves with its law: L4.19 carries L3.12's (m3 §11).
+  The `src/tannen/laws/plugin.py` comment that still called the package-qualified import "the
+  real fix" is corrected in the same change (SUPERSESSIONS.md item 4); `src/tannen` is inside
+  the harness subject, so that edit moves every law descriptor — harmless under
+  `make verify`'s throwaway store, and stated.
+reversibility: >-
+  The successors are frozen and leave only by supersession; the M3 originals were never
+  touched, so nothing here needs undoing to recover M3's state. The two guards are unfrozen
+  tests and can be removed with a record.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: manifest
+    target: tests/laws/m4/_frozen_bind.py
+    strength: enforced
+    detail: The loader, frozen.
+  - type: manifest
+    target: tests/laws/m4/test_l4_differential_superseding.py
+    strength: enforced
+    detail: L3.16's successor — the file the regression test drives.
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_no_law_file_after_m3_binds_its_oracle_by_a_bare_import"
+    strength: enforced
+    detail: The ratchet — no bare-import binding in any law file frozen after m3.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_a_superseded_law_binds_its_oracle_from_the_frozen_bytes"
+    strength: enforced
+    detail: Immunity, the guard not disarmed, the decoys arriving.
+links: ["D0106", "D0128", "D0142", "D0165", "D0174", "D0179", "D0201", "D0203", "D0204", "D0207", "D0224", "D0227"]

@@ -606,3 +606,95 @@ def test_every_installed_fixture_is_exercised_by_this_suite() -> None:
         + " — the corpus is short a directory, not the guard weakened; a guard run "
         "against an absent tree exits 0 and the row would pass vacuously"
     )
+
+
+def test_a_superseded_law_binds_its_oracle_from_the_frozen_bytes(tmp_path: Path) -> None:
+    """RT-M3-04's real fix, pinned where a builder can reach it (docs/specs/m4.md §8;
+    docs/proposals/2026-09-04-m3-boundary-sitting/SUPERSESSIONS.md, item 2).
+
+    `tests/laws/m4/test_l4_differential_superseding.py` (frozen) binds L3.16's oracle from
+    the frozen bytes by file location, through `tests/laws/m4/_frozen_bind.py`, and puts the
+    bare names back afterwards. Three things must hold, and each is asserted on its own run
+    because each can fail without the others:
+
+    1. THE BINDING IS IMMUNE. Under a DATA decoy — every callable is the frozen module's own
+       function object and `__file__` claims the frozen path, so the oracle-shadow guard
+       cannot see it and does not confound the measurement — the superseding file still
+       collects every shape, while the superseded M3 file collects one.
+    2. THE GUARD IS NOT DISARMED. Collected together with the superseded file under a CODE
+       decoy, the run aborts with the guard's own tooth text. A loader that KEPT the frozen
+       module under the bare name would silence the guard for the M3 file — measured 52
+       passed, exit 0 — and no single-file run could ever see it.
+    3. THE DECOYS ARRIVE. The superseded file alone under the code decoy aborts the same way.
+
+    It constructs the violating state itself in `tmp_path` (D0092) and runs its children
+    with evidence switched off and pointed at `tmp_path`: under `make verify` it would
+    otherwise inherit the gate's evidence root, write an M4 record from a stubbed run, make
+    M4 live and redden `tannen laws report` (docs/specs/m4.md §11). The bootstrap stubs
+    `tannen.oracles` so M4's sentinel admits the file; nothing in the superseding file uses it.
+    """
+    frozen = REPO_ROOT / "tests" / "laws" / "m3" / "_delta_model.py"
+    loader = (
+        "import importlib.util as ilu\n"
+        "import sys\n"
+        f"real = {str(frozen)!r}\n"
+        "spec = ilu.spec_from_file_location('_delta_model_regression_real', real)\n"
+        "mod = ilu.module_from_spec(spec)\n"
+        "sys.modules['_delta_model_regression_real'] = mod\n"
+        "spec.loader.exec_module(mod)\n"
+        "for name in dir(mod):\n"
+        "    if not name.startswith('__'):\n"
+        "        globals()[name] = getattr(mod, name)\n"
+        "__file__ = real\n"
+    )
+    bootstrap = (
+        "import sys, types\n"
+        "sys.modules.setdefault('tannen.oracles', types.ModuleType('tannen.oracles'))\n"
+        "try:\n"
+        "    import _delta_model  # noqa: F401 -- primes the decoy under the bare name\n"
+        "except ImportError:\n"
+        "    pass\n"
+    )
+    decoys = {
+        "clean": None,
+        "data": loader + "SHAPES = SHAPES[:1]\n",
+        "code": loader + "def check_differential(*args, **kwargs):\n    return None\n",
+    }
+    for name, source in decoys.items():
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "bootstrap_m4_binding.py").write_text(bootstrap)
+        if source is not None:
+            (tmp_path / name / "_delta_model.py").write_text(source)
+
+    superseded = "tests/laws/m3/test_l3_differential.py"
+    superseding = "tests/laws/m4/test_l4_differential_superseding.py"
+
+    def pytest_run(decoy: str, *files: str) -> subprocess.CompletedProcess:
+        env = {k: v for k, v in os.environ.items() if not k.startswith("TANNEN_")}
+        env.update(PYTHONPATH=str(tmp_path / decoy), PYTHONDONTWRITEBYTECODE="1",
+                   TANNEN_NO_EVIDENCE="1", TANNEN_EVIDENCE_ROOT=str(tmp_path / "ev"))
+        return run([str(REPO_ROOT / ".venv" / "bin" / "python"), "-B", "-m", "pytest",
+                    "-p", "bootstrap_m4_binding", *files, "--collect-only", "-q",
+                    "-p", "no:cacheprovider"], env=env)
+
+    def collected(result: subprocess.CompletedProcess) -> int:
+        assert result.returncode == 0, result.stdout + result.stderr
+        return sum(1 for line in result.stdout.splitlines() if "::test_" in line)
+
+    every_shape = collected(pytest_run("clean", superseded))
+    assert every_shape > 1, "the clean control collected too little to distinguish anything"
+    assert collected(pytest_run("data", superseded)) == 1, \
+        "the data decoy did not reach the superseded file — this run proves nothing"
+    assert collected(pytest_run("data", superseding)) == every_shape, (
+        "the superseding file answered to the decoy's narrowed SHAPES — its oracle was bound "
+        "by name, not from the frozen bytes")
+
+    together = pytest_run("code", superseded, superseding)
+    combined = together.stdout + together.stderr
+    assert together.returncode != 0, (
+        "the superseded and superseding files collected together under a code decoy and the "
+        f"oracle-shadow guard stayed silent — the loader kept a bare name:\n{combined}")
+    assert "answers with different code" in combined, combined
+
+    alone = pytest_run("code", superseded)
+    assert alone.returncode != 0 and "answers with different code" in alone.stdout + alone.stderr

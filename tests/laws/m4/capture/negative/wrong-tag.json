@@ -1,0 +1,35 @@
+{
+  "input_key": "sha256:ea33c57459e4005168fd655737445db312a1dc31e858fad384b92805ab86bdf0",
+  "kind": "llm",
+  "oracle": "sha256:3f95ec7b957bccd093ddb0e59377796717a43b8020a6b371e36b6c11ebd01e25",
+  "price": 47,
+  "request": {
+    "messages": [
+      {
+        "content": "question 1",
+        "role": "user"
+      }
+    ],
+    "model": "model-1",
+    "params": {
+      "max_tokens": 2,
+      "temperature_milli": 500
+    },
+    "prompt": "summarise v1",
+    "tool_schema": {
+      "name": "lookup"
+    }
+  },
+  "reservation": "sha256:a4abf5516a059b93931d87febce92461dd5865aecfa7b76d86070102293dbd28",
+  "response": {
+    "content": "answer d4b62d2a6cdd",
+    "resolved_model": "model-1-resolved",
+    "usage": {
+      "input_tokens": 45,
+      "output_tokens": 2
+    }
+  },
+  "scope": "M4",
+  "tannen": "capture/2",
+  "unit": "nano-usd"
+}

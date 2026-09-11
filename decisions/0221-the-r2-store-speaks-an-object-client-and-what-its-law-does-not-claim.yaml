@@ -1,0 +1,48 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0221
+title: "The R2 store is a backend over an ObjectClient — write-once by conditional put, integrity by verifying every read — and its law does not claim any real client conforms to R2"
+tier: A
+date: "2026-09-11"
+risk_flags: []
+decision: >-
+  BRIEF §4's "Store: local fs (M0), R2 (M4)", frozen as L4.11 (docs/specs/m4.md §5).
+  `Store(root)` keeps its meaning — every frozen M0–M3 law constructs a store that way — and
+  is `Store(backend=LocalBackend(root))`; `R2Backend(client)` speaks an `ObjectClient` of
+  three calls (`put_if_absent`, `get`, `list`), with a ref's key `objects/<hex[:2]>/<hex[2:]>`.
+  Write-once is `put_if_absent`, which never replaces an object (S3's `If-None-Match: *`,
+  which R2 honours); integrity is verification on every read, because the remote is not
+  trusted to hand back what it was given. The real client lives in `tannen.r2`; no law
+  instantiates it.
+  .
+  WHAT IS NOT CLAIMED. That any real client conforms to R2. The law drives a frozen
+  in-memory client with S3's conditional-write semantics and two injectable faults (a write
+  that does not happen; bytes swapped behind the store's back). A first write to a real
+  bucket is a network write outside a captured oracle, which `governance/policy.yaml`
+  forbids today — so it is Tier-C door 2, queued as D0228, with the evidence stream's
+  promised "durable home" folded into the same question.
+rationale: >-
+  The seam is where the law can reach. Freezing an HTTP-level fake would freeze S3's wire
+  format into tannen's laws and test a signature implementation nobody asked for; freezing
+  the three-call protocol tests exactly the store's own logic — addressing, write-once,
+  verify-on-read, enumeration, the refusals — against the two ways a remote can betray it,
+  each kept as a mutant (`overwrite-on-put`, `trust-remote-bytes`). What is left unverified
+  is stated in the spec and the law's own docstring rather than implied by a green run; a
+  green run against a fake that says nothing about the real thing is this repository's most
+  recorded failure.
+reversibility: >-
+  Fully reversible until a real bucket holds bytes. After that the key layout is the
+  bucket's meaning and changes only by migration, which BRIEF §10 forbids in place.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m4/test_l4_backend.py
+    strength: enforced
+    detail: L4.11 — the two backends agree; write-once and verify-on-read under faults.
+  - type: config
+    target: "governance/policy.yaml#external_surface.network_writes"
+    strength: documentary
+    detail: >-
+      `captured-oracles-only` — the policy line that makes a live R2 write a door. Read, not
+      changed: changing it is the owner's (D0228).
+links: ["D0046", "D0218", "D0228"]

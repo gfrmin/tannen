@@ -1,0 +1,46 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0223
+title: "No hidden IO in the shell: the network and the clock enter tannen only through tannen.oracles, frozen as a law because the import-linter contract that should say it is custody-set"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  BRIEF §5.3's kernel half is a guard (`kernel-no-io`, `kernel-no-clock`). Its SHELL half was
+  prose: measured while planning, nothing stopped `tannen.store`, `tannen.executor` or
+  `tannen.incremental` from importing a socket or a clock. L4.9 freezes it
+  (docs/specs/m4.md §6): outside `tannen.oracles`, no `tannen` module imports a network
+  module except `tannen.r2`, and none imports a clock module except `tannen.laws`, whose
+  `run_at` is the runner's time by the evidence schema's own wording.
+  .
+  THE SETS. The clock set is DERIVED from `governance/importlinter.toml`'s `kernel-no-clock`
+  contract, so the two cannot drift. The network set is NAMED in the law as residue:
+  `kernel-no-io` also lists `os`, `pathlib`, `tempfile` and `io`, which the shell
+  legitimately imports, so deriving it would fail today's tree on its first run. What a
+  static scan cannot see — `importlib.import_module`, `__import__` — is stated, not claimed.
+  The scanner carries two positive controls: it must see imports planted in a synthetic
+  source, and it must reach the package it guards. Today's tree passes; the only clock
+  import outside the kernel is `tannen.laws.evidence`.
+rationale: >-
+  The right home is an import-linter contract, and `governance/importlinter.toml` is
+  custody-set — an owner edit (queued in D0229). A frozen law is builder-landable at
+  Session A and binds from Session B whether or not the sitting installs the contract; the
+  two are complementary rather than redundant, as the M2 oracle-shadow pair was. A residual
+  hand-named list is exactly what D0171 ruling (3) warns about, and it is accepted here with
+  its reason written down because the only derivable source says something else.
+reversibility: >-
+  Reversible by supersession only once frozen. Installing the contract later does not
+  retire the law; it adds a second guard on the same property.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m4/test_l4_doorway.py
+    strength: enforced
+    detail: L4.9 — both doors, the derived clock set, the scanner's positive controls.
+  - type: file
+    target: governance/importlinter.toml
+    strength: documentary
+    detail: >-
+      The kernel contracts the clock set is derived from, and the custody-set file the
+      shell contract belongs in when the owner installs it (D0229).
+links: ["D0016", "D0063", "D0171", "D0218", "D0229"]

@@ -1,0 +1,71 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0218
+title: "M4 is the boundary: oracles and their captures, SpendGuard, the R2 store, the shell's doorway and the serve-only export — plus the M3 laws bound from their bytes — and the six things it deliberately is not"
+tier: A
+date: "2026-09-11"
+risk_flags: []
+decision: >-
+  M4's scope, fixed at Session A and frozen with docs/specs/m4.md, the D0125/D0155
+  precedent one milestone on. BRIEF §8's whole charter is nine words — "M4 boundary
+  (oracles, R2, optional ClickHouse emission for `serve` only)" — and everything below is
+  the decomposition.
+  .
+  IN. (1) Oracle identity: the `oracle/1` descriptor over the full effective spec and a
+  declared reproducibility class (D0219). (2) The invocation policy — invoke iff no capture,
+  capture before read, replay-only by default — and the `capture/1` envelope with frozen
+  Grade-S vectors (D0219). (3) SpendGuard as a reserve-then-settle fold over the store
+  (D0220). (4) The three built-ins BRIEF §4 names: Fetch, LLM, Clock. (5) The store's R2
+  backend over an `ObjectClient` seam (D0221). (6) The shell's half of "no hidden IO", as a
+  frozen law (D0223). (7) The serve-only export m1 §6 promised (D0222). (8) `tannen run`,
+  replay-only unless `--spend`. (9) The M3 carry-forward the owner chose on 2026-09-11 —
+  all nine M3 law files superseded forward so their oracle is bound from its bytes, plus
+  laws for RT-M3-01/02/03 and the RT-M3-05 answer (D0224, D0225, D0226). Laws L4.1–L4.25.
+  .
+  OUT, each named so a reader does not go looking. CLICKHOUSE EMISSION — optional in BRIEF
+  §8, and any write to a ClickHouse server is a network write outside a captured oracle,
+  which `governance/policy.yaml` refuses (`network_writes: captured-oracles-only`); nothing
+  consumes it before M5 (owner answer, 2026-09-11). THE GRADE-S GOVERNOR WIRE — D0088
+  deferred it to "M4 at the earliest" because two of BRIEF §7's four Request fields had no
+  producer; M4 supplies the cost model's spend term and still not demand, an M5 notion, and
+  BRIEF §7 holds the governor premature until demand logs exist: M5 at the earliest (owner
+  answer, 2026-09-11). ANY LIVE NETWORK CONTACT — no law touches a network, no real transport
+  is invoked, every ceiling stays zero (door 1; BRIEF §9.1 makes a dedicated owner sitting
+  the gate), and a first write to a real R2 bucket is door 2 (D0228). PERFORMANCE — every
+  capture lookup and spend fold is a full store scan, deliberately (BRIEF §10). A GRAPH
+  OBJECT — M3 §7's refusal stands. RENAVON INPUTS — M5, door 3.
+  .
+  THE SUPERSESSION AUDIT, WITH ITS NULL RESULT. L1.10 (capture admits no operator) is
+  unchanged; `Store(root)` keeps its meaning; `derivation_id` (L1.13) is unchanged; the
+  RT-M3-03 remedy moves only binary `join`/`anti_join` step ids and no frozen node asserts
+  one. `governance/laws.yaml`'s `pending` list stays empty.
+rationale: >-
+  Recorded because the charter is a sentence and every line above is an inference from it,
+  made before the freeze turns inferences into law. The inferences worth defending are the
+  exclusions: each is a plausible next step that would quietly widen the milestone — a
+  ClickHouse client, a governor schema with a field nothing fills, a "just check R2 works"
+  write — and two of them are one-way doors. The carry-forward is IN rather than deferred
+  because a sealed law directory cannot take new files after its freeze: the M3 red team's
+  frozen-law residue had to land at this Session A or wait a whole milestone again, a
+  fourth boundary for SUPERSESSIONS.md's item 2 (D0201 ruling (3), D0207).
+reversibility: >-
+  Scope is the most reversible thing in a milestone until its laws are frozen, and after the
+  freeze not reversible at all — which is why it is recorded before the tag. Nothing here
+  binds M5.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: docs/specs/m4.md
+    strength: enforced
+    detail: >-
+      The spec this record fixes the scope of, frozen at m4-laws-freeze. Its scope paragraph
+      carries the in and out lists and §9 the supersession audit.
+  - type: file
+    target: BRIEF.md
+    strength: documentary
+    detail: >-
+      §8 ("M4 boundary (oracles, R2, optional ClickHouse emission for `serve` only)"), §4
+      (store, descriptors, oracles and captures), §5.3/§5.7/§5.9/§5.10, §7 (the governor
+      seam) and §10 (no performance work before M5) are the sentences this scope is derived
+      from.
+links: ["D0088", "D0125", "D0155", "D0201", "D0207", "D0214", "D0228"]

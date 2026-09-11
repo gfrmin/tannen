@@ -1,0 +1,50 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0224
+title: "RT-M3-05 answered: a law is the unit a frozen check can falsify on its own — rows sharing their only node are clauses — and after m3 no node claims more than one law"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  The question the M3 red team routed to this Session A (docs/redteam/2026-09-05-m3-boundary.md,
+  RT-M3-05): "is a law that shares its node with three others a law or a clause?"
+  .
+  THE ANSWER. A law is the unit a frozen check can falsify on its own. Rows that share their
+  only node are clauses of the law that node attests, and one evidence record then stands for
+  exactly what was checked. M3's five bundles are each ONE frozen check
+  (`_delta_model.py`: `check_delta_algebra` for L3.1–L3.4, `check_integrated_ops` for
+  L3.7–L3.8, `check_convergence` for L3.9–L3.10, `check_graph_convergence` for L3.11–L3.12,
+  `check_doors` for L3.13–L3.14), so each bundle's successor (D0225) is one law with the
+  bundle's rows as clauses. M4's successor set is nine laws with a node each, against M3's
+  sixteen rows on twelve nodes.
+  .
+  MERGED, NOT SPLIT — and the choice needs saying because the owner was offered "one node per
+  law". Merging meets that exactly: no node claims more than one law. Splitting would mean
+  re-authoring M3's checks as new frozen assertion code, and D0203's refutation stage found
+  that new frozen claims about old laws are precisely where false sentences enter — three of
+  seven there.
+  .
+  THE RULE FOR EVERY LATER MILESTONE: no law node's name is a range, and every law has at
+  least one node of its own. Enforced by `tests/test_laws_runner.py` for every milestone after
+  m3 — one boundary, not a growing list — with a positive control (the scan must see M3's
+  bundles) and a planted-bundle test watched failing.
+rationale: >-
+  The reason the question matters is the evidence store: `tannen laws report` showed sixteen
+  healthy M3 rows while four of them carried the same single node's attestation, and nothing
+  said so where a reader would look. Counting rows the checks cannot tell apart overstates the
+  milestone's resolution; counting laws by what can independently fail states it. The rule
+  is also what makes `scripts/check_laws.py`'s range-blind regex (`:45`) harmless from here on.
+reversibility: >-
+  The rule is an unfrozen test and can be relaxed with a record. The merged successor laws
+  are frozen and change only by supersession.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: pytest
+    target: "tests/test_laws_runner.py::test_no_law_node_after_m3_claims_more_than_one_law"
+    strength: enforced
+    detail: The rule, for every milestone after m3, with its positive control.
+  - type: file
+    target: docs/redteam/2026-09-05-m3-boundary.md
+    strength: documentary
+    detail: RT-M3-05, which measured the density across milestones and routed the question here.
+links: ["D0169", "D0174", "D0203", "D0225"]

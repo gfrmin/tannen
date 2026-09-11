@@ -1,0 +1,47 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0230
+title: "master was red at D0216: the roadmap test commits a fixture as an example.invalid address the PII guard does not allow, and '862 passed' was quoted from a run that also said '1 failed'"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  FOUND AT M4 SESSION A, FIXED IN THE SAME CHANGE. `tests/test_roadmap.py`, landed with
+  D0216 at `b80531e`, builds a throwaway git repository and commits into it under a fixture
+  address at the reserved domain `example.invalid`. `tests/test_no_pii.py` scans every
+  tracked file for addresses and
+  allows exactly `example.com`, `example.org`, `example.net` and `openssh.com`. So from
+  `b80531e` on, `test_no_unallowlisted_email_address_is_tracked` failed on the real tree.
+  Measured, not inferred: CI run 34582479175 on `b80531e` (branch master) ends
+  `FAILED tests/test_no_pii.py::test_no_unallowlisted_email_address_is_tracked` and
+  `1 failed, 862 passed, 1 skipped, 1 xfailed`, then `make: *** [Makefile:41: verify]
+  Error 1`. Reproduced locally at this Session A before any of its own files were involved:
+  the line is unchanged since `b80531e`.
+  .
+  THE FIX: the fixture commits at `example.com` instead. It is a fixture identity, never an
+  address anyone reads, so the allowlisted reserved domain says the same thing and the
+  guard stays exactly as strict as it was. The allowlist is not widened: `example.invalid`
+  is as reserved as `example.com`, but widening a PII guard to admit a string a test
+  happened to use is the direction this repository has refused before.
+  .
+  THE PART WORTH KEEPING. The M4 plan carried D0216's close as "`make verify` 862 passed".
+  862 is exactly the passed count of the failing CI run: the number quoted was true, and the
+  line beside it — `1 failed` — was the verdict. A pass count is not a verdict. This is the
+  standing lesson ("a green verdict can be measuring the wrong thing") in its plainest form
+  yet: no mechanism misled anyone; a summary was read for the number that looked like success.
+  And this record's first draft quoted the fixture address verbatim, so the record of the
+  PII failure reddened the same guard itself (caught by `make verify` through this record's
+  own binding, before commit). It names the domain instead.
+rationale: >-
+  Recorded rather than silently fixed because a red master for the length of a session is
+  a fact about the gate, and because the M4 plan relied on the false green. Tier A: one
+  unfrozen, uncustodied test file, one literal.
+reversibility: >-
+  Revert the one-line change and master is red again; nothing else depends on it.
+status: accepted
+bindings_count: 1
+bindings:
+  - type: pytest
+    target: "tests/test_no_pii.py::test_no_unallowlisted_email_address_is_tracked"
+    strength: enforced
+    detail: The guard that was red at `b80531e` and is green again with the fixture fixed.
+links: ["D0112", "D0216"]

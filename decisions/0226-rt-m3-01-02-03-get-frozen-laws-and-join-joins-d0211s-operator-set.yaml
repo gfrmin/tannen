@@ -1,0 +1,79 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0226
+title: "RT-M3-01, -02 and -03 get frozen laws; join belongs in RT-M3-03's scope beside anti_join, correcting D0211's 'exactly {anti_join}'; and the remedy pinned leaves derivation_id alone"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  The three M3 red-team findings whose remaining residue was "needs a frozen law"
+  (D0197, D0198, D0211), frozen as L4.23–L4.25 (docs/specs/m4.md §8).
+  .
+  L4.23 (RT-M3-01). The declared form carries the address of every code a node names — a
+  predicate, a map AND the schema it declares, a monoid or group — and a lambda is refused.
+  D0197 closed the predicate half; the map's out-schema is still resolved from the registry
+  at tick time. Same name, different code is observable only across interpreters (`_register`
+  refuses any in-process re-registration), so the law compares descriptors printed by fresh
+  interpreters. Watched: the out-schema clause FAILS on today's code, and passes with the
+  remedy (the schema in the declared form) applied in a scratch interpreter.
+  .
+  L4.24 (RT-M3-02). Every catalogue shape through the SHIPPED `advance`, driven by a frozen
+  caller that never declares `replay=True` on an `anti_join` and picks integrals or deltas by
+  reading `node.replay`, reaches the reference byte for byte. Watched: passes on today's code;
+  fails on exactly the three `anti_join` shapes with `anti_join` removed from
+  `_ALWAYS_REPLAYS`, by its own assertion; fails on all five `join` shapes when `join` forgets
+  its held state.
+  .
+  L4.25 (RT-M3-03). For every operator `binary_operators()` declares, a step served from a
+  trace recorded under the other operand order equals the same call against an empty trace
+  store. Watched: fails today for `anti_join` AND `join`, in both orders; passes for `union`;
+  passes with the remedy applied.
+  .
+  THE CORRECTION. D0211 said the non-commutative set "is today exactly {anti_join} — union and
+  join are genuinely commutative". `join` commutes as an operator and is still unsound under a
+  swap, because its state keeps the two inputs by position (SUPERSESSIONS.md's measurement,
+  reproduced here). What matters is whether a NODE's roles are interchangeable, not whether
+  the operator commutes; L4.25 quantifies over the package's own binary operators and names
+  no set, so the correction costs the law nothing.
+  .
+  THE REMEDY PINNED is D0211's first: `advance` folds the operand roles into the step's
+  derivation inputs for a node whose roles are not interchangeable. `derivation_id`'s formula
+  is untouched, so owner-signed D0171 ruling (2) — no widening at M4 — stands. The unfrozen pin
+  `tests/test_incremental.py::test_a_binary_step_id_inherits_derivation_ids_order_insensitivity`
+  asserts the opposite for `anti_join`; Session B retires it under its own record, as its
+  docstring demands ("this test is what says a decision is being reversed").
+  .
+  A FINDING, recorded rather than smoothed over: the frozen L3.15 row claims "a quarantining
+  step moves nothing" and no L3.15 node ever tested it. L4.21, its successor, does not carry
+  the clause (D0161's holding: a row may not describe more than its law checks).
+rationale: >-
+  Each of the three was CLOSED at the guard level in unfrozen code by the session after the
+  red team, and each record said plainly that the frozen suite still could not see the
+  defect. A frozen law is the only thing a builder cannot quietly weaken, and Session A is
+  the only time one can be added. Writing them now also forced the two public names Session B
+  must add — `binary_operators()` and `required_params()` — because a law that quantifies
+  over the package's operators needs the package to say what they are.
+reversibility: >-
+  Frozen laws leave only by supersession. The remedy is Session B's and is reversible until
+  step ids it mints sit in a trace store.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: manifest
+    target: tests/laws/m4/test_l4_code_address.py
+    strength: enforced
+    detail: L4.23.
+  - type: manifest
+    target: tests/laws/m4/test_l4_binary_replay.py
+    strength: enforced
+    detail: L4.24.
+  - type: manifest
+    target: tests/laws/m4/test_l4_operand_roles.py
+    strength: enforced
+    detail: L4.25.
+  - type: file
+    target: tests/test_incremental.py
+    strength: documentary
+    detail: >-
+      Holds the unfrozen swap pin Session B must retire under its own record once the
+      RT-M3-03 remedy lands.
+links: ["D0161", "D0167", "D0171", "D0174", "D0197", "D0198", "D0204", "D0211", "D0218"]

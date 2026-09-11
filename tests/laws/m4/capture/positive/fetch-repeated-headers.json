@@ -1,0 +1,43 @@
+{
+  "input_key": "sha256:ff9de882b481bcc897c32e93fb70cff13ce2bb4499afbddb5f21ea4dc9e73bcb",
+  "kind": "fetch",
+  "oracle": "sha256:6913946eea580f892a954c5a1a679887381f4f912dc3f9c88e05080dddd9d94b",
+  "price": 1,
+  "request": {
+    "headers": [
+      [
+        "accept",
+        "text/plain"
+      ],
+      [
+        "x-variant",
+        "1"
+      ]
+    ],
+    "method": "GET",
+    "uri": "https://example.com/page/1"
+  },
+  "reservation": "sha256:468d1673ba2f23a0e01631c66c86542816e123c377bf3c10a626ea96584e9490",
+  "response": {
+    "body": "sha256:59cf3226b7b5d6db49b6bf28563b137f3e30dd724f45c7870863408e5e1f9c7e",
+    "headers": [
+      [
+        "content-type",
+        "text/plain"
+      ],
+      [
+        "x-seen",
+        "409ae7ab"
+      ],
+      [
+        "x-seen",
+        "8e1e6f59"
+      ]
+    ],
+    "observed_at": "2026-09-11T00:00:00Z",
+    "status": 200
+  },
+  "scope": "M4",
+  "tannen": "capture/1",
+  "unit": "nano-usd"
+}

@@ -1,0 +1,67 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0229
+title: "Five custody-set items M4 Session A found and a builder cannot write: a literal $marker in DELEGATIONS.md, the shell doorway contract, the anti-disarm poison fixture, m4-laws-freeze as a required tag, and a ceiling rule the guard does not enforce"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE OWNER, non-blocking, joining D0214's M4 boundary queue. Tier A because each
+  item is reversible (BRIEF §9.2 classifies by reversibility), `blocked-on-owner` because each
+  artefact is custody-set — the convention D0216 introduced so ROADMAP §3 can see it.
+  .
+  (1) `DELEGATIONS.md:41` IS A LITERAL `$marker of 2026-09-07` — an unexpanded shell variable
+  left by the publication rewrite in a frozen, custody-set file. The m4-laws-freeze tag message
+  quotes delegation 1 and the file's hash rather than the whole file, so it does not carry the
+  defect forward.
+  .
+  (2) THE SHELL DOORWAY CONTRACT. L4.9 freezes "network and clock only through
+  `tannen.oracles`" as a law (D0223); its natural second home is an import-linter contract in
+  custody-set `governance/importlinter.toml`.
+  .
+  (3) THE ANTI-DISARM POISON FIXTURE and the two poison-README corrections SUPERSESSIONS.md
+  lists as (a) and (b). The disarm half of the loader's property is visible only when an M3
+  file and its M4 successor are collected TOGETHER; the corpus's single-file invocations
+  cannot see it, so the fixture must collect both. Until it lands the property is held by the
+  unfrozen regression test D0225 binds.
+  .
+  (4) `m4-laws-freeze` IN `governance/tag-roles.yaml` `required_tags` — or, better, D0205's
+  derivation installed. Without either it is the first laws-freeze tag deletable with no guard
+  noticing, D0095's enumeration-that-lags shape.
+  .
+  (5) THE CEILING RULE THE GUARD DOES NOT ENFORCE. `governance/policy.yaml:10-11` says a
+  ceiling may never exceed the CURRENT milestone's envelope; `scripts/check_manifest.py`
+  compares against the maximum over ALL milestones. Inert while every envelope is zero; live
+  the moment the M4 budget sitting raises one — the sitting this would bite. Either side can
+  move; both are owner files.
+rationale: >-
+  Found while doing Session A's work, and each is the owner's to write. Recorded as one record
+  so the queue gains one row, and so that none of the five is invisible to the digest's
+  Tier-C-only query (D0154, D0191, D0195). Item (5) was named in the M4 roadmap plan as
+  something to file before the budget sitting, precisely so it is not discovered mid-ceremony.
+reversibility: >-
+  Nothing changes by filing it; each item, when taken, is an ordinary custody-set edit and a
+  re-signature.
+status: blocked-on-owner
+bindings_count: 5
+bindings:
+  - type: file
+    target: DELEGATIONS.md
+    strength: documentary
+    detail: Item (1).
+  - type: file
+    target: governance/importlinter.toml
+    strength: documentary
+    detail: Item (2).
+  - type: file
+    target: tests/poison/README.md
+    strength: documentary
+    detail: Item (3) — the corpus the fixture and the corrections join.
+  - type: file
+    target: governance/tag-roles.yaml
+    strength: documentary
+    detail: Item (4).
+  - type: file
+    target: scripts/check_manifest.py
+    strength: documentary
+    detail: Item (5) — the comparison against every envelope rather than the current one.
+links: ["D0095", "D0205", "D0214", "D0216", "D0223", "D0225"]

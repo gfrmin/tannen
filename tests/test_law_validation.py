@@ -43,6 +43,7 @@ REGISTRY = REPO_ROOT / "governance" / "laws.yaml"
 MODEL_PATHS = {
     "m2": ("_m2_model", REPO_ROOT / "tests" / "laws" / "m2" / "_model.py"),
     "m3": ("_m3_delta_model", REPO_ROOT / "tests" / "laws" / "m3" / "_delta_model.py"),
+    "m4": ("_m4_boundary_model", REPO_ROOT / "tests" / "laws" / "m4" / "_boundary_model.py"),
 }
 
 #: Enough draws for every mutant to die, measured rather than guessed: the whole matrix

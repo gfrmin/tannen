@@ -267,7 +267,7 @@ def test_the_output_does_not_move_with_the_tag_set(tmp_path: Path) -> None:
     before = render(root)
 
     _git("-C", str(root), "init", "-q", "--initial-branch=master", capture_output=True)
-    _git("-C", str(root), "-c", "user.email=t@example.invalid", "-c", "user.name=t",
+    _git("-C", str(root), "-c", "user.email=t@example.com", "-c", "user.name=t",
          "commit", "-q", "--allow-empty", "-m", "fixture", capture_output=True)
     _git("-C", str(root), "tag", "m9-close", capture_output=True)
     assert "m9-close" in _git("-C", str(root), "tag", "-l",

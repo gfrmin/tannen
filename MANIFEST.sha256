@@ -88,6 +88,52 @@ aa547ae13435f3fd641697a56b18f5053269080ebf477d79909df852df2fb425  tests/laws/m3/
 
 07bd6e858ed7b0aa00ead99edb5128969f4a2b299ac870ec364d7cbca7681491  docs/specs/m3-corrections.md
 
+60aa5ca0c55e89d5e8977df00b41ada36bfa42d6db8c66e5bcfd0f1fa5f08d5f  docs/specs/m4.md
+75267952e7974f3a40efc27345dc81feabb48f5e15b3ac88ba8b4bc8d938f1d8  tests/laws/m4/_boundary_model.py
+e04d8a3b067053d08b58b288b687cd1292b6ddf85bb85b146315d605ae08cdb7  tests/laws/m4/_boundary_subject.py
+645a4f0d55ef3a54acaf379872a357f2930eb511d7e3227064a4a262ec6e064a  tests/laws/m4/_frozen_bind.py
+a4fc6b870129b15d563ba98e1f3619ff392ebfccec65119bcca7382e9d137d7f  tests/laws/m4/capture/negative/clock-instant-not-utc.json
+379a84ae6533dcbb94219d4df13c1f620c01ad6bdcddfbd6e5e3c3cea27839f9  tests/laws/m4/capture/negative/extra-top-level-field.json
+94646d97a4991a5dfa413049baceb6c5751da23456c1beabf8e63f2852ad2bc4  tests/laws/m4/capture/negative/fetch-body-inline.json
+fd27e6f9f980357c04eaf57208d946cf5923037d7052822d42c7924cc98a8f70  tests/laws/m4/capture/negative/fetch-status-out-of-range.json
+71722fd1aec77229ab523c2568d17cfb3d1df9401949d9d47c3e7a9bfd868ed7  tests/laws/m4/capture/negative/header-not-a-pair.json
+1eee361f1579475d307231b9f8938b8e339c977f1a55c10aea9131a41ea47748  tests/laws/m4/capture/negative/llm-missing-usage.json
+528b6cd8d385fa8c80383266d8cc8d20f6a31003d647a728ba8d17483e13ed44  tests/laws/m4/capture/negative/missing-reservation.json
+d9074feabddb6254d975049f07a3ddfafcbaec31d37cd5b33ac5f7a2b2a9da8a  tests/laws/m4/capture/negative/oracle-not-a-ref.json
+1268cf0ebf899d6a2e0b475bc725253515adfc235250f3b673bc83d357ba8160  tests/laws/m4/capture/negative/price-is-fractional.json
+edbdf894a85ca4b829f5a3d3d7e3fa9ab32974a8f862e61a7f38e173c5d3c9e3  tests/laws/m4/capture/negative/price-is-negative.json
+d70c3a4c607a1dc4acf0a370604e04931723b24a5bc0fe765f5dda7e26008a72  tests/laws/m4/capture/negative/unknown-kind.json
+a0a54b3487baa5fc5cf1c29acb120983df69fa9ba221d1535d66c5b866c2fad5  tests/laws/m4/capture/negative/wrong-tag.json
+3a1688e1133257d3b845fa8859d994b5467603a5868888f673a4391ee1c12e1f  tests/laws/m4/capture/positive/clock-reading.json
+e2aa290e94b3c710b0065b7e574eafbf29fafb407f3e9c1e60f41aecc843ff6c  tests/laws/m4/capture/positive/fetch-free.json
+fcba5148dc878b2e6a625b878d38fc5942b26d454983c56a7868b68145717498  tests/laws/m4/capture/positive/fetch-repeated-headers.json
+928182c9218a04525abd815e13dc08739b7160e5c1be8eb2427ab19253e1d8a0  tests/laws/m4/capture/positive/llm-with-tool-schema.json
+9255aa8702d77cf23f3bc17e25e0a25cd00066f99784bf346912ef8d180a4073  tests/laws/m4/capture/positive/llm-without-tools.json
+3efa29d0cf63ff53d8a45aa9f15438ca11eb8d34ea6a6550a33e7082cb80cdff  tests/laws/m4/capture/schema.json
+1fc51f3d31317cb8069ca53e8c4d14f4889cc2000bc9b2b6ad720f369f0238fa  tests/laws/m4/test_l4_backend.py
+b5989b81df73191a67542509b599d46ce8ff853ff39e53b5f887ecd0c360b231  tests/laws/m4/test_l4_binary_replay.py
+5a63e9ad9223ee950711288c5ce53c6666441826aef0d70919ec11343edf859f  tests/laws/m4/test_l4_boundary_differential.py
+667d914991921bd4fa8e91c429867960ccde4c07ef586b8d446e44435e7e05e0  tests/laws/m4/test_l4_capture.py
+5a7ab95ad2e5811ecbcdb9c4106e880a09a4e469c54958a6aa0e4857409c770a  tests/laws/m4/test_l4_code_address.py
+0a2125030a435bd465b12667e93507b5c47cb95c2e677007556fb03d59933fcc  tests/laws/m4/test_l4_convergence_superseding.py
+c26824bca00890b4ba2b00d63f8c88a2f136c14c3d35927ae333c7ab8374afe6  tests/laws/m4/test_l4_delta_superseding.py
+041042976eec6b0d4d87cb63554415ee252eb7c10c2646d9950aecf5bca618cd  tests/laws/m4/test_l4_descriptor.py
+5773801f367c4198c731acd5ea25ef449dcfef6fef34dba4b48c971687e6741c  tests/laws/m4/test_l4_differential_superseding.py
+f733307f47e19fe6534c2d0168b49f5acc3af351613bfa8ba44bde278372ddff  tests/laws/m4/test_l4_door_superseding.py
+bab20b86836e2e298a41438f194effacc7e1232d72b0098b3e9164419f309a21  tests/laws/m4/test_l4_doorway.py
+5f4182c954b2bac8f8919711c2887cb18a28d6c870109ced459cf1a278af19f4  tests/laws/m4/test_l4_envelopes.py
+7b6f7d6341210f4e26bdf4b308c984d90859e28318bd6828f50f88948c77d6cb  tests/laws/m4/test_l4_executor_superseding.py
+bbe08ca5a2b9a59419e1acbcfcbc1962e0829921fdf07a78143e897bf1b15f16  tests/laws/m4/test_l4_export.py
+b4adc5a4444fcd5da3467422c61b1cabf43c6f2c541d9d63836c96f846bb2eae  tests/laws/m4/test_l4_graph_superseding.py
+211ff645a76f12ccd219f039fab050b7736e2cf6d6c12cae27882c1ac879db6d  tests/laws/m4/test_l4_integrated_superseding.py
+70e2aa52a3b2fac3cc0e4a148268caa66630801aebd3f0b7fb5eab12880d2c9b  tests/laws/m4/test_l4_invoke.py
+88a0a13853f0be61086f1b724c8f30f062742c453ac4a3aae37b5e13c6d47b45  tests/laws/m4/test_l4_join_superseding.py
+9057c7c210ecdcca6ddce2f779f4f365847d424fd0f58c94684be26254aa0411  tests/laws/m4/test_l4_linear_superseding.py
+98ba992f1f1daa2197ccd5fb44617749bf131d2d16f7754103b9e51520a746f9  tests/laws/m4/test_l4_modes.py
+4ad1757f44bf299a673d493025d0f13abf269651aab21c2520364d82916769f2  tests/laws/m4/test_l4_operand_roles.py
+1b9a58bd4f85defda9d148b22f8650f08a7873f3420afed6f57b2e3880dbe2f4  tests/laws/m4/test_l4_replay.py
+946b38d4ea00fe13f6571f81e03b76e0a295ef9910bdbad6de32a99d628a7855  tests/laws/m4/test_l4_spend.py
+
 # --- supersession notes (D0106 ruling 2; D0128) ------------------------------
 # tests/laws/m1/test_l1_rel.py
 #   RETIRED, ONE node: test_l1_5_mixing_semirings_is_refused_by_name.
@@ -116,6 +162,27 @@ aa547ae13435f3fd641697a56b18f5053269080ebf477d79909df852df2fb425  tests/laws/m3/
 #   found only by attacking the correction rather than reading it (D0203).
 #   NOT the laws.yaml machinery: prose has no node to retire, and D0161 holds that
 #   running the node-retirement half against prose is a category error. Record: D0204.
+#
+# tests/laws/m3/ — ALL NINE LAW FILES
+#   SUPERSEDED FORWARD, WHOLE FILES, no node retired. Every M3 file is retained, unedited,
+#   and still runs; its claim is restated under tests/laws/m4/ by a file that binds the
+#   frozen oracle FROM ITS BYTES by file location (tests/laws/m4/_frozen_bind.py) instead of
+#   a bare import a decoy can claim first (RT-M1-01, RT-M2-01, RT-M3-04):
+#     test_l3_delta.py        L3.1-L3.4    -> test_l4_delta_superseding.py        L4.14
+#     test_l3_linear.py       L3.5         -> test_l4_linear_superseding.py       L4.15
+#     test_l3_join.py         L3.6         -> test_l4_join_superseding.py         L4.16
+#     test_l3_integrated.py   L3.7-L3.8    -> test_l4_integrated_superseding.py   L4.17
+#     test_l3_convergence.py  L3.9-L3.10   -> test_l4_convergence_superseding.py  L4.18
+#     test_l3_graph.py        L3.11-L3.12  -> test_l4_graph_superseding.py        L4.19
+#     test_l3_door.py         L3.13-L3.14  -> test_l4_door_superseding.py         L4.20
+#     test_l3_executor.py     L3.15        -> test_l4_executor_superseding.py     L4.21
+#     test_l3_differential.py L3.16        -> test_l4_differential_superseding.py L4.22
+#   Rows that shared one frozen check became one law (RT-M3-05's answer, D0224). L4.21
+#   states L3.15 as docs/specs/m3-corrections.md corrects it and does not carry its untested
+#   quarantine clause. L4 ids, not L3: the evidence plugin keys a run by law id alone.
+#   NO governance/laws.yaml entry: the M3 nodes still pass, so a strict xfail would be red.
+#   The poison fixtures keep naming the M3 files. m3 §11's kill criterion now reads on
+#   L4.19. Record: D0225.
 3b7eca1046095151e2cd58ff665e4a7e96f9ceb7ddb53e938986417a51196c7c  governance/schemas/evidence-record.schema.json
 46741f08a678df9a6062c153750ef6f1eb2665b0227fe06f0c62c08f25d720e7  tests/poison/oracle-shadow-model/bootstrap_shadow_model.py
 3f627f2a9f5a4d970e901c671b3782ae9693a1f7be66824b0e09d4d6d3136f5e  tests/poison/oracle-shadow-model/_model.py

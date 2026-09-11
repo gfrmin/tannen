@@ -1,0 +1,39 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0227
+title: "Every M4 law file skips on one sentinel, tannen.oracles, even the successors that could run today, because a milestone is live from its first evidence record and a stray record is permanent"
+tier: A
+date: "2026-09-11"
+risk_flags: ["governance-paths"]
+decision: >-
+  Every `tests/laws/m4/test_*.py` first does `pytest.importorskip("tannen.oracles")` — M4's
+  new IO doorway — and only then anything else, importorskipping every other module new at M4
+  it needs so that a half-landed Session B sees skips, never a collection error that aborts
+  the whole run. At the freeze all 23 files are visible skips and M4 reports `frozen`.
+  .
+  WHY ONE SENTINEL, measured in `src/tannen/laws/report.py:82`: a milestone is LIVE once any
+  record carries its label, and in a live milestone every law with no matching record is
+  STALE, which fails the report. The nine successors (D0225) and L4.24 would pass on today's
+  code; had they run while the boundary laws skipped, the freeze commit's `make verify` would
+  have gone red on its own report. And because the evidence store is append-only, a single
+  stray M4 record would keep M4 live for ever — which is also why the regression test in
+  D0225 runs its children with evidence off.
+rationale: >-
+  The alternative — letting the successors attest now — buys four sessions of earlier
+  evidence for laws whose M3 originals run and attest meanwhile, at the price of a red gate
+  at the freeze. M3's sentinel (`tannen.incremental`) was a new module for the same reason;
+  this is that precedent, stated as a rule because at M4 some laws are about old code.
+reversibility: >-
+  Frozen in every M4 law file; changes only by supersession. It costs nothing after Session B,
+  when the sentinel resolves.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m4/_boundary_subject.py
+    strength: enforced
+    detail: The adapter's importorskips — the sentinel, then every other new module.
+  - type: file
+    target: src/tannen/laws/report.py
+    strength: documentary
+    detail: The live/stale rule the sentinel exists to respect.
+links: ["D0041", "D0165", "D0225"]

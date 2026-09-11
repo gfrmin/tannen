@@ -45,9 +45,19 @@ _TRUE = {"1", "true", "yes", "on"}
 #: `tests/_fragment.py` re-exporting the real module's names passed every test while
 #: `sys.modules['_fragment'].__file__` pointed outside `tests/laws/m1/` the whole run,
 #: and no guard in `make verify` noticed. This check is defence in depth, not a fix for
-#: the naming hazard itself — the real fix is a package-qualified import in the frozen
-#: law file, which only the owner may make (CLAUDE.md: frozen paths are read-only
-#: outside a supersession).
+#: the naming hazard itself. The remedy is NOT a package-qualified import: measured
+#: 2026-09-09, a dotted `from tests.laws.m3 import _delta_model as M` closes the
+#: sys.path-shadow shape and leaves `sys.modules["tests.laws.m3._delta_model"] = decoy`
+#: winning exactly as before, while the `__init__.py` files it needs take collection from
+#: 842 to 808 with 8 errors, because the eight sibling frozen law files' bare imports stop
+#: resolving. What closes both shapes is to load the oracle from the frozen bytes by file
+#: location off the law file's own `__file__` — `tests/laws/m4/_frozen_bind.py`, frozen at
+#: m4-laws-freeze, which every M4 law file uses and which superseded M3's nine files
+#: forward (docs/specs/m4.md §8). Such a loader may BORROW an oracle's bare name in
+#: `sys.modules` for the duration of a load and must put back what was there: this check
+#: reads `sys.modules` once, at the END of collection, so a superseding file that KEEPS the
+#: name silences it for every law file it does not supersede (measured: 52 passed, exit 0,
+#: under a decoy that aborts the same run at exit 1 without it).
 #:
 #: THE SET IS DERIVED, NOT ENUMERATED — that is RT-M2-01. The first spelling pinned the
 #: single name `_fragment`. M2 then added `tests/laws/m2/_model.py`, bare-imported by

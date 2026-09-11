@@ -8,6 +8,7 @@ implementation moves, and a partly-run law attests nothing at all.
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -547,3 +548,106 @@ def test_the_harness_scrubs_an_ambient_tannen_variable(tmp_path: Path) -> None:
         "an ambient TANNEN_NO_EVIDENCE reached the child and disabled the plugin, so this "
         f"harness reports absence as failure:\n{result.stdout}{result.stderr}"
     )
+
+
+# ------------------------------------------------------ rules for every milestone after m3
+#
+# Two properties M4 Session A chose for its own laws and every later milestone's
+# (docs/specs/m4.md §8; D0224, D0225). The frozen M0–M3 files predate both and cannot be
+# edited, so the rules apply AFTER the last milestone that broke them — a single boundary,
+# not a list that grows. Each scan carries a positive control, so an empty result means
+# "nothing is there" and never "the scan is blind".
+
+LEGACY_THROUGH = 3
+
+
+def _milestone_number(name: str) -> int:
+    return int(re.match(r"m(\d+)", name).group(1))
+
+
+def _manifest_paths(root: Path) -> list[str]:
+    out = []
+    for line in (root / "MANIFEST.sha256").read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            out.append(line.split(None, 1)[1].strip())
+    return out
+
+
+def bare_oracle_bindings(root: Path) -> dict[str, list[str]]:
+    """Per milestone directory, the frozen `.py` files under `tests/laws/<m>/` that bind a
+    frozen law helper — any manifested `tests/laws/m*/_*.py` stem — by a bare import.
+    Derived from the manifest's own rows by AST, never listed (D0171 ruling (3))."""
+    rows = [p for p in _manifest_paths(root) if re.fullmatch(r"tests/laws/m\d+b?/[^/]+\.py", p)]
+    stems = {Path(p).stem for p in rows if Path(p).name.startswith("_")}
+    found: dict[str, list[str]] = {}
+    for rel in rows:
+        names: set[str] = set()
+        for node in ast.walk(ast.parse((root / rel).read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Import):
+                names |= {alias.name.split(".")[0] for alias in node.names}
+            elif (isinstance(node, ast.ImportFrom) and node.level == 0 and node.module
+                  and node.module != "__future__"):
+                names.add(node.module.split(".")[0])
+        if names & stems:
+            found.setdefault(Path(rel).parts[2], []).append(rel)
+    return found
+
+
+def range_named_law_nodes(root: Path, milestone: str) -> list[str]:
+    """Module-level law functions in `tests/laws/<milestone>/` whose name claims more than
+    one law (`_and_`/`_through_` ranges, read by discovery's own `law_ids_of`)."""
+    out = []
+    for path in sorted((root / "tests" / "laws" / milestone).glob("test_*.py")):
+        for node in ast.parse(path.read_text(encoding="utf-8")).body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and \
+                    len(discovery.law_ids_of(node.name)) > 1:
+                out.append(f"{path.name}::{node.name}")
+    return out
+
+
+def test_no_law_file_after_m3_binds_its_oracle_by_a_bare_import() -> None:
+    """RT-M1-01, RT-M2-01 and RT-M3-04 are one hazard: a bare `import _oracle` receives
+    whatever holds the name. The residue it left grew 2 -> 10 -> 19 files across three
+    boundaries; it may not grow again. New law files bind from the frozen bytes by file
+    location (`tests/laws/m4/_frozen_bind.py`)."""
+    found = bare_oracle_bindings(REPO_ROOT)
+    later = {m: files for m, files in found.items() if _milestone_number(m) > LEGACY_THROUGH}
+    legacy = sum(len(files) for m, files in found.items()
+                 if _milestone_number(m) <= LEGACY_THROUGH)
+    assert later == {}, f"law files after m{LEGACY_THROUGH} binding by bare import: {later}"
+    assert legacy > 0, "the scan found no legacy bare-import binding at all — it is blind"
+
+
+def test_the_bare_import_scan_sees_a_planted_binding(tmp_path: Path) -> None:
+    m4 = tmp_path / "tests" / "laws" / "m4"
+    m4.mkdir(parents=True)
+    (m4 / "_planted.py").write_text("X = 1\n")
+    (m4 / "test_l4_1_planted.py").write_text(
+        "from __future__ import annotations\nfrom _planted import X\n")
+    (m4 / "test_l4_2_clean.py").write_text("from __future__ import annotations\nimport json\n")
+    (tmp_path / "MANIFEST.sha256").write_text("".join(
+        f"{'0' * 64}  tests/laws/m4/{name}\n"
+        for name in ("_planted.py", "test_l4_1_planted.py", "test_l4_2_clean.py")))
+    assert bare_oracle_bindings(tmp_path) == {"m4": ["tests/laws/m4/test_l4_1_planted.py"]}
+
+
+def test_no_law_node_after_m3_claims_more_than_one_law() -> None:
+    """RT-M3-05, answered (docs/specs/m4.md §8): a law is the unit a frozen check can
+    falsify on its own. M3 bundled sixteen laws into twelve nodes; after m3, one node
+    attests one law, so an evidence record never stands for rows nobody checked apart."""
+    later = [m for m in MILESTONES if _milestone_number(m) > LEGACY_THROUGH]
+    found = {m: range_named_law_nodes(REPO_ROOT, m) for m in later}
+    assert not any(found.values()), f"range-named law nodes after m{LEGACY_THROUGH}: {found}"
+    assert range_named_law_nodes(REPO_ROOT, "m3"), \
+        "the scan does not see M3's bundled nodes — it is blind"
+
+
+def test_the_range_scan_sees_a_planted_bundle(tmp_path: Path) -> None:
+    m4 = tmp_path / "tests" / "laws" / "m4"
+    m4.mkdir(parents=True)
+    (m4 / "test_l4_bundle.py").write_text(
+        "def test_l4_1_and_2_two_laws_one_node():\n    pass\n\n"
+        "def test_l4_3_one_law():\n    pass\n")
+    assert range_named_law_nodes(tmp_path, "m4") == [
+        "test_l4_bundle.py::test_l4_1_and_2_two_laws_one_node"]

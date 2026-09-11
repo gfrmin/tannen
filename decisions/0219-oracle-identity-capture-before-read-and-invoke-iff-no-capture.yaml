@@ -1,0 +1,66 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0219
+title: "An oracle is its full effective spec and a declared class; a capture answers (descriptor, input key) once; the caller reads only what a capture already in the store says"
+tier: A
+date: "2026-09-11"
+risk_flags: ["public-surface"]
+decision: >-
+  Three pins, frozen as L4.1–L4.3 and L4.6–L4.8 (docs/specs/m4.md §2–§3).
+  .
+  IDENTITY. `oracle/1` = the content address of kind, name, the FULL effective spec — every
+  field that decides what the world is asked or what it costs, prices included — and the
+  declared reproducibility class. The class vocabulary is pkm's, in the spellings m0 §4
+  already fixed (`bit`, `in-distribution`, `non-reproducible`); it is data the kernel
+  carries, never interprets and never defaults, so an oracle with no class cannot be built.
+  .
+  INVOKE IFF NO CAPTURE. The capture key is the PAIR (descriptor, input key), where the input
+  key addresses only the invocation's variable part. A hit returns the capture in any mode at
+  any budget and costs nothing. Two captures for one key — which two racing processes can
+  produce — is `CaptureConflict`, never a silent choice.
+  .
+  CAPTURE BEFORE READ, AND THE ENVELOPE. A novel invocation writes a reservation, calls,
+  writes any payload blob and the capture, and only then returns the capture's ref; `read`
+  returns what that capture says, verified. A failed write withholds the value by name.
+  `capture/1` records the effective request verbatim and a per-kind response — Fetch
+  WARC-shaped with ordered, repeatable header pairs and the body BY REF; the LLM's resolved
+  model (never normalised) and usage; the Clock's instant, keyed by a caller-named label so
+  time is a replayable question. It is tannen's first own Grade-S shape: a JSON Schema and a
+  positive/negative vector corpus frozen under `tests/laws/m4/capture/` — not
+  `governance/schemas/`, which is custody-set. The vectors were generated from the model's own
+  captures and each negative was checked to be refused for the reason it was built to show.
+rationale: >-
+  The key must be the pair and the descriptor must be the whole spec for the same reason:
+  anything outside them lets two different questions share one recorded answer — RT-M3-01's
+  disease, at the boundary where it would cost money. Each was given a mutant that commits
+  exactly that error (`class-outside-descriptor`, `key-ignores-descriptor`) and watched dying
+  by its family. Capture-before-read is BRIEF P1 made mechanical; its mutant
+  (`read-before-capture`) swallows a failed capture write and serves the value from memory,
+  which only a fault-injected store and a fresh-session read can tell apart from correct —
+  so that is what the check does.
+  .
+  `public-surface` because `capture/1` and `oracle/1` are data shapes other systems will one
+  day read (BRIEF §2.1's wire-first rule); nothing crosses a repo boundary at M4.
+reversibility: >-
+  Before Session B, fully: the shapes are frozen but nothing produces them yet. After
+  captures exist in a store, a change of shape is a new tag (`capture/2`), never a
+  reinterpretation — the store is append-only.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: manifest
+    target: tests/laws/m4/test_l4_descriptor.py
+    strength: enforced
+    detail: L4.1, identity.
+  - type: manifest
+    target: tests/laws/m4/test_l4_invoke.py
+    strength: enforced
+    detail: L4.3, invoke iff no capture, including the conflict refusal.
+  - type: manifest
+    target: tests/laws/m4/test_l4_capture.py
+    strength: enforced
+    detail: L4.2, capture before read under fault injection.
+  - type: manifest
+    target: tests/laws/m4/capture/schema.json
+    strength: enforced
+    detail: The frozen `capture/1` schema L4.6 and L4.7 validate against.
+links: ["D0088", "D0197", "D0218", "D0220"]

@@ -1,0 +1,34 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0222
+title: "The export admits only a serve-layer node and emits exactly its bytes; ClickHouse emission is out of M4 and goes through this door when it comes"
+tier: A
+date: "2026-09-11"
+risk_flags: ["public-surface"]
+decision: >-
+  `tannen.export.export(store, built)` admits a `Built` whose layer is `Layer.SERVE` —
+  project and select only, so its provenance is trivially that of what it projects — and
+  returns that node's output bytes, deterministically; anything wider, `decode` or `derive`,
+  raises `LayerError`. Frozen as L4.10 (docs/specs/m4.md §7). This is m1 §6's "the `serve`
+  default for exports arrives with the export surface at M4", kept.
+  .
+  CLICKHOUSE EMISSION IS OUT, by the owner's answer of 2026-09-11. BRIEF §8 calls it
+  optional; a client that writes to a server is a network write outside a captured oracle
+  (door 2); and nothing consumes it before M5. A future emitter is a consumer of `export`,
+  so it inherits the serve-only door rather than re-deciding it.
+rationale: >-
+  The door is the part of "ClickHouse emission for `serve` only" that is a discipline rather
+  than a feature, and it is the part BRIEF P8 and §5.9 already require: exports default to
+  serve. Landing the door without the emitter keeps the milestone's one-way doors closed and
+  still discharges the promise m1 made. The mutant `export-accepts-derive` is the emitter
+  written first and the door forgotten.
+reversibility: >-
+  Fully reversible; nothing downstream consumes exports yet. Widening the door later would be
+  a new law, not an edit of this one.
+status: accepted
+bindings_count: 1
+bindings:
+  - type: manifest
+    target: tests/laws/m4/test_l4_export.py
+    strength: enforced
+    detail: L4.10 — every catalogue pipeline, three serve and three wider, and drawn rows.
+links: ["D0083", "D0218"]
