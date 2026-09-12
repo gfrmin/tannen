@@ -1,0 +1,94 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0242
+title: "The owner accepts D0241's deferral and the m4b decline on protocol grounds, accepts the correction that check_manifest is owner-applied, and orders D0240's three preconditions made a MECHANICAL gate on the first nonzero envelope rather than a documentary one"
+tier: C
+date: "2026-09-12"
+risk_flags: ["spend", "governance-paths"]
+decision: >-
+  THE OWNER RULED IN CONVERSATION ON 2026-09-12, on D0240 and D0241, after reading both
+  drafts. Recorded here verbatim in substance and UNSIGNED, on the precedent D0240 states and
+  for the same reason: the reversible half is acted on immediately, and the Tier-C half —
+  installing the drafts, re-signing policy.yaml and the custody set — is authoritative only
+  once this record carries the owner's signature at a sitting.
+  .
+  (1) D0241 ACCEPTED: the deferral of the clamp to M5 Session A stands, and the reason the
+  `m4b` route was DECLINED is the part the owner singled out. "The spec-table guard asserting
+  set equality between a milestone's discovered law ids and its frozen spec table is precisely
+  the guard you want, and it's doing its job by making a successor law inside M4 impossible
+  without editing frozen prose. That the `m4b` route was available, cheap, and declined ON
+  PROTOCOL — because a session that writes both the implementation and the frozen check judging
+  it has cancelled the Session A/B separation while leaving every gate green — is the right
+  call, and it's the same defect class as the nine review findings a green suite couldn't see."
+  Recorded as instructed: THE COST THAT MATTERED WAS A SESSION WRITING BOTH THE IMPLEMENTATION
+  AND ITS JUDGE, not the mechanics of the spelling.
+  .
+  (2) THE `check_manifest` CORRECTION ACCEPTED, and the owner states the error as their own:
+  "I called it builder work; it's custody-set, measured red on a one-line comment append, so
+  it's owner-applied with a re-signature." Both drafts install at the M4 sitting. The owner
+  also affirmed the draft's own verification block, "including the point that regenerating the
+  custody hash doesn't re-sign it, and a regenerated file under a stale signature is the alarm
+  rather than a nuisance", and affirmed the `current_milestone` helper deriving from
+  MANIFEST.sha256's rows with an `m<digits>`-only match, so a forward-correction file cannot
+  invent a milestone (D0171 ruling (3), D0211).
+  .
+  (3) THE ADDITION, AND THE REASON IT IS NOT OPTIONAL. The deferral rests on the gap being
+  inert here — zero ceilings, zero envelopes, no credentials, no network in any test. "True
+  today, and the argument's load-bearing element is the ABSENCE OF CREDENTIALS, which is not
+  enforced by anything — it's a property of your machine." So the three D0240 preconditions
+  become a BLOCKING, MECHANICAL gate on the pre-budget sitting: the first nonzero envelope
+  cannot be signed while any of them is outstanding — specifically while `governance/laws.yaml`
+  lacks the superseded entry retiring L4.4's third node, and while the clamp is absent from
+  `src/tannen/cli.py`. "The deferral is then a judgement with a lock on it, not a judgement
+  with a hope attached." Implemented as D0243, which is builder work: `governance/tier-c.yaml`
+  has 27 custody paths and its only `tests/` entry is `tests/poison/**/*`, so a new file under
+  `tests/` needs no signature — measured, not assumed.
+  .
+  (4) M5 SESSION A'S OWINGS ARE AS D0241 LISTS THEM, UNCHANGED: the successor law under
+  `tests/laws/m5/` with its id in `docs/specs/m5.md`'s table, the `governance/laws.yaml`
+  `superseded` entry, the `MANIFEST.sha256` supersession note, and the clamp itself.
+  .
+  THE OWNER ALSO ASKED THAT ONE OBSERVATION BE RECORDED PERMANENTLY, and it is recorded here
+  because it is a claim about this repository's governance layer rather than about any one
+  artifact: "My rulings have now been corrected by measurement on the custody question, by the
+  spec-table guard on the supersession path, and by the floor audit on the remote. In each case
+  the correction came from an artifact the repository built to be checkable, wielded against
+  the owner's instruction. That is the strongest available evidence the governance layer earns
+  its cost — not that it prevents error, but that it makes the owner's errors cheap to find and
+  expensive to ignore."
+rationale: >-
+  Recorded rather than enacted wholesale, because items (1), (2) and (4) are acknowledgements
+  whose Tier-C halves need the owner's key, while item (3) is reversible builder work that
+  landed immediately as D0243. The ruling's addition is the one that changes the repository
+  today: D0240 item (4) already said all three preconditions gate the first spend, but it said
+  so in prose inside a record, and a promise in a record is exactly what D0240 item (1) found
+  defective in `governance/policy.yaml`. Making the same promise mechanical is the correction
+  applied to itself.
+reversibility: >-
+  This record enacts nothing on its own. D0243's gate is a test file and is reversible by
+  deleting it, which is visible in a diff; the ruling's point is that the lock should be
+  expensive to ignore, not impossible to remove. What is not reversible is a spend admitted
+  under the wrong rule, which is why the gate refuses at the envelope rather than at the call.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: "tests/test_spend_preconditions.py::test_a_nonzero_envelope_is_refused_while_any_precondition_is_open"
+    strength: enforced
+    detail: >-
+      Item (3), made mechanical. The node asserts the lock refuses while any D0240 precondition
+      is open; D0243 records the gate's construction, its limits and the mutation control that
+      was watched failing before it was trusted.
+  - type: file
+    target: governance/laws.yaml
+    strength: documentary
+    detail: >-
+      Where M5 Session A's `superseded` entry retiring L4.4's third node lands. Documentary
+      because the entry does not exist yet — that absence is precisely what the gate reports.
+  - type: manifest
+    target: tests/laws/m4/test_l4_modes.py
+    strength: enforced
+    detail: >-
+      L4.4, frozen. Its third `tannen run` node is the one the clamp retires and the one the
+      gate names; the frozen bytes are what make the retirement a supersession rather than an
+      edit (D0106 ruling 2, D0128).
+links: ["D0240", "D0241", "D0239", "D0238", "D0229", "D0128", "D0106", "D0171", "D0211", "D0143", "D0063", "D0064"]

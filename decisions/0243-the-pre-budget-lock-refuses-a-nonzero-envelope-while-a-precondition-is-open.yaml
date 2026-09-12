@@ -1,0 +1,80 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0243
+title: "The pre-budget lock: a nonzero envelope is refused while any D0240 precondition is open, with the two signature-required corrections tested by hash and the clamp tested by parsing"
+tier: A
+date: "2026-09-12"
+risk_flags: ["spend"]
+decision: >-
+  `tests/test_spend_preconditions.py` implements D0242 item (3). Its trigger is any nonzero
+  value in `governance/policy.yaml`'s `budget_envelopes` or `budget.yaml`'s `ceilings` —
+  measured today as all six envelopes and all three ceilings zero. While armed it refuses
+  unless all four of D0240's preconditions are satisfied, and it names each one that is not.
+  .
+  HOW EACH IS DECIDED, AND WHY NOT OTHERWISE.
+  (a) The policy sentence (D0240 item 1) and the current-envelope fix (D0240 item 3) are prose
+  and code the owner must re-sign, and no structural check can judge prose on its semantics.
+  They are tested the only honest way available: both files are signature-protected, so "has it
+  been corrected?" is tested as "is it still byte-identical to the version D0240 found
+  defective?" — sha256 `96988c59…` for `governance/policy.yaml` and `dc89de2b…` for
+  `scripts/check_manifest.py`. A differing hash implies an owner re-signature. IT DOES NOT
+  IMPLY THE CORRECTION IS RIGHT, and the file says so rather than overclaiming.
+  (b) The successor law (D0240 item 2, D0241) is read structurally out of
+  `governance/laws.yaml`'s `superseded` list by node id — data, not prose.
+  (c) The clamp is decided BEHAVIOURALLY: the gate builds the real parser and asks whether
+  `tannen run` accepts `--budget-override`. Measured today, argparse itself answers
+  "unrecognized arguments: --budget-override", so a flag that existed only in a docstring would
+  not satisfy it. No guard here reads another artifact's prose to learn its state.
+  .
+  THE AMBIENT-CREDENTIAL HALF, WHICH IS THE PART OF D0242'S REASONING THAT COULD BE ENFORCED.
+  The owner's premise — absent credentials — is a property of a machine and unenforceable here.
+  That the code cannot acquire one implicitly is a property of this repository, and is now
+  enforced: an AST scan asserts no shipped module reaches for `os.environ` or `os.getenv`, over
+  a module set DERIVED by walking `src/tannen/` with one stated exemption, `tannen.laws`, which
+  reads two documented non-credential variables (the evidence root and the plugin disable
+  switch). Measured: those two are the only environment reads in `src/tannen/`, and `r2.py`
+  already documents that credentials are constructor arguments (BRIEF §5.3).
+  .
+  WATCHED FAILING BEFORE IT WAS TRUSTED. The gate passed 33 nodes in 0.17s on its first run,
+  which is the starting condition and not evidence. Three controls were then added and run:
+  the environment detector is shown to fire on a module that does read one; the trigger is
+  exercised on BOTH branches, because every other node here runs against today's all-zero tree
+  and a `spend_is_authorised` that always returned False would leave the lock inert with the
+  suite still green; and a MUTATION CONTROL — a copy with a wrong `DEFECTIVE_POLICY` hash —
+  was run and failed exactly as it should, dropping `policy-sentence` from the reported set.
+  36 passed, 1 failed, and the one that failed was the one that had to.
+rationale: >-
+  D0240 item (4) already made the three preconditions gate the first spend, but it said so in
+  prose inside a decision record — the same shape of promise that D0240 item (1) found
+  defective in `governance/policy.yaml`. The correction is applied to itself: the promise moves
+  into an artifact that fails. Builder-landable because `governance/tier-c.yaml`'s `custody.set`
+  is 27 paths whose only `tests/` entry is `tests/poison/**/*`, measured rather than assumed.
+reversibility: >-
+  Fully reversible: delete the file. That is deliberate — the ruling asked for a lock that is
+  expensive to ignore, and a test file in `make verify` and CI is exactly that, not a lock that
+  cannot be removed. A stronger home exists: the ceiling-versus-envelope comparison already
+  lives in `scripts/check_manifest.py:221-228`, which is custody-set, so folding the same rule
+  in there is owner-applied and is offered as a third sitting patch, not assumed.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: "tests/test_spend_preconditions.py::test_each_d0240_precondition_is_open_today_and_the_gate_names_it"
+    strength: enforced
+    detail: >-
+      Non-vacuity. The gate can only pass today by naming all four open preconditions, so an
+      identifier disappearing announces that one LANDED instead of letting the gate decay into
+      a tautology. This node is expected to go red at the M4 sitting as each is applied, and
+      updating it is part of the sitting rather than a surprise.
+  - type: pytest
+    target: "tests/test_spend_preconditions.py::test_the_lock_opens_only_when_all_four_are_satisfied"
+    strength: enforced
+    detail: >-
+      The positive control against a stuck-red gate: a synthetic tree meeting all four returns
+      empty. A guard that can never clear is as useless as one that never fires.
+  - type: pytest
+    target: "tests/test_spend_preconditions.py::test_the_trigger_arms_on_either_a_nonzero_envelope_or_a_nonzero_ceiling"
+    strength: enforced
+    detail: >-
+      Both branches of the trigger, which nothing else exercises: a nonzero envelope arms it and
+      so does a nonzero ceiling. Without this the whole lock could be inert and green.
+links: ["D0242", "D0240", "D0241", "D0229", "D0211", "D0171", "D0128"]
