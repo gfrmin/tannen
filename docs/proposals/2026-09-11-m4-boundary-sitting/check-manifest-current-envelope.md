@@ -4,6 +4,12 @@
 envelope. Owner ruling of 2026-09-12, recorded as decision D0240 item (3); the defect is
 D0229 item (5), filed at M4 Session A precisely so it would not be discovered mid-ceremony.
 
+**This patch now carries TWO changes**, by the owner's later ruling of the same day (D0244
+item (1)): the envelope comparison below, and the pre-budget lock D0242 item (3) ordered made
+mechanical. The lock is folded in here rather than shipped as a third draft because this file
+is already being re-signed at this sitting, so the fold costs one custody regeneration and one
+signature instead of two. The two changes are therefore signed, or declined, together.
+
 `scripts/check_manifest.py` is in `governance/tier-c.yaml`'s `custody.set`. **This was
 measured, not assumed:** appending a single comment line to the file turns the gate red with
 
@@ -120,11 +126,142 @@ quiet path. On the real tree the patch changes nothing today — every envelope 
 applied while it is inert, so the sitting that raises an envelope is not also the sitting
 that first exercises the guard.
 
+## The second change: the pre-budget lock (D0242 item (3), folded here by D0244 item (1))
+
+The deferral of the CLI clamp to M5 Session A (D0241) rests on the gap being inert here — zero
+envelopes, zero ceilings, no credentials. The owner's ruling: *"the argument's load-bearing
+element is the absence of credentials, which is not enforced by anything — it's a property of
+your machine."* So the preconditions bind the first nonzero envelope mechanically.
+
+**Which preconditions this guard can honestly hold, and which it cannot.** Two of the four are
+applied by the *same sitting* that installs this code — `policy.yaml`'s sentence
+(`policy-envelope-sentence.md`) and the comparison above. A check for those here would be a
+patch testing itself, green the moment it was written. So this guard holds exactly the two the
+ruling names — "while `governance/laws.yaml` lacks the superseded entry retiring L4.4's third
+node and the clamp is absent from `cli.py`" — both owed by M5 Session A, both open today. All
+four stay pinned in `tests/test_spend_preconditions.py` (D0243), which can pin the sitting's
+output precisely because it is not the sitting's output. Neither artifact is redundant.
+
+Add `import ast` to the imports, and these beside `current_milestone`:
+
+```python
+L4_4_CLAMPED_NODE = (
+    "tests/laws/m4/test_l4_modes.py::"
+    "test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call"
+)
+
+
+def _nonzero(values: Iterable[object]) -> bool:
+    """Whether anything here authorises a spend. A bool is not a budget."""
+    return any(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0
+               for v in values)
+
+
+def _declares_flag(source: str, flag: str) -> bool:
+    """Whether `source` DECLARES `flag` as an argparse option, read off the syntax tree.
+
+    Not a grep: a flag named in a docstring, a comment or an error message does not declare
+    it, and a guard that learned another artifact's state from its prose is the defect
+    D0171 ruling (3) and D0211 forbid. The shape asserted is `<x>.add_argument("<flag>", …)`.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "add_argument"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == flag
+        for node in ast.walk(tree)
+    )
+
+
+def unmet_spend_preconditions(root: Path) -> list[str]:
+    """D0240's preconditions to the first nonzero envelope that this guard can still see.
+
+    Empty means the pre-budget sitting may proceed. The other two preconditions are applied
+    by the sitting that installs this function, so testing them here would be testing this
+    patch; `tests/test_spend_preconditions.py` (D0243) pins all four.
+    """
+    unmet = []
+    laws = load_yaml(root / "governance" / "laws.yaml") or {}
+    retired = {entry.get("node") for entry in (laws.get("superseded") or [])}
+    if L4_4_CLAMPED_NODE not in retired:
+        unmet.append(
+            f"governance/laws.yaml has no superseded entry retiring {L4_4_CLAMPED_NODE} — "
+            "L4.4's third node still says `tannen run --spend` may be called with a budget "
+            "of its own, which is the law the clamp reverses (D0240 item (2), D0241)"
+        )
+    cli = root / "src" / "tannen" / "cli.py"
+    source = cli.read_text(encoding="utf-8") if cli.exists() else ""
+    if not _declares_flag(source, "--budget-override"):
+        unmet.append(
+            "src/tannen/cli.py declares no --budget-override, so `tannen run --budget` is "
+            "still honoured as handed in and the shortest spelling can spend against a "
+            "budget the owner never signed (D0240 item (2))"
+        )
+    return unmet
+```
+
+Then, inside the same `elif` branch, immediately after `envelopes` and `ceilings` are loaded
+and **before** the current-milestone comparison:
+
+```python
+        # D0242 item (3): the first nonzero envelope is a one-way door, and the deferral of
+        # the clamp to M5 Session A rests on this gap being inert here — zero envelopes, zero
+        # ceilings, no credentials. The first two are properties of this repository, so they
+        # are checked; the third is a property of a machine and cannot be. While ANY spend is
+        # authorised at all, the preconditions to authorising it must already be met.
+        if _nonzero(list(envelopes.values()) + list(ceilings.values())):
+            for problem in unmet_spend_preconditions(root):
+                fail.add(
+                    "a nonzero budget envelope or ceiling is declared while a precondition "
+                    f"to the first spend is open — {problem}"
+                )
+```
+
+This is an addition inside the existing branch — no replacement, no early `return` — so the
+current-milestone comparison below it and the import-linter contract checks after it both
+still run, for the same reason the note above gives.
+
+## Watched failing, 2026-09-12, before this section was written
+
+Both decision rules were run over scratch trees, with **no** change to the real
+`budget.yaml`, `policy.yaml`, `laws.yaml` or `cli.py`. Verdicts as measured:
+
+| # | Scenario | Verdict |
+|---|---|---|
+| e | the real tree: every envelope and ceiling zero | PASS — the lock is disarmed |
+| f | one envelope nonzero, neither M5 owing landed | FAIL: `superseded-entry`, `clamp` |
+| g | one *ceiling* nonzero, envelopes all zero, neither owing landed | FAIL: `superseded-entry`, `clamp` |
+| h | one envelope nonzero, **both** owings landed | PASS |
+| i | envelope nonzero, entry landed, `--budget-override` only in a **docstring** | FAIL: `clamp` |
+
+Row (i) is the one that earns the AST: a grep would have passed that tree, and a flag that
+exists only in prose is exactly the state D0211 forbids a guard to be fooled by. Row (g) proves
+the trigger arms on a ceiling and not only on an envelope. Row (h) is the control against a
+lock that can never open — a guard that refuses for a reason that cannot clear is an
+obstruction, not a gate.
+
+**And the control that changes how row (e) reads.** The probe also printed the real tree's
+inputs: every envelope and every ceiling is zero, and `unmet_spend_preconditions` on the real
+tree returns **both** identifiers. So (e) passes because the trigger is disarmed, *not* because
+the preconditions are met. Without that line, (e) would have read as a clean tree.
+
 ## Verification, after the owner applies it
 
 ```
-.venv/bin/python -I -P scripts/check_manifest.py   # still OK on the real tree
+.venv/bin/python -I -P scripts/check_manifest.py   # still OK on the real tree (row e)
 .venv/bin/python -I -P scripts/gen_custody.py      # custody.sha256 covers the new bytes
-bash scripts/custodian.sh --check-only             # after the owner re-signs custody.sha256
-uv run pytest tests/test_governance_scripts.py -q  # the guard's own suite
+bash scripts/custodian.sh --check-only             # AFTER the owner re-signs custody.sha256
+uv run pytest tests/test_governance_scripts.py tests/test_spend_preconditions.py -q
 ```
+
+Regenerating the custody hash does not re-sign it, and a regenerated file under a stale
+signature is the alarm rather than a nuisance — the owner affirmed that reading at D0242 item
+(2). The last line now also runs D0243's gate: once this patch lands, that gate's
+`current-envelope` identifier leaves the open set, which is the announcement that a
+precondition landed. Updating the gate is part of the sitting, by ruling (D0244 item (3)).

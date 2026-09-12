@@ -32,6 +32,16 @@ comparison against every envelope rather than the current one). Both are custody
 both are preconditions to the first nonzero envelope, so they belong to the pre-budget
 sitting below as much as to this one.
 
+Added again the same day by the owner's ruling on D0240/D0241 (D0242, D0244): D0242 and D0243
+join the queue, and `check-manifest-current-envelope.md` now carries a **second** change — the
+pre-budget lock, which refuses a nonzero envelope or ceiling while `governance/laws.yaml` lacks
+the superseded entry retiring L4.4's third node, or while the clamp is absent from
+`src/tannen/cli.py`. It is folded into that patch rather than drafted separately so the sitting
+pays one custody regeneration and one signature; the two changes are signed, or declined,
+together. The builder half of the same ruling already landed as `tests/test_spend_preconditions.py`
+(D0243), which pins all four preconditions — including the two this sitting itself applies, and
+which the folded guard therefore cannot honestly test about itself.
+
 The mandatory extra sitting BRIEF §9.1 names — before any nonzero budget — is separate, and
 its input is docs/specs/m4.md §4: which oracles M4 invokes, how they are priced, and what a
 ceiling is a count of.

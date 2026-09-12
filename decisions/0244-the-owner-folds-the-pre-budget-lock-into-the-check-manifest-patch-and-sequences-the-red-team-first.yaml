@@ -1,0 +1,100 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0244
+title: "The owner rules on three open questions: the pre-budget lock folds into the existing check_manifest patch rather than shipping a third one, the M3-M4 red team comes before the sitting driver and before any merge, and D0243's non-vacuity node stays strict and is updated at the sitting"
+tier: C
+date: "2026-09-12"
+risk_flags: ["spend", "governance-paths"]
+decision: >-
+  THE OWNER RULED IN CONVERSATION ON 2026-09-12, answering three questions put to them
+  directly, under their standing instruction of the same day that open rulings be put as an
+  interview rather than buried at the end of a status report. Recorded UNSIGNED on the
+  precedent D0240 and D0242 state: the reversible halves are acted on immediately; the Tier-C
+  half — an owner-applied patch to a custody-set file and its re-signature — is authoritative
+  only once this record carries the owner's signature at a sitting.
+  .
+  (1) THE PRE-BUDGET LOCK FOLDS INTO THE EXISTING check_manifest PATCH. D0242 item (3) ordered
+  the lock made mechanical; D0243 landed it as a builder-owned test file and OFFERED a stronger
+  home in `scripts/check_manifest.py`, which is custody-set. The owner chose that home, and
+  chose it folded into `check-manifest-current-envelope.md` — the patch already queued for this
+  sitting to fix D0229 item (5) — rather than as a third draft. The reason is ceremony cost:
+  that file is being re-signed here anyway, so the lock costs ONE custody regeneration and ONE
+  signature instead of two. The accepted consequence is that the two changes are now signed, or
+  declined, together.
+  .
+  WHAT THE FOLDED GUARD CAN HONESTLY HOLD. Two of D0240's four preconditions — `policy.yaml`'s
+  sentence and this guard's own max-versus-current comparison — are applied by the SAME sitting
+  that installs the lock, so a check for them inside `check_manifest.py` would be a patch
+  testing itself and would read green the moment it was written. The folded guard therefore
+  holds exactly the two the ruling named: the `governance/laws.yaml` superseded entry retiring
+  L4.4's third node, and the clamp's absence from `src/tannen/cli.py`. Both are owed by M5
+  Session A and both are open today. All four remain pinned in
+  `tests/test_spend_preconditions.py`, which can pin the sitting's output precisely because it
+  is not the sitting's output. The overlap is deliberate; neither artifact is redundant.
+  .
+  THE CLAMP IS READ OFF THE SYNTAX TREE, NEVER GREPPED, AND THAT WAS WATCHED. `check_manifest`
+  cannot import the application to ask argparse, so the folded guard asserts the shape
+  `<x>.add_argument("--budget-override", ...)` in `src/tannen/cli.py`'s AST. Measured over
+  scratch trees on 2026-09-12, with no change to any real file: an envelope raised with neither
+  M5 owing landed FAILS naming both; a nonzero CEILING with all envelopes zero also FAILS, so
+  the trigger arms on either; both owings landed PASSES, which is the control against a lock
+  that can never open; and `--budget-override` present only inside a DOCSTRING still FAILS on
+  the clamp — the row that earns the AST, because a grep would have admitted that tree, which
+  is the state D0171 ruling (3) and D0211 forbid a guard to be fooled by. The real tree passes
+  only because the trigger is disarmed: the same probe reports both preconditions open right
+  now, so the pass is inertness and not compliance.
+  .
+  (2) THE M3-M4 RED TEAM COMES NEXT, IN A FRESH CONTEXT (D0104), ahead of drafting the M4
+  boundary sitting driver and ahead of any merge of `m4` into `master`. The owner's own
+  reasoning at D0242 item (1) applies directly: the red team is the method that finds the
+  defect class a green suite cannot see, and drafting the ceremony first would front-run items
+  the red team may add to it. `m4` accordingly stays unmerged, and master's red `test_no_pii`
+  fix continues to ride on it (D0230).
+  .
+  (3) D0243'S NON-VACUITY NODE STAYS STRICT.
+  `test_each_d0240_precondition_is_open_today_and_the_gate_names_it` asserts the open set is
+  exactly the four identifiers, so it goes RED as each precondition lands. Offered a ratcheting
+  variant that would never need editing, the owner kept the strict form: the redness IS the
+  announcement that a precondition landed, and updating it is part of the ceremony. The
+  accepted cost is that a sitting which forgets leaves a red suite — the failure mode that gets
+  noticed, unlike a gate that quietly stops asserting anything.
+rationale: >-
+  Item (1) is the one that changes the repository: it moves the lock D0242 ordered out of a
+  file a builder can delete and into one only the owner can change, at no extra ceremony cost.
+  Item (2) sequences the remaining M4 work behind the check most likely to change it. Item (3)
+  resolves a Tier-A test-design question the builder raised as a cost rather than deciding it
+  silently, and resolves it toward the louder failure. A correction this record carries against
+  its own draft: the draft bound `scripts/check_manifest.py` as `type: manifest`, which would
+  not have resolved — MANIFEST.sha256 holds exactly two `scripts/` rows, `check_tag_signers.py`
+  and `custodian.sh`. That file is custody-set and NOT manifest-frozen; the two sets are
+  different, and the binding below says so.
+reversibility: >-
+  Item (1) is applied under the owner's key and is reversible only by another owner-applied
+  patch and re-signature, which is the point of choosing that home over a test file. Items (2)
+  and (3) are freely reversible. What is not reversible is a spend admitted while a
+  precondition is open, which is the door all of this exists to hold shut.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/check-manifest-current-envelope.md
+    strength: documentary
+    detail: >-
+      The single patch the owner chose: the D0229 item (5) envelope fix and the pre-budget lock
+      in one draft, one custody regeneration, one signature. It carries the measured failing
+      rows, including the docstring-only row that distinguishes the AST test from a grep.
+  - type: file
+    target: scripts/check_manifest.py
+    strength: documentary
+    detail: >-
+      Where the folded lock lands at the sitting. Documentary, not `manifest`: this file is
+      custody-set (governance/tier-c.yaml) and has NO row in MANIFEST.sha256, which holds only
+      scripts/check_tag_signers.py and scripts/custodian.sh. Custody-set means owner-applied
+      with a re-signature; regenerating the custody hash does not re-sign it (D0242 item (2)).
+  - type: pytest
+    target: "tests/test_spend_preconditions.py::test_each_d0240_precondition_is_open_today_and_the_gate_names_it"
+    strength: enforced
+    detail: >-
+      Item (3), kept strict by ruling. This node goes red as each precondition lands, and that
+      redness is the announcement; the sitting updates it rather than the gate silently
+      weakening into a tautology.
+links: ["D0243", "D0242", "D0241", "D0240", "D0230", "D0229", "D0211", "D0171", "D0128", "D0104"]
