@@ -1,0 +1,97 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0241
+title: "D0128's forward supersession has no legal home inside M4: the spec-table guard pins a milestone's law set to its frozen spec, so D0240's CLI clamp defers to M5 Session A rather than weaken the guard or write its own judge"
+tier: A
+date: "2026-09-12"
+risk_flags: ["spend", "governance-paths"]
+decision: >-
+  QUEUED FOR THE OWNER, non-blocking (BRIEF §9.2), carrying the two drafts D0240 items (1) and
+  (3) need and the deferral of item (2). Tier A because every part is reversible;
+  `blocked-on-owner` because both drafts are custody-set artefacts only the owner may install
+  — the convention D0216 introduced so ROADMAP §3 can see an item the digest's Tier-C filter
+  cannot.
+  .
+  THE FINDING, AND IT FALSIFIES A PREMISE OF D0240 ITEM (2). The ruling said that if the clamp
+  breaks L4.4's third node, "that node — and only that node — gets superseded forward under
+  D0128's discipline". D0128's discipline is NOT AVAILABLE INSIDE M4.
+  `tests/test_laws_runner.py::test_discovery_matches_the_frozen_spec_table` asserts SET
+  EQUALITY between a milestone's discovered law ids and the law table of its FROZEN spec, and
+  then that each law's nodes live in exactly the file that table names. Measured on this tree:
+  `docs/specs/m4.md` §11's table parses to 25 rows and `tests/laws/m4/` discovers the same 25
+  ids, L4.1-L4.25, and the two sides are equal today. So a successor law under `tests/laws/m4/`
+  fails that guard TWICE OVER — a new `L4.26` breaks set equality, and a second file defining
+  `L4.4` breaks the per-law file assertion — and the only repair is an edit to frozen
+  `docs/specs/m4.md`, the one act CLAUDE.md forbids outright. D0106 ruling 2 places a successor
+  in "the CURRENT milestone's directory"; for a law retired after M4's own Session B closed,
+  that directory does not yet exist.
+  .
+  THE OPTION CONSIDERED AND DECLINED, stated because it is real and someone will find it
+  again. `m<N>b` is a SANCTIONED SPELLING that has never been used: the evidence-record schema
+  pins `^M[0-9]b?$`, `discovery.MILESTONE_DIR_RE` and `check_laws.MILESTONE_DIR_RE` both carry
+  the `b` group, the manifest-row scan in `tests/test_laws_runner.py:581` matches `m\d+b?`, and
+  `test_milestone_labels` already asserts `milestone_label("m5b") == "M5b"`. A
+  `tests/laws/m4b/` with its own `docs/specs/m4b.md` table would satisfy every guard but one —
+  `test_milestone_labels`'s consecutive-names assertion — plus `test_law_validation.py`'s pin
+  of exactly one registry entry, both unfrozen and neither custody-set. It is declined ON
+  PROTOCOL, not on mechanics: writing the successor law now would have the session that wrote
+  the implementation also write the frozen check that judges it, which is the exact Session
+  A/B separation the frozen-oracle protocol exists to enforce (BRIEF §8, CLAUDE.md). Owner
+  decision of 2026-09-12, taken on those terms.
+  .
+  SO THE CLAMP DEFERS TO M5 SESSION A, where a successor law has an ordinary home in a spec
+  table written for it by a session that is not the implementer's. What M5 Session A owes:
+  the clamped default and the `--budget-override` path as a law under `tests/laws/m5/`, its id
+  in `docs/specs/m5.md`'s table; a `governance/laws.yaml` `superseded` entry retiring
+  `tests/laws/m4/test_l4_modes.py::test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call`
+  and naming it as successor; a `MANIFEST.sha256` supersession note; and the clamp itself in
+  `src/tannen/cli.py`. The entry is `superseded` and not `pending` because once the clamp lands
+  the node FAILS, and a strict xfail on a passing node is a red gate (D0128).
+  .
+  WHY DEFERRING COSTS LITTLE, stated so the deferral is a judgement and not a hope. The gap is
+  inert in this repository: every ceiling in `budget.yaml` is zero, nothing here holds
+  credentials for a real transport, no law or test reaches a network, and D0240 item (4)
+  already makes all three items preconditions to the first spend. M5 Session A precedes any
+  nonzero envelope.
+  .
+  THE TWO DRAFTS LAND NOW, in the M4 sitting's staging directory, whose README says every file
+  there is a draft the owner installs or declines. Neither is applied: `governance/policy.yaml`
+  is signature-required and `scripts/check_manifest.py` is custody-set, and the second was
+  MEASURED rather than assumed — appending one comment line to it turns `check_manifest` red
+  with "custody drift", and reverting restores OK.
+rationale: >-
+  The premise failed in the direction that matters: a guard the repository built to stop the
+  law set and the spec drifting apart is what stops a law being added, and that guard is
+  working exactly as designed. Weakening it to land a change it was built to catch would be
+  the "narrow the rule to what the implementation does" move m4 §12's kill criterion forbids,
+  one level up. The `m4b` route was available and cheap, which is why the reason for declining
+  it is recorded in full: the cost it avoids is not mechanical but adversarial, and a session
+  that writes both the code and its judge has quietly cancelled the protocol while leaving
+  every gate green — the same class of finding as this milestone's nine review defects, which
+  a green frozen suite also could not see (D0239, D0240).
+reversibility: >-
+  Nothing here changes behaviour. The deferral is undone by M5 Session A doing the work; the
+  drafts are undone by the owner declining them at the sitting, which costs two files. The
+  `m4b` option stays open if the owner would rather pay the protocol cost than wait.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: tests/test_laws_runner.py::test_discovery_matches_the_frozen_spec_table
+    strength: enforced
+    detail: >-
+      The guard that closes D0128's path inside M4, and the reason this record exists. It
+      passes today over all five milestones; it is what would fail if a successor law were
+      added to `tests/laws/m4/` without its id in the frozen spec table.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/policy-envelope-sentence.md
+    strength: documentary
+    detail: >-
+      D0240 item (1)'s drafted patch to `governance/policy.yaml:9-12`, for the owner to apply
+      and re-sign. A draft enforces nothing (D0143).
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/check-manifest-current-envelope.md
+    strength: documentary
+    detail: >-
+      D0240 item (3)'s drafted patch to `scripts/check_manifest.py:218-229`, closing D0229 item
+      (5), with the current milestone derived from MANIFEST.sha256's rows rather than listed.
+links: ["D0240", "D0238", "D0229", "D0239", "D0128", "D0106", "D0216", "D0211", "D0171", "D0143"]

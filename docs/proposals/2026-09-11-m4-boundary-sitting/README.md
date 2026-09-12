@@ -24,6 +24,14 @@ C and cannot see a Tier-A item that needs the key. At Session A it holds:
 | D0228 | C | Whether, and on what terms, the store may write to a real R2 bucket |
 | D0229 | A | Five custody-set items Session A found |
 
+Added after Session A, by the owner's D0238 ruling of 2026-09-12 (D0240, D0241): D0241 joins
+the queue, and two drafted patches land in this directory — `policy-envelope-sentence.md`
+(the sentence claiming SpendGuard enforces the envelope operationally, which is false of the
+SpendGuard that shipped) and `check-manifest-current-envelope.md` (D0229 item (5), the
+comparison against every envelope rather than the current one). Both are custody-set files;
+both are preconditions to the first nonzero envelope, so they belong to the pre-budget
+sitting below as much as to this one.
+
 The mandatory extra sitting BRIEF §9.1 names — before any nonzero budget — is separate, and
 its input is docs/specs/m4.md §4: which oracles M4 invokes, how they are priced, and what a
 ceiling is a count of.

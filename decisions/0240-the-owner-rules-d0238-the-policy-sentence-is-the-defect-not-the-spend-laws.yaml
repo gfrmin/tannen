@@ -1,0 +1,128 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0240
+title: "The owner rules D0238: the defective artifact is policy.yaml's sentence, not the frozen spend laws — a library enforces the authorisation it is handed, the CLI gets clamped instead, and check_manifest's max-over-all-envelopes bug is fixed on its own"
+tier: C
+date: "2026-09-12"
+risk_flags: ["spend", "governance-paths"]
+decision: >-
+  THE OWNER RULED IN CONVERSATION ON 2026-09-12, on D0238's three options, after reading the
+  M4 Session B close. Recorded here verbatim in substance and UNSIGNED, on the precedent and
+  for the reason D0171, D0201 and D0207 state: the rulings are instructions the builder acts
+  on immediately where the act is reversible, and the Tier-C half — editing an owner-signed
+  policy file, editing a custody-set guard, superseding a frozen law node — is authoritative
+  only once this record carries the owner's signature at a sitting. A record of rulings is not
+  the key that enacts them (D0063), and a Tier-C record without a signature is not accepted
+  (D0064).
+  .
+  THE RULING WAS AGAINST THE BUILDER'S RECOMMENDATION. D0238 recommended option (a): supersede
+  the spend laws forward so SpendGuard takes an envelope as an upper bound on every ceiling.
+  The owner ruled option (c) PLUS A CLAMP, and the reason is the part worth keeping: "a budget
+  file is an AUTHORISATION, and authorisations are properties of the caller, not of the
+  library. SpendGuard's job is to enforce the rule against whatever authorisation it is
+  handed — and it does that correctly. The frozen laws are not an obstacle to be superseded
+  here; they encode a sound design."
+  .
+  (1) THE DEFECTIVE ARTIFACT IS `governance/policy.yaml:10-13`, NOT THE SPEND LAWS. That
+  sentence asserts SpendGuard operationally enforces the envelope from M4; SpendGuard does not
+  and should not. Option (a) "would make a LIBRARY reach into governance/policy.yaml to
+  discover which milestone this repository is in — coupling the kernel's spend primitive to
+  this repo's governance layout, which is precisely the repo-unification the brief forbids in
+  every other direction. A library that reads the constitution to decide whether you may make
+  a network call is the wrong shape, and you'd be superseding correct laws to get there." The
+  correction states what is true and enforceable: the envelope binds `budget.yaml`
+  mechanically via `check_manifest`; SpendGuard enforces whatever budget its caller supplies;
+  passing a budget other than the checked-in one is an OWNER act, not a builder act. Drafted
+  at `docs/proposals/2026-09-11-m4-boundary-sitting/policy-envelope-sentence.md`; the file is
+  custody-set and signature-required, so the owner applies it and re-signs.
+  .
+  (2) CLAMP `tannen run`, WHICH IS NOT A LIBRARY. "Option (b)'s instinct is right even though
+  I'm rejecting (a). The CLI is this repository's own executable, the spelling an operator
+  actually reaches for, and it defaulting to any file the caller names is the gap that
+  matters." `tannen run --spend` uses the checked-in `budget.yaml` unless `--budget` is given,
+  and `--budget` with anything else requires an explicit override flag whose name says what it
+  is (`--budget-override`), refusing silently otherwise. If that breaks L4.4's third node,
+  that node — and ONLY that node — is superseded forward under D0128, with the new law
+  asserting the clamped default and the override path both. One node, not the spend law
+  family. DEFERRED TO M5 SESSION A for a reason the ruling could not have known, measured
+  after it was given and recorded as D0241: D0128's mechanism has no legal home inside M4.
+  .
+  (3) FIX D0229 ITEM (5) IN THE SAME BREATH, independently: `scripts/check_manifest.py`
+  compares each ceiling against the MAXIMUM envelope over all milestones rather than the
+  current one. "The same promise failing at the mechanical end, and it's straightforwardly a
+  bug with no frozen-law entanglement." The ruling called this builder work; IT IS NOT, and
+  the correction is measured rather than argued — `scripts/check_manifest.py` is in
+  `governance/tier-c.yaml`'s `custody.set`, so appending one comment line to it turns the gate
+  red with "custody drift: scripts/check_manifest.py changed since the custody file was
+  written", and reverting restores "check_manifest: OK". It is therefore an owner-applied edit
+  and a re-signature, exactly as D0229 item (5) already said of both its sides. Drafted at
+  `docs/proposals/2026-09-11-m4-boundary-sitting/check-manifest-current-envelope.md`, with the
+  current milestone DERIVED from MANIFEST.sha256's own rows rather than written down (D0171
+  ruling (3), D0211).
+  .
+  (4) ALL THREE LAND BEFORE ANY NONZERO ENVELOPE IS SIGNED. "The pre-budget sitting checks all
+  three as preconditions to the first spend." That sitting is the one BRIEF §9.1 already makes
+  mandatory for M4.
+  .
+  THE OWNER ALSO RULED ON D0239'S SHAPE, recorded because it is an instruction about how
+  completion records are written from here on: "the paragraph worth more than the completion
+  claim is the one admitting that the first complete draft passed every frozen law and every
+  unit test, and two review passes then found nine defects, two reproduced, neither reachable
+  by the frozen model's generators. That is the honest boundary of the whole method, stated by
+  the party with the least incentive to state it: a green frozen suite is the protocol's
+  definition of done, not evidence of soundness against an adversarial world. Keep that
+  paragraph's discipline in every completion record."
+  .
+  RECORDED `blocked-on-owner`, NOT `accepted`, AND THE GUARD IS WHY. The first draft of this
+  record copied `status: accepted` from the earlier ruling records (D0171, D0201, D0207) and
+  `scripts/check_decisions.py` refused it: "Tier-C record accepted without an owner signature
+  ... BRIEF §9.2: affirmative signature only, never silence." Those three carry the owner's
+  detached signature and this one does not yet, which is the whole difference — the precedent
+  was the signature, not the status. It joins the boundary queue until the sitting signs it,
+  and per BRIEF §9.2 that blocks nothing: the drafts land, D0241 defers the clamp, and work
+  continues elsewhere.
+rationale: >-
+  Recorded rather than acted on wholesale, because two of the three items are owner territory
+  and the third turned out to be blocked by a guard the ruling did not know about. The
+  ruling's central argument is worth preserving in the builder's own words back: D0238 framed
+  the gap as "SpendGuard does not enforce the envelope", and the owner's answer is that
+  SpendGuard was never the thing that should — the promise was written into the wrong artifact,
+  and the repair is to the promise. That is the opposite of narrowing a rule to match an
+  implementation (m4 §12's kill criterion), because the rule being corrected is a claim about
+  a mechanism, not a claim about the world.
+reversibility: >-
+  This record enacts nothing on its own. Each of the three items is reversible until a nonzero
+  envelope is signed; after that, a spend admitted under the wrong rule is not reversible,
+  which is why the ruling makes all three preconditions to the first spend rather than
+  follow-ups to it.
+status: blocked-on-owner
+bindings_count: 4
+bindings:
+  - type: file
+    target: governance/policy.yaml
+    strength: documentary
+    detail: >-
+      Item (1)'s target — the sentence at :10-13 that claims SpendGuard enforces the envelope
+      operationally. Owner-signed and custody-set, so the correction is drafted and installed
+      under the owner's key; a drafted change awaiting the key enforces nothing (D0143).
+  - type: file
+    target: scripts/check_manifest.py
+    strength: documentary
+    detail: >-
+      Item (3)'s target — the max-over-all-envelopes comparison at :221-222. Custody-set, which
+      was measured rather than assumed, so this is owner-applied and not the builder work the
+      ruling took it for. D0229 item (5) binds the same path for the same defect.
+  - type: file
+    target: src/tannen/cli.py
+    strength: documentary
+    detail: >-
+      Item (2)'s target — the `run` handler at :91-111, whose `--budget` is honoured as given.
+      Documentary and not enforced: the clamp is deferred to M5 Session A by D0241, so this
+      binding records work queued, not a rule in force.
+  - type: manifest
+    target: tests/laws/m4/test_l4_modes.py
+    strength: enforced
+    detail: >-
+      L4.4, frozen. Its third node spends through `tannen run` against a budget of its own and
+      expects exit 0, which is the node the clamp retires and the reason the clamp cannot land
+      inside M4 (D0241).
+links: ["D0238", "D0229", "D0239", "D0241", "D0128", "D0106", "D0171", "D0201", "D0207", "D0063", "D0064", "D0143", "D0211"]
