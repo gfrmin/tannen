@@ -1,0 +1,192 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0245
+title: "M3→M4 boundary red team: six findings, two high, none closed — M4's review closed the value-the-world-authors hazard, and the caller-authored twin survives in the spend fold and the export door"
+tier: A
+date: "2026-09-12"
+risk_flags: ["governance-paths", "spend"]
+decision: >-
+  BRIEF §9.1 point 5, D0021, D0059 and D0244 item (2) mandate a red team at each milestone
+  boundary, run in a fresh context that did not write the milestone's implementation (D0104),
+  BEFORE the boundary sitting driver is drafted and BEFORE any merge of `m4` into `master`. This
+  session ran that pass against this worktree at `3cac685`, clean tree, CI green. The
+  implementation under audit is `fa04253` + `7f5f635` (M4 Session B, D0231–D0239); the four
+  owner-ruling commits `4257646`/`61200f3`/`3cac685` (D0240–D0244) were themselves in scope.
+  Full record: `docs/redteam/2026-09-12-m4-boundary.md`. Seven probes were specified going in
+  (the standing mandate, five M4-specific hypotheses, the mandatory status audit); the floor was
+  six.
+  .
+  SIX FINDINGS: two high, two medium, one low, plus the status audit. NONE CLOSED, deliberately
+  — RT-M4-03 and RT-M4-05 are builder-landable and RT-M4-01/-02/-04 need the pre-budget sitting or
+  an owner-key contract or a superseding law; all are left for a session that is not the one that
+  found them, with the D0092 regression bindings written then (the D0104 norm). The headline is
+  that M4's own review passes (D0235) closed the hazard of a value the WORLD authors reaching a
+  trusting reader, and the same disease survives one step over where the author is the CALLER.
+  .
+  - RT-M4-01 (high, inert today): the SpendGuard fold trusts a shared, caller-writable store.
+    `spent()` (src/tannen/oracles/context.py) folds over every `reservation/1`/`capture/1` value
+    in the store, trusting structural agreement; the pipeline `tannen run` executes reaches the
+    store through the public `Oracles.store` property and writes such values with `put_value`.
+    This is the CALLER-side twin of D0235(a), which closed only the FETCH path (Fetch.normalise
+    refuses a body that decodes as a tannen value, "because the world never authors one"). Two
+    reproductions with controls: (a) a price-0 capture agreeing on `_SETTLES` with a capture-less
+    reservation (a failed transport) replaces its worst-case fallback with 0, so a call the
+    ceiling would deny is admitted; (b) a `reservation/1` with a non-integer `worst_case` makes
+    `spent()` raise for the whole scope PERMANENTLY, because the store is write-once — an
+    irreversible denial reachable by any party sharing the store. There is no authentication
+    distinguishing a fold input the Oracles context wrote from one `put_value` wrote. This is
+    BEYOND D0238 (which budget a caller names) — it is who can write the ledger the fold reads, so
+    SpendGuard does not enforce the ceiling against the pipeline it guards. INERT today: every
+    ceiling is zero, nothing here holds credentials, no test reaches a network — the pre-budget
+    sitting is exactly when a nonzero ceiling arrives, and is the right place for it. Frozen L4.5
+    constrains only the honest reserve-then-settle path, so an input-authentication fix would not
+    contradict it; but making a reservation/capture unforgeable in a store the pipeline must also
+    write to is a design question, not a one-liner.
+  .
+  - RT-M4-02 (high): the doorway law L4.9 (frozen tests/laws/m4/test_l4_doorway.py) is a static
+    AST scan over a HAND-MAINTAINED network set. The clock set is DERIVED from
+    governance/importlinter.toml and asserted non-empty; the network set is a bare literal "named
+    as residue" with no derivation and no completeness assertion — the RT-M3-02 shape, in a frozen
+    law. Verified with the law's own scanner (34 modules; live violations empty, so the pass is
+    real): `subprocess` and `os` are NOT SCANNED AT ALL, so `subprocess.run(["curl", url])` in
+    tannen.store/executor/cli reads the world with make verify green (lint-imports' kernel-no-io
+    contract has source_modules=["tannen.kernel"] and never scans the shell); and live
+    socket-opening stdlib modules — `imaplib`, `poplib`, `socketserver`, `xmlrpc.client` — are
+    absent from the set. BRIEF §5.3's "the only IO doorway is oracles/" is enforced for the shell
+    only over an enumerated network-name slice. The remedy is the D0229 item (2) shell
+    import-linter contract (owner-key) plus a superseding frozen L4.9 that derives its forbidden
+    set from it the way the clock set is derived.
+  .
+  - RT-M4-03 (medium): the export door (src/tannen/export.py, L4.10) trusts a caller-set `.layer`
+    and never re-derives `layer_of(built.operators)`. `Built` is a frozen dataclass with a public
+    constructor, so a forged `Built(layer=SERVE, operators={join,distinct})` is exported; an
+    honest join node (layer=DERIVE) is refused. Unreachable through the executor (layer is always
+    layer_of(operators) there), so its consequence is latent — but m4 §7 says "a later emitter is
+    a consumer of this function and inherits its door," and the door trusts a forgeable witness.
+    Same public-constructor-witness class as RT-M4-01 and the D0235 findings. The fix is one
+    additive line and is STRICTER than L4.10, so it needs no supersession — builder-landable.
+  .
+  - RT-M4-04 (medium): the RT-M3-01 code-address remedy hashes SOURCE TEXT (transform.source_text,
+    inspect.getsource), which is blind to a closure's captured environment. Two NAMED closures
+    with identical source and different captured values hash identically, so registered under one
+    predicate name across two sessions they mint one DeltaNode descriptor and one step_id while
+    computing differently — RT-M3-01's exact "two codes, one node, stale answer served
+    rebuilt=False" hazard, reached through a named closure (a lambda is refused; a closure is not).
+    Reproduced with a file-based module (a heredoc FALSELY REFUTED it, because inspect.getsource
+    cannot recover stdin source and _code_address then refuses the closure — the D0174-family
+    lesson recorded in the report). INHERITED from M1: `@transform` uses the same source_text for
+    its code_hash (transform.py:76) and collides identically; it is documented nowhere. Frozen
+    L4.23 never exercises it (its bodies have distinct source). Medium, not critical: needs the
+    closure-factory-under-a-stable-name pattern, is inherited from M1's design, and serves a stale
+    trace answer rather than corrupting the store. The remedy is not builder-trivial — `__closure__`
+    cells may hold unaddressable objects — so it is a design question (refuse a closure, or fold
+    encodable cell contents into the address), touching unfrozen incremental.py AND transform.py,
+    with a superseding law likely wanted.
+  .
+  - RT-M4-05 (low): error classification is looser than the docstrings claim, all fail-closed.
+    `tannen.r2`'s "every other failure is R2Error" is overstated — `urllib.error.URLError` and
+    `socket.timeout` are OSError subclasses that propagate as bare OSError, not R2Error (caught by
+    oracles' _write as CaptureWriteFailed, so functionally fine, but a timeout mid-PUT does not get
+    the "outcome unknown" message a mid-response HTTPException does). And a `tannen run` crash and
+    a refusal both exit 1 — D0237's "non-refusals propagate rather than collapse into an exit code"
+    is achieved for stderr, not the exit code.
+  .
+  - RT-M4-06 (informational): status audit at `3cac685`. RT-M3-02/-03/-04 CLOSED and verified —
+    `_ALWAYS_REPLAYS` is derived-and-asserted (D0198's unfrozen test) and covered by frozen L4.24;
+    operand roles distinguish every binary swap across a persisted trace with the swap pin retired
+    as a live inline strict xfail (D0232); the oracle-shadow guard compares the code a module
+    answers with (plugin.py `_substituted_callables`), the spoofed and model fixtures are both
+    wired, and the poison corpus is complete (18 dirs, 18 invocations). RT-M3-01 closed for names
+    (D0231's map out-schema) and REOPENED for closures (RT-M4-04). Still open, unchanged: RT-05/
+    RT-M1-03 (evidence forgery, surface now 77 laws), RT-07 (the digest is not header-verified;
+    digest/ has no manifest or custody rows), RT-10, RT-11, RT-12 (append-only unenforced),
+    RT-M1-02 (harness_subject misses .venv), RT-M1-04 (the trace dir has no content-integrity
+    binding — the general case RT-M4-01 also reaches). `required_tags` STILL LAGS: git has 10 tags,
+    tag-roles.yaml lists 9, `m4-laws-freeze` missing — the 5th recurrence of D0095, already queued
+    as D0229 item (4). D0231–D0244 audited and consistent: D0243's pinned DEFECTIVE_POLICY /
+    DEFECTIVE_CHECK_MANIFEST hashes are byte-current, so the two signature-required preconditions
+    read as open exactly as the armed-inert lock intends.
+rationale: >-
+  Recorded as the one record the M4 boundary sitting can point at for "the red team ran, here is
+  what it found, here is what closed and what didn't" — the D0104/D0153/D0174 pattern, so the
+  digest's exception-only view carries a single flagged entry for the whole pass. Flagged
+  governance-paths and spend because RT-M4-01 is a spend-primitive finding the pre-budget sitting
+  must see.
+  .
+  Filed with the pass's own error in it, following the norm RT-04's M0 closure set and D0174
+  continued: the first reproduction of RT-M4-04, run from a heredoc, falsely refuted the finding
+  because inspect.getsource cannot recover stdin source, and only the file-based repro (a real
+  pipeline's shape) showed the collision. A refuting result can be measuring the harness, not the
+  code — the D0174 lesson, one execution-context over.
+  .
+  The method was fan-out to five parallel agents (the owner's choice when the two options were put),
+  which is M2's method rather than M0/M1/M3's single session — it satisfies D0104 (each agent a
+  fresh context that never wrote M4's implementation) but not its precedent, and the compensation
+  is that the five probes were pre-registered and every finding was re-verified by the dispatching
+  author from the failing side with a control before entering the report. P5's central claim
+  returned CLEAN — the store's write-once and verify-on-read hold under a lying ObjectClient on
+  every believed-bytes path — and that is recorded as a result, because an audit that only lists
+  what broke cannot be falsified.
+reversibility: >-
+  A statement of what was found; nothing to reverse. Nothing was closed, nothing was installed
+  under tests/poison/, no frozen path was touched (the frozen L4.9 scanner was executed by file
+  location to reproduce RT-M4-02, never edited), and evidence/ in the real tree was not written to
+  — every reproduction ran against a throwaway store with TANNEN_NO_EVIDENCE=1, every transport a
+  fake, every budget an in-memory mapping, budget.yaml byte-identical with every ceiling zero. The
+  fixture candidates and the sitting note change nothing until the owner acts; a drafted fixture
+  awaiting its guard enforces nothing (D0143). The six findings are a to-do list, not an action.
+status: accepted
+bindings_count: 8
+bindings:
+  - type: file
+    target: docs/redteam/2026-09-12-m4-boundary.md
+    strength: documentary
+    detail: >-
+      The full pass — the seven probes, reproductions with controls, severities, the status audit,
+      and the section on where the pass fell short of its own rules.
+  - type: file
+    target: src/tannen/oracles/context.py
+    strength: documentary
+    detail: >-
+      RT-M4-01's subject: `spent()` and `_tagged` fold over caller-writable store values with no
+      authentication; the public `Oracles.store` property is the write path. Unfrozen and
+      uncustodied, so a fix is builder-landable, but the design is a sitting question; documentary
+      here because this record reports rather than fixes.
+  - type: file
+    target: tests/laws/m4/test_l4_doorway.py
+    strength: documentary
+    detail: >-
+      RT-M4-02's subject: L4.9's hand-written NETWORK literal and the subprocess/os blind spot.
+      FROZEN, so it cannot be edited — the remedy is a superseding law plus the D0229 item (2)
+      shell import-linter contract. Documentary by necessity.
+  - type: file
+    target: src/tannen/export.py
+    strength: documentary
+    detail: >-
+      RT-M4-03: `export` trusts `built.layer` and never re-derives `layer_of(built.operators)`.
+      Unfrozen; the additive fix is stricter than frozen L4.10 and needs no supersession.
+  - type: file
+    target: src/tannen/incremental.py
+    strength: documentary
+    detail: >-
+      RT-M4-04's subject and the RT-M3 remedies' home: `_code_address` hashes source text and is
+      blind to closure captures; the same blind spot lives in `src/tannen/transform.py:76`
+      (`@transform`'s code_hash). Both unfrozen and uncustodied.
+  - type: file
+    target: docs/redteam/fixture-candidates/spend-fold-forged-reservation/README.md
+    strength: documentary
+    detail: >-
+      RT-M4-01's fixture candidate, drafted not installed: the guard that would authenticate fold
+      inputs does not exist yet, and a fixture belongs with its guard (RT-M3-02's lesson).
+  - type: file
+    target: docs/redteam/fixture-candidates/doorway-network-residue/README.md
+    strength: documentary
+    detail: >-
+      RT-M4-02's fixture candidate: a shell module reading the world through imaplib/subprocess,
+      to poison the future shell import-linter contract and superseding L4.9.
+  - type: file
+    target: docs/redteam/fixture-candidates/code-address-closure/README.md
+    strength: documentary
+    detail: >-
+      RT-M4-04's fixture candidate: two named closures, one source, different captures, one node —
+      to poison the future closure-aware code-address guard.
+links: ["D0021", "D0059", "D0084", "D0092", "D0095", "D0104", "D0128", "D0143", "D0153", "D0174", "D0197", "D0198", "D0211", "D0226", "D0229", "D0231", "D0232", "D0235", "D0237", "D0238", "D0240", "D0243"]
