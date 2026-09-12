@@ -42,3 +42,10 @@ shared M1 blind spot), and frozen L4.23 does not cover the case — a supersedin
 wanted. Because the flaw is M1-inherited and undocumented, the decision record that closes it
 should note it in both `transform.py` and the specs, not only `incremental.py`. When the guard
 lands, this fixture installs as usual (owner-key, Tier-C `trust-root-changes`).
+
+## Owner review (D0246)
+
+**The obligation runs the other way (A4).** A drafted fixture enforces nothing (D0143), so the
+obligation to install this one sits on the decision record that closes RT-M4-04 (the closure-aware
+code address, or a refusal of an un-addressable closure): **that record must account for this
+candidate**, not this draft.

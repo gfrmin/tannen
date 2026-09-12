@@ -1,0 +1,117 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0246
+title: "M3→M4 red-team addendum after owner review: P5's clean re-verified from the failing side (earned, not accepted), RT-M4-07 filed for the queue's missing service-rate, and four dispositional sharpenings"
+tier: A
+date: "2026-09-13"
+risk_flags: ["governance-paths", "spend"]
+decision: >-
+  The owner reviewed the M3→M4 red team (D0245, `docs/redteam/2026-09-12-m4-boundary.md`) and found
+  one methodological gap and four dispositional ones. This record closes all five, additively —
+  D0245's body is left as filed (the D0104 norm: the record of a mistake is part of the record), and
+  the report gains a dated addendum (`# Addendum, 2026-09-13 — owner review`). Nothing here overturns
+  a finding; A1 confirms one.
+  .
+  - A1 (P5 re-verified). D0245's method re-verified every FINDING from the failing side with a
+    control, but P5 produced a CLEAN, not a finding, and that clean was reported without the author
+    re-running it — the D0174 lesson drawn for RT-M4-04's refuting result was never run backwards
+    over P5's negative result, though a negative result can measure the harness exactly as a refuting
+    one can. Re-verified file-based (not a heredoc) through the REAL Store/LocalBackend/R2Backend
+    classes in the shape a pipeline and a remote take, with `tannen.store.__file__` asserted into
+    `src/tannen` first, TANNEN_NO_EVIDENCE=1, throwaway dirs, no network: 12 controls, all pass.
+    verify-on-read refuses tamper-at-rest (local file edited), corrupted-in-flight (remote), and a
+    SWAPPED-IN different object (remote hands back another key's bytes) — all IntegrityError;
+    write-once refuses exclusive re-put on both backends; iter_refs filters foreign/malformed keys
+    (bad hex, too few/many parts, absent) without crashing; `.root` raises AttributeError on a
+    remote. P5's clean is now EARNED, not accepted, and CONFIRMS the original result — the gap was in
+    the report's process, not its conclusion. Stated as an admitted non-hole, not left silent: a
+    non-str listing element would raise in `iter_refs`' `key.split`, but the S3/R2 XML API returns
+    string keys only, so it is unreachable by a real remote.
+  .
+  - A2 (RT-M4-02 promoted). The sitting note dispositioned RT-M4-02 as SHARPENING an existing queue
+    item (D0229 item 2); that undersells the only high finding that is LIVE rather than inert
+    (RT-M4-01 is inert while every ceiling is zero), whose threat model is the BUILDER — the party
+    the apparatus exists to bound — now that the repository is PUBLISHED and a gate runs off this
+    machine, so the blast radius changed. `make verify` green does not today mean "no IO," and that
+    sentence is load-bearing for every other guarantee. Promoted to the item the sitting takes FIRST.
+  .
+  - A3 (RT-M4-07 filed). The meta-finding the pass did not file: `required_tags` is the 5th
+    recurrence of D0095, and RT-05/-07/-10/-11/-12/-M1-02/-M1-04 are all "unchanged" across FOUR
+    boundaries. The D0104 norm (the finder does not fix) works only if some session does, and six new
+    findings land on a queue that has not drained in four boundaries — a service-rate problem no
+    artifact measures. Proposed remedy (a coverage-ledger-shaped gate): a boundary sitting that
+    cannot account for every standing finding — scheduled, deferred-with-reason, or ruled a non-goal
+    — should not close. Informational/process; owned by the sitting, not enacted here.
+  .
+  - A4 (fixture binding inverted). As filed the obligation to install a fixture candidate sat on the
+    candidate, which enforces nothing (D0143): nothing failed if a guard landed and its fixture was
+    never git-mv'd into tests/poison/. Inverted so the obligation sits on the GUARD's closing
+    decision record — closing RT-M4-01 must account for spend-fold-forged-reservation, RT-M4-02 for
+    doorway-network-residue, RT-M4-04 for code-address-closure. Recorded in each fixture README and
+    as an obligation in the sitting note.
+  .
+  - A5 (pre-budget corollary). RT-M4-01(b) is irreversible in a write-once store, so the hazard is
+    not only "when a nonzero ceiling arrives" — the store in use at that moment may already carry a
+    poisoned reservation with no mutation path (BRIEF §10). Signing the first nonzero ceiling should
+    START A FRESH SPEND NAMESPACE, not inherit one. Added to the pre-budget item now, while free.
+rationale: >-
+  Append-only correction, not an edit: D0045's immutability means a wrong or incomplete record is
+  answered by a new record, never a hand-edit of the old one, and the same holds for the red team's
+  own filed conclusions. A1 is the [[owner-rulings-corrected-by-measurement]] discipline turned on
+  the pass itself — the owner named a mechanical claim (P5's clean) as unverified, so the claim was
+  MEASURED before it was accepted or defended, and the measurement earned the clean it did not
+  overturn. A3 is the coverage-ledger protocol pointed at the red team's own output: the pass
+  audited every standing finding (RT-M4-06) but did not file the fact that auditing without draining
+  is the actual failure. Flagged governance-paths and spend because A2 and A5 both bear on the
+  spend/IO primitives the pre-budget sitting must see.
+reversibility: >-
+  A statement and a re-measurement; nothing to reverse. A1 wrote no evidence and touched no tracked
+  file — it ran against a throwaway store with TANNEN_NO_EVIDENCE=1, a fake ObjectClient, and
+  `tannen.store.__file__` asserted into src before any check. A2–A5 are dispositional: they change
+  the ORDER and the OWNERSHIP of items already queued, and add one informational finding and one
+  pre-budget note; nothing is closed, nothing is installed under tests/poison/, no frozen path is
+  touched, and budget.yaml stays byte-identical with every ceiling zero. The promotion of RT-M4-02
+  and the RT-M4-07 gate are proposals the sitting rules on, not enactments.
+status: accepted
+bindings_count: 6
+bindings:
+  - type: file
+    target: docs/redteam/2026-09-12-m4-boundary.md
+    strength: documentary
+    detail: >-
+      The `# Addendum, 2026-09-13 — owner review` section: A1's 12-control P5 re-verification and its
+      admitted non-hole, A2's promotion, A3's RT-M4-07 row, A4's inverted binding, A5's corollary.
+  - type: file
+    target: src/tannen/store.py
+    strength: documentary
+    detail: >-
+      A1's subject: Store's write-once and verify-on-read (get_bytes re-hashes; put_if_absent never
+      replaces; iter_refs filters non-object keys) re-verified clean from the failing side against
+      the real LocalBackend and R2Backend shapes. Documentary — this record confirms, it does not
+      change the code.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/2026-09-12-red-team-findings.md
+    strength: documentary
+    detail: >-
+      The sitting note, sharpened: RT-M4-02 promoted ahead of the queue (A2), RT-M4-07 added (A3),
+      the fixture-install obligation moved onto the closing decision records (A4), and the fresh
+      spend-namespace corollary added to the pre-budget item (A5).
+  - type: file
+    target: docs/redteam/fixture-candidates/spend-fold-forged-reservation/README.md
+    strength: documentary
+    detail: >-
+      A4 binding inversion and A5 corollary: closing RT-M4-01 must account for this fixture, and the
+      first nonzero ceiling starts a fresh spend namespace rather than inheriting a possibly-poisoned
+      one.
+  - type: file
+    target: docs/redteam/fixture-candidates/doorway-network-residue/README.md
+    strength: documentary
+    detail: >-
+      A4 binding inversion: closing RT-M4-02 (the shell import-linter contract plus superseding L4.9)
+      must account for this fixture; and A2's note that this is the sitting's first item.
+  - type: file
+    target: docs/redteam/fixture-candidates/code-address-closure/README.md
+    strength: documentary
+    detail: >-
+      A4 binding inversion: closing RT-M4-04 (the closure-aware code address) must account for this
+      fixture.
+links: ["D0021", "D0045", "D0059", "D0092", "D0095", "D0104", "D0143", "D0153", "D0174", "D0205", "D0211", "D0228", "D0229", "D0235", "D0238", "D0240", "D0245"]

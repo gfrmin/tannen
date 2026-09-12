@@ -34,3 +34,11 @@ The guard is owner-key and Session-A-shaped: the shell import-linter contract li
 path is never edited (CLAUDE.md). When both land, this fixture installs as usual (owner-key,
 Tier-C `trust-root-changes`). Deriving the forbidden set (rather than hand-listing it) is the
 D0171-ruling-3 / D0211 discipline the clock set already follows and the network set does not.
+
+## Owner review (D0246)
+
+**This is the boundary sitting's FIRST item (A2)** — RT-M4-02 is the only *live* high finding, its
+threat model is the builder, and the repository is now published, so `make verify` green does not
+today mean "no IO." **The obligation runs the other way (A4):** the obligation to install this
+fixture sits on the decision record that closes RT-M4-02 (the shell contract + superseding L4.9),
+which **must account for this candidate**, not on this draft.

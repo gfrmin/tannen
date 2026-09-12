@@ -40,3 +40,16 @@ and a `tests/poison/README.md` row (owner-key, Tier-C `trust-root-changes`).
 `src/tannen/oracles/context.py` is unfrozen and uncustodied; frozen L4.5
 (`tests/laws/m4/test_l4_spend.py`) constrains only the honest reserve-then-settle path, so an
 input-authentication guard neither edits it nor contradicts it.
+
+## Owner review (D0246)
+
+**The obligation runs the other way (A4).** A drafted fixture enforces nothing (D0143), so the
+obligation to install this one does not sit here — it sits on the decision record that closes
+RT-M4-01: **closing RT-M4-01 must account for this candidate** (install it, or record why not).
+
+**Irreversibility corollary (A5).** RT-M4-01(b) bricks a scope permanently in a write-once store,
+so the hazard is not only "when a nonzero ceiling arrives" — the store in use at that moment may
+*already* hold a poisoned reservation with no mutation path (BRIEF §10). The pre-budget sitting
+should therefore **start a fresh spend namespace when the first nonzero ceiling is signed, not
+inherit one.** This fixture's ceiling-erosion and scope-brick payloads apply to that fresh
+namespace's guard.
