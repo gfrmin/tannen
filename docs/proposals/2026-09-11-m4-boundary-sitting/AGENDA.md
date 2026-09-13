@@ -1,6 +1,6 @@
 # M4 boundary sitting — the owner's agenda
 
-Generated from `boundary_sitting.sh`, sha256 `c88d3b9…` — **NOT CLEARED.** No full, non-FAST rehearsal has run green over these bytes; FAST rehearsals skip both `make verify` legs and check_decisions.
+Generated from `boundary_sitting.sh`, sha256 `c88d3b9…` — **the bytes a full rehearsal cleared**.
 
 **19 steps. 18 prompts state a cost for declining, 7 do not.** A prompt with no `else` arm simply skips its action — usually a printout, but NOT always: step 0's `make verify` has no else arm and declining it skips the precondition gate. Not every site fires — several sit inside conditionals, so the number you meet depends on repo state.
 

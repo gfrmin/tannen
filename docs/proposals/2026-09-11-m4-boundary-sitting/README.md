@@ -70,16 +70,21 @@ successors.
 
 # `boundary_sitting.sh` — the M4 driver (drafted 2026-09-13, D0247)
 
-> **NOT CLEARED.** These bytes have had `TANNEN_SITTING_FAST` rehearsals, which skip both `make
-> verify` legs, the commit hooks and step 5's `check_decisions`. They have also had one non-FAST
-> run stopped after step 5. The previous bytes (`1ae556f…`) had one full `--from head`
-> rehearsal, which stopped red at step 9 on two step-5 defects no FAST run can see. Both are fixed
-> (D0250, verdicts below). Only a full, green `--from head` rehearsal clears the driver, and it
-> clears the bytes it ran (D0068). Clearance is recorded in ONE file, `CLEARED.sha256` beside this
-> README, which `sitting-preflight.sh` and `gen_agenda.py` both read. It does not exist yet, so the
-> preflight refuses and the agenda's banner says NOT CLEARED. The owner chose FAST-only
-> verification for the drafting session and started the clearance rehearsal the same day
-> (2026-09-13).
+> **CLEARED FOR THESE BYTES — sha256 `c88d3b901dad330d8c07d6958d140bcc87ad2b5687bdf0cfac1ec50de76b1c2f`.**
+> The first full, non-FAST `--from head` rehearsal to run green over this driver cleared it on
+> 2026-09-13, at commit 9a4d823, in 3h03m01s, with 22 of 22 checks ok. The accept path passed
+> end to end:
+> - `m4-close` was minted, and verified as owner@tannen;
+> - a fresh receipt was taken and signed;
+> - the custodian was green with no tolerances;
+> - the gate was green in the sitting's own tree, and `check_decisions` green with 0 queued;
+> - nothing was left uncommitted.
+>
+> Clearance covers exactly these bytes (D0068). It is recorded in `CLEARED.sha256` beside this
+> README, which `sitting-preflight.sh` and `gen_agenda.py` both read. Any edit to the driver voids
+> it. The previous bytes (`1ae556f…`) stopped red at step 9 on two step-5 defects no FAST run can
+> see (D0250, verdicts below). The owner chose FAST-only verification for the drafting session,
+> and started this clearance the same day.
 
 Built on the M3 driver, which is byte-identical to the live `scripts/boundary_sitting.sh`. The
 owner installs it the way `docs/SITTING.md` says: `make verify` first, then the `cp`, then
@@ -208,6 +213,7 @@ still runs in the clone.
 | FAST abort at step 9 | `1ae556f…` | **"the sitting completes"**, harness exit 0. `--abort-at 47 --abort-step 9`: prompt 47 fell in step 9, the commit confirm, and the prompt map agrees. The declined commit took no receipt, then step 10 refused the dirty tree: `sitting: STOP`, exit 1, with the undo given. m4-close was not minted, and the unexpected-failure section was empty. |
 | Full accept, `--from head` (run 1) | `1ae556f…` | **FAIL — stopped at step 9.** Steps 0–8c completed. Step 9's `make verify` ended 1 failed, 1229 passed, 1 skipped, 2 xfailed in 39m06s. The one failure was the undeclared generated bundle. The driver printed `sitting: STOP — verify red`, so no tag was minted and no receipt taken. The verdict's first FAIL was step 5's `check_decisions` block, which carried D0216 beyond the known transient. The completion FAILs follow from the stop. The unexpected-failure scan, run by hand, holds those two defects and nothing else. The harness's post-run `make verify` could only repeat the red and was stopped by PID. |
 | Non-FAST, stopped after step 5 | `c88d3b9…` | **Step 5 as intended; not a clearance.** Run `--from head` with `TANNEN_SITTING_STOP_AFTER=5`. The driver exited 3 after step 5. The bundle was declared after its 12 objects scanned clean. `check_decisions` carried only D0063 and D0177, and the harness's matcher, run by hand, found nothing outside the known set. `test_no_pii.py` and `test_roadmap.py` in the clone ran 35 passed. The harness's verdict tail asserts a completed sitting, so it was stopped by PID. |
+| Full accept, `--from head` (run 2) | `c88d3b9…` | **"the sitting completes": CLEARED.** Harness exit 0 in 3h03m01s, with 22 of 22 checks ok. Step 5 declared the bundle, and its `check_decisions` carried only D0063 and D0177, inside the known transient. Step 9's `make verify` ran 1230 passed, 1 skipped, 2 xfailed in 38m56s, and all six commit hooks passed, including the roadmap hook installed at step 4c. `m4-close` was minted and verified as owner@tannen, and the receipt was signed. In the clone, the verdict's own `make verify` and `check_decisions` were green, with 0 queued. The unexpected-failure section was empty. |
 
 **What the first full rehearsal found** (non-FAST, `--from head`, over `1ae556f…`). Both defects
 were in step 5, and both are fixed there (D0250):
