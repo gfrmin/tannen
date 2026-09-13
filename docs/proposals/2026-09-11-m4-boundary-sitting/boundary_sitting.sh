@@ -910,6 +910,96 @@ for fixture in $FIXTURES; do
         || die "could not wire $fixture into tests/test_governance_scripts.py — the completeness test would be red; hand back to a builder"
 done
 
+# A GENERATED BUNDLE IS A FILE THE PII GUARD CANNOT READ, and tests/test_no_pii.py refuses every
+# NUL-carrying file it has not been told about: an unscannable file is a finding, never a pass
+# (D0112). make-fixture.sh writes repo.bundle at this step, so the declaration lands at this step,
+# or step 9's gate goes red forty minutes later — which is exactly where the first full rehearsal
+# of this driver stopped (D0250). FAST skips that gate, so no FAST run could have seen it.
+#
+# A DECLARATION IS NOT AN INSPECTION, so the inspection comes first: every object in the bundle is
+# read out as text and scanned by the guard's OWN scan(), imported rather than restated, and the
+# identities it carries are shown. A finding refuses; a NUL-carrying file that is not a bundle
+# refuses. Resumable like wire_suite: it runs over installed fixtures, and a declared file is skipped.
+declare_generated_binaries() {  # <tests/poison/name> -> 0 every NUL-carrying file scanned and declared
+    "$PY" -I -P - "$1" <<'PY'
+import os, pathlib, re, subprocess, sys, tempfile
+
+for k in [k for k in os.environ if k.startswith("GIT_")]:
+    del os.environ[k]   # a hook's GIT_DIR beats `git -C`, and would aim every git below at this repo
+fixture = pathlib.Path(sys.argv[1])
+sys.path.insert(0, str(pathlib.Path("tests").resolve()))
+import test_no_pii as guard
+
+t = pathlib.Path("tests/test_no_pii.py")
+opener = "\nDECLARED_BINARY = {\n"
+
+
+def git(*args):
+    return subprocess.run(["git", *args], check=True, capture_output=True).stdout
+
+
+# The set publishing would publish, tracked or about to be: never __pycache__, which carries NUL too.
+listed = git("ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", str(fixture))
+for name in sorted(n for n in listed.decode().split("\0") if n):
+    path = pathlib.Path(name)
+    if not path.is_file() or b"\0" not in path.read_bytes():
+        continue
+    if name in guard.DECLARED_BINARY:
+        print(f"   {name}: already declared to tests/test_no_pii.py")
+        continue
+    if subprocess.run(["git", "bundle", "list-heads", name], capture_output=True).returncode:
+        sys.exit(f"{name} carries a NUL byte and is not a git bundle — read it and declare it by hand")
+    with tempfile.TemporaryDirectory() as tmp:
+        store, dump = pathlib.Path(tmp, "store"), pathlib.Path(tmp, "dump")
+        git("init", "-q", "--bare", str(store))
+        git("-C", str(store), "fetch", "-q", str(path.resolve()), "+refs/*:refs/*")
+        git("init", "-q", str(dump))
+        check = git("-C", str(store), "cat-file", "--batch-all-objects", "--batch-check=%(objectname)")
+        shas = check.decode().split()
+        if not shas:
+            sys.exit(f"{name}: no object was read out of the bundle, so a clean scan would mean nothing")
+        for sha in shas:   # -p prints trees as text too, so the file names are scanned with the rest
+            (dump / f"{sha}.txt").write_bytes(git("-C", str(store), "cat-file", "-p", sha))
+        git("-C", str(dump), "add", "-A")
+        findings = guard.scan(dump)
+        if findings:
+            sys.exit(f"{name}: tests/test_no_pii.py's scan finds, inside the bundle:\n"
+                     + "\n".join(f"  object {p.removesuffix('.txt')}: {kind}" for p, kind in findings))
+        who = sorted({m.group(1).decode(errors="replace") for f in dump.glob("*.txt") for m in
+                      re.finditer(rb"^(?:author|committer|tagger) (.*?) \d+ [+-]\d{4}$", f.read_bytes(), re.M)})
+    print(f"   {name}: {len(shas)} object(s) read out of the bundle and scanned by the guard: nothing found")
+    print(f"   the identities it carries: {'; '.join(who) or '(none)'}")
+    src = t.read_text(encoding="utf-8")
+    if src.count(opener) != 1:
+        sys.exit("tests/test_no_pii.py: DECLARED_BINARY is not found exactly once — declare by hand")
+    end = src.index("\n}\n", src.index(opener)) + 1
+    entry = (f'    "{name}": (\n'
+             f'        "a git bundle, by construction binary, generated at the boundary sitting by "\n'
+             f'        "{fixture.as_posix()}/make-fixture.sh; its {len(shas)} objects were read out "\n'
+             f'        "and scanned by this guard before it was declared (D0250)"\n'
+             "    ),\n")
+    t.write_text(src[:end] + entry + src[end:], encoding="utf-8")
+    print(f"   tests/test_no_pii.py: {name} declared")
+PY
+}
+for fixture in $FIXTURES; do
+    [ -d "tests/poison/$fixture" ] || continue
+    declare_generated_binaries "tests/poison/$fixture" \
+        || die "could not declare $fixture's generated binary to tests/test_no_pii.py — step 9's gate would be red; nothing is signed yet, hand back to a builder"
+done
+
+# STEP 5's OWN EDITS ARE PROJECTION INPUTS. retarget_bindings rewrites records and add_manifest_rows
+# adds rows, and DECISIONS.md and ROADMAP.md both render from those — so on the first full rehearsal
+# the check_decisions below read two stale projections and failed four ways (D0250): D0063 and
+# D0177, which are the stale DECISIONS.md seen twice, the stale-file line itself, and D0216's
+# roadmap freshness. The harness's position-bounded tolerance names the first three and not the
+# fourth, and it is custody-set, so it cannot learn it. Regenerated here instead, so the check
+# reads what step 5 actually left rather than what step 4 did.
+"$PY" -I -P scripts/gen_projections.py >/dev/null \
+    || die "projection generation failed after the fixtures moved — nothing is signed yet"
+"$PY" -I -P scripts/gen_roadmap.py >/dev/null \
+    || die "ROADMAP.md generation failed after the fixtures moved — nothing is signed yet"
+
 # Installing a fixture MOVES files, and a binding naming a candidate path stops resolving the
 # instant it does (D0141 at M2, D0199 at M3, D0245/D0246/D0248 in this driver's first
 # rehearsal). retarget_bindings now moves them with the fixture; this is the backstop for any
@@ -1066,6 +1156,8 @@ applied_by() {  # <record id> -> the APPLIED-BY lines, computed from what landed
         D0248) note "APPLIED-BY: step 1 — $(said_landed doorway); its fixture at step 5 —"
                note "            $(said_landed fixture:doorway-network-residue). The superseding L4.9 is M5's." ;;
         D0249) note "APPLIED-BY: step 8c's gate and step 10's refusal — $(said_landed ledger)." ;;
+        D0250) note "APPLIED-BY: the same cp as D0247, whose step 5 it corrects: the bundle declared to"
+               note "            the PII guard and the projections regenerated before its check ran." ;;
         *)     note "APPLIED-BY: NOTHING in this sitting. A yes authorises future work only." ;;
     esac
 }

@@ -1,0 +1,98 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0250
+title: "The first full rehearsal of the M4 driver stopped at step 9 on two step-5 defects no FAST run can see: a generated bundle undeclared to the PII guard, and projections step 5 had itself staled before its own check read them"
+tier: A
+date: "2026-09-13"
+risk_flags: ["governance-paths"]
+decision: >-
+  CORRECTS D0247, whose text is immutable (D0045). Its items stand. This record adds what the
+  first full rehearsal of its driver found and how step 5 of
+  docs/proposals/2026-09-11-m4-boundary-sitting/boundary_sitting.sh now answers it. The corrected
+  bytes are still NOT CLEARED. Clearance is a later full, green, non-FAST rehearsal over them, and
+  only that run writes CLEARED.sha256 (D0068, D0247 item 12).
+  .
+  THE RUN. scripts/rehearse_sitting.sh --from head --answers y --keep, non-FAST, over the committed
+  driver (sha256 1ae556f…, commit 5ec9957). Steps 0 to 8c completed. Step 9's make verify ran 1233
+  tests in 39m06s: 1229 passed, 1 skipped, 2 xfailed, 1 failed. The driver stopped as designed
+  ("verify red — stop here and hand back to the builder; sign no tag over a red gate"): no tag
+  minted, no receipt taken. The harness's unexpected-failure scan, run by hand over the
+  transcript, holds exactly the two defects below and nothing else. The harness's post-run make
+  verify could only repeat the red, and was stopped by PID.
+  .
+  (1) A GENERATED BUNDLE WAS NOT DECLARED TO THE PII GUARD. Step 5 runs the tag-roles-derived
+  fixture's make-fixture.sh, which writes repo.bundle into tests/poison/. A bundle carries NUL
+  bytes. tests/test_no_pii.py::test_every_unscannable_file_is_declared refuses every NUL-carrying
+  tracked file missing from DECLARED_BINARY, because a file the guard cannot read is a finding
+  and never a pass (D0112). The one bundle already in the corpus was declared by hand when the
+  guard was written. This is the first a sitting generates.
+  Step 5 now declares every NUL-carrying file in each installed fixture, but only after it has:
+  - read every object in the bundle out as text;
+  - run the guard's own scan() over them, imported and not restated;
+  - printed the identities the bundle carries.
+  A finding refuses the declaration, and so does a NUL-carrying file that is not a bundle.
+  Watched in the kept clone:
+  - the node failed;
+  - the real bundle's 12 objects scanned clean, carrying one identity (the poison fixture, at the
+    reserved invalid domain);
+  - the declaration landed, the node passed, and the whole file ran 18 passed;
+  - a re-run skipped it.
+  Three negatives were each refused with the guard file unchanged: a bundle carrying a
+  non-allowlisted address, a bundle with a home-directory path in a blob, and a non-bundle NUL
+  file. The same bundle shape with clean values was accepted.
+  .
+  (2) STEP 5 CHECKED PROJECTIONS ITS OWN EDITS HAD STALED. retarget_bindings rewrites records and
+  add_manifest_rows adds manifest rows. DECISIONS.md and ROADMAP.md both render from those, and
+  nothing regenerated them before step 5's check_decisions. That check failed four ways:
+  - D0216's tests/test_roadmap.py::test_roadmap_is_fresh;
+  - "DECISIONS.md is stale";
+  - D0063 and D0177, both bound to tests/test_governance_scripts.py.
+  The last two are a different fact. test_check_passes_on_real_tree[check_manifest] is red at
+  step 5 by construction, because the custody set stays unsigned until step 7. The driver carried
+  on, correctly: its backstop stops only on a binding whose target is gone. Step 9's regeneration
+  turned check_decisions green again. But the harness's tolerance for that block names D0063, D0177
+  and the stale DECISIONS.md, not D0216, so the verdict was red on that line regardless: "the
+  pre-step-7 check_decisions failure is only the known step-5 transient". The harness is
+  custody-set and was not edited. Step 5 now runs gen_projections.py and gen_roadmap.py before its
+  check, and refuses if either generation fails.
+  .
+  WATCHED ON THE CORRECTED BYTES. A non-FAST --from head rehearsal (sha256 c88d3b9…) ran with
+  TANNEN_SITTING_STOP_AFTER=5. Step 5 declared the bundle, with 12 objects and one identity. Its
+  check_decisions carried exactly two lines, D0063 and D0177, both inside the harness's known set,
+  with no stale-projection line and no D0216. In that clone:
+  - check_manifest reported 42 violations, all custody drift: 24 files absent from the unsigned
+    custody file and 18 changed since it was written;
+  - check_concepts was green;
+  - tests/test_no_pii.py and tests/test_roadmap.py ran 35 passed.
+  .
+  WHY NO FAST RUN SAW EITHER. FAST skips step 5's check_decisions and both make verify legs
+  (D0247 item 12), and those are exactly where these two defects surface. That is why D0068 clears
+  only a full run. The three green FAST verdicts on 1ae556f were true about the driver's mechanics
+  and said nothing about its gate.
+rationale: >-
+  Both corrections go in the driver, not the harness, because both defects are the driver's: it
+  generates the bundle, and it makes the edits that stale the projections. Step 5 already leaves
+  the tree consistent at the step that changed it when it wires each fixture into the suite in
+  the same step that installs it, and these corrections follow that rule. The declaration inspects
+  before it declares because DECLARED_BINARY means "allowed to be unreadable", never "known to be
+  clean". A sitting that declared a bundle nobody read would turn the guard's refusal into a
+  formality. The scan reuses the guard's module so one definition says what a finding is. That
+  definition's stated limit comes with it: there is no private-name layer. So the bundle's
+  identities are printed for the owner to read.
+reversibility: >-
+  Fully reversible: a draft in the staging directory and this record. Nothing is installed until
+  the owner's cp.
+status: blocked-on-owner
+bindings_count: 2
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Step 5's declare_generated_binaries and the regeneration before its binding check.
+      Documentary for D0247's reason: the draft enforces nothing until it is installed and its
+      custody row signed.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/README.md
+    strength: documentary
+    detail: The full-rehearsal verdict rows and the controls watched for each fix.
+links: ["D0247", "D0068", "D0112", "D0216", "D0045", "D0063", "D0177", "D0199", "D0246"]

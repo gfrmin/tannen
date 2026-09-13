@@ -70,13 +70,16 @@ successors.
 
 # `boundary_sitting.sh` — the M4 driver (drafted 2026-09-13, D0247)
 
-> **NOT CLEARED.** These bytes have had `TANNEN_SITTING_FAST` rehearsals only (verdicts below),
-> which skip both `make verify` legs, the commit hooks and step 5's `check_decisions`. Only a
-> full, green `--from head` rehearsal clears the driver, and it clears the bytes it ran (D0068).
-> Clearance is recorded in ONE file, `CLEARED.sha256` beside this README, which
-> `sitting-preflight.sh` and `gen_agenda.py` both read; it does not exist yet, so the preflight
-> refuses and the agenda's banner says NOT CLEARED. The owner's choice of verification level for
-> this drafting session was FAST only (interview of 2026-09-13).
+> **NOT CLEARED.** These bytes have had `TANNEN_SITTING_FAST` rehearsals, which skip both `make
+> verify` legs, the commit hooks and step 5's `check_decisions`. They have also had one non-FAST
+> run stopped after step 5. The previous bytes (`1ae556f…`) had one full `--from head`
+> rehearsal, which stopped red at step 9 on two step-5 defects no FAST run can see. Both are fixed
+> (D0250, verdicts below). Only a full, green `--from head` rehearsal clears the driver, and it
+> clears the bytes it ran (D0068). Clearance is recorded in ONE file, `CLEARED.sha256` beside this
+> README, which `sitting-preflight.sh` and `gen_agenda.py` both read. It does not exist yet, so the
+> preflight refuses and the agenda's banner says NOT CLEARED. The owner chose FAST-only
+> verification for the drafting session and started the clearance rehearsal the same day
+> (2026-09-13).
 
 Built on the M3 driver, which is byte-identical to the live `scripts/boundary_sitting.sh`. The
 owner installs it the way `docs/SITTING.md` says: `make verify` first, then the `cp`, then
@@ -156,7 +159,7 @@ them: `check-manifest-current-envelope.md`'s row (b) now FAILS where its table s
 table predates the lock fold, and with both M5 owings landed it passes (`ownertext.md`); and its
 code omits `from collections.abc import Iterable`, which the patch adds.
 
-## Rehearsals — FAST only, so these bytes are NOT cleared
+## Rehearsals — FAST, and one full run that stopped red, so these bytes are NOT cleared
 
 Every run below set `TANNEN_SITTING_FAST=1`, ran in `--from worktree` mode (so step 0 took the
 RESUMED path and its precondition gate was not exercised), and used
@@ -203,6 +206,37 @@ still runs in the clone.
 | FAST accept (second) | `5057e6c…` | **"the sitting completes"**, harness exit 0. Every check ok, including the clone's `check_decisions` (green, 0 queued) and every step recorded through the last. Step 5 retargeted D0245/D0246/D0248, and the other two fixtures had nothing to retarget. Step 8 showed 8 "upgrades kept" and 5 "nothing landed". Two lines were listed as unexpected failures, and both were the driver's own watched-failing demos: step 1's guard on its poison, and step 3's custody-drift-only `check_manifest`. Their summary lines are now restated once the expected outcome is confirmed, which changes the bytes for the runs below. |
 | FAST decline-all | `1ae556f…` | **"the sitting completes"**, harness exit 0. Step 9's tree was dirty, and the declined commit took NO receipt. Step 10 refused to tag the uncommitted tree: `sitting: STOP`, `reached: step 10`, exit 1, with the undo given. The unexpected-failure section was empty. |
 | FAST abort at step 9 | `1ae556f…` | **"the sitting completes"**, harness exit 0. `--abort-at 47 --abort-step 9`: prompt 47 fell in step 9, the commit confirm, and the prompt map agrees. The declined commit took no receipt, then step 10 refused the dirty tree: `sitting: STOP`, exit 1, with the undo given. m4-close was not minted, and the unexpected-failure section was empty. |
+| Full accept, `--from head` (run 1) | `1ae556f…` | **FAIL — stopped at step 9.** Steps 0–8c completed. Step 9's `make verify` ended 1 failed, 1229 passed, 1 skipped, 2 xfailed in 39m06s. The one failure was the undeclared generated bundle. The driver printed `sitting: STOP — verify red`, so no tag was minted and no receipt taken. The verdict's first FAIL was step 5's `check_decisions` block, which carried D0216 beyond the known transient. The completion FAILs follow from the stop. The unexpected-failure scan, run by hand, holds those two defects and nothing else. The harness's post-run `make verify` could only repeat the red and was stopped by PID. |
+| Non-FAST, stopped after step 5 | `c88d3b9…` | **Step 5 as intended; not a clearance.** Run `--from head` with `TANNEN_SITTING_STOP_AFTER=5`. The driver exited 3 after step 5. The bundle was declared after its 12 objects scanned clean. `check_decisions` carried only D0063 and D0177, and the harness's matcher, run by hand, found nothing outside the known set. `test_no_pii.py` and `test_roadmap.py` in the clone ran 35 passed. The harness's verdict tail asserts a completed sitting, so it was stopped by PID. |
+
+**What the first full rehearsal found** (non-FAST, `--from head`, over `1ae556f…`). Both defects
+were in step 5, and both are fixed there (D0250):
+
+- **Step 5 generated a bundle and never declared it to the PII guard.**
+  - **What failed:** `make-fixture.sh` writes `tests/poison/tag-roles-derived/repo.bundle`. A
+    bundle carries NUL bytes, and `test_every_unscannable_file_is_declared` refuses any file it
+    cannot read that has not been declared (D0112). Step 9's `make verify` failed on exactly that
+    after 39 minutes, and the driver correctly refused to tag.
+  - **The fix:** step 5 now reads every object out of the bundle, runs the guard's own `scan()`
+    over them, prints the identities they carry, and only then adds the declaration.
+  - **Watched in the kept clone:** the node failed; the real bundle's 12 objects scanned clean,
+    the declaration landed and the node passed; the whole file ran 18 passed; a re-run skipped
+    it.
+  - **Negatives, each refused with the guard file unchanged:** a bundle carrying a
+    non-allowlisted address, a home path inside a blob, and a NUL file that is not a bundle. The
+    same bundle shape with clean values was accepted.
+- **Step 5 checked the projections its own edits had staled.**
+  - **What failed:** the retargets and new manifest rows are inputs to `DECISIONS.md` and
+    `ROADMAP.md`. Step 5's `check_decisions` failed four ways: D0216's `test_roadmap_is_fresh`,
+    "DECISIONS.md is stale", D0063 and D0177. The harness's tolerance names the last three as
+    the known transient, but not D0216, and the harness is custody-set.
+  - **The fix:** step 5 now regenerates both projections before the check.
+  - **Watched on the corrected bytes:** only D0063 and D0177 remain. They are a different fact
+    from the projections. Both bind `tests/test_governance_scripts.py`, whose
+    `test_check_passes_on_real_tree[check_manifest]` is red until step 7 signs the custody set.
+    Measured in that clone, all 42 of `check_manifest`'s lines are custody drift.
+- **Why no FAST run could see either:** FAST skips exactly those two gates. The FAST verdicts on
+  `1ae556f…` stand for the driver's mechanics and nothing more.
 
 ## Found while drafting, for the owner
 

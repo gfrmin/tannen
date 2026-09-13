@@ -1,10 +1,10 @@
 # M4 boundary sitting — the owner's agenda
 
-Generated from `boundary_sitting.sh`, sha256 `1ae556f…` — **NOT CLEARED.** No full, non-FAST rehearsal has run green over these bytes; FAST rehearsals skip both `make verify` legs and check_decisions.
+Generated from `boundary_sitting.sh`, sha256 `c88d3b9…` — **NOT CLEARED.** No full, non-FAST rehearsal has run green over these bytes; FAST rehearsals skip both `make verify` legs and check_decisions.
 
 **19 steps. 18 prompts state a cost for declining, 7 do not.** A prompt with no `else` arm simply skips its action — usually a printout, but NOT always: step 0's `make verify` has no else arm and declining it skips the precondition gate. Not every site fires — several sit inside conditionals, so the number you meet depends on repo state.
 
-**Step 8 will ask you 13 times**, once per record still blocked-on-owner at any tier — derived from `decisions/` just now: D0214 (Tier C), D0215 (Tier C), D0217 (Tier A), D0228 (Tier C), D0229 (Tier A), D0238 (Tier C), D0240 (Tier C), D0241 (Tier A), D0242 (Tier C), D0244 (Tier C), D0247 (Tier A), D0248 (Tier A), D0249 (Tier A).
+**Step 8 will ask you 14 times**, once per record still blocked-on-owner at any tier — derived from `decisions/` just now: D0214 (Tier C), D0215 (Tier C), D0217 (Tier A), D0228 (Tier C), D0229 (Tier A), D0238 (Tier C), D0240 (Tier C), D0241 (Tier A), D0242 (Tier C), D0244 (Tier C), D0247 (Tier A), D0248 (Tier A), D0249 (Tier A), D0250 (Tier A).
 
 **8 steps do something consequential**, and only these:
 
