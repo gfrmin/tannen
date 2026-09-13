@@ -1,0 +1,14 @@
+diff --git a/scripts/check_manifest.py b/scripts/check_manifest.py
+index cc8fe97..2c3070f 100755
+--- a/scripts/check_manifest.py
++++ b/scripts/check_manifest.py
+@@ -260,6 +260,9 @@ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
+         "kernel-no-io": ["tannen.kernel"],
+         "kernel-no-clock": ["tannen.kernel"],
+         "no-cross-repo": ["tannen"],
++        # RT-M4-02 (D0248): process creation is refused in the WHOLE package. Pinned here
++        # like its siblings, or narrowing it to one module would pass every other guard.
++        "shell-no-subprocess": ["tannen"],
+     }
+     seen_ids = {c.get("id") for c in contracts}
+     for cid, expected in expected_sources.items():

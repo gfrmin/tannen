@@ -1,0 +1,518 @@
+diff --git a/Makefile b/Makefile
+index bfa8598..1662896 100644
+--- a/Makefile
++++ b/Makefile
+@@ -38,6 +38,7 @@ verify:
+ 	$(UNHATCH) $(PY) -I -P scripts/check_tag_signers.py
+ 	$(UNHATCH) $(PY) -I -P scripts/check_receipts.py
+ 	$(UNHATCH) $(PY) -I -P scripts/check_laws.py
++	$(UNHATCH) $(PY) -I -P scripts/check_doorway.py
+ 	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run pytest -q
+ 	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run tannen laws report
+ 	$(UNHATCH) $(PY) -I -P -c 'import sys; from importlinter.cli import lint_imports_command; sys.exit(lint_imports_command())' --config governance/importlinter.toml
+diff --git a/governance/importlinter.toml b/governance/importlinter.toml
+index 4f1eacb..a7bb1b3 100644
+--- a/governance/importlinter.toml
++++ b/governance/importlinter.toml
+@@ -58,6 +58,17 @@ forbidden_modules = [
+     "uuid",
+ ]
+ 
++[[tool.importlinter.contracts]]
++name = "nothing in tannen creates a process (BRIEF §5.3; RT-M4-02)"
++id = "shell-no-subprocess"
++type = "forbidden"
++source_modules = ["tannen"]
++forbidden_modules = [
++    "subprocess",
++    "multiprocessing",
++    "pty",
++]
++
+ [[tool.importlinter.contracts]]
+ name = "no cross-repo imports, in either direction (BRIEF §1, Tier C)"
+ id = "no-cross-repo"
+diff --git a/governance/tier-c.yaml b/governance/tier-c.yaml
+index 3ae69a7..71adfec 100644
+--- a/governance/tier-c.yaml
++++ b/governance/tier-c.yaml
+@@ -42,6 +42,11 @@ guard_enforced:
+     guard: "pyproject.toml import-linter contract kernel-no-io"
+   - id: kernel-clock
+     guard: "pyproject.toml import-linter contract kernel-no-clock (BRIEF P7; arrived M0 with the kernel)"
++  - id: shell-io
++    guard: "scripts/check_doorway.py (the shell's network imports DERIVED from each import's
++      static closure to the socket primitives; process creation refused by name) and the
++      governance/importlinter.toml contract shell-no-subprocess (BRIEF §5.3; RT-M4-02,
++      D0229 item (2), D0248). Arrived at the M4 boundary sitting"
+   - id: tag-signer-roles
+     guard: "scripts/check_tag_signers.py over governance/tag-roles.yaml (D0050/D0054): the
+       right principal signed the right class of tag, unknown classes refused, trust root
+@@ -129,6 +134,7 @@ custody:
+     - scripts/check_tag_signers.py
+     - scripts/check_receipts.py
+     - scripts/check_laws.py
++    - scripts/check_doorway.py
+     - scripts/gen_projections.py
+     - scripts/gen_custody.py
+     - scripts/opening_sitting.sh
+@@ -188,6 +194,16 @@ forbidden_imports:
+     - random
+     - secrets
+     - uuid
++  # Process creation, forbidden in the WHOLE package, not only the kernel (RT-M4-02,
++  # D0248): a child process reads the world through any binary on PATH, so no import
++  # closure can bound it. The oracles doorway does not spawn either, so no door is needed
++  # and the contract can stay whole-package with no ignore_imports. Enforced by the
++  # shell-no-subprocess contract and, for `os`'s spawning functions (which an import rule
++  # cannot see, since the shell imports `os` for paths), by scripts/check_doorway.py.
++  process_modules:
++    - subprocess
++    - multiprocessing
++    - pty
+   # Module names of the constellation repos; forbidden everywhere in tannen
+   # (BRIEF §1 standing rule; guard_enforced cross-repo-imports).
+   cross_repo:
+diff --git a/scripts/check_doorway.py b/scripts/check_doorway.py
+new file mode 100644
+index 0000000..2376c52
+--- /dev/null
++++ b/scripts/check_doorway.py
+@@ -0,0 +1,314 @@
++#!/usr/bin/env python3
++"""check_doorway.py — the shell reads the world only through the doorway (RT-M4-02; BRIEF
++§5.3, §5.7, P1; D0229 item (2); D0248).
++
++BRIEF §5.3: "the only IO doorway is `oracles/`, and the only way to read the world is
++through a capture handle". The kernel's half has been a guard since M0
++(`governance/importlinter.toml`: `kernel-no-io`). The shell's half is frozen L4.9
++(`tests/laws/m4/test_l4_doorway.py`), and the M3→M4 red team measured two holes in it:
++
++  - its network set is a HAND-WRITTEN literal, so live socket-opening stdlib modules
++    (`imaplib`, `poplib`, `socketserver`, `xmlrpc.client`) are simply absent from it;
++  - `subprocess` and `os`'s shell-outs are not scanned at all, so
++    `subprocess.run(["curl", url])` in `tannen.store` reads the world with every gate green.
++
++This guard closes both without a hand-maintained list (D0171 ruling (3), D0211):
++
++  NETWORK   An import is refused outside the doors when its module-level STATIC import
++            closure reaches a SEED. The set of network modules is therefore DERIVED — from
++            the source of the interpreter running this guard — rather than enumerated, so a
++            module nobody thought to list is caught the day it is imported.
++  PROCESS   An import of a PROCESS module, or a call to one of `os`'s process-spawning
++            functions, is refused outside the network doors. A child process can read the
++            world through any binary on PATH, so no closure can bound it; it is refused by
++            name, and the names are the POSIX primitives, not a list of network tools.
++
++THE SEEDS are the one irreducible constant, and they are the operating system's socket
++primitives rather than a list of protocols: every stdlib or third-party route to the
++network bottoms out in `_socket` (and TLS in `_ssl`), so a closure that reaches neither
++cannot open a connection. Naming protocols instead is exactly the enumeration L4.9 froze.
++
++THE DOORS, each with its reason:
++  tannen.oracles   network  the doorway itself (BRIEF §5.3): capture handles and transports.
++  tannen.r2        network  the R2 client the store backend speaks through — a store
++                            transport, not a way to read the world (L4.9's own door).
++  tannen.laws      network  the evidence RUNNER, a pytest plugin. Measured 2026-09-13 with
++                            this door removed, exactly three imports in the whole shell
++                            reach a socket, and all three are here: `hypothesis` and
++                            `pytest` (plugin.py) and `jsonschema` (evidence.py). It is
++                            runner-side and never product IO — the same reason L4.9 gives
++                            it as the clock door. It is NOT a process door: it has no
++                            reason to spawn anything, and the process rule still scans it.
++
++WHAT THIS DOES NOT CLAIM, stated rather than implied:
++  - Dynamic imports. `importlib.import_module(name)` and `__import__(name)` with a computed
++    name are invisible to a static scan. `tannen.cli` legitimately uses the former to load a
++    PIPELINE module named on the command line — that module is the operator's code, not
++    this package's, and nothing here scans it.
++  - Code the interpreter did not ship. The closure is resolved against the interpreter that
++    runs the guard (`.venv/bin/python -I -P` at the gate); a different environment can
++    derive a different set. The positive controls below refuse to run at all if the
++    derivation stops seeing a known network module or starts seeing a known local one.
++  - Anything reached through `ctypes`, `cffi` or a C extension's own internals.
++
++Exits non-zero on any violation. `--root` points it at a fixture tree.
++"""
++
++from __future__ import annotations
++
++import argparse
++import ast
++import importlib.util
++import sys
++from pathlib import Path
++
++# Run under `python -I -P` (conferral ruling 3, D0063): the one path this guard needs is
++# named literally, derived from __file__ rather than inherited from the environment.
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++
++from _gov import Failures, REPO_ROOT  # noqa: E402
++
++#: The operating system's socket primitives (see the module docstring). Irreducible: the
++#: only constant the network rule rests on.
++SEEDS = frozenset({"socket", "_socket", "ssl", "_ssl"})
++
++#: Modules whose import is refused outside NETWORK_DOORS, by name. POSIX process creation;
++#: measured absent from src/tannen on 2026-09-13.
++PROCESS_MODULES = frozenset({"subprocess", "multiprocessing", "pty"})
++
++#: `os` attributes that create a process or replace this one. Prefix matches, so the
++#: exec*/spawn*/posix_spawn*/fork* families are covered whole.
++OS_PROCESS_PREFIXES = ("system", "popen", "exec", "spawn", "posix_spawn", "fork")
++
++NETWORK_DOORS = ("tannen.oracles", "tannen.r2", "tannen.laws")
++PROCESS_DOORS = ("tannen.oracles", "tannen.r2")
++
++#: The marker the custodian and the suite key on. One phrase for both rules, so a single
++#: fixture carrying both kinds of payload has one marker to fail for.
++MARKER = "reads the world outside the doorway"
++
++#: Positive controls on the derivation itself (produce-the-failure): if the closure stops
++#: seeing a module that opens sockets, or starts seeing one that cannot, the derived set is
++#: wrong and every verdict below it is worthless — so the guard refuses to give one.
++MUST_REACH = ("imaplib", "http.client")
++MUST_NOT_REACH = ("os", "pathlib", "json")
++#: Modules the scan must reach in a real shell, so a scan over nothing cannot pass.
++MUST_SCAN = ("tannen.store", "tannen.executor", "tannen.cli")
++
++
++def _inside(module: str, doors: tuple[str, ...]) -> bool:
++    return any(module == door or module.startswith(door + ".") for door in doors)
++
++
++def locate(name: str) -> Path | None:
++    """The source file of `name`, found WITHOUT importing anything.
++
++    `importlib.util.find_spec("a.b")` imports package `a` to read its `__path__`, and a
++    guard that executes a third-party package's `__init__` to decide whether that package
++    is safe has already lost. So only the top-level name goes through `find_spec` (which
++    locates without executing), and submodules are found by walking the package's
++    `submodule_search_locations` on disk. A builtin or compiled module has no source and
++    is a leaf: it can still BE a seed, matched by name.
++    """
++    parts = name.split(".")
++    try:
++        spec = importlib.util.find_spec(parts[0])
++    except (ImportError, ValueError):
++        return None
++    if spec is None:
++        return None
++    if len(parts) == 1:
++        origin = spec.origin
++        return Path(origin) if origin and origin.endswith(".py") else None
++    locations = list(spec.submodule_search_locations or [])
++    found: Path | None = None
++    for part in parts[1:]:
++        found = None
++        for loc in locations:
++            base = Path(loc)
++            if (base / part / "__init__.py").is_file():
++                found = base / part / "__init__.py"
++                locations = [str(base / part)]
++                break
++            if (base / f"{part}.py").is_file():
++                found = base / f"{part}.py"
++                locations = []
++                break
++        if found is None:
++            return None
++    return found
++
++
++def _package_of(name: str, path: Path) -> str:
++    return name if path.name == "__init__.py" else name.rpartition(".")[0]
++
++
++def import_time_names(name: str, path: Path) -> set[str]:
++    """Absolute names imported when `name` is IMPORTED — its module level only.
++
++    Function bodies do not run at import, so they are not descended into; class bodies and
++    `if`/`try` blocks do run, so they are (`http.client` imports `ssl` inside a `try`). A
++    relative import is resolved against the module's own package. A dotted name also names
++    its parents, since importing `a.b` executes `a`.
++    """
++    try:
++        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
++    except (SyntaxError, ValueError):
++        return set()
++    package = _package_of(name, path)
++    names: set[str] = set()
++    stack: list[ast.AST] = list(tree.body)
++    while stack:
++        node = stack.pop()
++        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
++            continue
++        if isinstance(node, ast.Import):
++            names |= {alias.name for alias in node.names}
++        elif isinstance(node, ast.ImportFrom):
++            if node.level:
++                base = package.split(".")
++                base = base[: len(base) - (node.level - 1)] if node.level > 1 else base
++                prefix = ".".join(p for p in base if p)
++                module = ".".join(p for p in (prefix, node.module or "") if p)
++            else:
++                module = node.module or ""
++            if module:
++                names.add(module)
++                # `from pkg import sub` may import a submodule; include it where one exists.
++                names |= {f"{module}.{alias.name}" for alias in node.names
++                          if alias.name != "*" and locate(f"{module}.{alias.name}")}
++        stack.extend(ast.iter_child_nodes(node))
++    with_parents: set[str] = set()
++    for n in names:
++        parts = n.split(".")
++        with_parents |= {".".join(parts[:i]) for i in range(1, len(parts) + 1)}
++    return with_parents
++
++
++_REACHES: dict[str, bool] = {}
++
++
++def reaches_seed(name: str) -> bool:
++    """Whether importing `name` can, through module-level imports, load a SEED.
++
++    Iterative rather than recursive (third-party closures run hundreds deep), and memoised
++    per name. A cycle is not a route: a name already on the path contributes nothing new.
++    """
++    if name in _REACHES:
++        return _REACHES[name]
++    seen: set[str] = set()
++    frontier = [name]
++    hit = False
++    while frontier and not hit:
++        current = frontier.pop()
++        if current in seen:
++            continue
++        seen.add(current)
++        if current.split(".")[0] in SEEDS or current in SEEDS:
++            hit = True
++            break
++        if _REACHES.get(current):
++            hit = True
++            break
++        path = locate(current)
++        if path is None:
++            continue
++        frontier.extend(n for n in import_time_names(current, path) if n not in seen)
++    _REACHES[name] = hit
++    return hit
++
++
++def shell_modules(root: Path) -> dict[str, Path]:
++    package = root / "src" / "tannen"
++    out: dict[str, Path] = {}
++    for path in sorted(package.rglob("*.py")):
++        if "__pycache__" in path.parts:
++            continue
++        parts = path.relative_to(package.parent).with_suffix("").parts
++        if parts[-1] == "__init__":
++            parts = parts[:-1]
++        out[".".join(parts)] = path
++    return out
++
++
++def every_import(tree: ast.Module) -> list[tuple[int, str]]:
++    """Every absolute import anywhere in the module, function bodies included — a scan of
++    the PACKAGE's own code asks what it can do, not only what it does at import."""
++    found: list[tuple[int, str]] = []
++    for node in ast.walk(tree):
++        if isinstance(node, ast.Import):
++            found += [(node.lineno, alias.name) for alias in node.names]
++        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
++            found.append((node.lineno, node.module))
++    return found
++
++
++def os_process_calls(tree: ast.Module) -> list[tuple[int, str]]:
++    """`os.<spawner>` attribute uses, and names imported `from os` that are spawners."""
++    found: list[tuple[int, str]] = []
++    for node in ast.walk(tree):
++        if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
++                and node.value.id == "os" and node.attr.startswith(OS_PROCESS_PREFIXES)):
++            found.append((node.lineno, f"os.{node.attr}"))
++        elif isinstance(node, ast.ImportFrom) and node.module == "os":
++            found += [(node.lineno, f"os.{alias.name}") for alias in node.names
++                      if alias.name.startswith(OS_PROCESS_PREFIXES)]
++    return found
++
++
++def check(root: Path, fail: Failures) -> int:
++    for name in MUST_REACH:
++        if not reaches_seed(name):
++            fail.add(f"positive control: the derived closure says {name} cannot reach a "
++                     f"socket — the derivation is broken, so no verdict is given")
++    for name in MUST_NOT_REACH:
++        if reaches_seed(name):
++            fail.add(f"positive control: the derived closure says {name} reaches a socket "
++                     f"— the derivation over-approximates, so no verdict is given")
++    modules = shell_modules(root)
++    missing = [m for m in MUST_SCAN if m not in modules]
++    if not modules or missing:
++        fail.add(f"positive control: the scan does not reach {missing or 'any module'} under "
++                 f"{root / 'src' / 'tannen'} — a scan over nothing passes everything")
++    if fail.messages:
++        return len(modules)
++
++    for module, path in modules.items():
++        rel = path.relative_to(root)
++        tree = ast.parse(path.read_text(encoding="utf-8"))
++        imports = every_import(tree)
++        if not _inside(module, NETWORK_DOORS):
++            for lineno, name in imports:
++                if name.split(".")[0] == "tannen":
++                    continue
++                if reaches_seed(name):
++                    fail.add(f"{rel}:{lineno}: network — {module} imports {name}, whose import "
++                             f"closure reaches a socket; it {MARKER} (BRIEF §5.3, RT-M4-02)")
++        if not _inside(module, PROCESS_DOORS):
++            for lineno, name in imports:
++                if name.split(".")[0] in PROCESS_MODULES:
++                    fail.add(f"{rel}:{lineno}: process — {module} imports {name}; a child "
++                             f"process {MARKER} (BRIEF §5.3, RT-M4-02)")
++            for lineno, call in os_process_calls(tree):
++                fail.add(f"{rel}:{lineno}: process — {module} uses {call}; a child process "
++                         f"{MARKER} (BRIEF §5.3, RT-M4-02)")
++    return len(modules)
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("--root", type=Path, default=REPO_ROOT,
++                        help="tree whose src/tannen is scanned (a poison fixture points here)")
++    args = parser.parse_args()
++    root = args.root.resolve()
++    fail = Failures("check_doorway")
++    scanned = check(root, fail)
++    return fail.finish(
++        f"{scanned} module(s) scanned; no network import outside {', '.join(NETWORK_DOORS)} "
++        f"and no process creation outside {', '.join(PROCESS_DOORS)} (seeds: "
++        f"{', '.join(sorted(SEEDS))})"
++    )
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/tests/test_check_doorway.py b/tests/test_check_doorway.py
+new file mode 100644
+index 0000000..1e3d24a
+--- /dev/null
++++ b/tests/test_check_doorway.py
+@@ -0,0 +1,117 @@
++"""scripts/check_doorway.py — the shell reads the world only through the doorway (RT-M4-02).
++
++Builder tests for a custody-set guard, landed with it at the M4 boundary sitting (D0248).
++Each test CONSTRUCTS the state that distinguishes a working guard from a broken one in
++tmp_path (D0092) rather than reading the installed poison fixture, so the pair is
++position-independent: this file proves the guard's rules, and the custodian's `poison`
++line proves the guard against the corpus.
++
++Two directions for every rule, because a guard that refuses everything passes every
++"must fail" test: each payload must fail naming ITS module and ITS import or call, and the
++controls — filesystem IO, the doors, the runner — must pass in the same tree.
++"""
++
++from __future__ import annotations
++
++import subprocess
++import sys
++from pathlib import Path
++
++import pytest
++
++REPO_ROOT = Path(__file__).resolve().parent.parent
++GUARD = REPO_ROOT / "scripts" / "check_doorway.py"
++MARKER = "reads the world outside the doorway"
++
++#: The minimum shell the guard's positive control requires to be scanned.
++CONTROL_SHELL = {
++    "__init__.py": '"""tree"""\n',
++    "store.py": "import os\nfrom pathlib import Path\n",
++    "executor.py": "import os.path\n",
++    "cli.py": "import importlib\n",
++}
++
++
++def run_guard(root: Path) -> subprocess.CompletedProcess:
++    return subprocess.run(
++        [sys.executable, "-I", "-P", str(GUARD), "--root", str(root)],
++        capture_output=True, text=True, cwd=REPO_ROOT,
++    )
++
++
++def tree(tmp_path: Path, extra: dict[str, str]) -> Path:
++    package = tmp_path / "src" / "tannen"
++    for rel, body in {**CONTROL_SHELL, **extra}.items():
++        path = package / rel
++        path.parent.mkdir(parents=True, exist_ok=True)
++        path.write_text(body, encoding="utf-8")
++    return tmp_path
++
++
++def test_the_real_tree_is_green() -> None:
++    result = run_guard(REPO_ROOT)
++    assert result.returncode == 0, result.stdout + result.stderr
++    assert "module(s) scanned" in result.stdout
++
++
++def test_a_control_shell_that_only_touches_the_filesystem_passes(tmp_path: Path) -> None:
++    result = run_guard(tree(tmp_path, {}))
++    assert result.returncode == 0, result.stdout + result.stderr
++
++
++@pytest.mark.parametrize(
++    "module, body, names",
++    [
++        ("export.py", "import imaplib\n", "imports imaplib"),
++        ("export.py", "import xmlrpc.client\n", "imports xmlrpc.client"),
++        ("export.py", "def f():\n    import socketserver\n", "imports socketserver"),
++        ("export.py", "from poplib import POP3\n", "imports poplib"),
++        ("store.py", "import subprocess\n", "imports subprocess"),
++        ("store.py", "import multiprocessing.pool\n", "imports multiprocessing.pool"),
++        ("executor.py", "import os\nos.system('curl x')\n", "uses os.system"),
++        ("executor.py", "import os\nos.execvp('curl', ['curl'])\n", "uses os.execvp"),
++        ("executor.py", "from os import posix_spawn\n", "uses os.posix_spawn"),
++    ],
++)
++def test_each_payload_fails_for_its_own_reason(
++    tmp_path: Path, module: str, body: str, names: str
++) -> None:
++    result = run_guard(tree(tmp_path, {module: CONTROL_SHELL.get(module, "") + body}))
++    out = result.stdout + result.stderr
++    assert result.returncode != 0, f"payload passed:\n{out}"
++    assert MARKER in out, out
++    assert names in out, out
++
++
++def test_the_doors_are_honoured_and_only_for_their_own_rule(tmp_path: Path) -> None:
++    root = tree(tmp_path, {
++        "oracles/__init__.py": "import http.client\nimport subprocess\n",
++        "r2.py": "import urllib.request\n",
++        "laws/plugin.py": "import hypothesis\n",
++    })
++    result = run_guard(root)
++    assert result.returncode == 0, result.stdout + result.stderr
++
++    # The runner is a NETWORK door only: a process spawned from it is still refused.
++    (root / "src" / "tannen" / "laws" / "plugin.py").write_text("import subprocess\n")
++    result = run_guard(root)
++    assert result.returncode != 0
++    assert "tannen.laws.plugin imports subprocess" in result.stdout + result.stderr
++
++
++def test_a_scan_over_nothing_is_refused(tmp_path: Path) -> None:
++    result = run_guard(tmp_path)
++    assert result.returncode != 0
++    assert "a scan over nothing passes everything" in result.stdout + result.stderr
++
++
++def test_the_derivation_sees_what_it_must_and_nothing_it_must_not() -> None:
++    sys.path.insert(0, str(GUARD.parent))
++    try:
++        import check_doorway
++    finally:
++        sys.path.remove(str(GUARD.parent))
++    for name in ("imaplib", "poplib", "socketserver", "xmlrpc.client", "http.client"):
++        assert check_doorway.reaches_seed(name), name
++    for name in ("os", "pathlib", "json", "hashlib", "tomllib", "subprocess"):
++        assert not check_doorway.reaches_seed(name), name

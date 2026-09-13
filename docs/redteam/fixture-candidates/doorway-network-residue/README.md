@@ -1,7 +1,9 @@
 # Fixture candidate — a shell module reads the world past L4.9 (RT-M4-02)
 
 **Finding:** RT-M4-02 (`docs/redteam/2026-09-12-m4-boundary.md`), high.
-**Status: DRAFT, no guard exists yet — do not install.**
+**Status: DRAFT, guard drafted for the M4 boundary sitting — install at step 5, together with
+`scripts/check_doorway.py` at step 1 (D0248). Do not install without that guard: against the
+shipped tree nothing scans this payload, so the custodian would report the guard weakened.**
 
 L4.9 (`tests/laws/m4/test_l4_doorway.py`, frozen) enforces BRIEF §5.3's "the only IO doorway is
 `oracles/`" for the shell, but only over a HAND-WRITTEN network-name set, and it does not scan
@@ -34,6 +36,44 @@ The guard is owner-key and Session-A-shaped: the shell import-linter contract li
 path is never edited (CLAUDE.md). When both land, this fixture installs as usual (owner-key,
 Tier-C `trust-root-changes`). Deriving the forbidden set (rather than hand-listing it) is the
 D0171-ruling-3 / D0211 discipline the clock set already follows and the network set does not.
+
+## How it is exercised
+
+The guard is `docs/proposals/2026-09-11-m4-boundary-sitting/doorway/check_doorway.py`, installed at
+`scripts/check_doorway.py` by the sitting's step 1. This directory is a `--root` tree: only
+`src/tannen/` is read, by AST, and nothing in it is ever imported.
+
+```
+.venv/bin/python -I -P scripts/check_doorway.py --root tests/poison/doorway-network-residue
+```
+
+must exit non-zero with **exactly six** violations, each carrying the marker
+`reads the world outside the doorway`:
+
+| File | Payload | Rule |
+|---|---|---|
+| `store.py` | `import subprocess` + `subprocess.run(["curl", …])` | process (import) |
+| `executor.py` | `os.system("curl …")` | process (`os` spawner) |
+| `cli.py` | `import imaplib` | network (derived closure) |
+| `incremental.py` | `import xmlrpc.client` | network (derived closure) |
+| `export.py` | `import poplib`, and `import socketserver` inside a function body | network (derived closure) |
+
+Three files are CONTROLS in the same tree and must produce nothing: `paths.py` (`os.path` and
+`pathlib` — reading the filesystem is not reading the world), `oracles/__init__.py`
+(`http.client` inside the doorway) and `laws/__init__.py` (`hypothesis`, the runner's stated
+network door). A guard that refused everything would still fail this fixture, so the controls
+are what make the count of six meaningful.
+
+**Watched failing, 2026-09-13.** Frozen L4.9's own scanner (`imports_of` over its `NETWORK`
+literal, outside its `NETWORK_DOORS`) run over this tree reports `[]` — the defect, demonstrated.
+The drafted guard reports the six above. Custodian line (step 6's hunk):
+
+```
+poison check_doorway "reads the world outside the doorway" \
+    "$PY" -I -P scripts/check_doorway.py --root tests/poison/doorway-network-residue
+```
+
+and the matching `POISON` row in `tests/test_governance_scripts.py`.
 
 ## Owner review (D0246)
 

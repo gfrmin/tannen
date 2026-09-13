@@ -1,0 +1,102 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0247
+title: "The M4 boundary sitting driver, drafted: RT-M4-02 first, every re-application step removed, owner edits as patches, the queue at any tier, the receipt behind the commit, and step 11 kept only as D0215's fallback"
+tier: A
+date: "2026-09-13"
+risk_flags: ["governance-paths"]
+decision: >-
+  DRAFTED AT docs/proposals/2026-09-11-m4-boundary-sitting/boundary_sitting.sh, NOT INSTALLED and
+  NOT CLEARED. The driver is custody-set, so the owner installs it by the cp docs/SITTING.md
+  names. Queued `blocked-on-owner` for that reason (D0216's convention). Built on the M3 driver,
+  which is byte-identical to the live scripts/boundary_sitting.sh. The scope — draft every missing
+  artefact rather than name any as not offered — and the verification level are the owner's
+  choices from this session's interview of 2026-09-13.
+  .
+  (1) EVERY M0-M3 RE-APPLICATION STEP IS REMOVED (M3's 2, 3, 3b, 4-4l, 5b, 8b). Each detector was
+  evaluated against the tree first, and every one was an already-applied skip bar one, which
+  is the argument: M3 step 4b still compared ci.yml against the M0 proposal copy that the same
+  driver's step 4f had since made stale, so the installed driver, re-run today, would OFFER TO
+  INSTALL THE M0-ERA ci.yml over the corrected file. A step that re-offers finished work is not a
+  guard; it is a pointer into an older proposals directory, which is D0152 item 6's class. The
+  copy reads one proposals directory. This is the ceremony's release valve D0201 ruling (2) asked
+  for, and it removes no check from the floor.
+  .
+  (2) EVERY OWNER EDIT IS A DRAFTED git PATCH, and `git apply --check` / `git apply -R --check`
+  compute the three states — applies, already applied, neither — that M3 re-implemented by hand
+  per step and got wrong once (D0152 item 2). A kept patch refreshes MANIFEST rows only for files
+  that already carry one, derived from the patch, never creating a row.
+  .
+  (3) THE QUEUE IS SELECTED BY STATUS AT ANY TIER (D0217 item 3). A Tier-C record is accepted and
+  signed as one act that rolls back. A Tier-A record is accepted by a status flip and carries NO
+  signature: it is reversible by definition, it needed the key only because its artefact is
+  custody-set, and that act happened at the step that applied it. Unsigned, its bindings stay
+  upgradable by a builder without a re-signature (D0214's cost).
+  .
+  (4) BINDINGS ARE UPGRADED BEFORE A RECORD IS ACCEPTED (D0214's recommendation), each upgrade in
+  queue_upgrades.py gated on a detector that its artefact landed in the tree, so a declined step
+  earns no upgrade. D0214's nine upgrades on already-signed records are step 8b, edit-then-re-sign
+  one record at a time.
+  .
+  (5) THE RECEIPT IS TAKEN BEHIND THE COMMIT CONFIRM (D0201 ruling 4, implemented the way that
+  record reads it): the confirm moves earlier, the receipt stays inside the commit and ahead of
+  the tag, and a sitting with nothing to commit takes no receipt.
+  .
+  (6) STEP 11 IS DELETED WHEN D0205 AND D0215 BOTH LAND, and runs only as D0215's fallback — a
+  projection regeneration and a commit, no signature. Declining D0205 instead offers
+  m4-laws-freeze into the hand list at step 4, under step 7's single custody signature; m4-close
+  then lags one boundary, as D0095 accepts. The close is followed by check_tag_signers and the
+  custodian, seconds, in place of the old thirty-minute gate.
+  .
+  (7) AN ssh-agent IS STARTED WHEN NONE RUNS, and "no agent" (ssh-add -l exit 2) is told apart
+  from "key not loaded" (exit 1), because they have different remedies. An agent the run starts
+  is stopped when the run exits. A failed ssh-add is reported rather than swallowed.
+  .
+  (8) THE CUSTODIAN DRAFT IS ASSEMBLED FROM THE FIXTURES STEP 5 INSTALLED, one delimited hunk per
+  fixture, replacing M3's warning that declining a fixture at step 5 obliged declining the whole
+  custodian at step 6. The same holds for the suite rows each fixture needs.
+  .
+  (9) D0243'S STRICT NODE IS REWRITTEN AT STEP 3 from the artefacts that landed, never from the
+  node's own detector, which would make it a tautology (D0244 item 3).
+  .
+  (10) THE CLOSE TAG QUOTES THE FINDINGS LEDGER and is refused without it (D0249).
+  .
+  (11) A FIXTURE MOVE RETARGETS EVERY BINDING THAT NAMED IT, derived rather than listed. The
+  first FAST rehearsal found D0245, D0246 and D0248 still bound to doorway-network-residue's
+  candidate path after step 5 had moved it, and step 5's own binding check is skipped whole under
+  FAST. M3 retargeted D0141 and D0199 by name, one block each, which is D0171 ruling (3)'s hand
+  enumeration. An unsigned record is now rewritten in the same breath as the move; a signed record
+  is refused before anything is written, because its signature covers those bytes.
+  .
+  (12) NOT CLEARED. Verification is FAST rehearsals only, which skip both make verify legs and
+  check_decisions. Clearance is recorded in one file, CLEARED.sha256, which the preflight and the
+  agenda generator both read, and which only a full, green, non-FAST rehearsal writes.
+rationale: >-
+  The M3 staging README listed four items owed to this driver, D0246 added two, and the queue
+  holds ten records. Each design choice above either executes one of those items or removes a
+  class of defect the M3 driver's own history recorded. The removal in item (1) is the one that
+  changes the ceremony's size, and it is justified by a measurement rather than a count: the stale
+  pointer is live in the installed driver today.
+reversibility: >-
+  Fully reversible: a draft in the staging directory and this record. Nothing is installed until
+  the owner's cp, and a declined driver leaves the M3 copy in place.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      The draft. Documentary until the owner installs it over scripts/boundary_sitting.sh, whose
+      custody row then pins these bytes.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/README.md
+    strength: documentary
+    detail: The changes-versus-M3 table, the step-to-queue map, and the rehearsal verdicts.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/sitting-preflight.sh
+    strength: documentary
+    detail: >-
+      The owner's read-only preflight: refuses as NOT CLEARED until CLEARED.sha256 names these
+      bytes, and tells "no agent" from "key not loaded".
+links: ["D0201", "D0205", "D0214", "D0215", "D0217", "D0243", "D0244", "D0246", "D0248", "D0249",
+        "D0068", "D0152", "D0095"]

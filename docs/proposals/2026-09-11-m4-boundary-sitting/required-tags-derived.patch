@@ -1,0 +1,262 @@
+diff --git a/governance/tag-roles.yaml b/governance/tag-roles.yaml
+index 8fb8ba2..c8b3831 100644
+--- a/governance/tag-roles.yaml
++++ b/governance/tag-roles.yaml
+@@ -37,22 +37,17 @@ roles:
+ 
+ # Tags that must EXIST. RT-15: no guard required any tag to be present, so `git tag -d`
+ # erased the trust root, emptied the bless_epoch that delegation-precedes-signature
+-# depends on, and made the attention receipt fresh for ever — every guard green,
+-# including check_tag_signers.py itself, which read an absent brief-freeze as "not
+-# created yet". That reading is right for a fresh repo and wrong for one that has been
+-# through its opening sitting, which is what `owner_key_enrolled` distinguishes.
++# depends on, and made the attention receipt fresh for ever — every guard green.
+ # Reachable by accident: shallow clones, exports and `git push` without --tags all
+ # produce a working copy that looks exactly like this attack.
+-required_tags:
+-  - m3-close
+-  - m3-laws-freeze
+-  - m2-laws-freeze
+-  - m2-close
+-  - m1-laws-freeze
+-  - m1-close
+-  - m0-close
+-  - brief-freeze
+-  - m0-laws-freeze
++#
++# required_tags is DERIVED, never enumerated — see derive_required_tags in
++# scripts/check_tag_signers.py (D0205). A hand-written list here lagged by exactly one
++# milestone at every boundary, which is what step 11 of every sitting through M3 existed
++# to patch, and at M4 Session A it lacked m4-laws-freeze (D0095 half 2, D0171 ruling 3,
++# D0229 item 4). The key is kept and MUST stay empty: a non-empty value is refused, so
++# re-adding an enumeration is a red gate rather than a silent regression.
++required_tags: []
+ 
+ # An unmatched tag class is REFUSED, not waved through. Without this the next hole is
+ # simply a tag kind the table never heard of.
+diff --git a/scripts/check_tag_signers.py b/scripts/check_tag_signers.py
+index 06a73ec..bcdabeb 100755
+--- a/scripts/check_tag_signers.py
++++ b/scripts/check_tag_signers.py
+@@ -14,6 +14,10 @@ review and the poison corpus must keep honest. Keeping the *policy* in
+ governance/tag-roles.yaml and the *logic* here leaves the custodian with a two-line
+ invocation, and makes this guard testable and poisonable like the other four.
+ 
++Which tags must EXIST is derived, not listed (D0205): see derive_required_tags. The table's
++`required_tags` key is kept empty, and a non-empty value is refused, because the hand list
++it replaced lagged one milestone at every boundary (D0095 half 2, D0171 ruling 3).
++
+ Exits non-zero on any violation.
+ """
+ 
+@@ -101,6 +105,34 @@ def check_trust_root(repo: Path, pin: dict, fail: Failures, opened: bool) -> Non
+         print(f"  trust root: {tag} pinned at {actual[:12]}…")
+ 
+ 
++def derive_required_tags(root: Path, opened: bool) -> list[str]:
++    """The tags a tree must carry, DERIVED from its frozen specs rather than enumerated
++    (D0205; the rule and its non-circularity argument are in
++    docs/proposals/2026-09-04-m3-boundary-sitting/TAG-ROLES-DERIVED.md).
++
++    `<m>-laws-freeze` for every milestone with a `docs/specs/<m>.md`; `<m>-close` for every
++    milestone whose SUCCESSOR has one, since a successor's Session A cannot precede its
++    predecessor's boundary sitting (BRIEF §8); `brief-freeze` once the owner key is
++    enrolled. That last condition is check_trust_root's own: before the opening sitting the
++    trust root legitimately does not exist, and requiring it here would contradict the
++    tolerance one function up.
++
++    `m<digits>` only. docs/specs/ also holds forward-correction files such as
++    m3-corrections.md, and a looser match would invent a milestone.
++
++    The source is docs/specs/*.md, every one of which is frozen in MANIFEST.sha256 — so
++    deleting a spec to shed a requirement reddens check_manifest first, in a different
++    guard. Deriving from the TAG SET would be vacuous: detecting a deleted tag is the job.
++    """
++    nums = sorted({int(p.stem[1:]) for p in (root / "docs" / "specs").glob("m*.md")
++                   if p.stem[1:].isdigit()})
++    required = {f"m{n}-laws-freeze" for n in nums}
++    required |= {f"m{n}-close" for n in nums if n + 1 in nums}
++    if opened:
++        required.add("brief-freeze")
++    return sorted(required)
++
++
+ @contextmanager
+ def repo_at(target: Path):
+     """Yield a working repo for `target`, cloning it first if it is a git bundle.
+@@ -148,7 +180,16 @@ def check(root: Path, repo: Path) -> int:
+     check_trust_root(repo, table["trust_root"], fail, opened)
+ 
+     tags = [t for t in git(repo, "tag", "-l").stdout.splitlines() if t.strip()]
+-    for required in table.get("required_tags") or []:
++    declared = table.get("required_tags") or []
++    if declared:
++        fail.add(
++            "required_tags is enumerated in governance/tag-roles.yaml, and it is derived — a "
++            "hand list lags one milestone at every boundary (D0095 half 2, D0171 ruling 3, "
++            f"D0205). Remove these and let the rule derive them: {', '.join(declared)}"
++        )
++    required_tags = derive_required_tags(root, opened)
++    print(f"  required (derived from docs/specs): {', '.join(required_tags) or 'none'}")
++    for required in required_tags:
+         if required not in tags:
+             fail.add(
+                 f"required tag missing: {required} — the tag set is part of the custody "
+diff --git a/tests/poison/custodian-tag-signer/governance/tag-roles.yaml b/tests/poison/custodian-tag-signer/governance/tag-roles.yaml
+index 5cef6af..6041fdd 100644
+--- a/tests/poison/custodian-tag-signer/governance/tag-roles.yaml
++++ b/tests/poison/custodian-tag-signer/governance/tag-roles.yaml
+@@ -12,6 +12,5 @@ roles:
+   - {pattern: "*-close", signer: owner}
+   - {pattern: "amendment-*", signer: owner}
+   - {pattern: "receipt-*", signer: owner}
+-required_tags:
+-  - brief-freeze
++required_tags: []
+ unknown: refuse
+diff --git a/tests/poison/custodian-tag-signer/make-fixture.sh b/tests/poison/custodian-tag-signer/make-fixture.sh
+index 5710eb7..b345a11 100755
+--- a/tests/poison/custodian-tag-signer/make-fixture.sh
++++ b/tests/poison/custodian-tag-signer/make-fixture.sh
+@@ -48,8 +48,7 @@ roles:
+   - {pattern: "*-close", signer: owner}
+   - {pattern: "amendment-*", signer: owner}
+   - {pattern: "receipt-*", signer: owner}
+-required_tags:
+-  - brief-freeze
++required_tags: []
+ unknown: refuse
+ YAML
+ 
+diff --git a/tests/test_tag_signers.py b/tests/test_tag_signers.py
+index 0b791ec..bc3a59f 100644
+--- a/tests/test_tag_signers.py
++++ b/tests/test_tag_signers.py
+@@ -28,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
+ sys.path.insert(0, str(REPO_ROOT / "scripts"))
+ 
+ from _gov import git_env  # noqa: E402
++from check_tag_signers import derive_required_tags  # noqa: E402
+ 
+ GUARD = REPO_ROOT / "scripts" / "check_tag_signers.py"
+ 
+@@ -76,11 +77,13 @@ def world(tmp_path: Path):
+         return sh("git", "-C", str(repo), "rev-parse", f"refs/tags/{name}").stdout.strip()
+ 
+     def write_table(trust_object: str, unknown: str = "refuse",
+-                    required: tuple[str, ...] = ()) -> None:
+-        required_block = "".join(f"  - {name}\n" for name in required)
++                    enumerated: tuple[str, ...] = ()) -> None:
++        # `enumerated` writes a HAND LIST, which the guard now refuses (D0205): it exists
++        # only so the refusal can be watched. Required tags come from specs().
++        required_block = "".join(f"  - {name}\n" for name in enumerated)
+         (root / "governance" / "tag-roles.yaml").write_text(
+             "version: 1\n"
+-            + (f"required_tags:\n{required_block}" if required else "")
++            + (f"required_tags:\n{required_block}" if enumerated else "")
+             +
+             "trust_root:\n"
+             "  tag: brief-freeze\n"
+@@ -94,6 +97,12 @@ def world(tmp_path: Path):
+             f"unknown: {unknown}\n"
+         )
+ 
++    def specs(*names: str) -> None:
++        """Frozen-spec stand-ins. The guard reads only their NAMES (D0205)."""
++        (root / "docs" / "specs").mkdir(parents=True, exist_ok=True)
++        for name in names:
++            (root / "docs" / "specs" / f"{name}.md").write_text(f"# {name}\n")
++
+     def run() -> subprocess.CompletedProcess:
+         return subprocess.run(
+             [sys.executable, str(GUARD), "--root", str(root), "--repo", str(repo)],
+@@ -103,7 +112,8 @@ def world(tmp_path: Path):
+     return type("World", (), dict(
+         root=root, repo=repo, owner_key=owner_key, builder_key=builder_key,
+         stranger_key=stranger_key, tag=staticmethod(tag),
+-        write_table=staticmethod(write_table), run=staticmethod(run),
++        write_table=staticmethod(write_table), specs=staticmethod(specs),
++        run=staticmethod(run),
+     ))
+ 
+ 
+@@ -210,9 +220,11 @@ def test_deleting_the_trust_root_after_the_sitting_is_refused(world):
+ 
+ def test_a_required_tag_that_was_never_there_is_refused(world):
+     """The accident case: a shallow clone or an export arrives without tags and is
+-    indistinguishable from deletion, so both are refused."""
++    indistinguishable from deletion, so both are refused. The requirement now comes from
++    the spec, not from a list (D0205)."""
+     original = world.tag("brief-freeze", world.owner_key)
+-    world.write_table(original, required=("brief-freeze", "m0-laws-freeze"))
++    world.specs("m0")
++    world.write_table(original)
+     run = world.run()
+     assert run.returncode != 0
+     assert "required tag missing: m0-laws-freeze" in run.stderr
+@@ -221,8 +233,63 @@ def test_a_required_tag_that_was_never_there_is_refused(world):
+ def test_required_tags_present_pass(world):
+     original = world.tag("brief-freeze", world.owner_key)
+     world.tag("m0-laws-freeze", world.builder_key)
+-    world.write_table(original, required=("brief-freeze", "m0-laws-freeze"))
+-    assert world.run().returncode == 0
++    world.specs("m0")
++    world.write_table(original)
++    run = world.run()
++    assert run.returncode == 0, run.stdout + run.stderr
++    assert "required (derived from docs/specs): brief-freeze, m0-laws-freeze" in run.stdout
++
++
++def test_a_milestone_whose_successor_has_a_spec_must_have_been_closed(world):
++    """The lag D0095 recorded, closed by construction: the successor's spec is what makes
++    the predecessor's close required, and the successor's own close is not yet owed."""
++    original = world.tag("brief-freeze", world.owner_key)
++    world.tag("m0-laws-freeze", world.builder_key)
++    world.tag("m1-laws-freeze", world.builder_key)
++    world.specs("m0", "m1")
++    world.write_table(original)
++    run = world.run()
++    assert run.returncode != 0
++    assert "required tag missing: m0-close" in run.stderr
++    assert "m1-close" not in run.stderr, "a close was required before its successor's spec"
++
++
++def test_an_enumerated_required_tags_list_is_refused(world):
++    """Re-adding a hand list must be a red gate, not a silent regression — even when every
++    tag it names exists, which is exactly when an enumeration looks harmless."""
++    original = world.tag("brief-freeze", world.owner_key)
++    world.tag("m0-laws-freeze", world.builder_key)
++    world.tag("m0-close", world.owner_key)
++    world.specs("m0")
++    world.write_table(original, enumerated=("m0-close",))
++    run = world.run()
++    assert run.returncode != 0
++    assert "required_tags is enumerated" in run.stderr and "m0-close" in run.stderr
++
++
++def test_a_forward_correction_file_is_not_a_milestone(world):
++    """docs/specs/ holds m3-corrections.md beside m3.md. `m<digits>` only, or the rule
++    would invent a milestone and require a close tag for m0 on the strength of a filename."""
++    original = world.tag("brief-freeze", world.owner_key)
++    world.tag("m0-laws-freeze", world.builder_key)
++    world.specs("m0", "m1-corrections")
++    world.write_table(original)
++    run = world.run()
++    assert run.returncode == 0, run.stdout + run.stderr
++
++
++def test_the_real_repo_derives_a_requirement_for_every_spec():
++    """The positive control a derived rule needs: one that derived NOTHING would pass the
++    real tree too. Every frozen spec must yield its laws-freeze tag, and every derived tag
++    must exist — asserted against the specs on disk, never a count written down here."""
++    derived = set(derive_required_tags(REPO_ROOT, opened=True))
++    specs = [p.stem for p in (REPO_ROOT / "docs" / "specs").glob("m*.md")
++             if p.stem[1:].isdigit()]
++    assert specs, "no docs/specs/m<N>.md found — the derivation has nothing to read"
++    assert {f"{m}-laws-freeze" for m in specs} <= derived
++    assert "brief-freeze" in derived
++    tags = set(sh("git", "-C", str(REPO_ROOT), "tag", "-l").stdout.split())
++    assert derived <= tags, f"derived but absent: {sorted(derived - tags)}"
+ 
+ 
+ def test_the_real_repo_passes_its_own_table():

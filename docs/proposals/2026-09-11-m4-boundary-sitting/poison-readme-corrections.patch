@@ -1,0 +1,77 @@
+diff --git a/tests/poison/README.md b/tests/poison/README.md
+index 500b588..cecd0f8 100644
+--- a/tests/poison/README.md
++++ b/tests/poison/README.md
+@@ -60,9 +60,13 @@ instead, in `poison-readme-row-file-skip.md`, right after that step lands the pa
+ This fixture proves the check added this session runs against the **real** frozen law
+ file, the same way `lint-imports-kernel/` runs against the repo's real import contracts —
+ not a copy, so it goes silent exactly when the check is neutered. It defends against one
+-exploitation of the naming hazard, not the hazard itself; the real fix (a package-qualified
+-import in the frozen file) is queued for a future sitting, since `test_l1_duckdb.py` is
+-frozen and manifested (`m1-laws-freeze`).
++exploitation of the naming hazard, not the hazard itself. The hazard is closed by superseding
++the frozen law file FORWARD — a new file that binds its oracle from the frozen bytes by file
++location, borrowing the name and putting it back — which is Tier-A builder work under D0106
++ruling 2 and D0128's precedent, not a sitting item. What IS a sitting item is this fixture: a
++superseding file is immune by construction, so a poison line aimed at one would report "guard
++PASSED its poison". The fixtures keep naming the SUPERSEDED files, which a forward supersession
++retains unedited.
+ 
+ ## Added at the M2 boundary sitting (2026-08-31)
+ 
+diff --git a/tests/poison/oracle-shadow-spoofed/README.md b/tests/poison/oracle-shadow-spoofed/README.md
+index 697153b..ea38f96 100644
+--- a/tests/poison/oracle-shadow-spoofed/README.md
++++ b/tests/poison/oracle-shadow-spoofed/README.md
+@@ -39,7 +39,8 @@ L3.12   ok      pass     hypothesis-derandomize    sha256:94c965b3c7575288…
+ OK — 52 law(s) carry fresh passing evidence.
+ ```
+ 
+-`check_differential` is BRIEF §6's differential kill criterion and frozen L3.12's entire body.
++`check_differential` is frozen L3.16's entire body (its oracle; L3.12, BRIEF §6's declared kill
++criterion, is carried by `test_l3_graph.py` — this sentence named L3.12 until the M4 sitting).
+ It was answered 1,400 times by `lambda *a, **k: None`, and the last line above is the
+ completion criterion CLAUDE.md names for an implementation session.
+ 
+@@ -91,12 +92,22 @@ controls. `__all__ = []` fingerprinted nothing and passed. The shipped spelling
+ list off the frozen reference only and looks up each name on the module under test; the evasion
+ then exits non-zero. The fixture sets `__all__` deliberately so the corpus keeps that case.
+ 
+-**What it does not close.** This is defence in depth, not a fix for the naming hazard. A decoy
+-that `compile()`s its stub from the frozen file's own source text and patches behaviour through
+-a closure or a mutable default would still need to change *some* code object, so this check has
+-real teeth — but the actual fix remains the one RT-M1-01 named at M1 and RT-M2-01 repeated at
+-M2: **a package-qualified import in the frozen law file**, which needs the owner's key because
+-the law files are frozen. That is now three boundaries of the same recommendation.
++**What it does not close.** This is defence in depth and its teeth are narrower than they
++look. The check compares CODE objects, so a decoy that changes only a DATA export slips
++through: measured 2026-09-09, a decoy whose callables are the frozen module's own function
++objects and which narrows `SHAPES` from 14 entries to 1 cuts L3.16 to a single case with
++this guard silent (`1 passed`, against `14 passed` clean), and the evidence record written
++under it says `examined: {law_nodes: 1, test_cases: 1}, verdict: pass`. `MUTANTS`,
++`CAUGHT_BY`, `FAMILIES` and `ATOMS` are substitutable the same way.
++
++The actual fix is not the package-qualified import RT-M1-01 and RT-M2-01 named — measured,
++that leaves `sys.modules["tests.laws.m3._delta_model"] = decoy` winning. It is a load from
++the frozen bytes by file location, borrowing the name and putting it back, landed as a
++forward supersession under D0106 ruling 2 — Tier-A builder work, no owner key, per D0128's
++precedent. This fixture keeps its job unchanged: it runs against the SUPERSEDED
++`tests/laws/m3/test_l3_differential.py`, which a forward supersession retains unedited.
++Its invocation is single-file, so it cannot see a cross-file disarm; that property is
++pinned by `tests/test_governance_scripts.py`, and pinning it here too is queued.
+ 
+ **Install cost.** The reference load runs once per frozen oracle per pytest session (five
+ oracles at M3). Measured as noise against a 26–31s `tests/laws/m3` run.
+diff --git a/tests/poison/oracle-shadow-spoofed/_delta_model.py b/tests/poison/oracle-shadow-spoofed/_delta_model.py
+index f5f9434..4470b12 100644
+--- a/tests/poison/oracle-shadow-spoofed/_delta_model.py
++++ b/tests/poison/oracle-shadow-spoofed/_delta_model.py
+@@ -6,7 +6,7 @@
+ # covers the variant it does not: `__file__` is a plain attribute, and a module that
+ # sets it to the frozen path passes `_oracle_shadow_problem`'s identity comparison
+ # outright. Measured against the shipped guard: `check_differential` — BRIEF §6's
+-# differential kill criterion, frozen L3.12 — was answered 1,400 times by a stub that
++# differential oracle, frozen L3.16 — was answered 1,400 times by a stub that
+ # returns None, with 38 M3 law nodes green, 16 fresh evidence records written, and
+ # `check_manifest` reporting "frozen paths intact; seals unbroken; custody set current".
+ #

@@ -1,0 +1,154 @@
+diff --git a/scripts/check_manifest.py b/scripts/check_manifest.py
+index cc8fe97..115bb58 100755
+--- a/scripts/check_manifest.py
++++ b/scripts/check_manifest.py
+@@ -16,9 +16,11 @@ Exits non-zero on any violation.
+ from __future__ import annotations
+ 
+ import argparse
++import ast
+ import subprocess
+ import sys
+ import tomllib
++from collections.abc import Iterable
+ from pathlib import Path
+ 
+ # Run under `python -I -P` (conferral ruling 3, D0063): isolated mode ignores
+@@ -197,6 +199,86 @@ def check_custody(root: Path, fail: Failures) -> None:
+             )
+ 
+ 
++def current_milestone(root: Path) -> str | None:
++    """The milestone this repository is in, DERIVED from MANIFEST.sha256's own rows.
++
++    Never written down: a hand-maintained "current milestone" constant lags by exactly one
++    boundary, which is the shape D0095 argued about `required_tags`, D0142 about the oracle
++    map and D0169 about the milestone list (D0171 ruling (3), D0211). A milestone is frozen
++    when its spec and its law files both carry manifest rows; the highest such is the one in
++    flight. `m<digits>` only — docs/specs/ also holds forward-correction files such as
++    m3-corrections.md, and a looser match silently invents a milestone (gen_roadmap.py:241).
++    """
++    manifest = parse_manifest(root / "MANIFEST.sha256")
++    is_milestone = lambda name: name.startswith("m") and name[1:].isdigit()  # noqa: E731
++    specs = {p.split("/")[-1][:-3] for p in manifest
++             if p.startswith("docs/specs/") and p.endswith(".md")}
++    laws = {p.split("/")[2] for p in manifest if p.startswith("tests/laws/")}
++    frozen = {m for m in specs & laws if is_milestone(m)}
++    return f"M{max(int(m[1:]) for m in frozen)}" if frozen else None
++
++
++L4_4_CLAMPED_NODE = (
++    "tests/laws/m4/test_l4_modes.py::"
++    "test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call"
++)
++
++
++def _nonzero(values: Iterable[object]) -> bool:
++    """Whether anything here authorises a spend. A bool is not a budget."""
++    return any(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0
++               for v in values)
++
++
++def _declares_flag(source: str, flag: str) -> bool:
++    """Whether `source` DECLARES `flag` as an argparse option, read off the syntax tree.
++
++    Not a grep: a flag named in a docstring, a comment or an error message does not declare
++    it, and a guard that learned another artifact's state from its prose is the defect
++    D0171 ruling (3) and D0211 forbid. The shape asserted is `<x>.add_argument("<flag>", …)`.
++    """
++    try:
++        tree = ast.parse(source)
++    except SyntaxError:
++        return False
++    return any(
++        isinstance(node, ast.Call)
++        and isinstance(node.func, ast.Attribute)
++        and node.func.attr == "add_argument"
++        and node.args
++        and isinstance(node.args[0], ast.Constant)
++        and node.args[0].value == flag
++        for node in ast.walk(tree)
++    )
++
++
++def unmet_spend_preconditions(root: Path) -> list[str]:
++    """D0240's preconditions to the first nonzero envelope that this guard can still see.
++
++    Empty means the pre-budget sitting may proceed. The other two preconditions are applied
++    by the sitting that installs this function, so testing them here would be testing this
++    patch; `tests/test_spend_preconditions.py` (D0243) pins all four.
++    """
++    unmet = []
++    laws = load_yaml(root / "governance" / "laws.yaml") or {}
++    retired = {entry.get("node") for entry in (laws.get("superseded") or [])}
++    if L4_4_CLAMPED_NODE not in retired:
++        unmet.append(
++            f"governance/laws.yaml has no superseded entry retiring {L4_4_CLAMPED_NODE} — "
++            "L4.4's third node still says `tannen run --spend` may be called with a budget "
++            "of its own, which is the law the clamp reverses (D0240 item (2), D0241)"
++        )
++    cli = root / "src" / "tannen" / "cli.py"
++    source = cli.read_text(encoding="utf-8") if cli.exists() else ""
++    if not _declares_flag(source, "--budget-override"):
++        unmet.append(
++            "src/tannen/cli.py declares no --budget-override, so `tannen run --budget` is "
++            "still honoured as handed in and the shortest spelling can spend against a "
++            "budget the owner never signed (D0240 item (2))"
++        )
++    return unmet
++
++
+ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
+     tier_c_path = root / "governance" / "tier-c.yaml"
+     if not tier_c_path.exists():
+@@ -217,16 +299,44 @@ def check_tier_c_consistency(root: Path, fail: Failures) -> None:
+         fail.add(f"tier-c.yaml policy.file {policy_rel!r} does not exist")
+     elif budget_rel and (root / budget_rel).exists():
+         # BRIEF §9.2: operational SpendGuard ceilings may never exceed what the
+-        # owner-signed policy envelopes authorise (Tier-C door: spend-envelopes).
++        # owner-signed policy envelopes authorise (Tier-C door: spend-envelopes) — the
++        # CURRENT milestone's envelope, which is what policy.yaml has always said and what
++        # this comparison did not do. Taking the maximum over all milestones meant a raised
++        # LATER envelope silently authorised every earlier milestone's ceilings
++        # (D0229 item (5); owner ruling D0240 item (3)).
+         envelopes = (load_yaml(root / policy_rel) or {}).get("budget_envelopes", {})
+-        max_envelope = max(envelopes.values(), default=0)
+         ceilings = (load_yaml(root / budget_rel) or {}).get("ceilings", {})
+-        for name, value in ceilings.items():
+-            if value > max_envelope:
++        # D0242 item (3): the first nonzero envelope is a one-way door, and the deferral of
++        # the clamp to M5 Session A rests on this gap being inert here — zero envelopes, zero
++        # ceilings, no credentials. The first two are properties of this repository, so they
++        # are checked; the third is a property of a machine and cannot be. While ANY spend is
++        # authorised at all, the preconditions to authorising it must already be met.
++        if _nonzero(list(envelopes.values()) + list(ceilings.values())):
++            for problem in unmet_spend_preconditions(root):
+                 fail.add(
+-                    f"budget.yaml ceiling {name}={value} exceeds every policy.yaml "
+-                    f"budget envelope (max {max_envelope}) — Tier-C door spend-envelopes"
++                    "a nonzero budget envelope or ceiling is declared while a precondition "
++                    f"to the first spend is open — {problem}"
+                 )
++        current = current_milestone(root)
++        if current is None:
++            fail.add(
++                "no milestone has both a frozen spec row and frozen law rows in "
++                "MANIFEST.sha256, so there is no current envelope to compare ceilings "
++                "against — a comparison with no basis admits everything"
++            )
++        elif current not in envelopes:
++            fail.add(
++                f"policy.yaml names no budget envelope for {current}, the current "
++                f"milestone — a missing envelope authorises nothing, and falling back to "
++                f"the other milestones' values would authorise the largest of them"
++            )
++        else:
++            for name, value in sorted(ceilings.items()):
++                if value > envelopes[current]:
++                    fail.add(
++                        f"budget.yaml ceiling {name}={value} exceeds {current}'s policy.yaml "
++                        f"budget envelope ({envelopes[current]}) — Tier-C door spend-envelopes"
++                    )
+ 
+     # The contracts live in their own custody-set file, not in pyproject.toml: a guard's
+     # configuration is part of the guard, and pyproject.toml is deliberately outside the

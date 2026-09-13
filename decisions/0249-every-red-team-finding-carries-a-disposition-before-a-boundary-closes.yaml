@@ -1,0 +1,71 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0249
+title: "Every red-team finding carries a disposition before a boundary closes: docs/redteam/LEDGER.yaml, and a gate inline in the sitting driver that refuses the close tag without it"
+tier: A
+date: "2026-09-13"
+risk_flags: ["governance-paths"]
+decision: >-
+  RT-M4-07's mechanism (D0246 A3), drafted for the M4 boundary sitting, which is the first to run
+  under it. Queued `blocked-on-owner` because the gate lives in the sitting driver, a custody-set
+  artefact. Shape chosen by the owner in this session's interview of 2026-09-13: a ledger and a
+  driver gate, not a guard in make verify.
+  .
+  (1) THE LEDGER. `docs/redteam/LEDGER.yaml` holds one row per finding id any red-team report
+  names, each with a disposition from a closed set: `closed` (the record that closed it),
+  `scheduled` (where, and a record), `deferred` (a reason and the boundary to revisit it) or
+  `non-goal` (a BRIEF § citation). Builder-maintained, owner-confirmed at each sitting. Drafted
+  from each report's own status sections and the M1-M4 status audits: 42 findings, 24 closed,
+  4 scheduled, 14 deferred, 0 non-goal. Where the evidence did not settle a disposition, the row
+  says `deferred` and says why, rather than inventing a closure.
+  .
+  (2) THE GATE. Inline in the driver (its heredoc body is `ledger_gate.py` verbatim). It refuses
+  an id with no row, an orphan row, a duplicate, a missing or invalid disposition field, and a
+  record id with no decision file. Its positive control refuses a derivation that finds no RT-01
+  or no RT-M4-07. Watched failing on mutated copies for each problem before this record was
+  written. Step 8c pages the open rows and offers an edit; step 10 re-runs the gate and REFUSES
+  the close tag while it fails, and the tag message quotes the ledger's sha256 and its open rows,
+  so the owner's close signature is also a signature over the account of what is still open.
+  .
+  (3) THE ID SET IS DERIVED FROM THE REPORTS' STRUCTURE — `## RT-… —` headings and `| RT-… |`
+  table rows — never listed. That reads what a report IS, not a state another artefact holds:
+  whether a finding is closed is recorded in the ledger row, never inferred from report prose,
+  which keeps the standing rule that no check learns another artefact's state by grepping it.
+  .
+  (4) INLINE, AND NOT IN make verify, DELIBERATELY. Inline because the driver is re-signed at step
+  7, so the gate runs under the owner's custody signature, whereas a standalone script would be
+  one more path a builder edits freely. Not in verify because that makes every commit, not only
+  the close, fail on an undispositioned finding; promoting it is a later ruling the owner reserved.
+  .
+  (5) WHAT BUILDING IT FOUND. RT-M2-03 has no record addressing it after D0141 and is absent from
+  both the M3 and M4 status audits: a finding that may simply have been dropped, which is exactly
+  the failure RT-M4-07 names. It is recorded as deferred for that reason, and the sitting should
+  rule on it rather than inherit it.
+rationale: >-
+  The D0104 norm — the session that finds a defect does not fix it — is right and only works if
+  some session does. Seven findings sat "unchanged" across four boundaries with nothing measuring
+  whether the queue drained. A gate at the close is the cheapest point that bites: it adds no
+  commit-time cost, it makes the account part of the one signature that anchors the boundary, and
+  it cannot be satisfied by silence, because every row must say which of four things it is.
+reversibility: >-
+  Reversible: a ledger file, a gate in a driver, and this record. Declining it at the sitting
+  costs nothing but RT-M4-07 staying open; removing it later is an owner edit to the driver.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/redteam/LEDGER.yaml
+    strength: documentary
+    detail: >-
+      The ledger. Documentary because no guard in make verify reads it (item 4); what enforces it is
+      the driver's step-10 refusal, which binds only at a sitting.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/ledger-gate.md
+    strength: documentary
+    detail: The rule, the schema, the derivation argument and the watched-failing table.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/ledger_gate.py
+    strength: documentary
+    detail: >-
+      The gate's tested source. The driver embeds it verbatim; the two must stay byte-identical, and
+      the staging README states the command that checks it.
+links: ["D0246", "D0245", "D0104", "D0141", "D0171", "D0213"]

@@ -1,0 +1,90 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0248
+title: "The shell's IO doorway, derived: check_doorway.py refuses a socket-reaching import or a shell-out outside the named doors, and a whole-package contract refuses subprocess — drafted as the M4 sitting's first step"
+tier: A
+date: "2026-09-13"
+risk_flags: ["governance-paths"]
+decision: >-
+  DRAFTED, NOT INSTALLED, for step 1 of the M4 boundary sitting — the item D0246 A2 put first.
+  Queued `blocked-on-owner` on D0216's convention: every artefact it touches is custody-set.
+  Shape chosen by the owner in this session's interview of 2026-09-13, from three options put
+  with a recommendation: a derived scan plus a contract, over a contract alone or deferral.
+  .
+  (1) THE RULE. `scripts/check_doorway.py` scans every module under `src/tannen` outside the
+  doors and refuses (a) any absolute import whose STATIC module-level import closure reaches a
+  seed in {socket, _socket, ssl, _ssl}, and (b) any call to `os.system`, `os.popen`, `os.exec*`,
+  `os.spawn*`, `os.posix_spawn*` or `os.fork*`. The network set is therefore DERIVED, the way
+  L4.9's clock set already is and its network set is not (D0171 ruling (3), D0211). The seeds are
+  the one named constant, and they are the operating system's socket primitives rather than a
+  list of libraries that wrap them.
+  .
+  (2) THE DOORS, EACH WITH ITS REASON. `tannen.oracles` and `tannen.r2` for the network — the
+  doorway and the store transport, as frozen L4.9 already names them. `tannen.laws` for the
+  network scan only, as the runner: measured, its closure reaches socket through three imports
+  (`hypothesis` and `pytest` in plugin.py, `jsonschema` in evidence.py), and L4.9 already gives it
+  the same door for the clock for the same reason. It is NOT a door for shell-outs.
+  .
+  (3) THE CONTRACT. `governance/importlinter.toml` gains `shell-no-subprocess`: forbidden,
+  source_modules ["tannen"], forbidding subprocess, multiprocessing and pty, with no
+  ignore_imports. Whole-package because none of the three appears anywhere in src/tannen,
+  oracles included — measured, lint-imports "4 kept, 0 broken" with the patch applied. The
+  guard, not the contract, carries the derivation and the os shell-outs: an import rule cannot
+  exclude a door without ignore_imports, which check_manifest refuses (D0056), cannot see an
+  attribute call on a module the shell legitimately imports, and cannot derive anything.
+  Its check_manifest shape row lands at step 3, and only on top of the envelope patch, because
+  D0243 reads any byte change to check_manifest.py as that patch landing.
+  .
+  (4) WATCHED FAILING, in a scratch clone before this record was written: green on the real
+  tree (34 modules scanned); the fixture fails exactly once per payload while its control
+  modules stay silent; frozen L4.9's own scanner finds nothing in the same fixture — which is
+  RT-M4-02 demonstrated; emptied seeds, an over-approximating control, a removed runner door and
+  an empty --root each fail loudly; an os.system planted in a copy of executor.py is caught.
+  .
+  (5) WHAT IT DOES NOT CLAIM. A static scan does not see `importlib.import_module` or
+  `__import__`, and it resolves closures against the interpreter running it. Two narrower
+  limits were found reading the draft rather than running it, and are stated so the next pass
+  can measure them: the shell-out rule matches the literal name `os`, so `import os as o;
+  o.system(...)` is not seen; and the process rule refuses PROCESS MODULES BY NAME, not by
+  closure, so a stdlib module that itself spawns a child (webbrowser, for one) is not refused
+  on that ground. The superseding
+  frozen L4.9 that derives its forbidden set from this guard is owed by M5 Session A: a successor
+  law has no legal home inside M4 (D0241).
+  .
+  (6) THE FIXTURE OBLIGATION RUNS HERE (D0246 A4). This record is the one closing RT-M4-02's
+  owner-key half, so it accounts for `docs/redteam/fixture-candidates/doorway-network-residue/`:
+  the candidate now carries a payload tree, and step 5 installs it — offered only when the step-1
+  guard landed — with its custodian line assembled at step 6.
+rationale: >-
+  RT-M4-02 is the one live high finding (D0245, D0246): `make verify` green does not today mean
+  "no IO", its threat model is the builder, and the repository is published. The three
+  alternatives each fail on a measured fact rather than a preference. A contract alone cannot
+  hold the doors without the exception mechanism the floor refuses. A hand-extended NETWORK
+  literal is the RT-M3-02 shape the finding is about. And deferring to a Session A leaves the
+  hole open for a whole milestone for a remedy whose owner-key half is ready now.
+reversibility: >-
+  Fully reversible today: drafts in the staging directory and this record. Once installed,
+  reversible by an owner-applied patch and a re-signature of the custody set — the cost every
+  custody-set guard carries, and the property that makes it a guard.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/doorway-guard.md
+    strength: documentary
+    detail: >-
+      The proposal: the rule, the doors and their reasons, the measurements and the watched-failing
+      table. Documentary: a draft awaiting the owner's key enforces nothing (D0143).
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/doorway-guard.patch
+    strength: documentary
+    detail: >-
+      What step 1 applies: the guard, its unit tests, the Makefile line, the tier-c.yaml custody and
+      guard rows, and the import-linter contract. Upgrades to enforced bindings on the installed
+      paths after the sitting.
+  - type: file
+    target: docs/redteam/fixture-candidates/doorway-network-residue/README.md
+    strength: documentary
+    detail: >-
+      The fixture this record accounts for (item 6). Retargets to tests/poison/ the moment step 5
+      moves it, in the same breath as the move (D0152's ruling for D0141).
+links: ["D0245", "D0246", "D0229", "D0223", "D0241", "D0171", "D0211", "D0056", "D0243"]

@@ -1,0 +1,346 @@
+# docs/redteam/LEDGER.yaml — where every red-team finding stands (RT-M4-07, D0246 A3).
+#
+# WHAT THIS IS. One row per finding id that appears in any docs/redteam/*.md report, saying
+# where it stands: closed (by which record), scheduled (where, under which record), deferred
+# (why, and at which boundary it is looked at again), or a non-goal (which BRIEF clause).
+# RT-M4-07 found that the queue had no service-rate: infrastructure findings sat "unchanged"
+# across four boundaries and nothing required a sitting to account for them. The M4 boundary
+# sitting's driver refuses to close while any finding lacks a valid row here
+# (docs/proposals/2026-09-11-m4-boundary-sitting/ledger_gate.py).
+#
+# WHO MAINTAINS IT. The builder drafts and updates rows; the owner confirms them at each
+# boundary sitting. A `deferred` row is a proposal until the owner has seen it at a sitting.
+# This file is not custody-set and not in `make verify` — promoting the gate is a later
+# ruling (D0249).
+#
+# WHAT IT IS NOT. It is a disposition record, not a guard's enumeration: the set of ids is
+# DERIVED from the reports' own `## RT-… —` headings and `| RT-… |` table rows, and the gate
+# refuses both a finding with no row and a row naming no finding. Nothing here decides what
+# is checked; it records what was decided about each finding.
+#
+# SCHEMA. id, report, severity (as the report states it), disposition, and by disposition:
+#   closed    -> record  (the decision that closed it)
+#   scheduled -> where + record
+#   deferred  -> reason + revisit
+#   non-goal  -> cite    (BRIEF §…)
+# plus an optional note. Status audits (RT-M1-06, RT-M2-08, RT-M3-06, RT-M4-06) are
+# informational: they are "closed" by the record that filed their pass, and every item they
+# carry is dispositioned under its own id.
+#
+# Evidence for every row: each report's own text and the status audits RT-M1-06 (at M1),
+# RT-M2-08, RT-M3-06 and RT-M4-06 (the latest, at 3cac685), plus
+# docs/proposals/2026-09-11-m4-boundary-sitting/2026-09-12-red-team-findings.md.
+version: 1
+
+findings:
+  # ------------------------------------------------------------------ M0 → M1 (D0059)
+  - id: RT-01
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Critical
+    disposition: closed
+    record: D0056
+    note: Sealed directories (D0056) plus the custody set as the positive enumeration (D0061); verified closed by RT-M2-08.
+  - id: RT-02
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Critical
+    disposition: closed
+    record: D0063
+    note: Contract shape check (D0056) and the contracts moved into custody-set governance/importlinter.toml (conferral ruling 3); verified closed by RT-M2-08.
+  - id: RT-03
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Critical
+    disposition: closed
+    record: D0056
+    note: Sealed directories; verified closed by RT-M2-08.
+  - id: RT-04
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: High
+    disposition: closed
+    record: D0056
+    note: Required signatures; verified closed by RT-M2-08.
+  - id: RT-05
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      Closed inside `make verify` only (D0057's freshly removed evidence store). The bare
+      `tannen laws report` against the default evidence/ store is still forgeable — carried as
+      RT-M1-03, surface 77 laws at RT-M4-06. No milestone has been chartered to authenticate
+      evidence, and the builder has no drafted remedy.
+    revisit: m5-boundary
+  - id: RT-06
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: High
+    disposition: closed
+    record: D0064
+    note: Tier-C records require an owner signature; poison fixture check-decisions-unsigned-tier-c. Verified closed by RT-M2-08.
+  - id: RT-07
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      Half closed: the ratchet fires against its poison fixture (installed at the M0 sitting).
+      The digest's input-hash header is still never verified and digest/ has no manifest or
+      custody rows (RT-M4-06, unchanged). No record proposes a remedy; D0215 moves more weight
+      onto the digest, which makes this worth ruling on rather than leaving.
+    revisit: m5-boundary
+  - id: RT-08
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: High
+    disposition: closed
+    record: D0057
+    note: The accident half is closed (`env -u` at every call site). The deliberate half is unauthenticatable by design (RT-M2-08).
+  - id: RT-09
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Medium-high
+    disposition: closed
+    record: D0096
+    note: The descriptor addresses its harness (D0086, D0096). What the widening still misses is RT-M1-02.
+  - id: RT-10
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      Unchanged across four boundaries (RT-M4-06). The binding strength field (D0052) and
+      bindings_count (D0106) narrowed it but do not make a resolving binding an enforcing one;
+      no record proposes the rest.
+    revisit: m5-boundary
+  - id: RT-11
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      Partially closed: sample_rate_k is owner-signed in policy.yaml. `tier` and `risk_flags`
+      remain author-written and unchecked (RT-M4-06). No record proposes a check.
+    revisit: m5-boundary
+  - id: RT-12
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      Append-only is still declared, not enforced: only signed Tier-C records are covered, by
+      their signature (RT-M4-06). D0045 records that no guard enforces immutability; no remedy
+      is drafted.
+    revisit: m5-boundary
+  - id: RT-13
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Medium
+    disposition: closed
+    record: D0061
+    note: governance/tier-c.yaml carries a MANIFEST.sha256 row; verified closed by RT-M1-06 and RT-M2-08.
+  - id: RT-14
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      Last audited at M1 (RT-M1-06: "still open in the general form"). Since then the guards'
+      code became custody-set (D0061), which answers the "guards are unfrozen" half, but no
+      later audit re-measured the "one tooth per guard" half. Not settled by the evidence; it
+      needs a re-audit before it can be closed.
+    revisit: m5-boundary
+  - id: RT-15
+    report: docs/redteam/2026-08-24-m0-boundary.md
+    severity: High
+    disposition: scheduled
+    where: m4 boundary sitting, driver step 4 (required_tags derived)
+    record: D0205
+    note: The mechanism was closed at M0 (D0058). Its enumeration lags every boundary (D0095; m4-laws-freeze is missing at RT-M4-06), and D0205's derivation, queued as D0229 item (4), is what ends the lag.
+
+  # ------------------------------------------------------------------ M1 → M2 (D0104)
+  - id: RT-M1-01
+    report: docs/redteam/2026-08-26-m1-boundary.md
+    severity: Critical
+    disposition: closed
+    record: D0179
+    note: Re-found as RT-M2-01 and again as RT-M3-04. Closed at the identity layer by D0179 and by D0225's file-location binding; verified closed by RT-M4-06.
+  - id: RT-M1-02
+    report: docs/redteam/2026-08-26-m1-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      harness_subject still misses .venv/site-packages. The Makefile concedes "site-packages
+      itself is still builder-controlled" (RT-M4-06, unchanged). No remedy is drafted.
+    revisit: m5-boundary
+  - id: RT-M1-03
+    report: docs/redteam/2026-08-26-m1-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      The same hazard as RT-05, carried forward: evidence forgery for the bare `tannen laws
+      report`, surface 77 laws (RT-M4-06). It grows with every milestone and has no chartered
+      remedy.
+    revisit: m5-boundary
+  - id: RT-M1-04
+    report: docs/redteam/2026-08-26-m1-boundary.md
+    severity: Medium-high
+    disposition: deferred
+    reason: >-
+      The trace directory still has no content-integrity binding (RT-M4-06). D0232 closed the
+      binary-swap sub-case only. RT-M3-01, RT-M3-03 and RT-M4-01 all reach the general case;
+      no remedy is drafted.
+    revisit: m5-boundary
+  - id: RT-M1-05
+    report: docs/redteam/2026-08-26-m1-boundary.md
+    severity: High
+    disposition: closed
+    record: D0105
+    note: Patch and fixture landed at the M1 boundary sitting (D0103, D0105); verified biting by RT-M2-08.
+  - id: RT-M1-06
+    report: docs/redteam/2026-08-26-m1-boundary.md
+    severity: Informational
+    disposition: closed
+    record: D0104
+    note: Status audit; its items are dispositioned under their own ids.
+
+  # ------------------------------------------------------------------ M2 → M3 (D0141)
+  - id: RT-M2-01
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: Critical
+    disposition: closed
+    record: D0179
+    note: D0142 closed the derived-name half; reopened as RT-M3-04 and closed there (D0179, D0225); verified by RT-M4-06.
+  - id: RT-M2-02
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      Partially closed: check_laws.py and conftest.py are custody-set and check_laws runs in
+      `make verify` (D0131 items 3 and 4, M2 sitting). governance/laws.yaml was deliberately
+      left out of the custody set at that sitting, and RT-M3-06 re-measured it as "mitigated by
+      nothing". No audit since M3 re-examines it, so whether the residue is accepted is not
+      settled.
+    revisit: m5-boundary
+  - id: RT-M2-03
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      No record after D0141 addresses it and neither the M3 nor the M4 status audit mentions
+      it: `lineage` reports structure, not authenticity, so a hand-built srcrow/1 value cites a
+      real document for a row it lacks. Not settled by the evidence — it may have been silently
+      dropped from the audits, which is RT-M4-07's shape exactly.
+    revisit: m5-boundary
+  - id: RT-M2-04
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: High
+    disposition: closed
+    record: D0161
+    note: why_slots is recursive; verified closed by RT-M3-06.
+  - id: RT-M2-05
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: High
+    disposition: closed
+    record: D0143
+    note: The attention-receipt comparison landed at the M2 sitting, driver step 4g. That fix made every tagged commit fail the gate afterwards (D0215, scheduled at this sitting, step 4b).
+  - id: RT-M2-06
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: High (operational)
+    disposition: closed
+    record: D0148
+    note: D1–D5 were fixed in the M2 driver before its sitting (D0147, D0148), and their remedies are still cited in scripts/boundary_sitting.sh.
+  - id: RT-M2-07
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: Medium-high
+    disposition: closed
+    record: D0162
+    note: Why.encode re-checks atoms; verified closed by RT-M3-06, with the accepted hot-path residue.
+  - id: RT-M2-08
+    report: docs/redteam/2026-09-01-m2-boundary.md
+    severity: Informational
+    disposition: closed
+    record: D0141
+    note: Status audit; its items are dispositioned under their own ids.
+
+  # ------------------------------------------------------------------ M3 → M4 (D0174)
+  - id: RT-M3-01
+    report: docs/redteam/2026-09-05-m3-boundary.md
+    severity: Critical
+    disposition: closed
+    record: D0231
+    note: Closed for names (D0197, D0231; frozen law D0226); verified by RT-M4-06. The closure case reopens as RT-M4-04.
+  - id: RT-M3-02
+    report: docs/redteam/2026-09-05-m3-boundary.md
+    severity: High
+    disposition: closed
+    record: D0198
+    note: Derived and asserted (D0198) and covered by frozen L4.24 (D0226); verified by RT-M4-06.
+  - id: RT-M3-03
+    report: docs/redteam/2026-09-05-m3-boundary.md
+    severity: High
+    disposition: closed
+    record: D0232
+    note: Operand roles enter the derivation, and the swap pin is retired as a strict xfail; verified by RT-M4-06.
+  - id: RT-M3-04
+    report: docs/redteam/2026-09-05-m3-boundary.md
+    severity: Critical
+    disposition: closed
+    record: D0179
+    note: The guard compares the code a module answers with, and M4 law files bind from the frozen bytes (D0225); verified by RT-M4-06. The anti-disarm fixture (D0229 item 3) is scheduled at this sitting, step 5.
+  - id: RT-M3-05
+    report: docs/redteam/2026-09-05-m3-boundary.md
+    severity: Medium
+    disposition: closed
+    record: D0224
+  - id: RT-M3-06
+    report: docs/redteam/2026-09-05-m3-boundary.md
+    severity: Informational
+    disposition: closed
+    record: D0174
+    note: Status audit; its items are dispositioned under their own ids.
+
+  # ------------------------------------------------------------------ M3 → M4 boundary pass (D0245, D0246)
+  - id: RT-M4-01
+    report: docs/redteam/2026-09-12-m4-boundary.md
+    severity: High (inert today)
+    disposition: scheduled
+    where: the pre-budget sitting (BRIEF §9.1), before any nonzero ceiling is signed
+    record: D0246
+    note: Filed D0245. A5 — signing the first nonzero ceiling starts a fresh spend namespace. Closing it must account for fixture candidate spend-fold-forged-reservation (A4).
+  - id: RT-M4-02
+    report: docs/redteam/2026-09-12-m4-boundary.md
+    severity: High
+    disposition: scheduled
+    where: m4 boundary sitting, driver step 1 (derived doorway scan + shell contract); superseding L4.9 at M5 Session A
+    record: D0246
+    note: Filed D0245; promoted to the sitting's first item by A2. Closing it must account for fixture candidate doorway-network-residue (A4).
+  - id: RT-M4-03
+    report: docs/redteam/2026-09-12-m4-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      Builder-landable: one additive `layer_of(built.operators)` line in unfrozen export.py,
+      stricter than L4.10. Unreachable through the executor today. No session is assigned yet,
+      and the finder does not fix it (D0104).
+    revisit: m5-boundary
+  - id: RT-M4-04
+    report: docs/redteam/2026-09-12-m4-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      A design question, not a one-liner: refuse an unaddressable closure, or fold encodable
+      captures into the code address. It touches incremental.py and transform.py (inherited
+      from M1), and a superseding law is likely. It needs a decision record and a session that
+      did not find it. Closing it must account for fixture candidate code-address-closure (D0246
+      A4).
+    revisit: m5-boundary
+  - id: RT-M4-05
+    report: docs/redteam/2026-09-12-m4-boundary.md
+    severity: Low
+    disposition: deferred
+    reason: >-
+      Every error path fails closed. Mapping OSError to R2Error and distinguishing a
+      `tannen run` crash from a refusal by exit code is optional builder work with no
+      assigned session.
+    revisit: m5-boundary
+  - id: RT-M4-06
+    report: docs/redteam/2026-09-12-m4-boundary.md
+    severity: Informational
+    disposition: closed
+    record: D0245
+    note: Status audit; its items are dispositioned under their own ids. Its required_tags half is RT-15's row.
+  - id: RT-M4-07
+    report: docs/redteam/2026-09-12-m4-boundary.md
+    severity: Informational (process)
+    disposition: scheduled
+    where: m4 boundary sitting, driver step 8c (this ledger and its gate); promotion into make verify is a later ruling
+    record: D0246
