@@ -1,0 +1,74 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0253
+title: "D0229 item (5) was upgraded to 'enforced… landed through D0244's fold' over bytes the patch never reached: scripts/check_manifest.py is the version D0243 pinned as defective, so the current-envelope fix and the folded pre-budget lock are both still open"
+tier: A
+date: "2026-09-15"
+risk_flags: ["spend", "governance-paths"]
+decision: >-
+  A CORRECTION, filed as its own record because D0229's fields are immutable (D0045). D0229 is
+  not edited; this record says which of its bindings is false and what is actually true.
+  .
+  WHAT WAS CLAIMED. Commit b239e4c ("post-sitting binding upgrades") changed D0229's binding on
+  `scripts/check_manifest.py` from documentary to ENFORCED, with the detail "D0240 item (3)'s patch
+  landed through D0244's fold, so each budget.yaml ceiling is compared against the CURRENT
+  milestone's envelope". D0244 (1) had folded the pre-budget lock into that same patch, so the
+  claim also implied the lock was installed in check_manifest.
+  .
+  WHAT THE BYTES SHOW, measured at M5 Session A on master e03b4ac:
+  (a) `sha256(scripts/check_manifest.py)` is `dc89de2b…d61`, byte-identical to
+  `DEFECTIVE_CHECK_MANIFEST` in tests/test_spend_preconditions.py — the version D0240 found
+  defective;
+  (b) governance/custody.sha256, owner-signed at the M4 sitting, pins those same bytes;
+  (c) commit 9cff0b7 (the sitting) does not touch the file;
+  (d) line 222 still reads `max_envelope = max(envelopes.values(), default=0)`;
+  (e) the file contains neither `def current_milestone(` nor `def unmet_spend_preconditions(` —
+  the two detectors the sitting's own queue_upgrades.py defined for exactly these upgrades, so
+  the upgrade was not one those detectors could have made.
+  .
+  WHAT HAPPENED AT STEP 3 IS NOT KNOWN, and is not claimed. The sitting driver's step 3 offered
+  `check-manifest-current-envelope.patch`; it did not land. Whether it was declined deliberately
+  or was another answer the prompt D0251 describes read wrongly cannot be recovered — the prompt
+  log records steps, never input — and the owner, asked on 2026-09-15, chose to have it recorded
+  as unknown.
+  .
+  WHAT IS OPEN AS A RESULT. (1) D0229 item (5) / D0240 item (3): ceilings are still compared
+  against the maximum envelope over all milestones. (2) D0244 item (1): the pre-budget lock does
+  not live in check_manifest. The lock that DOES exist is the builder test D0243 landed,
+  tests/test_spend_preconditions.py, whose strict node still lists `current-envelope` as open —
+  which is the true state, so that test was right where the binding was wrong. Both items are
+  re-queued for the pre-budget sitting, where the drafted patch in
+  docs/proposals/2026-09-11-m4-boundary-sitting/ is still the proposal. Nothing is spendable
+  meanwhile: every envelope and ceiling is zero, and D0243's lock refuses a nonzero one.
+  .
+  THE GENERAL LESSON, which is the reason for a record rather than a quiet fix: a binding
+  upgrade is a claim about an artefact's bytes, and this one was written without reading them.
+  The next binding upgrade that says a patch landed names the hash it measured.
+rationale: >-
+  Found while reading the premise M5 Session A was handed ("check_manifest refuses any nonzero
+  envelope until…"), which rested on this binding. A false `enforced` binding is worse than an
+  absent one: it removes the item from every projection that lists open work while nothing
+  enforces it — the digest cannot show a gap its own inputs say is closed.
+reversibility: >-
+  Nothing changes in any enforcing artefact. The owner can land the patch at the next sitting;
+  this record then becomes history and a later record upgrades the binding over measured bytes.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: "tests/test_spend_preconditions.py::test_each_d0240_precondition_is_open_today_and_the_gate_names_it"
+    strength: enforced
+    detail: >-
+      The strict node that still names `current-envelope` as open. It asserts the true state, and
+      goes red the day the patch lands, which is the moment this record is discharged.
+  - type: file
+    target: docs/proposals/2026-09-11-m4-boundary-sitting/check-manifest-current-envelope.patch
+    strength: documentary
+    detail: >-
+      The patch (current envelope plus the folded lock) that did not land at step 3, still the
+      proposal for the pre-budget sitting. Documentary: a draft enforces nothing (D0143).
+  - type: file
+    target: decisions/0229-custody-set-items-m4-session-a-found.yaml
+    strength: documentary
+    detail: >-
+      The record whose item-(5) binding this corrects. Left unedited (D0045).
+links: ["D0229", "D0240", "D0241", "D0242", "D0243", "D0244", "D0251", "D0045", "D0143"]

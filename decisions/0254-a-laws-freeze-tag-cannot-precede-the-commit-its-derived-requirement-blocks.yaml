@@ -1,0 +1,72 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0254
+title: "M5's freeze commit cannot pass its own hooks: the derived required_tags demands m5-laws-freeze as soon as docs/specs/m5.md is on disk, before the commit that tag seals can exist — drafted fix, the one deferral for a spec not yet in HEAD"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE OWNER, `blocked-on-owner` on D0216's convention: scripts/check_tag_signers.py is
+  frozen (a MANIFEST.sha256 row) and custody-set. M5 Session A's freeze waits on it; the frozen
+  set is drafted and validated meanwhile (BRIEF §9.2 non-blocking rule). Owner ruling of
+  2026-09-15: draft the fix, the owner applies it before the receipt expires on 09-22.
+  .
+  THE DEFECT. D0205's derivation, installed at the M4 sitting, requires `<m>-laws-freeze` for
+  every `docs/specs/<m>.md` ON DISK. The check-decisions pre-commit hook runs
+  tests/test_tag_signers.py (bound by D0050, D0054, D0058, D0062), whose real-repo nodes run the
+  guard. So the commit that adds a spec needs the tag that seals that commit. M5 is the first
+  Session A under the derivation, so the first to meet it. No split avoids it: a commit carrying
+  tests/laws/m5/ without the spec fails D0241's bound spec-table node, and --no-verify is refused.
+  .
+  WATCHED, in a scratch clone at e03b4ac: a placeholder docs/specs/m5.md fails both real-repo
+  nodes ("required tag missing: m5-laws-freeze"); without it the file gives 18 passed.
+  .
+  THE FIX, drafted in docs/proposals/2026-09-15-m5-freeze-commit-tags/: ONE deferral.
+  `<m>-laws-freeze` is not yet owed for a spec that is on disk but absent from the ROOT'S OWN
+  HEAD, and only when the root is a git work tree with a HEAD. Everything else stays strict:
+  a tree with no `.git`, every CI checkout (all specs committed), the close rule, and a committed
+  spec whose tag was deleted. The rule reads the root's HEAD, not the `--repo` bundle's, which is
+  what keeps both poison fixtures meaningful: their specs are committed files of this repository.
+  .
+  WATCHED WITH THE PATCH: tests/test_tag_signers.py 20 passed; the guard on the real tree OK over
+  11 tags; a staged, uncommitted m5.md passes (m4-close now required and present); the same spec
+  committed with no tag is refused naming m5-laws-freeze; a deleted m4-laws-freeze is refused;
+  poison `tag-roles-derived` still fails with exactly "required tag missing: m3-close", and
+  `custodian-tag-signer` still carries both of its markers. Against the UNPATCHED guard the new
+  deferral test fails and its sibling (the committed-spec test) passes — the sibling is a
+  no-weakening control, not a demonstration of the fix, and is described as such.
+  .
+  WHAT IT DOES NOT CLAIM. A spec left uncommitted indefinitely defers its tag indefinitely —
+  but an uncommitted spec freezes nothing either, and check_manifest's staged mode governs what
+  enters a commit. A fixture root whose specs are themselves uncommitted (a sitting mid-install)
+  would defer too; the custodian runs against committed fixtures.
+rationale: >-
+  The guard is right to refuse a missing tag and wrong only about WHEN a tag can exist. Fixing
+  the window rather than weakening the requirement keeps RT-15's property (a deleted boundary tag
+  is refused) exactly where it was. The alternatives each fail on a fact: reading the `--repo`
+  HEAD disarms the tag-roles-derived fixture (its bundle carries no specs); a commit that bypasses
+  hooks is refused by standing rule; committing the frozen set somewhere else only moves the
+  same wall one commit later.
+reversibility: >-
+  Fully reversible as a draft. Once installed, an owner patch and the re-signature of the
+  manifest row and custody set, like any change to a guard.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-15-m5-freeze-commit-tags/check_tag_signers.patch
+    strength: documentary
+    detail: >-
+      The drafted guard change. Documentary: the file it patches is frozen and custody-set, so a
+      draft enforces nothing (D0143). Upgrades to enforced over the measured hash once installed.
+  - type: file
+    target: docs/proposals/2026-09-15-m5-freeze-commit-tags/README.md
+    strength: documentary
+    detail: The mechanism, the watched table, and the owner's apply-and-re-sign chain.
+  - type: manifest
+    target: scripts/check_tag_signers.py
+    strength: documentary
+    detail: >-
+      The frozen guard the fix lands in, today at sha256 0dd46710… (MANIFEST.sha256 and the
+      custody set). Documentary until the patched bytes are installed and M5's freeze commit has
+      passed its own hooks.
+links: ["D0205", "D0229", "D0241", "D0050", "D0054", "D0058", "D0062", "D0216", "D0143", "D0252"]
