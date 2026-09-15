@@ -278,14 +278,60 @@ def test_a_forward_correction_file_is_not_a_milestone(world):
     assert run.returncode == 0, run.stdout + run.stderr
 
 
+def _root_repo(world) -> None:
+    """Make the world's ROOT a git work tree, so the one deferral can apply to it."""
+    sh("git", "init", "-q", "-b", "master", str(world.root))
+    for key, value in (("user.name", "t"), ("user.email", "builder@tannen"),
+                       ("commit.gpgsign", "false")):
+        sh("git", "-C", str(world.root), "config", key, value)
+    sh("git", "-C", str(world.root), "add", "-A")
+    sh("git", "-C", str(world.root), "commit", "-q", "-m", "root")
+
+
+def test_an_uncommitted_spec_defers_only_its_own_laws_freeze(world):
+    """The freeze commit's own window: M5 Session A's commit adds docs/specs/m5.md, and the
+    hooks run this guard before the tag that seals that commit can exist. The spec on disk
+    but absent from the root's HEAD defers `m1-laws-freeze` — and nothing else: the
+    predecessor's close is still owed."""
+    original = world.tag("brief-freeze", world.owner_key)
+    world.tag("m0-laws-freeze", world.builder_key)
+    world.tag("m0-close", world.owner_key)
+    world.specs("m0")
+    world.write_table(original)
+    _root_repo(world)
+    world.specs("m1")  # written after the root's commit: staged-but-uncommitted stand-in
+    run = world.run()
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert "m1-laws-freeze" not in run.stdout.split("required (derived from docs/specs):")[1] \
+        .splitlines()[0]
+
+
+def test_a_committed_spec_owes_its_laws_freeze_again(world):
+    """The deferral ends at the commit: once the spec is in HEAD, a missing tag is refused
+    exactly as before — a deleted laws-freeze tag cannot hide behind it."""
+    original = world.tag("brief-freeze", world.owner_key)
+    world.tag("m0-laws-freeze", world.builder_key)
+    world.tag("m0-close", world.owner_key)
+    world.specs("m0", "m1")
+    world.write_table(original)
+    _root_repo(world)
+    run = world.run()
+    assert run.returncode != 0
+    assert "required tag missing: m1-laws-freeze" in run.stderr
+
+
 def test_the_real_repo_derives_a_requirement_for_every_spec():
     """The positive control a derived rule needs: one that derived NOTHING would pass the
-    real tree too. Every frozen spec must yield its laws-freeze tag, and every derived tag
-    must exist — asserted against the specs on disk, never a count written down here."""
+    real tree too. Every COMMITTED frozen spec must yield its laws-freeze tag, and every
+    derived tag must exist — asserted against the specs in HEAD, never a count written down
+    here. (A spec on disk but not yet in HEAD is the freeze commit's own window: see
+    test_an_uncommitted_spec_defers_only_its_own_laws_freeze.)"""
     derived = set(derive_required_tags(REPO_ROOT, opened=True))
-    specs = [p.stem for p in (REPO_ROOT / "docs" / "specs").glob("m*.md")
-             if p.stem[1:].isdigit()]
-    assert specs, "no docs/specs/m<N>.md found — the derivation has nothing to read"
+    committed = sh("git", "-C", str(REPO_ROOT), "ls-tree", "--name-only", "HEAD",
+                   "docs/specs/").stdout.split()
+    specs = [Path(p).stem for p in committed
+             if Path(p).name.startswith("m") and Path(p).stem[1:].isdigit()]
+    assert specs, "no committed docs/specs/m<N>.md found — the derivation has nothing to read"
     assert {f"{m}-laws-freeze" for m in specs} <= derived
     assert "brief-freeze" in derived
     tags = set(sh("git", "-C", str(REPO_ROOT), "tag", "-l").stdout.split())

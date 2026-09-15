@@ -105,6 +105,20 @@ def check_trust_root(repo: Path, pin: dict, fail: Failures, opened: bool) -> Non
         print(f"  trust root: {tag} pinned at {actual[:12]}…")
 
 
+def uncommitted_specs(root: Path, nums: list[int]) -> list[int]:
+    """The milestones whose `docs/specs/m<n>.md` is on disk but absent from the root's own
+    HEAD — empty unless the root is a git work tree with a HEAD (see derive_required_tags).
+    `HEAD:./<path>` resolves relative to `-C root`, so a root that is a subdirectory of a
+    repository (a poison fixture) is answered about its own committed files."""
+    inside = git(root, "rev-parse", "--is-inside-work-tree")
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        return []
+    if git(root, "rev-parse", "-q", "--verify", "HEAD").returncode != 0:
+        return []
+    return [n for n in nums
+            if git(root, "cat-file", "-e", f"HEAD:./docs/specs/m{n}.md").returncode != 0]
+
+
 def derive_required_tags(root: Path, opened: bool) -> list[str]:
     """The tags a tree must carry, DERIVED from its frozen specs rather than enumerated
     (D0205; the rule and its non-circularity argument are in
@@ -123,10 +137,20 @@ def derive_required_tags(root: Path, opened: bool) -> list[str]:
     The source is docs/specs/*.md, every one of which is frozen in MANIFEST.sha256 — so
     deleting a spec to shed a requirement reddens check_manifest first, in a different
     guard. Deriving from the TAG SET would be vacuous: detecting a deleted tag is the job.
+
+    ONE DEFERRAL, AND ONLY ONE. A laws-freeze tag seals the commit that adds its spec, so
+    it cannot exist while that commit is being made — and the pre-commit hooks run this
+    guard (through tests/test_tag_signers.py) against exactly that tree. So `<m>-laws-freeze`
+    is not yet owed for a spec that is on disk but ABSENT FROM THE ROOT'S OWN HEAD. It is
+    owed the moment the spec is committed. The deferral applies only when the root is a git
+    work tree with a HEAD: an export or a copy with no `.git`, and every tree CI checks out
+    (where every spec is committed), are held to the strict rule. The close rule is not
+    deferred: a successor's spec on disk already means the predecessor's boundary has passed.
     """
     nums = sorted({int(p.stem[1:]) for p in (root / "docs" / "specs").glob("m*.md")
                    if p.stem[1:].isdigit()})
-    required = {f"m{n}-laws-freeze" for n in nums}
+    uncommitted = set(uncommitted_specs(root, nums))
+    required = {f"m{n}-laws-freeze" for n in nums if n not in uncommitted}
     required |= {f"m{n}-close" for n in nums if n + 1 in nums}
     if opened:
         required.add("brief-freeze")
