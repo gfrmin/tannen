@@ -1,0 +1,62 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0252
+title: "CI runs red on every boundary tag push: actions/checkout re-fetches the triggering tag as a lightweight ref, and check_tag_signers rightly refuses it — m3-close, m4-laws-freeze and m4-close all failed; drafted one-step fix for the owner"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE OWNER, `blocked-on-owner` on D0216's convention: `.github/workflows/ci.yml` is
+  frozen (a MANIFEST.sha256 row), custody-set, and named in governance/tier-c.yaml.
+  .
+  THE DEFECT. `on: push` fires for tag pushes too. For that event actions/checkout@v4 fetches every
+  tag correctly and then re-fetches the triggering tag as `+<commit sha>:refs/tags/<tag>` (logged
+  `t [tag update]`). That replaces the owner- or builder-signed annotated tag with a lightweight
+  ref, so check_tag_signers reports `tag does not verify against allowed_signers: <tag>`. The four
+  records bound to tests/test_tag_signers.py (D0050, D0054, D0058, D0062) then fail check_decisions,
+  and make verify is red. The tag-event runs of m3-close (34481481487), m4-laws-freeze
+  (34599516034) and m4-close (34930012977) all failed this way. Master's run on the m4-close commit
+  (34930012800) passed. The guard is right and the checkout is wrong: a signed tag reaching CI as
+  an unsigned ref is exactly what the guard exists to refuse.
+  .
+  NOT NOTICED UNTIL NOW, and stated as such. Earlier reports of "CI green" after a boundary named
+  the branch run. The tag-event run beside it was never read, across three boundaries. It is the
+  RT-M4-07 shape, a red signal nobody was required to account for, found here by reading the run
+  list rather than the one run expected.
+  .
+  WATCHED, in a scratch clone at m4-close: annotated tag, tests/test_tag_signers.py 18 passed;
+  after reproducing checkout's refetch, the tag is a `commit` and check_tag_signers fails with CI's
+  exact violation; after `git fetch --force --tags origin`, the tag is annotated again, 18 passed,
+  and check_tag_signers is OK over 11 tags.
+  .
+  THE FIX, drafted in docs/proposals/2026-09-15-ci-tag-event-checkout/ci.yml.patch: one step after
+  checkout, `git fetch --force --tags origin`. `--force` is needed to replace the wrong local tag. A
+  branch push, where every tag already matches, is unchanged. Nothing is edited in the frozen file.
+rationale: >-
+  Weakening the guard for tag events would trade a false red for a real hole, because a CI that
+  accepts a lightweight boundary tag cannot tell a stripped signature from a checkout artefact. So
+  the fix restores what the guard reads. An explicit step is chosen over searching for a checkout
+  option, which this record did not survey: the step was watched restoring the tag, it states its
+  reason in the file, and the same guard checks its effect on the next boundary tag's run.
+reversibility: >-
+  Fully reversible: a draft and this record. Once installed, an owner edit to ci.yml with its
+  manifest row and custody set re-signed.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-15-ci-tag-event-checkout/ci.yml.patch
+    strength: documentary
+    detail: >-
+      The drafted one-step fix. Documentary: the file it patches is frozen and custody-set, so a
+      draft enforces nothing (D0143).
+  - type: file
+    target: docs/proposals/2026-09-15-ci-tag-event-checkout/README.md
+    strength: documentary
+    detail: The mechanism, the three failed tag runs, and the watched reproduction and fix.
+  - type: manifest
+    target: .github/workflows/ci.yml
+    strength: documentary
+    detail: >-
+      The frozen file the fix lands in. Documentary until the patched bytes are installed, their
+      MANIFEST.sha256 row is regenerated, and the next boundary tag's own CI run is green.
+links: ["D0050", "D0054", "D0058", "D0062", "D0195", "D0216", "D0143", "D0246", "D0249"]
