@@ -68,7 +68,7 @@ reversibility: >-
   deleting it, which is visible in a diff; the ruling's point is that the lock should be
   expensive to ignore, not impossible to remove. What is not reversible is a spend admitted
   under the wrong rule, which is why the gate refuses at the envelope rather than at the call.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: pytest

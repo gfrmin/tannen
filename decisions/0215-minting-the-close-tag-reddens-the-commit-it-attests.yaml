@@ -116,7 +116,7 @@ reversibility: >-
   rendering. Declining costs no work here and leaves three close tags — and every future one
   — pointing at commits that fail the gate, a cost paid by whoever next audits a boundary
   rather than by anyone present when it was decided.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file
@@ -129,19 +129,22 @@ bindings:
       nothing here yet for one to enforce.
   - type: file
     target: scripts/check_decisions.py
-    strength: documentary
+    strength: enforced
     detail: >-
-      The comparison at :459 and the comment at :445 that names the clock half and argues the
-      fix that produced it. Cited for both: the reasoning is sound about RT-M2-05 and is the
-      proximate cause of a projection that can only be correct at the tip.
+      ENFORCED at the M4 boundary sitting: the recommendation landed. gen_projections.py no
+      longer renders the FRESH/STALE verdict into DECISIONS.md, and check_decisions no longer
+      compares the tracked file against a verdict computed from today's date and today's tag
+      set, which is what reddened every tagged sitting commit. It still computes and prints
+      the verdict at run time, and refuses a projection that carries one. Type stays `file`:
+      custody-set with no MANIFEST.sha256 row, so a revert shows as check_custody drift.
   - type: file
-    target: scripts/boundary_sitting.sh
+    target: docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh
     strength: documentary
     detail: >-
-      Step 10's clean-tree requirement at :2664 and step 11's argument at :2746-2760 that no
-      earlier regeneration point exists. Together they are the proof that this is structural:
-      the driver already knows both halves and neither it nor anything else says what they
-      imply for the commit the tag names. Documentary and must stay so — the file is
-      custody-set (D0143).
+      Retargeted at the M4 boundary sitting from scripts/boundary_sitting.sh, which that
+      sitting replaced with the M4 driver, so the line numbers kept a file in which they are
+      still true. Step 10's clean-tree requirement at :2664 and step 11's argument at
+      :2746-2760 that no earlier regeneration point exists: together, the proof that this is
+      structural. Documentary: a proposal copy detects nothing.
 links: ["D0214", "D0095", "D0018", "D0045", "D0049", "D0051", "D0063", "D0071", "D0143",
         "D0147", "D0154", "D0177", "D0195", "D0200", "D0213"]

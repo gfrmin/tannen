@@ -42,6 +42,11 @@ guard_enforced:
     guard: "pyproject.toml import-linter contract kernel-no-io"
   - id: kernel-clock
     guard: "pyproject.toml import-linter contract kernel-no-clock (BRIEF P7; arrived M0 with the kernel)"
+  - id: shell-io
+    guard: "scripts/check_doorway.py (the shell's network imports DERIVED from each import's
+      static closure to the socket primitives; process creation refused by name) and the
+      governance/importlinter.toml contract shell-no-subprocess (BRIEF §5.3; RT-M4-02,
+      D0229 item (2), D0248). Arrived at the M4 boundary sitting"
   - id: tag-signer-roles
     guard: "scripts/check_tag_signers.py over governance/tag-roles.yaml (D0050/D0054): the
       right principal signed the right class of tag, unknown classes refused, trust root
@@ -129,6 +134,7 @@ custody:
     - scripts/check_tag_signers.py
     - scripts/check_receipts.py
     - scripts/check_laws.py
+    - scripts/check_doorway.py
     - scripts/gen_projections.py
     - scripts/gen_custody.py
     - scripts/opening_sitting.sh
@@ -188,6 +194,16 @@ forbidden_imports:
     - random
     - secrets
     - uuid
+  # Process creation, forbidden in the WHOLE package, not only the kernel (RT-M4-02,
+  # D0248): a child process reads the world through any binary on PATH, so no import
+  # closure can bound it. The oracles doorway does not spawn either, so no door is needed
+  # and the contract can stay whole-package with no ignore_imports. Enforced by the
+  # shell-no-subprocess contract and, for `os`'s spawning functions (which an import rule
+  # cannot see, since the shell imports `os` for paths), by scripts/check_doorway.py.
+  process_modules:
+    - subprocess
+    - multiprocessing
+    - pty
   # Module names of the constellation repos; forbidden everywhere in tannen
   # (BRIEF §1 standing rule; guard_enforced cross-repo-imports).
   cross_repo:

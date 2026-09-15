@@ -59,6 +59,17 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
+name = "nothing in tannen creates a process (BRIEF §5.3; RT-M4-02)"
+id = "shell-no-subprocess"
+type = "forbidden"
+source_modules = ["tannen"]
+forbidden_modules = [
+    "subprocess",
+    "multiprocessing",
+    "pty",
+]
+
+[[tool.importlinter.contracts]]
 name = "no cross-repo imports, in either direction (BRIEF §1, Tier C)"
 id = "no-cross-repo"
 type = "forbidden"

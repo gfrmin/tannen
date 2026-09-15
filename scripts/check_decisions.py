@@ -17,7 +17,10 @@ load-bearing; CI fails if a binding's target is missing or skipped. This check:
     Grade-P/S-pending residue may rise above the last digest's recorded metrics. Until
     M0 this was a digest flag only; decision D0020 said it hardens to a failure here at
     the M0 boundary, and it now has;
-  - verifies the generated DECISIONS.md is fresh (input-hash header);
+  - verifies the generated DECISIONS.md is fresh (input-hash header, and its receipt line
+    against receipts/), and that it stores no attention-receipt verdict — the verdict moves
+    with the clock and the tag set, so it is printed here and rendered in the dated digest
+    only (D0215);
   - honours a per-binding retirement (`retires_bindings`, D0181): a `type: file` binding
     whose target was legitimately deleted resolves iff an ACCEPTED record retires exactly
     that (record, target) pair, the binding is DOCUMENTARY, and the target is still
@@ -49,7 +52,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _gov import (  # noqa: E402
     Failures,
     binding_strengths,
-    effective_status,
     input_hash,
     load_schema,
     load_yaml,
@@ -57,11 +59,13 @@ from _gov import (  # noqa: E402
     previous_metrics,
     ratchet_metrics,
     read_header_hash,
+    receipt_line,
     receipt_state,
     resolve_dotted,
     schema_errors,
     verify_owner_signature,
     REPO_ROOT,
+    STORED_VERDICT_RE,
 )
 
 FILENAME_RE = re.compile(r"^(\d{4})-[a-z0-9]+(-[a-z0-9]+)*$")
@@ -440,38 +444,33 @@ def main() -> int:
         elif actual != expected:
             fail.add("DECISIONS.md is stale (input-hash mismatch) — run make projections; never hand-edit")
 
-    # RT-M2-05 (D0141): the hash above covers decisions/*.yaml and NOTHING ELSE, so it is
-    # blind to the two things gen_decisions renders from the clock — the attention-receipt
-    # verdict and every Tier-B record's effective status. `today` can never be a file, so
-    # the fix is not a wider hash; it is to compare the CLAIM the projection makes against
-    # the one this run computes. Left alone, DECISIONS.md goes on asserting
-    # "Attention receipt: **FRESH**" after the receipt has gone stale, with every guard
-    # green — the precise opposite of what D0018's own text promises ("while stale …
-    # DECISIONS.md and the digest show the accumulating blocks").
+    # D0215, replacing RT-M2-05's comparison (D0141). DECISIONS.md used to STORE the
+    # attention-receipt verdict and every Tier-B record's effective status, and this block
+    # compared both with what today computes. Both are functions of the clock and of
+    # `git tag -l`, and no commit contains either — so the comparison was right at the tip
+    # and wrong everywhere in history, and minting a close tag reddened the very commit it
+    # attests (m1-, m2- and m3-close all point at such commits; CI run 34481481487 on
+    # e33adf8). The remedy removes the claim rather than checking it harder: the verdict and
+    # the veto clocks are still computed and PRINTED by this run, and rendered into the
+    # dated digest, which is never recompared.
     #
-    # Compared, not re-rendered. Importing gen_projections here would make the guard depend
-    # on the generator it audits, and a generator that renders the wrong thing would then
-    # render it into both sides of the comparison.
+    # So RT-M2-05's failure — a tracked file asserting FRESH after the receipt went stale —
+    # stays impossible, because no tracked projection asserts it at all; the first check
+    # below is what keeps that true. The second asserts the one receipt fact the file does
+    # carry against the tree it sits in. `receipt_line` is shared with the generator on
+    # purpose, as `input_hash` is: its output is a pure function of files in the commit, so
+    # this is a freshness comparison. D0141's objection to a shared renderer was about a
+    # clock verdict whose CORRECTNESS the guard had to judge, and there is none left here.
     if projection.exists():
         body = projection.read_text(encoding="utf-8")
-        want = f"Attention receipt: **{'FRESH' if receipts_fresh else 'STALE'}** — {receipt_detail}"
-        if want not in body:
-            fail.add(f"DECISIONS.md's attention-receipt line is not what today computes "
+        if STORED_VERDICT_RE.search(body):
+            fail.add("DECISIONS.md stores an attention-receipt verdict (FRESH/STALE) — it "
+                     "moves with the clock and the tag set, so it lives only in "
+                     "digest/<date>.md (D0215); run make projections")
+        want = receipt_line(root)
+        if want not in body.splitlines():
+            fail.add(f"DECISIONS.md's receipt line does not match this tree's receipts/ "
                      f"({want!r}) — run make projections")
-        # Only the records whose status CAN move with the date. Checking every row would
-        # duplicate the input hash for the ones that cannot, and would report one defect
-        # twice under two names.
-        for rec in valid_records:
-            if rec.get("veto_by") is None:
-                continue
-            status = effective_status(rec, args.today, receipts_fresh)
-            row = next((ln for ln in body.splitlines()
-                        if ln.startswith(f"| {rec['id']} |")), None)
-            if row is None:
-                fail.add(f"DECISIONS.md has no row for {rec['id']} — run make projections")
-            elif f"| {status} |" not in row:
-                fail.add(f"DECISIONS.md reports {rec['id']} as something other than "
-                         f"{status!r}, which is what today computes — run make projections")
 
     for line in clocks:
         print(f"  veto clock: {line}")

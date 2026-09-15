@@ -49,7 +49,7 @@ rationale: >-
 reversibility: >-
   Reversible: a ledger file, a gate in a driver, and this record. Declining it at the sitting
   costs nothing but RT-M4-07 staying open; removing it later is an owner edit to the driver.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file

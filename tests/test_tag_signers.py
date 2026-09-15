@@ -28,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from _gov import git_env  # noqa: E402
+from check_tag_signers import derive_required_tags  # noqa: E402
 
 GUARD = REPO_ROOT / "scripts" / "check_tag_signers.py"
 
@@ -76,11 +77,13 @@ def world(tmp_path: Path):
         return sh("git", "-C", str(repo), "rev-parse", f"refs/tags/{name}").stdout.strip()
 
     def write_table(trust_object: str, unknown: str = "refuse",
-                    required: tuple[str, ...] = ()) -> None:
-        required_block = "".join(f"  - {name}\n" for name in required)
+                    enumerated: tuple[str, ...] = ()) -> None:
+        # `enumerated` writes a HAND LIST, which the guard now refuses (D0205): it exists
+        # only so the refusal can be watched. Required tags come from specs().
+        required_block = "".join(f"  - {name}\n" for name in enumerated)
         (root / "governance" / "tag-roles.yaml").write_text(
             "version: 1\n"
-            + (f"required_tags:\n{required_block}" if required else "")
+            + (f"required_tags:\n{required_block}" if enumerated else "")
             +
             "trust_root:\n"
             "  tag: brief-freeze\n"
@@ -94,6 +97,12 @@ def world(tmp_path: Path):
             f"unknown: {unknown}\n"
         )
 
+    def specs(*names: str) -> None:
+        """Frozen-spec stand-ins. The guard reads only their NAMES (D0205)."""
+        (root / "docs" / "specs").mkdir(parents=True, exist_ok=True)
+        for name in names:
+            (root / "docs" / "specs" / f"{name}.md").write_text(f"# {name}\n")
+
     def run() -> subprocess.CompletedProcess:
         return subprocess.run(
             [sys.executable, str(GUARD), "--root", str(root), "--repo", str(repo)],
@@ -103,7 +112,8 @@ def world(tmp_path: Path):
     return type("World", (), dict(
         root=root, repo=repo, owner_key=owner_key, builder_key=builder_key,
         stranger_key=stranger_key, tag=staticmethod(tag),
-        write_table=staticmethod(write_table), run=staticmethod(run),
+        write_table=staticmethod(write_table), specs=staticmethod(specs),
+        run=staticmethod(run),
     ))
 
 
@@ -210,9 +220,11 @@ def test_deleting_the_trust_root_after_the_sitting_is_refused(world):
 
 def test_a_required_tag_that_was_never_there_is_refused(world):
     """The accident case: a shallow clone or an export arrives without tags and is
-    indistinguishable from deletion, so both are refused."""
+    indistinguishable from deletion, so both are refused. The requirement now comes from
+    the spec, not from a list (D0205)."""
     original = world.tag("brief-freeze", world.owner_key)
-    world.write_table(original, required=("brief-freeze", "m0-laws-freeze"))
+    world.specs("m0")
+    world.write_table(original)
     run = world.run()
     assert run.returncode != 0
     assert "required tag missing: m0-laws-freeze" in run.stderr
@@ -221,8 +233,63 @@ def test_a_required_tag_that_was_never_there_is_refused(world):
 def test_required_tags_present_pass(world):
     original = world.tag("brief-freeze", world.owner_key)
     world.tag("m0-laws-freeze", world.builder_key)
-    world.write_table(original, required=("brief-freeze", "m0-laws-freeze"))
-    assert world.run().returncode == 0
+    world.specs("m0")
+    world.write_table(original)
+    run = world.run()
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert "required (derived from docs/specs): brief-freeze, m0-laws-freeze" in run.stdout
+
+
+def test_a_milestone_whose_successor_has_a_spec_must_have_been_closed(world):
+    """The lag D0095 recorded, closed by construction: the successor's spec is what makes
+    the predecessor's close required, and the successor's own close is not yet owed."""
+    original = world.tag("brief-freeze", world.owner_key)
+    world.tag("m0-laws-freeze", world.builder_key)
+    world.tag("m1-laws-freeze", world.builder_key)
+    world.specs("m0", "m1")
+    world.write_table(original)
+    run = world.run()
+    assert run.returncode != 0
+    assert "required tag missing: m0-close" in run.stderr
+    assert "m1-close" not in run.stderr, "a close was required before its successor's spec"
+
+
+def test_an_enumerated_required_tags_list_is_refused(world):
+    """Re-adding a hand list must be a red gate, not a silent regression — even when every
+    tag it names exists, which is exactly when an enumeration looks harmless."""
+    original = world.tag("brief-freeze", world.owner_key)
+    world.tag("m0-laws-freeze", world.builder_key)
+    world.tag("m0-close", world.owner_key)
+    world.specs("m0")
+    world.write_table(original, enumerated=("m0-close",))
+    run = world.run()
+    assert run.returncode != 0
+    assert "required_tags is enumerated" in run.stderr and "m0-close" in run.stderr
+
+
+def test_a_forward_correction_file_is_not_a_milestone(world):
+    """docs/specs/ holds m3-corrections.md beside m3.md. `m<digits>` only, or the rule
+    would invent a milestone and require a close tag for m0 on the strength of a filename."""
+    original = world.tag("brief-freeze", world.owner_key)
+    world.tag("m0-laws-freeze", world.builder_key)
+    world.specs("m0", "m1-corrections")
+    world.write_table(original)
+    run = world.run()
+    assert run.returncode == 0, run.stdout + run.stderr
+
+
+def test_the_real_repo_derives_a_requirement_for_every_spec():
+    """The positive control a derived rule needs: one that derived NOTHING would pass the
+    real tree too. Every frozen spec must yield its laws-freeze tag, and every derived tag
+    must exist — asserted against the specs on disk, never a count written down here."""
+    derived = set(derive_required_tags(REPO_ROOT, opened=True))
+    specs = [p.stem for p in (REPO_ROOT / "docs" / "specs").glob("m*.md")
+             if p.stem[1:].isdigit()]
+    assert specs, "no docs/specs/m<N>.md found — the derivation has nothing to read"
+    assert {f"{m}-laws-freeze" for m in specs} <= derived
+    assert "brief-freeze" in derived
+    tags = set(sh("git", "-C", str(REPO_ROOT), "tag", "-l").stdout.split())
+    assert derived <= tags, f"derived but absent: {sorted(derived - tags)}"
 
 
 def test_the_real_repo_passes_its_own_table():

@@ -48,8 +48,7 @@ roles:
   - {pattern: "*-close", signer: owner}
   - {pattern: "amendment-*", signer: owner}
   - {pattern: "receipt-*", signer: owner}
-required_tags:
-  - brief-freeze
+required_tags: []
 unknown: refuse
 YAML
 

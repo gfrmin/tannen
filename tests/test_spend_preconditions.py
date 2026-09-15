@@ -137,7 +137,7 @@ def test_each_d0240_precondition_is_open_today_and_the_gate_names_it() -> None:
     rather than letting the gate quietly weaken to a tautology (produce-the-failure).
     """
     open_now = {item.split(":", 1)[0] for item in unmet_spend_preconditions()}
-    assert open_now == {"policy-sentence", "current-envelope", "successor-law", "clamp"}
+    assert open_now == {"current-envelope", "successor-law", "clamp"}
 
 
 def test_a_nonzero_envelope_is_refused_while_any_precondition_is_open() -> None:

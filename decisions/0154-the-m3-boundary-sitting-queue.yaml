@@ -111,29 +111,44 @@ reversibility: >-
   never running it. Item (1) left undone once more would make that two sittings in a
   row.
 status: accepted
-bindings_count: 4
+bindings_count: 5
 bindings:
-  - type: file
+  - type: manifest
     target: scripts/custodian.sh
-    strength: documentary
+    strength: enforced
     detail: >-
-      Carries items (1), (2)'s receipt-signing clause, (3) and (4) at the lines cited.
-      Documentary because every one of them is an absence or an unchecked status this
-      file cannot detect in itself, and because the file is custody-set and author-key
-      territory — the fact that makes this queue necessary.
+      ENFORCED, upgraded at the M4 boundary sitting (D0214 item 3). Items (1), (2)'s
+      receipt-signing clause, (3) and (4) landed at the M3 boundary sitting on 2026-09-10 as
+      hunks 1a/1b/1c, 2, 4 and 3: the oracle-shadow-model poison line and the derived
+      completeness pass, which refuses an installed fixture no invocation reaches and a named
+      fixture that is not installed; the receipt and its .sig removed, with a non-zero exit,
+      when signing fails; the previous-receipt line read from the chosen file; and the
+      __pycache__ exclusion in the sealed-path find. scripts/custodian.sh carries a
+      MANIFEST.sha256 row, so reverting any hunk breaks a seal and the custody signature
+      together.
   - type: file
     target: scripts/boundary_sitting.sh
-    strength: documentary
+    strength: enforced
     detail: >-
-      Items (2) and (5): the retarget guard, the skip-guard subset, the missing lock,
-      and the decline-path receipt ordering all live here. Custody-set
-      (governance/custody.sha256), so every fix is the owner's.
-  - type: file
+      ENFORCED, upgraded at the M4 boundary sitting (D0214 item 4). Items (2) and (5) landed in
+      the M3 driver installed over this path on 2026-09-10 (D0200): the retarget guard tests
+      the post-state, the skip guard reads every file its decline branch reverts, and an flock
+      makes the sitting a one-run ceremony. The M4 driver that replaced it keeps the lock,
+      moves the receipt behind the commit confirm (D0201 ruling 4), and retires the two
+      re-application steps whose guards were fixed, both already-applied no-ops by then; the
+      fixed copy stays readable at docs/proposals/2026-09-04-m3-boundary-sitting/boundary_sitting.sh.
+      Type stays `file`: the path is custody-set with no MANIFEST.sha256 row, so a revert is
+      detected by check_custody's drift line.
+  - type: manifest
     target: governance/tag-roles.yaml
-    strength: documentary
+    strength: enforced
     detail: >-
-      Item (6): `required_tags`, short of `m3-laws-freeze` from the moment this
-      session's freeze tag is minted until the sitting extends it.
+      ENFORCED, upgraded at the M4 boundary sitting (D0214 item 5). Item (6) landed:
+      m3-laws-freeze joined `required_tags` at the publication sitting of 2026-09-07 and
+      m3-close at the M3 boundary sitting, and scripts/check_tag_signers.py refuses the
+      deletion of either. The file carries a MANIFEST.sha256 row, so that requirement cannot
+      be edited away in silence, whether it is held by the hand enumeration or by the
+      derivation D0205 put in its place.
   - type: file
     target: docs/proposals/2026-09-04-m3-boundary-sitting/custodian.sh
     strength: documentary
@@ -143,4 +158,13 @@ bindings:
       invocation. Documentary and it must stay documentary until the owner installs it
       — a drafted patch awaiting owner application enforces nothing (D0143's words for
       the same situation).
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_every_installed_fixture_is_exercised_by_this_suite"
+    strength: enforced
+    detail: >-
+      ENFORCED, added at the M4 boundary sitting (D0214 item 6): the builder half of item (1)'s
+      completeness pass, landed by D0213. Every directory under tests/poison/ must be exercised
+      by a POISON row or a dedicated test, and every name there must have a directory behind
+      it, so the gap item (1) records, a fixture installed with no invocation, fails plain
+      `uv run pytest` as well as the custodian.
 links: [D0045, D0095, D0105, D0117, D0131, D0141, D0142, D0143, D0146, D0148, D0152, D0153]

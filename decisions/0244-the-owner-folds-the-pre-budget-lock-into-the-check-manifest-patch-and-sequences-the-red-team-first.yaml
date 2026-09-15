@@ -72,7 +72,7 @@ reversibility: >-
   patch and re-signature, which is the point of choosing that home over a test file. Items (2)
   and (3) are freely reversible. What is not reversible is a spend admitted while a
   precondition is open, which is the door all of this exists to hold shut.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file

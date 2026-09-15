@@ -331,6 +331,49 @@ poison check_laws "which no law file defines" \
     "$PY" -I -P scripts/check_laws.py --root tests/poison/check-laws-dropped-successor
 # --- end M3 DRAFT HUNK 5 -----------------------------------------------------
 
+
+# --- M4 DRAFT HUNK: check_doorway (RT-M4-02, D0229 item 2, D0248) ------------
+# The shell's IO doorway, DERIVED rather than enumerated: an import whose static module-level
+# closure reaches socket or ssl, or an os.system/popen/exec/spawn shell-out, anywhere outside
+# tannen.oracles and tannen.r2 (the network doors) and tannen.laws (the runner door). The
+# fixture is a miniature src/tannen/ carrying one payload per way frozen L4.9 misses, beside
+# control modules that must stay silent. L4.9's own scanner finds nothing in the same tree —
+# which is RT-M4-02, demonstrated rather than argued.
+poison check_doorway "reads the world outside the doorway" \
+    "$PY" -I -P scripts/check_doorway.py --root tests/poison/doorway-network-residue
+# --- end M4 DRAFT HUNK: check_doorway ----------------------------------------
+
+# --- M4 DRAFT HUNK: check_tag_signers, derived (D0205, D0229 item 4) ---------
+# required_tags is derived from the frozen specs (D0205), so a hand list can no longer lag.
+# The fixture carries specs m0..m4 and every derived tag, correctly signed, EXCEPT m3-close.
+# The marker names the tag rather than the phrase, so a run failing for some OTHER missing
+# tag cannot pass as this one. repo.bundle and allowed_signers are generated at the sitting
+# by the fixture's make-fixture.sh with a key that exists only inside it (conferral ruling 6).
+poison check_tag_signers_derived "required tag missing: m3-close" \
+    "$PY" -I -P scripts/check_tag_signers.py \
+    --root tests/poison/tag-roles-derived --repo tests/poison/tag-roles-derived/repo.bundle
+# --- end M4 DRAFT HUNK: check_tag_signers, derived ---------------------------
+
+# --- M4 DRAFT HUNK: oracle-shadow-cross-file (D0229 item 3(a)) ---------------
+# The anti-disarm property of the M4 supersession, which no single-file line can see. The
+# superseded tests/laws/m3/test_l3_differential.py and its successor
+# tests/laws/m4/test_l4_differential_superseding.py are collected TOGETHER, superseded
+# FIRST, under oracle-shadow-spoofed's code decoy. A successor loader that KEPT the frozen
+# module under the bare name would overwrite the decoy before the guard reads sys.modules at
+# the end of collection. The guard would then stay silent while the M3 file ran a stub:
+# exit 0, measured, and the M3-only line above still bites over the same broken loader.
+# Deviations are oracle-shadow-spoofed's (no -I -P, the attack IS PYTHONPATH; -B, sealed
+# directory; the literal venv interpreter), plus two for the WEAKENED case only:
+# --collect-only (the tooth is at collection; a weakened guard would otherwise run 28 nodes)
+# and TANNEN_NO_EVIDENCE=1 (a weakened full run would write an M4 record from a stubbed
+# differential). Order matters: with the M4 file first, nothing is ever shadowed.
+poison oracle-shadow-cross-file "answers with different code" \
+    env -u TANNEN_CHECK_DECISIONS_NESTED TANNEN_NO_EVIDENCE=1 \
+    PYTHONPATH=tests/poison/oracle-shadow-cross-file \
+    "$PY" -B -m pytest -p bootstrap_shadow_cross_file \
+    tests/laws/m3/test_l3_differential.py tests/laws/m4/test_l4_differential_superseding.py \
+    -q --collect-only -p no:cacheprovider
+# --- end M4 DRAFT HUNK: oracle-shadow-cross-file -----------------------------
 # --- M3 DRAFT HUNK 1c (D0154 item 1; D0152 item 6; the derived half) ---------
 # Every directory under tests/poison/ must have been reached by some invocation above.
 # This is the loop that would have caught 2026-09-03. It runs BEFORE the FAIL check below,

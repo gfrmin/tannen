@@ -60,14 +60,29 @@ def minimal_tree(dest: Path) -> Path:
 
 
 # ----------------------------------------------------------------- T1: freshness
+def _toggle_roadmap_hook(path: Path) -> None:
+    """Flip whether the config names this generator, in whichever direction it currently is.
+
+    The first spelling only APPENDED a mention, which moved the regeneration sentence only
+    while no hook existed. Once D0217's `regen-roadmap` hook landed, the mention was already
+    there, the append changed nothing, and this control went red for a reason that was not a
+    stale-but-green input — measured at the M4 sitting's drafting. A toggle is a control in
+    both states.
+    """
+    text = path.read_text(encoding="utf-8")
+    if "gen_roadmap.py" in text:
+        path.write_text(text.replace("gen_roadmap.py", "gen_roadmap_absent.py"), encoding="utf-8")
+    else:
+        path.write_text(text + "\n# entry: scripts/gen_roadmap.py\n", encoding="utf-8")
+
+
 def test_roadmap_is_fresh() -> None:
     """ROADMAP.md is exactly what the generator produces from this commit."""
     committed = (REPO_ROOT / "ROADMAP.md").read_text(encoding="utf-8")
     assert committed == render(REPO_ROOT), (
         "ROADMAP.md is stale or hand-edited — run "
-        "`.venv/bin/python -I -P scripts/gen_roadmap.py`; never hand-edit. "
-        "Nothing regenerates it automatically: .pre-commit-config.yaml and Makefile are "
-        "both custody-set (D0215's sibling record)."
+        "`.venv/bin/python -I -P scripts/gen_roadmap.py` (or `make projections`); never "
+        "hand-edit. The regen-roadmap pre-commit hook (D0217) regenerates it at commit time."
     )
 
 
@@ -173,9 +188,7 @@ def _drop_a_custody_row(root: Path) -> None:
 PERTURBATIONS = {
     "BRIEF.md": lambda r: _edit(r / "BRIEF.md", "## 8. ", "## 8. \n\nPERTURBED ARC.\n\n## 8x. "),
     "MANIFEST.sha256": _drop_a_manifest_row,
-    ".pre-commit-config.yaml": lambda r: (r / ".pre-commit-config.yaml").write_text(
-        (r / ".pre-commit-config.yaml").read_text(encoding="utf-8")
-        + "\n# entry: scripts/gen_roadmap.py\n", encoding="utf-8"),
+    ".pre-commit-config.yaml": lambda r: _toggle_roadmap_hook(r / ".pre-commit-config.yaml"),
     "governance/custody.sha256": _drop_a_custody_row,
     "governance/policy.yaml": lambda r: _edit(
         r / "governance" / "policy.yaml", "\n  M4: 0\n", "\n  M4: 7\n"),

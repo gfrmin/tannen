@@ -60,9 +60,13 @@ instead, in `poison-readme-row-file-skip.md`, right after that step lands the pa
 This fixture proves the check added this session runs against the **real** frozen law
 file, the same way `lint-imports-kernel/` runs against the repo's real import contracts —
 not a copy, so it goes silent exactly when the check is neutered. It defends against one
-exploitation of the naming hazard, not the hazard itself; the real fix (a package-qualified
-import in the frozen file) is queued for a future sitting, since `test_l1_duckdb.py` is
-frozen and manifested (`m1-laws-freeze`).
+exploitation of the naming hazard, not the hazard itself. The hazard is closed by superseding
+the frozen law file FORWARD — a new file that binds its oracle from the frozen bytes by file
+location, borrowing the name and putting it back — which is Tier-A builder work under D0106
+ruling 2 and D0128's precedent, not a sitting item. What IS a sitting item is this fixture: a
+superseding file is immune by construction, so a poison line aimed at one would report "guard
+PASSED its poison". The fixtures keep naming the SUPERSEDED files, which a forward supersession
+retains unedited.
 
 ## Added at the M2 boundary sitting (2026-08-31)
 
@@ -151,3 +155,39 @@ Ordering is load-bearing and already correct: this fixture installs at **step 5*
 custodian line that names it (hunk 5) installs at **step 6**. Reverse them and hunk 1a — new
 in this milestone's custodian — refuses the named fixture as NOT INSTALLED, which is the
 right answer and would still stop the sitting at step 7.
+
+### Installed at the M4 boundary sitting: `doorway-network-residue/` (RT-M4-02, D0248)
+
+The shell's IO doorway, derived. Frozen L4.9 scans the shell against a hand-written network
+set and never looks at `subprocess` or `os`; `lint-imports`' `kernel-no-io` contract forbids
+both, but its `source_modules` is `tannen.kernel` alone. `scripts/check_doorway.py` derives the
+network set from each import's static closure and refuses shell-outs by AST, outside the named
+doors. L4.9's own scanner finds nothing in this tree, which is the finding.
+
+| Fixture | Guard | Intended violation | Marker |
+|---|---|---|---|
+| `doorway-network-residue/` | `scripts/check_doorway.py`, driven with `--root` | a miniature `src/tannen/` whose shell modules read the world outside `tannen.oracles`: subprocess and `os` shell-outs, and socket-reaching stdlib modules absent from L4.9's list, beside controls that must stay silent | `reads the world outside the doorway` |
+
+### Installed at the M4 boundary sitting: `tag-roles-derived/` (D0205, D0229 item 4)
+
+`required_tags` lagged one milestone at every boundary for five boundaries, because it was a
+hand list patched at step 11 of every sitting (D0095). It is now derived from the frozen specs,
+and a non-empty hand list is refused. This fixture is the derivation's tooth: specs m0 to m4,
+every derived tag present and correctly signed except `m3-close`. Its `repo.bundle` and
+`allowed_signers` are generated at the sitting by `make-fixture.sh` (conferral ruling 6).
+
+| Fixture | Guard | Intended violation | Marker |
+|---|---|---|---|
+| `tag-roles-derived/` | `scripts/check_tag_signers.py`, driven with `--root` and `--repo` | a tree whose specs require `m3-close` and whose tag set lacks it, while `governance/tag-roles.yaml` enumerates nothing | `required tag missing: m3-close` |
+
+### Installed at the M4 boundary sitting: `oracle-shadow-cross-file/` (D0229 item 3(a))
+
+The M4 supersession binds each superseded law's oracle from the frozen bytes, borrowing the
+bare module name and putting it back. A successor that KEPT the name would silence the
+oracle-shadow guard for every file it does not supersede — and every other line in this corpus
+collects a single file, so none of them can see it. This fixture collects the superseded M3
+differential and its M4 successor together, superseded first.
+
+| Fixture | Guard | Intended violation | Marker |
+|---|---|---|---|
+| `oracle-shadow-cross-file/` | `src/tannen/laws/plugin.py`'s oracle-shadow check, over the M4 supersession | the superseded M3 differential and its M4 successor collected together under a code decoy — a successor that kept the bare name would silence the guard, invisible to any single-file run | `answers with different code` |

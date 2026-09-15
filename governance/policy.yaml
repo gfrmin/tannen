@@ -8,8 +8,22 @@ version: 0
 
 # Per-milestone spend envelopes (USD). Raising any value above zero is Tier-C door 1
 # (affirmative signature). budget.yaml's operational ceilings may never exceed the
-# current milestone's envelope; check_manifest enforces the zero-state consistency
-# and SpendGuard enforces it operationally from M4.
+# CURRENT milestone's envelope, and scripts/check_manifest.py is what enforces that:
+# mechanically, over the checked-in file, at every gate. (That guard compares against the
+# maximum envelope over all milestones rather than the current one — D0229 item (5), a
+# separate patch in this directory, applied in the same sitting.)
+#
+# WHAT SPENDGUARD DOES AND DOES NOT DO. Owner ruling of 2026-09-12 (D0240), replacing a
+# sentence here that claimed the second half and was false of the SpendGuard that shipped
+# at M4. SpendGuard enforces default-deny against THE BUDGET ITS CALLER SUPPLIES. It does
+# not read this file and it must not: a library that consults the constitution to decide
+# whether a call may be made couples the kernel's spend primitive to this repository's
+# governance layout, which BRIEF §10 forbids in every other direction. Supplying a budget
+# other than the checked-in budget.yaml is therefore an OWNER act, not a builder act, and
+# nothing in the library prevents it. `tannen run` is not a library: it is clamped to the
+# checked-in budget.yaml, with any other file requiring an explicit --budget-override
+# (D0240 item (2); deferred to M5 Session A by D0241, because a law retiring L4.4's third
+# node has no legal home inside M4).
 budget_envelopes:
   M0: 0
   M1: 0

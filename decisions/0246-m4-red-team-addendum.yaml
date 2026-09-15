@@ -103,7 +103,7 @@ bindings:
       first nonzero ceiling starts a fresh spend namespace rather than inheriting a possibly-poisoned
       one.
   - type: file
-    target: docs/redteam/fixture-candidates/doorway-network-residue/README.md
+    target: tests/poison/doorway-network-residue/README.md
     strength: documentary
     detail: >-
       A4 binding inversion: closing RT-M4-02 (the shell import-linter contract plus superseding L4.9)

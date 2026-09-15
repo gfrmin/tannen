@@ -40,6 +40,7 @@ from _gov import (  # noqa: E402
     load_yaml,
     previous_metrics,
     ratchet_metrics,
+    receipt_line,
     receipt_state,
     REPO_ROOT,
 )
@@ -111,20 +112,29 @@ def load_decisions(root: Path) -> tuple[list[Path], list[dict]]:
 
 
 def gen_decisions(root: Path, today: dt.date) -> str:
+    # `today` is accepted and IGNORED (D0215). This file used to render the attention-receipt
+    # verdict and each Tier-B record's effective status, both functions of the clock and of
+    # `git tag -l`; check_decisions compared them with what the day computes, so minting a
+    # close tag reddened the commit that tag attests. A commit can contain neither input, so
+    # the claims moved to digest/<date>.md, which is dated and never recompared. The
+    # parameter stays so the call site and the digest keep one signature.
+    del today
     paths, records = load_decisions(root)
-    receipts_fresh, receipt_detail = receipt_state(root, today)
     lines = [
         header(input_hash(paths, root)),
         "# DECISIONS — the decision log (generated projection)",
         "",
         "Generated from `decisions/*.yaml` (BRIEF §9, as amended §9.1–§9.2). Truth is the",
-        "fold of the records; this file is a query over them. Effective status is computed:",
-        "a provisional Tier-B record past its veto date is accepted by lapse ONLY while the",
-        "attention receipt is fresh; on a stale receipt it blocks instead.",
+        "fold of the records; this file is a query over them, and it says only what its",
+        "commit contains. The status column is each record's RECORDED status. Whether a",
+        "provisional Tier-B record past its veto date has lapsed into acceptance depends on",
+        "today and on attention-receipt freshness, which depends on the tag set — so that",
+        "is computed and printed by `check_decisions` at run time and rendered in the dated",
+        "`digest/<date>.md`, never stored here (D0215).",
         "",
-        f"Attention receipt: **{'FRESH' if receipts_fresh else 'STALE'}** — {receipt_detail}",
+        receipt_line(root),
         "",
-        "| Id | Tier | Title | Decision | Status (effective) | Veto by | Risk flags | Enforcement |",
+        "| Id | Tier | Title | Decision | Status (recorded) | Veto by | Risk flags | Enforcement |",
         "|---|---|---|---|---|---|---|---|",
     ]
     for rec in records:
@@ -136,7 +146,7 @@ def gen_decisions(root: Path, today: dt.date) -> str:
         flags = ", ".join(rec.get("risk_flags", [])) or "—"
         lines.append(
             f"| {rec['id']} | {rec['tier']} | {rec['title']} | {decision_short} "
-            f"| {effective_status(rec, today, receipts_fresh)} | {rec.get('veto_by', '—')} "
+            f"| {rec['status']} | {rec.get('veto_by', '—')} "
             f"| {flags} | {enforcement} |"
         )
     unenforced = [r for r in records if not r["bindings"]]

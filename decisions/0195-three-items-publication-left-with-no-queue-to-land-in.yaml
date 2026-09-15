@@ -86,13 +86,15 @@ reversibility: >-
 status: accepted
 bindings_count: 3
 bindings:
-  - type: file
+  - type: manifest
     target: .github/workflows/ci.yml
-    strength: documentary
+    strength: enforced
     detail: >-
-      Item (2). Documentary because the defect IS the prose: the workflow's behaviour is
-      correct and its header is false, and no guard reads a comment. Frozen and custody-set,
-      which is what makes it the owner's.
+      ENFORCED, upgraded at the M4 boundary sitting (D0214 item 9). Item (2) landed at the M3
+      boundary sitting on 2026-09-10: the header claiming the workflow had never run, and that
+      a remote was an unopened door, was replaced with one saying it has run since 2026-09-08.
+      The workflow is frozen with a MANIFEST.sha256 row, so a revert to the false header breaks
+      a seal; no guard reads the comment's meaning.
   - type: config
     target: "governance/policy.yaml#in_repo_mechanics.covers"
     strength: documentary

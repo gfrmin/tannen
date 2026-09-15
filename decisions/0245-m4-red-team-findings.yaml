@@ -178,7 +178,7 @@ bindings:
       RT-M4-01's fixture candidate, drafted not installed: the guard that would authenticate fold
       inputs does not exist yet, and a fixture belongs with its guard (RT-M3-02's lesson).
   - type: file
-    target: docs/redteam/fixture-candidates/doorway-network-residue/README.md
+    target: tests/poison/doorway-network-residue/README.md
     strength: documentary
     detail: >-
       RT-M4-02's fixture candidate: a shell module reading the world through imaplib/subprocess,

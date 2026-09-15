@@ -1,10 +1,9 @@
-# Poison fixture signer-role table (tag-roles-derived). PLACEHOLDER until make-fixture.sh
-# runs at the sitting: it rewrites this file with the trust-root pin of the bundle it
-# generates. Run against this placeholder, the fixture fails for the wrong reason.
+# Poison fixture signer-role table (tag-roles-derived). Written by make-fixture.sh at the
+# sitting: the trust-root pin is the brief-freeze object of the bundle generated beside it.
 version: 1
 trust_root:
   tag: brief-freeze
-  object: "0000000000000000000000000000000000000000"
+  object: "45e13bd236a63305f0d9ffee75ea26210a5e2e47"
   signer: owner
 roles:
   - {pattern: brief-freeze, signer: owner}

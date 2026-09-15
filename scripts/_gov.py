@@ -306,6 +306,40 @@ def receipt_state(root: Path, today: dt.date) -> tuple[bool, str]:
     return False, f"receipt {latest.name} stale: boundary {later[0]} + 7 days elapsed"
 
 
+#: An attention-receipt VERDICT stored in a projection, in either spelling one has used
+#: (`DECISIONS.md`'s bare line, the digest's bulleted one). D0215: the verdict is a function
+#: of the clock and of `git tag -l`, a commit can contain neither, so a tracked file that
+#: must match a later recomputation may not carry it. Anchored at the line start, because
+#: record titles quoted in DECISIONS.md legitimately mention the words.
+STORED_VERDICT_RE = re.compile(r"^(- )?Attention receipt: \*\*(FRESH|STALE)\*\*", re.M)
+
+
+def receipt_line(root: Path) -> str:
+    """What DECISIONS.md says about the attention receipt — only what its commit contains.
+
+    The latest dated receipt's filename, and whether a `.sig` file sits beside it. Both are
+    files in the tree, so this line reads the same whenever and wherever the commit is
+    checked out, which is the property `receipt_state` cannot have (D0215). The signature
+    is not VERIFIED here — verification is `receipt_state`'s, at run time — and whether the
+    receipt is fresh is deliberately absent. Same date parse as `receipt_state`, so a
+    `receipts/REWRITE-<date>.md` attestation is not mistaken for a receipt (D0183).
+    """
+    receipts_dir = root / "receipts"
+    dated = []
+    if receipts_dir.is_dir():
+        for path in receipts_dir.glob("*.md"):
+            try:
+                dated.append((dt.date.fromisoformat(path.stem), path.name))
+            except ValueError:
+                pass
+    if not dated:
+        return "Latest attention receipt: none in this tree."
+    name = max(dated)[1]
+    sig = "signature file present" if (receipts_dir / f"{name}.sig").exists() \
+        else "NO signature file beside it"
+    return f"Latest attention receipt: `receipts/{name}` — {sig}."
+
+
 def effective_status(record: dict, today: dt.date, receipts_fresh: bool) -> str:
     """Computed status: veto lapse converts to acceptance only under a fresh receipt
     (BRIEF §9.1); records themselves are append-only and never edited to say so."""

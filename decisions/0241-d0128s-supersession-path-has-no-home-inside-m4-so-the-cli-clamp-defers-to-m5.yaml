@@ -72,7 +72,7 @@ reversibility: >-
   Nothing here changes behaviour. The deferral is undone by M5 Session A doing the work; the
   drafts are undone by the owner declining them at the sitting, which costs two files. The
   `m4b` option stays open if the owner would rather pay the protocol cost than wait.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: pytest

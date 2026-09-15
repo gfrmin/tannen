@@ -101,6 +101,21 @@ POISON = [
     ("check_laws",
      ["scripts/check_laws.py", "--root", "tests/poison/check-laws-dropped-successor"],
      "which no law file defines"),
+    # Installed at the M4 boundary sitting (RT-M4-02, D0248), beside scripts/check_doorway.py
+    # and its custodian line. The fixture is a miniature src/tannen/ whose payloads read the
+    # world in each way frozen L4.9's hand-written network set misses; L4.9's own scanner
+    # finds nothing in it.
+    ("check_doorway",
+     ["scripts/check_doorway.py", "--root", "tests/poison/doorway-network-residue"],
+     "reads the world outside the doorway"),
+    # Installed at the M4 boundary sitting (D0205, D0229 item 4), beside the derivation that
+    # retired the hand-maintained required_tags. Specs m0..m4 and every derived tag except
+    # m3-close; the marker names the tag, so a failure for another missing tag cannot pass.
+    # repo.bundle is generated at the sitting by the fixture's make-fixture.sh.
+    ("check_tag_signers_derived",
+     ["scripts/check_tag_signers.py", "--root", "tests/poison/tag-roles-derived",
+      "--repo", "tests/poison/tag-roles-derived/repo.bundle"],
+     "required tag missing: m3-close"),
 ]
 
 
@@ -534,7 +549,7 @@ def test_oracle_shadow_spoofed_fails_its_poison() -> None:
 
 
 #: Fixture directories exercised by a test of their own rather than by a POISON row,
-#: each mapped to the test that does it. These five deviate from POISON's shape for
+#: each mapped to the test that does it. These deviate from POISON's shape for
 #: reasons documented at each test — the attack IS PYTHONPATH, so `-I -P` cannot be used;
 #: the decoy is imported from inside a sealed directory, so `-B` must be; the run is
 #: pytest rather than `--root`. The mapping is asserted in both directions below, so it
@@ -545,7 +560,42 @@ DEDICATED = {
     "oracle-shadow": "test_oracle_shadow_fails_its_poison",
     "oracle-shadow-model": "test_oracle_shadow_model_fails_its_poison",
     "oracle-shadow-spoofed": "test_oracle_shadow_spoofed_fails_its_poison",
+    "oracle-shadow-cross-file": "test_oracle_shadow_cross_file_fails_its_poison",
 }
+
+
+def test_oracle_shadow_cross_file_fails_its_poison() -> None:
+    """D0229 item (3)(a): the M4 supersession's anti-disarm property, on the custody floor.
+
+    tests/laws/m4/test_l4_differential_superseding.py binds L3.16's oracle from the frozen
+    bytes and must BORROW the bare name `_delta_model` and put it back. A loader that kept
+    the name would overwrite a decoy before the oracle-shadow guard reads sys.modules at the
+    end of collection — silencing it for the superseded M3 file, which had already bound
+    the decoy. Only a run collecting BOTH files, superseded first, can see that: measured
+    with a keep-the-name loader, this invocation exits 0 (28 passed on a full run) while
+    the M3-only invocation still aborts.
+
+    Same deviations from POISON as test_oracle_shadow_spoofed_fails_its_poison, plus
+    `--collect-only` and TANNEN_NO_EVIDENCE=1 so a weakened guard neither runs the stubbed
+    differential nor writes an evidence record for it. The marker is the guard's own text.
+    """
+    env = {k: v for k, v in os.environ.items()
+           if k != "TANNEN_CHECK_DECISIONS_NESTED" and not k.startswith("TANNEN_EVIDENCE")}
+    env["PYTHONPATH"] = str(REPO_ROOT / "tests" / "poison" / "oracle-shadow-cross-file")
+    env["TANNEN_NO_EVIDENCE"] = "1"
+    result = run(
+        [str(REPO_ROOT / ".venv" / "bin" / "python"), "-B", "-m", "pytest",
+         "-p", "bootstrap_shadow_cross_file",
+         "tests/laws/m3/test_l3_differential.py",
+         "tests/laws/m4/test_l4_differential_superseding.py",
+         "-q", "--collect-only", "-p", "no:cacheprovider"],
+        env=env,
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, (
+        f"oracle-shadow-cross-file PASSED its poison — the successor disarmed the guard:\n{combined}"
+    )
+    assert "answers with different code" in combined, combined
 
 
 def test_every_installed_fixture_is_exercised_by_this_suite() -> None:

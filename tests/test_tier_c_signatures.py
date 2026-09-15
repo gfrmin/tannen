@@ -9,7 +9,6 @@ both actually being enforced.
 
 from __future__ import annotations
 
-import datetime as dt
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +18,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from _gov import git_env, input_hash, receipt_state  # noqa: E402
+from _gov import git_env, input_hash, receipt_line  # noqa: E402
 from gen_projections import header  # noqa: E402
 
 GUARD = REPO_ROOT / "scripts" / "check_decisions.py"
@@ -75,19 +74,15 @@ def world(tmp_path: Path):
         # here — otherwise every case would exit non-zero and the positive ones would
         # prove nothing.
         #
-        # RT-M2-05 gave the projection a SECOND thing it must carry: the attention-receipt
-        # line this run computes, because the input hash above cannot see the clock. A bare
-        # header stopped being a fresh projection the moment that check landed, and this
-        # fixture said so by turning every exit-0 case below red. Rendered from
-        # `receipt_state` — the function the guard itself calls — so a throwaway tree with
-        # no receipts/ states the STALE verdict it actually has instead of faking a FRESH
-        # one. The record cases are unaffected: none of them carries a veto_by, so the
-        # guard's Tier-B row comparison has nothing to look for.
+        # The projection carries ONE line besides its header: the receipt line, which states
+        # only what the tree contains (D0215). It used to carry the attention-receipt
+        # VERDICT, rendered from `receipt_state` against this test's fixed TODAY, because
+        # RT-M2-05's check compared that verdict with the clock; D0215 moved the verdict to
+        # the dated digest, so the fixture renders exactly what the generator renders and
+        # no longer needs a date at all.
         paths = sorted((root / "decisions").glob("*.yaml"))
-        fresh, detail = receipt_state(root, dt.date.fromisoformat(TODAY))
         (root / "DECISIONS.md").write_text(
-            header(input_hash(paths, root))
-            + f"\nAttention receipt: **{'FRESH' if fresh else 'STALE'}** — {detail}\n")
+            header(input_hash(paths, root)) + f"\n{receipt_line(root)}\n")
         return subprocess.run(
             [sys.executable, str(GUARD), "--root", str(root), "--today", TODAY],
             capture_output=True, text=True, check=False, env=git_env(),

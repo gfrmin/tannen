@@ -61,28 +61,30 @@ reversibility: >-
   thing in the vicinity is the owner's re-signature of `governance/custody.sha256` after the
   two custody-set files change, and that is a routine motion the sitting performs anyway —
   the driver already regenerates and re-signs custody at step 11.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file
     target: .pre-commit-config.yaml
-    strength: documentary
+    strength: enforced
     detail: >-
-      Where the `regen-roadmap` hook goes, beside `regen-projections`. Documentary because
-      the file is custody-set: a builder cannot add the hook, and a drafted one enforces
-      nothing (D0143).
+      Item (1), ENFORCED at the M4 boundary sitting: the `regen-roadmap` hook landed beside
+      `regen-projections`, so a commit adding a decision record regenerates ROADMAP.md in the
+      same motion. tests/test_roadmap.py still detects a stale copy. Type stays `file`:
+      custody-set with no MANIFEST.sha256 row, so a revert shows as check_custody drift.
   - type: file
     target: Makefile
-    strength: documentary
+    strength: enforced
     detail: >-
-      The `projections` target, which names two generators and should name three.
-      Custody-set (row 6).
+      Item (2), ENFORCED at the M4 boundary sitting: `make projections` runs
+      scripts/gen_roadmap.py beside gen_projections.py. Type stays `file`: custody-set with no
+      MANIFEST.sha256 row, so a revert shows as check_custody drift.
   - type: file
     target: scripts/boundary_sitting.sh
-    strength: documentary
+    strength: enforced
     detail: >-
-      Step 8's queue selection, which tests tier before status and therefore cannot see this
-      record. Custody-set; the M4 driver is where it would change, alongside D0205's step-11
-      deletion and D0201 ruling (4)'s receipt reorder — one rework of the ceremony, not
-      three.
+      Item (3), ENFORCED at the M4 boundary sitting: step 8 of the M4 driver selects its queue
+      by `status: blocked-on-owner` at any tier, with no Tier-C prefilter, so a Tier-A record
+      that needs the owner's key (this one) reaches the sitting that discharges it. Type stays
+      `file`: custody-set with no MANIFEST.sha256 row, so a revert shows as check_custody drift.
 links: ["D0216", "D0215", "D0214", "D0205", "D0201", "D0154", "D0143"]

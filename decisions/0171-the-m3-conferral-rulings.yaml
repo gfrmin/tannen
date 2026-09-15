@@ -115,13 +115,16 @@ bindings:
     detail: >-
       Ruling (3)'s named instance and the reason it became a rule: `required_tags` is the
       enumeration that has lagged at three consecutive boundaries.
-  - type: file
+  - type: manifest
     target: scripts/custodian.sh
-    strength: documentary
+    strength: enforced
     detail: >-
-      Ruling (4)'s floor-integrity set: item 1's poison line and derived completeness pass,
-      item 7's `check_laws` fixture, and item 2's receipt exit-status clause all land here.
-      Author-key territory, which is what "goes in this sitting" means.
+      ENFORCED, upgraded at the M4 boundary sitting (D0214 item 7). Ruling (4)'s
+      floor-integrity set landed in full at the M3 boundary sitting on 2026-09-10: item 1's
+      poison line and derived completeness pass, item 7's `check_laws` fixture and its
+      `poison check_laws` invocation, and item 2's receipt exit-status clause.
+      scripts/custodian.sh carries a MANIFEST.sha256 row, so reverting any of them breaks a
+      seal and the custody signature together.
   - type: file
     target: scripts/gen_projections.py
     strength: documentary

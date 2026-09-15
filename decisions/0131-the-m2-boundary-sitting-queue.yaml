@@ -106,16 +106,27 @@ bindings:
     detail: >-
       Item (2)'s artifact, named at the path that holds it: frozen, sealed and custody-set,
       three separate reasons the builder cannot touch it.
-  - type: file
+  - type: manifest
     target: governance/tier-c.yaml
-    strength: documentary
+    strength: enforced
     detail: >-
-      Items (3) and (4): the custody set is declared here, so adding scripts/check_laws.py
-      and governance/laws.yaml to it is an edit to this file plus a re-signature.
-  - type: file
+      ENFORCED, upgraded at the M4 boundary sitting (D0214 item 1). Items (3) and (4) landed at
+      the M2 boundary sitting on 2026-09-03: scripts/check_laws.py joined `custody.set`, and
+      the gate runs it directly. Item (3) also named governance/laws.yaml; the sitting added
+      conftest.py in its place, because RT-M2-02 showed the registry's pointer, not its data,
+      is what an attack edits (D0141). So this binding claims check_laws.py and conftest.py,
+      not laws.yaml. governance/tier-c.yaml carries a MANIFEST.sha256 row, so removing either
+      entry breaks a seal as well as the custody signature.
+  - type: manifest
     target: governance/tag-roles.yaml
-    strength: documentary
-    detail: "Item (5): `required_tags`, now short of both m1-laws-freeze and m2-laws-freeze."
+    strength: enforced
+    detail: >-
+      ENFORCED, upgraded at the M4 boundary sitting (D0214 item 2). Item (5) landed at the M2
+      boundary sitting: m1-laws-freeze and m2-laws-freeze joined `required_tags`, and
+      scripts/check_tag_signers.py fails "required tag missing" when a required tag is deleted.
+      The file carries a MANIFEST.sha256 row, so the tag requirement cannot be edited away in
+      silence, whether it is held by the hand enumeration or by the derivation D0205 put in its
+      place.
 links:
   - decisions/0122-the-m1-sitting-reported-a-signature-the-owner-never-gave.yaml
   - decisions/0123-m1-sitting-followups-poison-matrix-and-bindings.yaml

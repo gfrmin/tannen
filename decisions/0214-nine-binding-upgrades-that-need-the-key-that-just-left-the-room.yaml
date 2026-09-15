@@ -67,7 +67,7 @@ reversibility: >-
   five records, and the previous signatures are superseded rather than destroyed — git holds
   both the bytes and the old `.sig`. Declining costs nothing but leaves nine bindings
   understating their enforcement, which the enforced/documentary split will keep reporting.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file
@@ -86,11 +86,12 @@ bindings:
       the signature, not the upgrade, and there is nothing here for it to detect.
   - type: file
     target: scripts/boundary_sitting.sh
-    strength: documentary
+    strength: enforced
     detail: >-
-      Step 4c, where each Tier-C queue record is flipped and signed — the one window in which
-      these upgrades are cheap, and the place the recommendation above would land. Documentary
-      and it must stay so until the owner writes it in: the file is custody-set, and a
-      drafted change awaiting the owner's key enforces nothing (D0143).
+      ENFORCED at the M4 boundary sitting: the recommendation landed. Step 8 of the M4 driver
+      offers each queue record's drafted binding upgrades before it flips the status and signs,
+      so the upgrade and the signature are one act, and its step 8b applies the nine upgrades
+      this record found to the five already-signed records. Type stays `file`: custody-set with
+      no MANIFEST.sha256 row, so a revert shows as check_custody drift.
 links: ["D0213", "D0045", "D0052", "D0063", "D0131", "D0154", "D0171", "D0176", "D0195",
         "D0200", "D0205"]

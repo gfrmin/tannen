@@ -41,25 +41,42 @@ rationale: >-
 reversibility: >-
   Nothing changes by filing it; each item, when taken, is an ordinary custody-set edit and a
   re-signature.
-status: blocked-on-owner
+status: accepted
 bindings_count: 5
 bindings:
-  - type: file
+  - type: manifest
     target: DELEGATIONS.md
-    strength: documentary
-    detail: Item (1).
-  - type: file
+    strength: enforced
+    detail: >-
+      Item (1), ENFORCED at the M4 boundary sitting: the literal `$marker` the publication
+      rewrite left in the founding ratification was replaced with the text it stood for, and
+      the file's MANIFEST.sha256 row was regenerated over the corrected bytes, so a regression
+      breaks a seal.
+  - type: manifest
     target: governance/importlinter.toml
-    strength: documentary
-    detail: Item (2).
-  - type: file
+    strength: enforced
+    detail: >-
+      Item (2), ENFORCED at the M4 boundary sitting: the `shell-no-subprocess` contract scans
+      the whole `tannen` package, not only the kernel, and the file's MANIFEST.sha256 row pins
+      it. The derived network scan installed beside it is scripts/check_doorway.py (RT-M4-02);
+      the superseding frozen L4.9 is owed by M5 Session A, for D0241's reason.
+  - type: manifest
     target: tests/poison/README.md
-    strength: documentary
-    detail: Item (3) — the corpus the fixture and the corrections join.
-  - type: file
+    strength: enforced
+    detail: >-
+      Item (3), ENFORCED at the M4 boundary sitting: the anti-disarm fixture
+      `tests/poison/oracle-shadow-cross-file/` was installed with its README row. It collects an
+      M3 law file and its M4 superseding file together, so a cross-file disarm is watched
+      failing by the custodian, which no single-file invocation can see. The README carries a
+      MANIFEST.sha256 row.
+  - type: manifest
     target: governance/tag-roles.yaml
-    strength: documentary
-    detail: Item (4).
+    strength: enforced
+    detail: >-
+      Item (4), ENFORCED at the M4 boundary sitting by the better half: D0205's derivation was
+      installed, so `required_tags` is refused as an enumeration and every milestone with a
+      frozen spec requires its laws-freeze tag, m4-laws-freeze included, by construction. The
+      file carries a MANIFEST.sha256 row.
   - type: file
     target: scripts/check_manifest.py
     strength: documentary

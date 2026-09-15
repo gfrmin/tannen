@@ -94,16 +94,17 @@ reversibility: >-
   envelope is signed; after that, a spend admitted under the wrong rule is not reversible,
   which is why the ruling makes all three preconditions to the first spend rather than
   follow-ups to it.
-status: blocked-on-owner
+status: accepted
 bindings_count: 4
 bindings:
   - type: file
     target: governance/policy.yaml
-    strength: documentary
+    strength: enforced
     detail: >-
-      Item (1)'s target — the sentence at :10-13 that claims SpendGuard enforces the envelope
-      operationally. Owner-signed and custody-set, so the correction is drafted and installed
-      under the owner's key; a drafted change awaiting the key enforces nothing (D0143).
+      Item (1), ENFORCED at the M4 boundary sitting: the sentence claiming SpendGuard enforces
+      the envelope operationally was replaced with one stating what SpendGuard does and does
+      not do. The corrected bytes are owner-signed and check_manifest's required_signatures
+      verifies them, so a revert to the false sentence breaks the signature.
   - type: file
     target: scripts/check_manifest.py
     strength: documentary

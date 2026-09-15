@@ -79,7 +79,7 @@ rationale: >-
 reversibility: >-
   Fully reversible: a draft in the staging directory and this record. Nothing is installed until
   the owner's cp, and a declined driver leaves the M3 copy in place.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file

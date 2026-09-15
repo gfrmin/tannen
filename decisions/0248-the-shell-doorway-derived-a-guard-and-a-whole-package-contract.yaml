@@ -65,7 +65,7 @@ reversibility: >-
   Fully reversible today: drafts in the staging directory and this record. Once installed,
   reversible by an owner-applied patch and a re-signature of the custody set — the cost every
   custody-set guard carries, and the property that makes it a guard.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file
@@ -82,7 +82,7 @@ bindings:
       guard rows, and the import-linter contract. Upgrades to enforced bindings on the installed
       paths after the sitting.
   - type: file
-    target: docs/redteam/fixture-candidates/doorway-network-residue/README.md
+    target: tests/poison/doorway-network-residue/README.md
     strength: documentary
     detail: >-
       The fixture this record accounts for (item 6). Retargets to tests/poison/ the moment step 5

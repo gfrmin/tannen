@@ -37,22 +37,17 @@ roles:
 
 # Tags that must EXIST. RT-15: no guard required any tag to be present, so `git tag -d`
 # erased the trust root, emptied the bless_epoch that delegation-precedes-signature
-# depends on, and made the attention receipt fresh for ever — every guard green,
-# including check_tag_signers.py itself, which read an absent brief-freeze as "not
-# created yet". That reading is right for a fresh repo and wrong for one that has been
-# through its opening sitting, which is what `owner_key_enrolled` distinguishes.
+# depends on, and made the attention receipt fresh for ever — every guard green.
 # Reachable by accident: shallow clones, exports and `git push` without --tags all
 # produce a working copy that looks exactly like this attack.
-required_tags:
-  - m3-close
-  - m3-laws-freeze
-  - m2-laws-freeze
-  - m2-close
-  - m1-laws-freeze
-  - m1-close
-  - m0-close
-  - brief-freeze
-  - m0-laws-freeze
+#
+# required_tags is DERIVED, never enumerated — see derive_required_tags in
+# scripts/check_tag_signers.py (D0205). A hand-written list here lagged by exactly one
+# milestone at every boundary, which is what step 11 of every sitting through M3 existed
+# to patch, and at M4 Session A it lacked m4-laws-freeze (D0095 half 2, D0171 ruling 3,
+# D0229 item 4). The key is kept and MUST stay empty: a non-empty value is refused, so
+# re-adding an enumeration is a red gate rather than a silent regression.
+required_tags: []
 
 # An unmatched tag class is REFUSED, not waved through. Without this the next hole is
 # simply a tag kind the table never heard of.

@@ -6,7 +6,7 @@
 # covers the variant it does not: `__file__` is a plain attribute, and a module that
 # sets it to the frozen path passes `_oracle_shadow_problem`'s identity comparison
 # outright. Measured against the shipped guard: `check_differential` — BRIEF §6's
-# differential kill criterion, frozen L3.12 — was answered 1,400 times by a stub that
+# differential oracle, frozen L3.16 — was answered 1,400 times by a stub that
 # returns None, with 38 M3 law nodes green, 16 fresh evidence records written, and
 # `check_manifest` reporting "frozen paths intact; seals unbroken; custody set current".
 #

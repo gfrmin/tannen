@@ -65,6 +65,11 @@ DECLARED_BINARY = {
         "a git bundle, by construction binary; it is the fixture that proves the "
         "custodian refuses a builder-signed *-close tag (D0050/D0054)"
     ),
+    "tests/poison/tag-roles-derived/repo.bundle": (
+        "a git bundle, by construction binary, generated at the boundary sitting by "
+        "tests/poison/tag-roles-derived/make-fixture.sh; its 12 objects were read out "
+        "and scanned by this guard before it was declared (D0250)"
+    ),
 }
 
 #: Home-directory disclosures already in the tree, each one also in the published history

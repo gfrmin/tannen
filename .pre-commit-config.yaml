@@ -17,6 +17,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: regen-roadmap
+        name: regenerate the roadmap projection (ROADMAP.md; D0217)
+        entry: .venv/bin/python -I -P scripts/gen_roadmap.py
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: check-concepts
         name: concept records ↔ vendored artifacts complete
         entry: .venv/bin/python -I -P scripts/check_concepts.py

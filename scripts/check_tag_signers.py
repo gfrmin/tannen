@@ -14,6 +14,10 @@ review and the poison corpus must keep honest. Keeping the *policy* in
 governance/tag-roles.yaml and the *logic* here leaves the custodian with a two-line
 invocation, and makes this guard testable and poisonable like the other four.
 
+Which tags must EXIST is derived, not listed (D0205): see derive_required_tags. The table's
+`required_tags` key is kept empty, and a non-empty value is refused, because the hand list
+it replaced lagged one milestone at every boundary (D0095 half 2, D0171 ruling 3).
+
 Exits non-zero on any violation.
 """
 
@@ -101,6 +105,34 @@ def check_trust_root(repo: Path, pin: dict, fail: Failures, opened: bool) -> Non
         print(f"  trust root: {tag} pinned at {actual[:12]}…")
 
 
+def derive_required_tags(root: Path, opened: bool) -> list[str]:
+    """The tags a tree must carry, DERIVED from its frozen specs rather than enumerated
+    (D0205; the rule and its non-circularity argument are in
+    docs/proposals/2026-09-04-m3-boundary-sitting/TAG-ROLES-DERIVED.md).
+
+    `<m>-laws-freeze` for every milestone with a `docs/specs/<m>.md`; `<m>-close` for every
+    milestone whose SUCCESSOR has one, since a successor's Session A cannot precede its
+    predecessor's boundary sitting (BRIEF §8); `brief-freeze` once the owner key is
+    enrolled. That last condition is check_trust_root's own: before the opening sitting the
+    trust root legitimately does not exist, and requiring it here would contradict the
+    tolerance one function up.
+
+    `m<digits>` only. docs/specs/ also holds forward-correction files such as
+    m3-corrections.md, and a looser match would invent a milestone.
+
+    The source is docs/specs/*.md, every one of which is frozen in MANIFEST.sha256 — so
+    deleting a spec to shed a requirement reddens check_manifest first, in a different
+    guard. Deriving from the TAG SET would be vacuous: detecting a deleted tag is the job.
+    """
+    nums = sorted({int(p.stem[1:]) for p in (root / "docs" / "specs").glob("m*.md")
+                   if p.stem[1:].isdigit()})
+    required = {f"m{n}-laws-freeze" for n in nums}
+    required |= {f"m{n}-close" for n in nums if n + 1 in nums}
+    if opened:
+        required.add("brief-freeze")
+    return sorted(required)
+
+
 @contextmanager
 def repo_at(target: Path):
     """Yield a working repo for `target`, cloning it first if it is a git bundle.
@@ -148,7 +180,16 @@ def check(root: Path, repo: Path) -> int:
     check_trust_root(repo, table["trust_root"], fail, opened)
 
     tags = [t for t in git(repo, "tag", "-l").stdout.splitlines() if t.strip()]
-    for required in table.get("required_tags") or []:
+    declared = table.get("required_tags") or []
+    if declared:
+        fail.add(
+            "required_tags is enumerated in governance/tag-roles.yaml, and it is derived — a "
+            "hand list lags one milestone at every boundary (D0095 half 2, D0171 ruling 3, "
+            f"D0205). Remove these and let the rule derive them: {', '.join(declared)}"
+        )
+    required_tags = derive_required_tags(root, opened)
+    print(f"  required (derived from docs/specs): {', '.join(required_tags) or 'none'}")
+    for required in required_tags:
         if required not in tags:
             fail.add(
                 f"required tag missing: {required} — the tag set is part of the custody "
