@@ -79,6 +79,11 @@ bindings:
       file carries a MANIFEST.sha256 row.
   - type: file
     target: scripts/check_manifest.py
-    strength: documentary
-    detail: Item (5) — the comparison against every envelope rather than the current one.
+    strength: enforced
+    detail: >-
+      Item (5), ENFORCED at the M4 boundary sitting, upgraded by the builder afterwards: D0240
+      item (3)'s patch landed through D0244's fold, so each budget.yaml ceiling is compared
+      against the CURRENT milestone's envelope, derived from MANIFEST.sha256's rows, not the
+      maximum over all of them. Type stays `file`: custody-set with no MANIFEST.sha256 row, so
+      a revert shows as check_custody drift.
 links: ["D0095", "D0205", "D0214", "D0216", "D0223", "D0225"]

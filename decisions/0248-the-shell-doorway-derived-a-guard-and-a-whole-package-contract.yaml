@@ -66,8 +66,28 @@ reversibility: >-
   reversible by an owner-applied patch and a re-signature of the custody set — the cost every
   custody-set guard carries, and the property that makes it a guard.
 status: accepted
-bindings_count: 3
+bindings_count: 6
 bindings:
+  - type: file
+    target: scripts/check_doorway.py
+    strength: enforced
+    detail: >-
+      ADDED after the M4 boundary sitting, where step 1 installed it: items (1) and (2), run by
+      `make verify` and pinned by its row in the owner-signed governance/custody.sha256, so a
+      change shows as check_custody drift. Type `file`: custody-set with no MANIFEST.sha256 row.
+  - type: pytest
+    target: tests/test_check_doorway.py::test_the_real_tree_is_green
+    strength: enforced
+    detail: >-
+      ADDED after the sitting: the guard over the real tree, beside the same file's controls
+      (each fixture payload fails for its own reason; the doors hold only for their own rule; an
+      empty scan is refused; the derivation sees imaplib and not os).
+  - type: manifest
+    target: governance/importlinter.toml
+    strength: enforced
+    detail: >-
+      ADDED after the sitting: item (3), the `shell-no-subprocess` contract over the whole
+      `tannen` package, run by lint-imports and pinned by the file's MANIFEST.sha256 row.
   - type: file
     target: docs/proposals/2026-09-11-m4-boundary-sitting/doorway-guard.md
     strength: documentary

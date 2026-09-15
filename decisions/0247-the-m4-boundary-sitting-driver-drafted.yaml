@@ -80,8 +80,16 @@ reversibility: >-
   Fully reversible: a draft in the staging directory and this record. Nothing is installed until
   the owner's cp, and a declined driver leaves the M3 copy in place.
 status: accepted
-bindings_count: 3
+bindings_count: 4
 bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      ADDED after the M4 boundary sitting, which ran these bytes: the installed driver is
+      byte-identical to the cleared draft (sha256 c88d3b9…) and pinned by its row in the
+      owner-signed governance/custody.sha256, so a change to the ceremony shows as
+      check_custody drift. Type `file`: custody-set with no MANIFEST.sha256 row.
   - type: file
     target: docs/proposals/2026-09-11-m4-boundary-sitting/boundary_sitting.sh
     strength: documentary

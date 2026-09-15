@@ -50,8 +50,16 @@ reversibility: >-
   Reversible: a ledger file, a gate in a driver, and this record. Declining it at the sitting
   costs nothing but RT-M4-07 staying open; removing it later is an owner edit to the driver.
 status: accepted
-bindings_count: 3
+bindings_count: 4
 bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      ADDED after the M4 boundary sitting, the first to run under it: item (2)'s gate is inline
+      in the installed driver, at step 8c and again as step 10's refusal before the close tag,
+      and the driver is pinned by its row in the owner-signed governance/custody.sha256. It binds
+      at a sitting only, by item (4)'s ruling — not at commit time.
   - type: file
     target: docs/redteam/LEDGER.yaml
     strength: documentary

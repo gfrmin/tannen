@@ -1,0 +1,69 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0251
+title: "The sitting's y/n prompt read three of the owner's typed y answers as declines: keys typed before a prompt joined its answer, and a stray Enter was a default no — drafted fix for the next driver"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths"]
+decision: >-
+  QUEUED FOR THE OWNER, `blocked-on-owner` on D0216's convention: the artefact is the sitting
+  driver, which is custody-set. It lands in the next driver the owner installs, and that driver is
+  cleared as whole bytes (D0068). No edit is made to the installed driver, and none would be
+  honest: its bytes are the ones the M4 clearance run and the M4 sitting ran.
+  .
+  WHAT HAPPENED. At the M4 boundary sitting three answers the owner reports typing as `y` were taken
+  as declines: D0248's accept at step 8, keeping D0131's binding upgrades at step 8b, and the
+  commit at step 9. The commit decline took no receipt, so step 10 refused on a dirty tree and the
+  sitting paused with its signatures uncommitted. Nothing was lost: the owner ruled on each of the
+  three (and reverted a fourth, D0228, to blocked), and a resume run completed the sitting at
+  9cff0b7 with m4-close. The resume path had been rehearsed on an exact copy of the paused tree
+  first.
+  .
+  THE MECHANISM. `confirm()` is `read -rp "$1 [y/N] " a; [[ "${a:-}" == [yY]* ]]`. A terminal
+  queues whatever is typed while nothing reads it, so a key pressed as `less` closes, or an Enter
+  pressed during a long gate, becomes the head of the next answer: `qy` and the empty line both
+  decline. The driver's prompt log records numbers and steps, never input, so which shape struck
+  at which of the three prompts is NOT recoverable and is not claimed.
+  .
+  THE FIX, drafted in docs/proposals/2026-09-15-sitting-confirm-input/confirm.sh: (1) on a
+  terminal only, each prompt first discards typeahead with non-canonical reads and prints what it
+  discarded; (2) an answer is y/yes or n/no, and anything else, the empty line included, is shown
+  back and asked again, so the `[y/N]` default is removed; (3) a decline echoes what was typed. The
+  same drain is put in front of `pause()`.
+  .
+  WATCHED. confirm_pty_test.py drives an implementation through a real pty over eight keystroke
+  shapes. The installed two lines fail four: Enter during a gate then y, q during a gate then y,
+  `qy` then y, and an empty line then y. The draft fails none. Fed from a file, as
+  rehearse_sitting.sh feeds `--answers y|n`, the draft accepts and declines exactly as before, and
+  end of input still declines, because nothing is drained off a non-terminal.
+rationale: >-
+  A sitting's answer spends the owner's key and its absence costs a paused ceremony, so a prompt
+  must never turn noise into a decision in either direction. Re-asking is cheaper than any
+  default. Draining alone would not be enough (a stray key on the prompt line itself is not
+  typeahead), and strict parsing alone would not be either (a queued `y` from an earlier keypress
+  would be taken as a real answer), so the fix is both. Neither the M4 driver's clearance nor the
+  sitting it ran is disturbed: the fix goes forward only.
+reversibility: >-
+  Fully reversible: a draft in a staging directory and this record. Once installed, an owner edit
+  to the driver and a custody re-signature, like any change to the ceremony.
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-15-sitting-confirm-input/confirm.sh
+    strength: documentary
+    detail: >-
+      The drafted confirm, pause and drain_typeahead. Documentary: the driver is custody-set and a
+      draft awaiting the owner's key enforces nothing (D0143).
+  - type: file
+    target: docs/proposals/2026-09-15-sitting-confirm-input/confirm_pty_test.py
+    strength: documentary
+    detail: >-
+      The pty test over eight keystroke shapes; run against confirm-m4-installed.sh it fails four,
+      against confirm.sh none. Not in make verify: it tests a draft, not an installed path.
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: documentary
+    detail: >-
+      Line 129's confirm() and line 130's pause(), the installed shape that read the answers. Upgrades
+      to enforced when a driver carrying the fix is installed and custody-signed.
+links: ["D0247", "D0250", "D0068", "D0143", "D0216", "D0228", "D0248", "D0131"]

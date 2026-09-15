@@ -82,8 +82,15 @@ reversibility: >-
   Fully reversible: a draft in the staging directory and this record. Nothing is installed until
   the owner's cp.
 status: accepted
-bindings_count: 2
+bindings_count: 3
 bindings:
+  - type: file
+    target: scripts/boundary_sitting.sh
+    strength: enforced
+    detail: >-
+      ADDED after the M4 boundary sitting, which ran these bytes: step 5's
+      declare_generated_binaries and its regeneration before the binding check are in the
+      installed driver, pinned by its row in the owner-signed governance/custody.sha256.
   - type: file
     target: docs/proposals/2026-09-11-m4-boundary-sitting/boundary_sitting.sh
     strength: documentary
