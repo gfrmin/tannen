@@ -1,0 +1,59 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0262
+title: "corpus/1 names Renavon bytes only by address, the comparator is byte identity with no normalisation, divergence/1 separates comparing from analysing, the charter law does its own comparison, and door 3 is enforced by a law file rather than the library"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths"]
+decision: >-
+  (1) CORPUS/1 carries names and content addresses only: vertical, pipeline (MODULE:CALLABLE),
+  authorisation (a decisions/ path) and items {id, input, production_output}. No Renavon byte is
+  ever in the record; the store beside it resolves the refs. 2 positive, 9 negative vectors.
+  .
+  (2) BYTE IDENTITY. "Byte-identical vs production" admits no normalisation: no trailing newline,
+  no whitespace, no re-encoding. One unanalysed divergence per differing item in corpus order,
+  with the first differing byte (the shorter length for a prefix); none for identical items; an
+  incomplete run refused. Model-checked by three mutants (normalise-before-compare, item-dropped,
+  offset-off-by-one).
+  .
+  (3) DIVERGENCE/1 separates comparing from analysing: `unanalysed` carries no analysis and no
+  evidence; any other class carries a non-empty analysis; `production-defect`, the win, needs
+  evidence. 4 positive, 9 negative vectors.
+  .
+  (4) THE CHARTER LAW COMPARES FOR ITSELF. L5.9 reads both outputs' bytes from the store instead of
+  trusting `tannen.dogfood.compare`, so the kill criterion does not rest on the code it judges.
+  It fails an unanalysed divergence, a missing one, and a stale one on an identical item.
+  .
+  (5) DOOR 3 IN A LAW. D0019 said the vertical would refuse without the door's signature; D0240
+  rules a library must not read the constitution. So L5.8 verifies the corpus's authorisation — a
+  Tier-C, accepted record under decisions/, links naming the door id read from tier-c.yaml,
+  owner-signed under tannen-decision with both -I and -n — and the library does not. Its verifier
+  was watched refusing eight bad variants against ephemeral keys and accepting a good one.
+  .
+  WATCHED against a synthetic corpus signed by a scratch owner key: L5.8 fails with the signature
+  removed; L5.9 fails with the analysis removed and again with it left unanalysed.
+rationale: >-
+  The comparator is where a dogfood quietly turns into a demonstration: every normalisation makes
+  the report greener and the claim weaker. Recording analysis as a separate act keeps a
+  classification from being a way to make a divergence go away, and the kill criterion says so.
+reversibility: >-
+  Frozen; changes only by supersession.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_charter.py
+    strength: enforced
+    detail: L5.9, the charter and M5's kill criterion.
+  - type: manifest
+    target: tests/laws/m5/test_l5_comparator.py
+    strength: enforced
+    detail: L5.7, byte identity model-checked.
+  - type: manifest
+    target: tests/laws/m5/test_l5_authorisation.py
+    strength: enforced
+    detail: L5.8, door renavon-first-contact in a law file.
+  - type: manifest
+    target: tests/laws/m5/divergence/schema.json
+    strength: enforced
+    detail: divergence/1 (L5.6); corpus/1 is its sibling under tests/laws/m5/corpus/ (L5.5).
+links: ["D0019", "D0240", "D0255", "D0256", "D0257", "D0259"]

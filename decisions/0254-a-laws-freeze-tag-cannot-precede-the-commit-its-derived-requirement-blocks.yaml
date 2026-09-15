@@ -49,7 +49,7 @@ rationale: >-
 reversibility: >-
   Fully reversible as a draft. Once installed, an owner patch and the re-signature of the
   manifest row and custody set, like any change to a guard.
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: file
@@ -64,9 +64,10 @@ bindings:
     detail: The mechanism, the watched table, and the owner's apply-and-re-sign chain.
   - type: manifest
     target: scripts/check_tag_signers.py
-    strength: documentary
+    strength: enforced
     detail: >-
-      The frozen guard the fix lands in, today at sha256 0dd46710… (MANIFEST.sha256 and the
-      custody set). Documentary until the patched bytes are installed and M5's freeze commit has
-      passed its own hooks.
+      APPLIED BY THE OWNER at 7d57dfe (2026-09-16), upgraded by the builder afterwards over
+      MEASURED bytes (D0253's lesson): scripts/check_tag_signers.py is sha256 f812a00516a5fbaf…,
+      the reviewed patch, pinned by its MANIFEST.sha256 row and the re-signed custody set.
+      M5's freeze commit is the first to pass its own hooks under it.
 links: ["D0205", "D0229", "D0241", "D0050", "D0054", "D0058", "D0062", "D0216", "D0143", "D0252"]

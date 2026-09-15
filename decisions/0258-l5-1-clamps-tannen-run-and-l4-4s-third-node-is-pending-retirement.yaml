@@ -1,0 +1,51 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0258
+title: "L5.1 clamps `tannen run` to the checked-in budget.yaml, with --budget-override the one spelling for another file; L4.4's third node is retired under `pending` at the freeze and promoted by Session B with the clamp"
+tier: A
+date: "2026-09-15"
+risk_flags: ["spend", "governance-paths"]
+decision: >-
+  Discharges D0241's owing and D0242 item (4): the clamp's successor law, its retirement entry and
+  its manifest note. The clamp itself is Session B's.
+  .
+  THE RULE, pinned (docs/specs/m5.md §6). Without --spend neither budget flag is consulted. With
+  --spend: no flag, or --budget naming the checked-in budget.yaml at find_root(), admits against
+  that file; --budget naming any other file is refused as SpendDenied, naming --budget-override,
+  before the transport and with nothing written; --budget-override PATH admits against PATH;
+  the two flags are mutually exclusive. The refusal reuses SpendDenied so L4.4's second node
+  keeps reading it. `--budget-override` takes a value, matching D0243's parser probe and D0244's
+  AST shape.
+  .
+  MEASURED AGAINST A THROWAWAY PROTOTYPE of that rule, never committed: of L4.4's five nodes,
+  exactly `test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call` fails; L5.1 passes all
+  forty enumerated scenarios; L5.1 against today's cli.py fails fifteen.
+  .
+  PENDING, NOT SUPERSEDED, AT THE FREEZE — owner ruling of 2026-09-15 at this session's interview,
+  correcting the literal wording of D0241 and of the session brief by measurement. Watched in a
+  scratch clone: under `superseded` the node reports failed (a strict xfail on a node that still
+  passes); under `pending` it passes, and check_laws accepts either. D0241's reason for
+  "superseded" is its end state, which Session B reaches in ONE change: land the clamp, promote
+  the entry, and rewrite tests/test_spend_preconditions.py's strict node to {current-envelope}.
+rationale: >-
+  D0128 built the two lists for exactly this: a retirement cannot be activated before the
+  behaviour that retires the node has landed. Using `superseded` now would redden the freeze
+  commit's gate for the whole of B1 and teach every session in between to read red as normal.
+reversibility: >-
+  The law is frozen and changes only by supersession. The registry entry is data: Session B's
+  promotion is a two-line move, and removing it is visible in check_laws.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_clamp.py
+    strength: enforced
+    detail: L5.1, frozen, model-checked by check_clamp with four mutants.
+  - type: file
+    target: governance/laws.yaml
+    strength: enforced
+    detail: The `pending` entry naming the node, successor L5.1 and this record, validated by check_laws.
+  - type: manifest
+    target: tests/laws/m4/test_l4_modes.py
+    strength: documentary
+    detail: The frozen file whose third L4.4 node is pending retirement, annotated in MANIFEST.sha256's notes. Documentary until Session B promotes the entry.
+links: ["D0128", "D0240", "D0241", "D0242", "D0243", "D0244", "D0253"]

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gfrmin/tannen/tests/laws/m5/corpus/schema.json",
+  "title": "corpus/1 — the frozen inputs of the M5 vertical and production's outputs for them (docs/specs/m5.md §3)",
+  "description": "Everything here is a name or a content address: no Renavon bytes are carried inline, and the store that resolves the refs lives beside this record outside the repository. `authorisation` names the owner-signed decision record that opened Tier-C door renavon-first-contact; L5.8 verifies it. `pipeline` is the vertical's MODULE:CALLABLE, the operator's code, as `tannen run` names it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tannen", "vertical", "pipeline", "authorisation", "items"],
+  "$defs": {
+    "ref": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "properties": {
+    "tannen": {"const": "corpus/1"},
+    "vertical": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
+    "pipeline": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.]*:[A-Za-z_][A-Za-z0-9_]*$"},
+    "authorisation": {"type": "string", "pattern": "^decisions/[0-9]{4}-[a-z0-9-]+\\.yaml$"},
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "input", "production_output"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+          "input": {"$ref": "#/$defs/ref"},
+          "production_output": {"$ref": "#/$defs/ref"}
+        }
+      }
+    }
+  }
+}

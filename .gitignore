@@ -22,3 +22,8 @@ evidence/
 # sitting commits with `git add -A`, so an unignored .verify-evidence/ would ride a failed
 # verify into the repository. Found by scripts/rehearse_sitting.sh, 2026-08-25.
 .verify-evidence/
+
+# M5's dogfood corpus, its store and its divergence analyses (docs/specs/m5.md §8; D0259).
+# Renavon's frozen inputs and production's outputs never enter this public repository (Tier-C
+# doors renavon-first-contact and external-bytes), so they live here, on the owner's machine.
+.dogfood/

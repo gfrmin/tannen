@@ -1,0 +1,42 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0261
+title: "BRIEF §8's selection rule pinned: a measurement naming a source twice or an unknown operator is refused whole, eligibility is the visible export, and ties break toward fewer operators then source id — measurement/1 is its Grade-S record"
+tier: A
+date: "2026-09-15"
+risk_flags: []
+decision: >-
+  Selection-rule outcomes are Tier A (BRIEF §9); the rule's silences are pinned here by property
+  test (BRIEF §4: "silence resolved by a pinning property test").
+  .
+  (1) REFUSED WHOLE: one source measured twice, or an operator outside tannen.kernel.ops.OPERATORS
+  in ANY candidate — eligible or not. A measurement naming an operator that does not exist is
+  wrong as a whole, not only in one row. (2) ELIGIBLE: `visible_export`; none eligible is refused.
+  (3) KEY: (parser_loc × distinct operators, distinct operators, source id as UTF-8 bytes). A
+  product tie breaks toward FEWER operators, because an operator is a unit of algebra the
+  vertical must get right. The plan's third key, LOC, was DROPPED while writing the model: equal
+  product and equal operator count force equal LOC, so it could never decide anything, and the
+  source id is the last and total key. (4) `loc/1` counts non-blank physical lines that are not
+  only a comment. (5) The catalogue is the package's own tuple, asserted by identity, never
+  listed in the schema or the law.
+  .
+  measurement/1 freezes with 3 positive and 11 negative vectors. The selection family is
+  model-checked by three mutants (visibility-ignored, sum-not-product,
+  tiebreak-prefers-operators), each watched dying.
+rationale: >-
+  A rule that is silent on ties or on malformed input is decided by whatever the implementation
+  happens to do, which is the question-being-asked BRIEF §8 forbids, only moved into code.
+reversibility: >-
+  Frozen; changes only by supersession, and before the gate sitting nothing has been selected
+  with it.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_selection.py
+    strength: enforced
+    detail: L5.4 — named measurements, drawn measurements, the catalogue identity and the gate clause.
+  - type: manifest
+    target: tests/laws/m5/measurement/schema.json
+    strength: enforced
+    detail: measurement/1, frozen with its vectors (L5.3).
+links: ["D0256", "D0257", "D0128", "D0171"]

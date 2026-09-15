@@ -179,6 +179,24 @@ b4adc5a4444fcd5da3467422c61b1cabf43c6f2c541d9d63836c96f846bb2eae  tests/laws/m4/
 #   NO governance/laws.yaml entry: the M3 nodes still pass, so a strict xfail would be red.
 #   The poison fixtures keep naming the M3 files. m3 §11's kill criterion now reads on
 #   L4.19. Record: D0225.
+#
+# tests/laws/m4/test_l4_modes.py
+#   ONE NODE PENDING RETIREMENT: test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call.
+#   It spends through `tannen run` against a `--budget` of its own; owner ruling D0240 item (2)
+#   clamps the CLI to the checked-in budget.yaml, so under the clamp it must fail. Its claim is
+#   carried forward by L5.1 (tests/laws/m5/test_l5_clamp.py, docs/specs/m5.md §6). Recorded in
+#   governance/laws.yaml under `pending` at m5-laws-freeze (D0258), because the clamp has not
+#   landed and the node still passes; M5 Session B promotes it to `superseded` in the change
+#   that lands the clamp. Every other node in the file is unaffected and stands.
+#
+# tests/laws/m4/test_l4_doorway.py
+#   SUPERSEDED FORWARD, WHOLE FILE, no node retired. L4.9's network set was a hand-written
+#   literal and process creation was not scanned (RT-M4-02). L5.2
+#   (tests/laws/m5/test_l5_doorway.py, docs/specs/m5.md §7) derives all three forbidden sets —
+#   the network set from the socket primitives by static import closure, the process and clock
+#   sets from governance/importlinter.toml's contracts — and holds itself to
+#   scripts/check_doorway.py by a differential clause (D0260). L4.9 is retained, unedited, and
+#   still runs: it is weaker, not false.
 3b7eca1046095151e2cd58ff665e4a7e96f9ceb7ddb53e938986417a51196c7c  governance/schemas/evidence-record.schema.json
 46741f08a678df9a6062c153750ef6f1eb2665b0227fe06f0c62c08f25d720e7  tests/poison/oracle-shadow-model/bootstrap_shadow_model.py
 3f627f2a9f5a4d970e901c671b3782ae9693a1f7be66824b0e09d4d6d3136f5e  tests/poison/oracle-shadow-model/_model.py
@@ -232,3 +250,58 @@ d3062795b98e45386b23a1f7044e1cddbe27c94a4a06b7f817959f74e536e8fe  tests/poison/o
 8382b1f15e5b347283e84106ff210741e67530d0a0868f19b2aec67ab89175ee  tests/poison/README.md
 b322fd878aea1c894962bfb2ec846cbf63c531040459181122e3558288f2f5ea  scripts/custodian.sh
 f812a00516a5fbaf9ee4aa492c0607a452abe1ff806837cba14a336ef37884c5  scripts/check_tag_signers.py
+484089e679dec740534dce8a8bc10351a8068e2a2c3042ce9dd4381b1aa7c425  docs/specs/m5.md
+fdf8c93e159e761a6de190108a20eb424bca39c3c2f9d345d4d0e8e1b2ca519f  tests/laws/m5/_dogfood_bind.py
+c39f497eb1dde9983a69e3722b96b6b38b586eb7930170bebaad194ea892f29d  tests/laws/m5/_dogfood_model.py
+c252cde4148b3630e82b8d9cc235175ba4fb401cdf6bf11bc0cdc76499749964  tests/laws/m5/_dogfood_subject.py
+3064bb4c2685b4e13ca9ab2569a273109aeda23145194f096f09f4fde163e810  tests/laws/m5/corpus/negative/authorisation-missing.json
+70e2174aa51150428f3f87d9a03e82963775be9beb6ef880b4f48332cf16d65b  tests/laws/m5/corpus/negative/authorisation-outside-decisions.json
+5482d9d5c85dd165dc7670e40ea9840ee53edc35f04f3f81e920d2a847e9cd21  tests/laws/m5/corpus/negative/extra-field.json
+437909af66ef91a12351657132fbb0941c80fcb92c66b84f6b2017a5dfa36b1d  tests/laws/m5/corpus/negative/input-inline-bytes.json
+d71346e29ff1dd774685df123f95428cda687aff3613fe9c474a00aa714bc95d  tests/laws/m5/corpus/negative/item-missing-production-output.json
+20809eaeb9e77ed43d49631be936a6305cb5644219c10ade7fac6eb0d6bbea14  tests/laws/m5/corpus/negative/no-items.json
+6a994cc5481db8bfd011081ccaeaef4d667562261ed854e9ca7e40ac1457d558  tests/laws/m5/corpus/negative/pipeline-no-callable.json
+fbe7bd3870f3701fb843a9304e16d991da6c5eed86febe461a85c2e81daa39f5  tests/laws/m5/corpus/negative/ref-uppercase-hex.json
+b5896aa4474feae92ae54b711dc0c4e203af6bb2be1ddfc667f0b0c318744126  tests/laws/m5/corpus/negative/wrong-tag.json
+56a6a4be908a037a3d277a252988a7b6d17ed7620afb15ac6cfa7f0ec97ba6b4  tests/laws/m5/corpus/positive/one-item.json
+954862e9025df3db79fb3d1a47f81cc0818852fca99f267ed8cc69dfbb6eff30  tests/laws/m5/corpus/positive/shared-production-output.json
+53d92b75a169e639593084a90791c0a5db162d579093e7f8d79833e19caa359f  tests/laws/m5/corpus/schema.json
+19aa163358f6807910238fb0729f75e557ecfede251b03014b548982d1761def  tests/laws/m5/divergence/negative/analysed-without-analysis.json
+723772b3bd2be6bd5930f8393aeb458ffc64205045d75b7e83b48e798325e6e9  tests/laws/m5/divergence/negative/extra-field.json
+3079ec972fa5639c3cdc53f6e27a120d02719fd0bcb2d0eed7d8fb26e3dd8236  tests/laws/m5/divergence/negative/offset-negative.json
+70fc26af6feaff5115b461829cd49c6a4c9c78bf025587aaaaf0f5271cbdc5d1  tests/laws/m5/divergence/negative/output-ref-malformed.json
+152cc9312aeb764a85fd98c82803e908989e98750b73e0c6d721754cb04ee0ef  tests/laws/m5/divergence/negative/production-defect-without-evidence.json
+8fa7826aeebee5707e6f3228a8df084cd834333950ff5798e7b9531c61a8c855  tests/laws/m5/divergence/negative/unanalysed-with-analysis.json
+0141cac048ffc364434326a3d25dc37c557bff2c4a0adffa1ca541a3ca84dde0  tests/laws/m5/divergence/negative/unanalysed-with-evidence.json
+8c85a642e4b29d3c296748758d545243b6c0fd824f97bcd0d0812434e47504b1  tests/laws/m5/divergence/negative/unknown-classification.json
+6f82282e3b3c4be6c87f55a935f2f106e1a3c66cdadba84793ba8882020def31  tests/laws/m5/divergence/negative/wrong-tag.json
+1615a3cb7df83bdd3b903a8f315b9972eaafe43c6959cd987d91d73120710ef5  tests/laws/m5/divergence/positive/production-defect-with-evidence.json
+1a31e0ef023d84f097fa4a874a93bcf8c29844e721ab7f9c856f9038633acb14  tests/laws/m5/divergence/positive/specification-gap.json
+f90c808c654c27c31b94e729689c59a2d4c5aa450b72329310c187132ff12bf0  tests/laws/m5/divergence/positive/tannen-defect.json
+98de5100c3609edf29dff3241331bbfff88703ba3d5b6056a7c42e1603b163e4  tests/laws/m5/divergence/positive/unanalysed.json
+0c262be1b9afce27008ffcb6cd6803d7a28ff95c96b37a56e3c84119d9b6c6c5  tests/laws/m5/divergence/schema.json
+e84f2977dbaf9d1650f26afc8c587482abb5f6a9d098cbddec87a8b3cf11e185  tests/laws/m5/measurement/negative/extra-field.json
+76a32fba1de19d68681d7e92a122ab9b01fa66c2a373d1c16fd096784b8ac9ac  tests/laws/m5/measurement/negative/loc-fractional.json
+dfa6c43ffb524767a745b7851a28d92081c61bdfa87c96e3a4982c85eaafce85  tests/laws/m5/measurement/negative/loc-zero.json
+cc2fbb534d0b1c199fb2c8437e5579327048207707e350554d87d87689d94087  tests/laws/m5/measurement/negative/no-candidates.json
+ce9349413b6a03d60d5e803fa6ff9c0e0aca1792e4f65e2a88488c9bd38874fe  tests/laws/m5/measurement/negative/no-parser-files.json
+9e64d00f442472cc6ab444452253a800ac541f1a3627e607d62f4351a1e78060  tests/laws/m5/measurement/negative/operators-empty.json
+ed7848a942acfda0efbc83a72158be1a547c91b1a77292362a43defedab57d4e  tests/laws/m5/measurement/negative/operators-repeated.json
+4dc1e2bd832e9ab1f22a2f5f4ae89067e8f35afeffa40341d91c2ebd75991715  tests/laws/m5/measurement/negative/source-uppercase.json
+85189e09f59e982bb5c57f83fef15fb2f03ae1634f2092f004a267f52e13746b  tests/laws/m5/measurement/negative/unknown-counter.json
+30318605a2be4d52e1317f5a50a43a249454c5436297d8b318db47a9fc7fff88  tests/laws/m5/measurement/negative/visible-export-missing.json
+6e7cd1900e635c00546ae4f98f97432a1b3a268dfa233e6b9794fb5b80385a6b  tests/laws/m5/measurement/negative/wrong-tag.json
+72c27c4da8d3560b7452207903f6b58546203a228aeef411130fec84811099a4  tests/laws/m5/measurement/positive/ineligible-beside-eligible.json
+2250e90f99a61e6659f7930c50529bc3e3cf144f9b40c9af303c032bee6d11fc  tests/laws/m5/measurement/positive/single-candidate.json
+2726d3cace586e991f1fb2e3d0496bab5cca87c41e329b4cbae28a345d3c2c79  tests/laws/m5/measurement/positive/tie-on-product.json
+01d777e5c8e75a146d7008fba0a8e8979ece700a4e6db6937b79bafa325e34fd  tests/laws/m5/measurement/schema.json
+c958339c2acc4524af4d2345defb35049bf0e5aa8429ff2993767243234aabae  tests/laws/m5/test_l5_authorisation.py
+014a1157749b5f57d50adb6787b08c66db708fb0516c87e7a9ad15da81c1b5ef  tests/laws/m5/test_l5_charter.py
+450526c0d55d9b2e8c1f40668a29314df96cc0151d7c297fa79b25b6aac95a2f  tests/laws/m5/test_l5_clamp.py
+34fe2be03eaab7367888025cfb9f747d1142c3e34bf947cffcb5514059ec6e5f  tests/laws/m5/test_l5_comparator.py
+e30a84ab40939472b34c743dfbc028d36251b554d720866a11cfb1369da01314  tests/laws/m5/test_l5_corpus.py
+fcc41727bf15e26df47c8028f2892704e4047d892b5227f73086b11038515996  tests/laws/m5/test_l5_divergence.py
+b77ceca45373ac8b818bbc0db917b9c38c8d65668aa3549f35b595fc3a22c203  tests/laws/m5/test_l5_doorway.py
+6395b92bd274ba03bf707fe1b06d0704e171dd0a0ac7ad58d588bf6cece5634d  tests/laws/m5/test_l5_measurement.py
+d52b5093922e37c1687e2e927a4816417f5159f0c60d9cf120f50ae185691d4f  tests/laws/m5/test_l5_replay.py
+98d0806f921eadb61422e910c312988ca17121a16ff1f63fffb31e53a936e17c  tests/laws/m5/test_l5_selection.py

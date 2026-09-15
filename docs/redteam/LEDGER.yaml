@@ -301,7 +301,7 @@ findings:
     disposition: scheduled
     where: M5 Session A — the superseding L4.9, deriving its network set as scripts/check_doorway.py does; the guard and the whole-package contract landed at the M4 boundary sitting (D0248)
     record: D0248
-    note: Filed D0245; promoted to the sitting's first item by A2. Closing it must account for fixture candidate doorway-network-residue (A4).
+    note: Filed D0245; promoted to the sitting's first item by A2. The guard, the contract and the fixture landed at the M4 sitting (D0248). The superseding law is FROZEN as L5.2 at m5-laws-freeze (D0260), accounting for the fixture in its own clause; it attests only when M5 goes live on the owner's machine (D0259), which is when this row can close.
   - id: RT-M4-03
     report: docs/redteam/2026-09-12-m4-boundary.md
     severity: Medium

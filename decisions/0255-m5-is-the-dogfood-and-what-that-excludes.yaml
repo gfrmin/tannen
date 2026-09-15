@@ -1,0 +1,53 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0255
+title: "M5 is the dogfood: the selection rule over a gate measurement, the corpus, byte identity, analysed divergences, door 3 in a law, the vertical's replay — plus the clamp and the derived doorway M4 left owed — and what it deliberately is not"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths"]
+decision: >-
+  M5's scope, fixed at Session A and frozen with docs/specs/m5.md, the D0218 precedent one
+  milestone on. BRIEF §8's charter is one sentence — "M5 dogfood: one Renavon vertical,
+  byte-identical vs production on frozen inputs, divergences analysed (production bugs found =
+  wins)" — plus the selection rule; everything below is the decomposition.
+  .
+  IN. (1) The selection rule as a law over a `measurement/1` record the gate sitting takes
+  (D0261). (2) `corpus/1`, the byte comparator, `divergence/1` and what "analysed" means, and the
+  charter law (D0262). (3) Door renavon-first-contact enforced in a law file, not the library
+  (D0262). (4) The vertical's replay from its captures. (5) The CLI spend clamp as L5.1, the
+  successor D0241 deferred here, with its `pending` retirement (D0258). (6) L4.9 superseded
+  forward by the derived L5.2 (D0260). Laws L5.1–L5.10.
+  .
+  OUT, each named so a reader does not go looking. ANY RENAVON READ BEFORE THE GATE, and so THE
+  CHOICE OF VERTICAL, which is the output of the measurement, not an input to the spec (D0256).
+  THE GRADE-S GOVERNOR WIRE: D0218 held the governor premature until demand logs exist, and M5
+  produces none. CLICKHOUSE EMISSION (D0222). A LIVE R2 STORE (D0228, still blocked). ANY NONZERO
+  SPEND and the pre-budget sitting (RT-M4-01, D0246 A5). THE CURRENT-ENVELOPE CHECK AND THE
+  FOLDED LOCK in check_manifest.py, which did not land (D0253). M5b. RT-M4-03, RT-M4-04 AND
+  RT-M4-05, deferred in the ledger — RT-M4-04 excluded by owner ruling of 2026-09-15 at this
+  session's interview, at the stated cost that its superseding law cannot land before M6
+  Session A. PERFORMANCE.
+  .
+  THE SUPERSESSION AUDIT. Exactly one frozen node changes meaning: L4.4's third, retired under
+  §6. Against a prototype clamp L4.4's other nodes pass. L4.9 is superseded as a whole file with
+  no node retired. No other frozen law exercises `tannen.cli`'s budget handling.
+rationale: >-
+  The exclusions are the part worth defending, because each is a plausible next step that would
+  widen the milestone, and three are one-way doors: reading Renavon to "just measure" is door 3,
+  publishing the measurement is door 2, and a nonzero ceiling is door 1. The two carry-forwards
+  are IN because a sealed law directory takes no files after its freeze: left out, both would
+  wait for M6 Session A.
+reversibility: >-
+  Scope is reversible until the freeze and not after it, which is why it is recorded before the
+  tag. Nothing here binds M6.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: docs/specs/m5.md
+    strength: enforced
+    detail: The spec whose scope paragraph carries the in and out lists and whose §9 carries the audit.
+  - type: file
+    target: BRIEF.md
+    strength: documentary
+    detail: §8 (the charter and the selection rule), §9.1–§9.2 (the M5 gate, door 3) and §7 (the governor seam) are the sentences this scope is derived from.
+links: ["D0218", "D0241", "D0248", "D0253", "D0256", "D0257", "D0258", "D0259", "D0260", "D0261", "D0262"]

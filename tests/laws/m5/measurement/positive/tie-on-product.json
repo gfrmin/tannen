@@ -1,0 +1,1 @@
+{"tannen":"measurement/1","counter":"loc/1","candidates":[{"source":"gamma","visible_export":true,"parser_files":["g.py"],"parser_loc":60,"operators":["select","project"]},{"source":"delta","visible_export":true,"parser_files":["d.py"],"parser_loc":40,"operators":["select","project","join"]}]}

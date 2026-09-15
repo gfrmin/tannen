@@ -1,0 +1,53 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0256
+title: "Reading Renavon source to measure BRIEF §8's selection rule is first contact — or cannot be shown not to be — so Session A read nothing and froze the rule as a law over a measurement the gate takes"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  Decided BEFORE any Renavon read, from governance/tier-c.yaml, governance/policy.yaml and BRIEF
+  §9.1–§9.2, under the owner's standing instruction for this session: if reading source to
+  measure counts as first contact, or it cannot be told, freeze a spec complete except for the
+  vertical and queue the measurement; never measure first and ask afterwards.
+  .
+  THE READING. Door renavon-first-contact is "First contact with Renavon inputs (the M5 gate;
+  mandatory sitting per §9.1)", and §9.1 gates M5 "before touching Renavon inputs". Three facts
+  put the measurement on the far side of that door. (1) BRIEF §8 measures "among sources with a
+  visible export", which is a survey of production, not only of code. (2) "Inputs" is not
+  defined, and parser source is exactly the material a vertical's inputs are decoded by; the
+  door is one-way, so an ambiguity in its scope resolves toward the owner. (3) This repository
+  is public (policy.yaml `publishing: this-repo-public`), and a measurement recorded here — source
+  names, file paths, line counts — publishes commercial detail, which is door 2 and was already
+  ruled a no for a Renavon excerpt at publication (D0115, D0176). policy.yaml answers none of this
+  affirmatively, so it is not a question the builder may settle.
+  .
+  WHAT WAS DONE. Nothing was read from the Renavon monorepo, `.reference/` included. The selection
+  rule is frozen as L5.4 over a `measurement/1` record (Grade S, L5.3), with BRIEF §8's silences
+  pinned (D0261); the measurement itself, where it lives, and whether any of it may be published
+  are queued to the gate sitting as D0257.
+  .
+  D0010 IS NOT A COUNTER-ARGUMENT. It cloned the owner repos into `.reference/` for pinning
+  concept sections before M0, when no door covered Renavon inputs specifically; reading a pinned
+  prose section of a design document is not measuring a production source, and D0176 later
+  removed the one Renavon excerpt that had entered the repository.
+rationale: >-
+  The cost of reading too early is irreversible in both directions the doors care about: once
+  read, first contact has happened, and once recorded here, it is published. The cost of waiting
+  is one question at a sitting that is mandatory anyway. A spec whose only gap is its vertical
+  loses nothing a later session cannot add as data: the rule, the record shapes and the charter
+  are all vertical-agnostic.
+reversibility: >-
+  Fully reversible: the owner can rule at the gate that some reading was never behind the door,
+  and the measurement proceeds under that ruling without touching a frozen path.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_selection.py
+    strength: enforced
+    detail: L5.4, the rule stated over a measurement rather than over any source this session could have read.
+  - type: config
+    target: "governance/policy.yaml#external_surface.publishing"
+    strength: documentary
+    detail: The line that makes a measurement recorded here a publication.
+links: ["D0010", "D0019", "D0115", "D0176", "D0257", "D0261"]

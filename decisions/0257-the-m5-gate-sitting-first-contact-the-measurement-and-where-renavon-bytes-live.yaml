@@ -1,0 +1,42 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0257
+title: "The M5 gate sitting's queue: authorise first contact with Renavon inputs, take the selection measurement, decide where the corpus and store live, whether any of it may be published, and the shape of the authorising record L5.8 reads"
+tier: C
+date: "2026-09-15"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  QUEUED FOR THE M5 GATE SITTING, non-blocking (BRIEF §9.2). Unsigned: this is a request, and
+  the door opens only by an affirmative owner signature over a record the owner authors or
+  accepts at the sitting.
+  .
+  THE ASKS. (1) Door renavon-first-contact: may this project make first contact with Renavon
+  inputs, and on what terms. (2) The measurement: the candidate sources with a visible export,
+  their parser files and `loc/1` counts, and the operators each would require, recorded as
+  `measurement/1` at `.dogfood/measurement.json` (docs/specs/m5.md §2); L5.4 then selects the
+  vertical — no one chooses it. (3) Where Renavon bytes live: `.dogfood/` is gitignored in this
+  checkout; is that the only home, is the owner's machine the only one that holds it, and how are
+  inputs and production outputs frozen into `.dogfood/store/`. (4) Publication, door 2: may the
+  selected vertical's NAME, the measurement, or any divergence analysis appear in this public
+  repository; the default is that none does, and a production defect is reported to its owner by
+  the owner's hand. (5) The authorisation record: L5.8 requires a Tier-C, accepted, owner-signed
+  (namespace tannen-decision) record under decisions/ whose links name renavon-first-contact; if
+  the owner wants a different shape, that is a superseding law.
+rationale: >-
+  Every ask is a one-way door or the terms of one, so none is the builder's. Filed at Session A
+  so the gate sitting has an agenda before it is scheduled, and so ROADMAP §3's owner queue shows
+  it from the freeze onward.
+reversibility: >-
+  Nothing changes by filing it. Answering (1) is irreversible by nature; (2)–(5) are policy the
+  owner can later revise under new records.
+status: blocked-on-owner
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_authorisation.py
+    strength: enforced
+    detail: L5.8, the law that reads the record ask (5) describes and fails any corpus the door did not open.
+  - type: config
+    target: "governance/policy.yaml#external_surface.network_writes"
+    strength: documentary
+    detail: The external-surface policy ask (4) would extend; it answers nothing about Renavon bytes today.
+links: ["D0019", "D0228", "D0255", "D0256", "D0259", "D0261", "D0262"]

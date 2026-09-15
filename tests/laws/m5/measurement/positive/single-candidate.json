@@ -1,0 +1,1 @@
+{"tannen":"measurement/1","counter":"loc/1","candidates":[{"source":"alpha","visible_export":true,"parser_files":["parsers/alpha.py"],"parser_loc":120,"operators":["select","project"]}]}

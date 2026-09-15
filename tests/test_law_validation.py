@@ -44,6 +44,7 @@ MODEL_PATHS = {
     "m2": ("_m2_model", REPO_ROOT / "tests" / "laws" / "m2" / "_model.py"),
     "m3": ("_m3_delta_model", REPO_ROOT / "tests" / "laws" / "m3" / "_delta_model.py"),
     "m4": ("_m4_boundary_model", REPO_ROOT / "tests" / "laws" / "m4" / "_boundary_model.py"),
+    "m5": ("_m5_dogfood_model", REPO_ROOT / "tests" / "laws" / "m5" / "_dogfood_model.py"),
 }
 
 #: Enough draws for every mutant to die, measured rather than guessed: the whole matrix
@@ -308,6 +309,8 @@ def test_check_laws_refuses_an_entry_that_is_both_active_and_pending(tmp_path: P
 
 
 RETIRED_NODE = "tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name"
+PENDING_NODE = ("tests/laws/m4/test_l4_modes.py::"
+                "test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call")
 
 
 def test_the_retirement_is_the_node_the_spec_names_and_it_is_now_ACTIVE() -> None:
@@ -318,15 +321,15 @@ def test_the_retirement_is_the_node_the_spec_names_and_it_is_now_ACTIVE() -> Non
     and a strict xfail on a passing test is a red gate. Session B landed D0110 and PROMOTED
     it to `superseded` in the same change — which is the moment the retirement became true
     rather than a claim about the future — so what this test asserts moved with it. The
-    node, successor and record did not move, and that is what is checked here; the
-    `pending` list is now empty, and an empty `pending` is the normal resting state
-    (an entry sits there only between a Session A freeze and the Session B change that
-    activates it).
+    node, successor and record did not move, and that is what is checked here. The
+    `pending` list is empty at rest; an entry sits there only between a Session A freeze and
+    the Session B change that activates it, and M5 Session A put one there (D0258, below).
     """
     import yaml
 
     registry = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
-    assert registry["pending"] == [], "nothing is awaiting activation now that D0110 has landed"
+    assert [entry["node"] for entry in registry["pending"]] == [PENDING_NODE], (
+        "the only entry awaiting activation is docs/specs/m5.md §6's (D0258)")
     superseded = registry["superseded"]
     assert len(superseded) == 1
     assert superseded[0]["node"] == RETIRED_NODE
@@ -354,3 +357,25 @@ def test_the_retired_node_actually_fails_now() -> None:
         f"claiming a retirement that has not happened:\n{result.stdout}"
     )
     assert "RelError" in result.stdout, result.stdout + result.stderr
+
+
+def test_the_pending_retirement_is_the_node_m5_names_and_it_still_passes() -> None:
+    """docs/specs/m5.md §6 (D0258): L4.4's third node is retired under `pending`, successor
+    L5.1, because the clamp that makes it fail has not landed — and a strict xfail on a passing
+    node is a red gate (D0128). The mirror of `test_the_retired_node_actually_fails_now`: a
+    PENDING node must still PASS, or the change that retires it has landed without the
+    promotion, and the registry is describing the past. M5 Session B promotes the entry, and
+    replaces this test with that one's shape, in the change that lands the clamp."""
+    import yaml
+
+    pending = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))["pending"]
+    assert [(e["node"], e["successor"], e["record"]) for e in pending] == [
+        (PENDING_NODE, "L5.1", "D0258")]
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", PENDING_NODE],
+        cwd=REPO_ROOT, capture_output=True, text=True,
+        env={**os.environ, "TANNEN_NO_EVIDENCE": "1"},
+    )
+    assert result.returncode == 0, (
+        "the pending node FAILS — the clamp has landed, so the entry must be promoted to "
+        f"`superseded` in the same change (D0128, docs/specs/m5.md §6):\n{result.stdout}")

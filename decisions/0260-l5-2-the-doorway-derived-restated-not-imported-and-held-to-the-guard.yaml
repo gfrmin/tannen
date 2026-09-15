@@ -1,0 +1,51 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0260
+title: "L5.2 supersedes L4.9 forward: the doorway's network, process and clock sets all derived, the derivation restated in the frozen law rather than imported from the guard, and a differential clause holding the two together"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths"]
+decision: >-
+  Discharges RT-M4-02's remaining half (D0248: "the superseding frozen L4.9 ... is owed by M5
+  Session A").
+  .
+  (1) DERIVED, NEVER LISTED. Network: an import whose static module-level closure reaches a seed
+  in {socket, _socket, ssl, _ssl}. Process: the `shell-no-subprocess` contract's forbidden
+  modules, read from governance/importlinter.toml, plus `os`'s process primitives named as POSIX
+  names them. Clock: the `kernel-no-clock` contract's, as L4.9 already derived it. Doors:
+  oracles, r2 and laws (the runner) for the network; oracles and r2 for processes; oracles and
+  laws for the clock.
+  .
+  (2) RESTATED, NOT IMPORTED. The frozen law carries its own copy of the closure derivation. A
+  frozen judge that loads scripts/check_doorway.py would change meaning whenever that
+  owner-editable script does, which is the freeze quietly delegated. Two implementations of one
+  rule is the cost, and (3) pays it.
+  .
+  (3) THE DIFFERENTIAL. Over the real tree and over tests/poison/doorway-network-residue, the
+  law's (file, line, rule) triples must equal the guard's, and the guard's exit code must agree
+  with its own violations. The fixture must fail exactly its six payloads (D0246 A4's
+  obligation, met in the law).
+  .
+  (4) WATCHED. On the real tree 8 passed; with `import imaplib` planted in store.py and
+  `os.system` in executor.py, the network and process nodes failed and the differential still
+  agreed.
+  .
+  (5) LIMITS carried into the docstring as limits: dynamic imports; interpreter-relative closures;
+  `import os as o`; process modules matched by name, not closure; ctypes and cffi.
+rationale: >-
+  L4.9's defect was the RT-M3-02 shape — an unasserted enumeration that lags — living in a frozen
+  law. The successor must not reintroduce it one level down, which is why even the process set is
+  read from the contract rather than written in the file.
+reversibility: >-
+  Frozen; changes only by supersession. L4.9 stays and runs.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_doorway.py
+    strength: enforced
+    detail: L5.2, with its positive controls, the fixture clause and the differential.
+  - type: manifest
+    target: tests/laws/m4/test_l4_doorway.py
+    strength: documentary
+    detail: L4.9, superseded forward as a whole file and annotated in MANIFEST.sha256's notes; no node retired.
+links: ["D0223", "D0225", "D0245", "D0246", "D0248", "D0171", "D0211", "D0259"]

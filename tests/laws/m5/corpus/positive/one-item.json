@@ -1,0 +1,1 @@
+{"tannen":"corpus/1","vertical":"alpha","pipeline":"pipelines.alpha:run","authorisation":"decisions/0300-renavon-first-contact.yaml","items":[{"id":"i-001","input":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","production_output":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}

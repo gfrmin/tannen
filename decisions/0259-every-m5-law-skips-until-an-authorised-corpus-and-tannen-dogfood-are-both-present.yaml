@@ -1,0 +1,45 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0259
+title: "Every M5 law file skips until BOTH an authorised corpus is present at .dogfood/corpus.json and tannen.dogfood imports: M5 stays pending in CI for good, and its close is attested on the owner's machine"
+tier: A
+date: "2026-09-15"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  Owner ruling of 2026-09-15 at this session's interview, chosen over splitting the carry-forward
+  laws into their own milestone and over deferring the choice to the gate.
+  .
+  THE PROBLEM. A milestone is live from its first evidence record, and in a live milestone every
+  law without fresh evidence is stale (D0227). Renavon's frozen inputs and production's outputs
+  can never enter this public repository (D0256), so CI can never run the charter law. Any M5 law
+  that attested in CI would make M5 live there and red for ever.
+  .
+  THE RULE. Every tests/laws/m5 file first skips unless `.dogfood/corpus.json` exists, then
+  importorskips `tannen.dogfood`. The second condition was ADDED during validation, not planned:
+  with the corpus present and tannen.dogfood absent, the five self-contained laws (L5.2, L5.3,
+  L5.5, L5.6, L5.8) ran and passed while the other five skipped — a half-live milestone on the
+  owner's machine, D0227's hazard exactly. Watched: 23 passed, 8 skipped before; 10 skipped
+  after. `.dogfood/` is gitignored.
+  .
+  WHAT IT COSTS, stated. The clamp and doorway successors attest nowhere until the vertical lands
+  on the owner's machine; the properties themselves are held meanwhile by tests/test_law_validation.py
+  (the model matrix, every commit), scripts/check_doorway.py (the guard L5.2 restates) and
+  tests/test_spend_preconditions.py (the lock). M5's bound records bind law files as `manifest`,
+  never `pytest`, because a skipped pytest binding fails check_decisions.
+rationale: >-
+  The alternatives fail on facts. A second milestone for the carry-forward needs a second spec
+  table under names BRIEF already reserves (m5b is pkm's), and splits one Session A's judge across
+  two. A code-only sentinel goes live the moment Session B lands anything, and red with it.
+reversibility: >-
+  Frozen in every M5 law file; changes only by supersession.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_charter.py
+    strength: enforced
+    detail: One of the ten files carrying both sentinels; the charter is the law CI can never run.
+  - type: file
+    target: .gitignore
+    strength: enforced
+    detail: The `.dogfood/` row, so no corpus, store or analysis can be committed by accident.
+links: ["D0227", "D0256", "D0257", "D0258", "D0260"]

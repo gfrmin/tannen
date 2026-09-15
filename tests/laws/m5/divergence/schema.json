@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gfrmin/tannen/tests/laws/m5/divergence/schema.json",
+  "title": "divergence/1 — one corpus item whose tannen output is not production's byte for byte (docs/specs/m5.md §5)",
+  "description": "The comparator writes it `unanalysed`, with no analysis and no evidence. Analysis replaces it with a classification from the closed set, a non-empty analysis, and — for a production defect, which counts as a win — at least one evidence ref. `offset` is the first differing byte, or the shorter length when one output is a prefix of the other.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tannen", "item", "input", "tannen_output", "production_output", "offset",
+               "classification", "analysis", "evidence"],
+  "$defs": {
+    "ref": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "properties": {
+    "tannen": {"const": "divergence/1"},
+    "item": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+    "input": {"$ref": "#/$defs/ref"},
+    "tannen_output": {"$ref": "#/$defs/ref"},
+    "production_output": {"$ref": "#/$defs/ref"},
+    "offset": {"type": "integer", "minimum": 0},
+    "classification": {"enum": ["unanalysed", "tannen-defect", "production-defect",
+                                "input-drift", "specification-gap"]},
+    "analysis": {"type": "string"},
+    "evidence": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/ref"}}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"classification": {"const": "unanalysed"}}},
+      "then": {"properties": {"analysis": {"maxLength": 0}, "evidence": {"maxItems": 0}}},
+      "else": {"properties": {"analysis": {"minLength": 1}}}
+    },
+    {
+      "if": {"properties": {"classification": {"const": "production-defect"}}},
+      "then": {"properties": {"evidence": {"minItems": 1}}}
+    }
+  ]
+}
