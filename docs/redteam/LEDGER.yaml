@@ -141,9 +141,8 @@ findings:
   - id: RT-15
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: High
-    disposition: scheduled
-    where: m4 boundary sitting, driver step 4 (required_tags derived)
-    record: D0205
+    disposition: closed
+    record: D0229
     note: The mechanism was closed at M0 (D0058). Its enumeration lags every boundary (D0095; m4-laws-freeze is missing at RT-M4-06), and D0205's derivation, queued as D0229 item (4), is what ends the lag.
 
   # ------------------------------------------------------------------ M1 → M2 (D0104)
@@ -300,8 +299,8 @@ findings:
     report: docs/redteam/2026-09-12-m4-boundary.md
     severity: High
     disposition: scheduled
-    where: m4 boundary sitting, driver step 1 (derived doorway scan + shell contract); superseding L4.9 at M5 Session A
-    record: D0246
+    where: M5 Session A — the superseding L4.9, deriving its network set as scripts/check_doorway.py does; the guard and the whole-package contract landed at the M4 boundary sitting (D0248)
+    record: D0248
     note: Filed D0245; promoted to the sitting's first item by A2. Closing it must account for fixture candidate doorway-network-residue (A4).
   - id: RT-M4-03
     report: docs/redteam/2026-09-12-m4-boundary.md
@@ -341,6 +340,5 @@ findings:
   - id: RT-M4-07
     report: docs/redteam/2026-09-12-m4-boundary.md
     severity: Informational (process)
-    disposition: scheduled
-    where: m4 boundary sitting, driver step 8c (this ledger and its gate); promotion into make verify is a later ruling
-    record: D0246
+    disposition: closed
+    record: D0249
