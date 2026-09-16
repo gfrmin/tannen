@@ -1,0 +1,68 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0265
+title: "Ask (6) for the M5 gate sitting: `corpus/1` presumes the vertical's pipeline is importable BY NAME, and `.dogfood/` — the one home Renavon material has — cannot hold an importable module"
+tier: C
+date: "2026-09-16"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  QUEUED FOR THE M5 GATE SITTING, non-blocking (BRIEF §9.2), as an addendum to D0257's five
+  asks. Unsigned: it is a request. D0257 is immutable (D0045), so this is a new record rather
+  than an edit to its queue.
+  .
+  THE FINDING, hit concretely rather than reasoned about. `corpus/1` names the vertical as
+  `pipeline: MODULE:CALLABLE` and `tannen.dogfood.run` imports it with `import_module`, exactly
+  as `tannen run` does. So the vertical's code must be importable by the interpreter that runs
+  the corpus. `.dogfood/` is where every Renavon-derived artifact lives, and a module under it
+  CANNOT be named by that field at all: the directory's leading dot is not a legal package name,
+  and `corpus/1`'s own frozen pattern forbids one. M5 Session B1 met this the moment it needed a
+  synthetic vertical to exercise the laws against, and put the module at the repository root,
+  untracked, deleting it before the commit (D0264).
+  .
+  WHY IT IS THE OWNER'S. The vertical is a tannen re-implementation of a Renavon parser, so its
+  SOURCE discloses the shape of the source it replicates — the same commercial-detail concern
+  D0256 raised about the measurement, and the same door 2. D0257 ask (4) covers whether the
+  vertical's NAME, the measurement and the analyses may appear here; it does not cover the
+  vertical's CODE, which is the largest disclosure of the four and the one the laws structurally
+  require to exist somewhere importable.
+  .
+  THE OPTIONS, as they look from here.
+  (a) COMMIT IT. The vertical lives under `src/tannen/` or a `verticals/` package and is public.
+      Everything works with no change to a frozen law. It is a publication act (door 2) over the
+      most disclosive artifact of the milestone.
+  (b) KEEP IT OUT OF GIT, ON THE OWNER'S MACHINE, IMPORTABLE. The module sits beside the
+      repository (or at its root, gitignored) and the owner's interpreter finds it — which is
+      what B1 did with the synthetic one. Nothing is published and nothing is superseded, but
+      M5's close then depends on a file no guard can see and no clone can reproduce, and
+      `.gitignore` gains a row naming it.
+  (c) MAKE `.dogfood/` IMPORTABLE. `run` would put `.dogfood/` on the path and the corpus would
+      name the module by a plain stem. This changes docs/specs/m5.md §1's contract for `run` and
+      is therefore a SUPERSEDING law, not an implementation choice — and it puts a library in
+      the business of mutating the caller's import path, which BRIEF §5's catalogue argues
+      against.
+  (d) A separate private package installed into the environment. Refused before asking: it is a
+      cross-repo code dependency in all but name (BRIEF §1, Tier C).
+  .
+  NO RECOMMENDATION IS OFFERED ON (a) VERSUS (b), because the difference between them is
+  precisely what may be published, which is the owner's and not the builder's. (c) is
+  recommended AGAINST, and (d) is refused. B2 is blocked on this only in the sense that it
+  cannot write the vertical before knowing where it goes; every other B2 precondition is
+  D0257's.
+rationale: >-
+  A gate sitting that authorises first contact and forgets to say where the resulting CODE lives
+  authorises an act whose most visible artifact has no home. Better to find that now, from the
+  one session that actually had to put a vertical somewhere, than at the sitting or after it.
+reversibility: >-
+  Nothing changes by filing it. (a) is irreversible by nature — published bytes stay published.
+  (b) and (c) are revisable under later records, (c) at the cost of a superseding law.
+status: blocked-on-owner
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/corpus/schema.json
+    strength: enforced
+    detail: The frozen `pipeline` pattern that makes a dot-directory module unnameable, and the field this ask is about.
+  - type: file
+    target: src/tannen/dogfood.py
+    strength: enforced
+    detail: "`run` imports the pipeline by name and puts nothing on sys.path — the behaviour option (c) would have to supersede."
+links: ["D0045", "D0255", "D0256", "D0257", "D0262", "D0264"]

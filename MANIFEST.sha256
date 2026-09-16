@@ -181,13 +181,15 @@ b4adc5a4444fcd5da3467422c61b1cabf43c6f2c541d9d63836c96f846bb2eae  tests/laws/m4/
 #   L4.19. Record: D0225.
 #
 # tests/laws/m4/test_l4_modes.py
-#   ONE NODE PENDING RETIREMENT: test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call.
+#   RETIRED, ONE node: test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call.
 #   It spends through `tannen run` against a `--budget` of its own; owner ruling D0240 item (2)
 #   clamps the CLI to the checked-in budget.yaml, so under the clamp it must fail. Its claim is
 #   carried forward by L5.1 (tests/laws/m5/test_l5_clamp.py, docs/specs/m5.md §6). Recorded in
-#   governance/laws.yaml under `pending` at m5-laws-freeze (D0258), because the clamp has not
-#   landed and the node still passes; M5 Session B promotes it to `superseded` in the change
-#   that lands the clamp. Every other node in the file is unaffected and stands.
+#   governance/laws.yaml under `pending` at m5-laws-freeze (D0258), because the clamp had not
+#   landed and the node still passed; M5 Session B1 moved it to `superseded` in the same change
+#   that landed the clamp (D0263) — so conftest.py now marks it xfail(strict=True) and it must
+#   FAIL, which it does, by the clamp's own `SpendDenied` naming `--budget-override`. The file
+#   stays frozen and unedited; every other node in it is unaffected and stands.
 #
 # tests/laws/m4/test_l4_doorway.py
 #   SUPERSEDED FORWARD, WHOLE FILE, no node retired. L4.9's network set was a hand-written

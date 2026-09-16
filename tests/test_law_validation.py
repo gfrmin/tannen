@@ -309,8 +309,8 @@ def test_check_laws_refuses_an_entry_that_is_both_active_and_pending(tmp_path: P
 
 
 RETIRED_NODE = "tests/laws/m1/test_l1_rel.py::test_l1_5_mixing_semirings_is_refused_by_name"
-PENDING_NODE = ("tests/laws/m4/test_l4_modes.py::"
-                "test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call")
+M5_RETIRED_NODE = ("tests/laws/m4/test_l4_modes.py::"
+                   "test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call")
 
 
 def test_the_retirement_is_the_node_the_spec_names_and_it_is_now_ACTIVE() -> None:
@@ -321,20 +321,26 @@ def test_the_retirement_is_the_node_the_spec_names_and_it_is_now_ACTIVE() -> Non
     and a strict xfail on a passing test is a red gate. Session B landed D0110 and PROMOTED
     it to `superseded` in the same change — which is the moment the retirement became true
     rather than a claim about the future — so what this test asserts moved with it. The
-    node, successor and record did not move, and that is what is checked here. The
-    `pending` list is empty at rest; an entry sits there only between a Session A freeze and
-    the Session B change that activates it, and M5 Session A put one there (D0258, below).
+    node, successor and record did not move, and that is what is checked here.
+
+    The same thing has now happened a second time: M5 Session A froze L4.4's third node under
+    `pending` (D0258), and M5 Session B1 promoted it in the change that landed the clamp
+    (docs/specs/m5.md §6, D0263). So `pending` is empty again, which is its state at rest: an
+    entry sits there only between a Session A freeze and the Session B change that activates
+    it. Both retirements are asserted here by node, successor and record — the three fields a
+    promotion must not move — and each is held to actually failing by its own node below.
     """
     import yaml
 
     registry = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
-    assert [entry["node"] for entry in registry["pending"]] == [PENDING_NODE], (
-        "the only entry awaiting activation is docs/specs/m5.md §6's (D0258)")
+    assert registry["pending"] == [], (
+        "an entry is awaiting activation — a `pending` entry is promoted by the Session B "
+        "change that lands the behaviour retiring its node, never left behind (D0128)")
     superseded = registry["superseded"]
-    assert len(superseded) == 1
-    assert superseded[0]["node"] == RETIRED_NODE
-    assert superseded[0]["successor"] == "L2.2"
-    assert superseded[0]["record"] == "D0128"
+    assert [(entry["node"], entry["successor"], entry["record"]) for entry in superseded] == [
+        (RETIRED_NODE, "L2.2", "D0128"),
+        (M5_RETIRED_NODE, "L5.1", "D0258"),
+    ]
 
 
 def test_the_retired_node_actually_fails_now() -> None:
@@ -359,23 +365,29 @@ def test_the_retired_node_actually_fails_now() -> None:
     assert "RelError" in result.stdout, result.stdout + result.stderr
 
 
-def test_the_pending_retirement_is_the_node_m5_names_and_it_still_passes() -> None:
-    """docs/specs/m5.md §6 (D0258): L4.4's third node is retired under `pending`, successor
-    L5.1, because the clamp that makes it fail has not landed — and a strict xfail on a passing
-    node is a red gate (D0128). The mirror of `test_the_retired_node_actually_fails_now`: a
-    PENDING node must still PASS, or the change that retires it has landed without the
-    promotion, and the registry is describing the past. M5 Session B promotes the entry, and
-    replaces this test with that one's shape, in the change that lands the clamp."""
-    import yaml
+def test_the_m5_retired_node_actually_fails_now() -> None:
+    """The same check for the second retirement, and it replaces the one Session A left here.
 
-    pending = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))["pending"]
-    assert [(e["node"], e["successor"], e["record"]) for e in pending] == [
-        (PENDING_NODE, "L5.1", "D0258")]
+    At the m5-laws-freeze commit this node was `pending` and this test asserted the mirror
+    claim — that it still PASSED — because the clamp had not landed and a strict xfail on a
+    passing node is a red gate (D0128). M5 Session B1 landed the clamp, promoted the entry, and
+    replaced that test with this one, which is the shape `test_the_retired_node_actually_fails_now`
+    already had: run the node under `--runxfail` so the underlying verdict is reported rather
+    than the conftest's marking, and require it to fail for the RIGHT reason.
+
+    The right reason is the clamp refusing by name: the node passes `--budget` naming a budget
+    file of its own, which under docs/specs/m5.md §6 is `SpendDenied` naming `--budget-override`.
+    A node failing for some other reason would satisfy a bare "it fails now" and prove nothing
+    about the behaviour that retired it.
+    """
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", PENDING_NODE],
+        [sys.executable, "-m", "pytest", "--runxfail", "-q", "-p", "no:cacheprovider",
+         M5_RETIRED_NODE],
         cwd=REPO_ROOT, capture_output=True, text=True,
         env={**os.environ, "TANNEN_NO_EVIDENCE": "1"},
     )
-    assert result.returncode == 0, (
-        "the pending node FAILS — the clamp has landed, so the entry must be promoted to "
-        f"`superseded` in the same change (D0128, docs/specs/m5.md §6):\n{result.stdout}")
+    assert result.returncode != 0, (
+        "the retired node PASSES — `tannen run` is admitting a `--budget` of its own again, and "
+        f"the supersession is claiming a retirement that has not happened:\n{result.stdout}")
+    assert "SpendDenied" in result.stdout and "--budget-override" in result.stdout, (
+        "the node fails, but not by the clamp's refusal:\n" + result.stdout + result.stderr)

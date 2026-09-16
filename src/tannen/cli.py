@@ -1,13 +1,25 @@
 """`tannen` — the command line. Effectful shell.
 
 Two commands. `tannen laws report` (BRIEF §5.11) joined `make verify` at M0 per decision
-D0012. `tannen run MODULE:CALLABLE --store PATH [--budget PATH] [--spend]` (docs/specs/m4.md
-§1; BRIEF §5.10) imports MODULE (from the working directory too, as `python -m` would) and
-calls CALLABLE with an invocation context over the store: replay-only unless `--spend` is
-given, and `--spend` engages SpendGuard against the budget file named by `--budget` — with
-none, it authorises nothing. WHICH budget a caller may name is not yet tied to the checked-in
-`budget.yaml` or the policy envelope: frozen L4.4 spends against a budget of its own, so that
-gap is a queued owner item (D0238), not a guarantee this command makes.
+D0012. `tannen run MODULE:CALLABLE --store PATH [--budget PATH | --budget-override PATH]
+[--spend]` (docs/specs/m5.md §6; BRIEF §5.10) imports MODULE (from the working directory too,
+as `python -m` would) and calls CALLABLE with an invocation context over the store:
+replay-only unless `--spend` is given, and `--spend` engages SpendGuard against a budget.
+
+THE CLAMP (L5.1; owner ruling D0240 item (2), deferred here by D0241). WHICH budget a caller
+may name is no longer the caller's to decide. Under `--spend` the default is the repository's
+own checked-in `budget.yaml` at `find_root()`, and `--budget` may name that file and no other:
+any other path is refused as `SpendDenied`, by name, before the pipeline is even imported and
+with nothing written. `--budget-override PATH` is the one spelling that spends against a
+budget this repository did not check in — the explicit act D0240 asks for, rather than a
+flag whose shortest spelling quietly authorises a file nobody reviewed (BRIEF §5, the
+correct-by-default catalogue). The two flags exclude each other. Without `--spend` neither is
+consulted at all: replay-only refuses a novel invocation whatever they name.
+
+A library enforces the authorisation it is handed and must not read the constitution (D0240,
+D0243): SpendGuard still admits against whatever `Budget` it is given, and it is HERE — in
+the shell, which is where a repository's own files may be read — that the checked-in budget
+binds.
 """
 
 from __future__ import annotations
@@ -23,6 +35,7 @@ from tannen.laws.report import build_report, render
 from tannen.oracles import (
     REPLAY,
     SPEND,
+    Budget,
     CaptureConflict,
     CaptureWriteFailed,
     NovelInvocationRefused,
@@ -32,7 +45,7 @@ from tannen.oracles import (
 )
 from tannen.store import Store
 
-__all__ = ["REFUSALS", "main"]
+__all__ = ["REFUSALS", "admitting_budget", "checked_in_budget", "main"]
 
 #: What `tannen run` reports as exit 1 with the class name on stderr (docs/specs/m4.md §1).
 #: Anything else is not a refusal, and propagates rather than hide inside an exit code.
@@ -73,8 +86,15 @@ def build_parser() -> argparse.ArgumentParser:
                      help="a callable taking a tannen.oracles.Oracles context")
     run.add_argument("--store", type=Path, required=True,
                      help="the store captures are read from and written to")
-    run.add_argument("--budget", type=Path, default=None,
-                     help="the budget file SpendGuard admits against (none authorises nothing)")
+    # Mutually exclusive, so naming both is argparse's usage error (exit 2) rather than a
+    # precedence rule nobody would remember: they are two answers to one question.
+    budgets = run.add_mutually_exclusive_group()
+    budgets.add_argument("--budget", type=Path, default=None,
+                         help="the checked-in budget.yaml, named explicitly; any other file is "
+                              "refused (--budget-override spends against one)")
+    budgets.add_argument("--budget-override", type=Path, default=None, dest="budget_override",
+                         help="spend against a budget this repository did not check in — the "
+                              "one spelling that may (D0240)")
     run.add_argument("--spend", action="store_true",
                      help="allow novel oracle invocations, each admitted by SpendGuard")
     run.set_defaults(handler=_run)
@@ -88,8 +108,52 @@ def _laws_report(args: argparse.Namespace) -> int:
     return 0 if report["ok"] else 1
 
 
+def checked_in_budget(start: Path | None = None) -> Path:
+    """The repository's own budget file — the only one `--spend` admits against unless
+    `--budget-override` names another (docs/specs/m5.md §6)."""
+    return find_root(start) / "budget.yaml"
+
+
+def admitting_budget(spend: bool, budget: Path | None, override: Path | None) -> Budget | None:
+    """The `Budget` this invocation may spend against, or `None` when it may not spend at all.
+
+    Without `--spend` neither flag is consulted — not read, not resolved, not validated: a
+    replay refuses a novel invocation whatever they name, and a clamp that fired in replay mode
+    would break L4.4's first node for a spend that was never possible.
+    """
+    if not spend:
+        return None
+    if override is not None:
+        return load_budget(override)
+    checked_in = checked_in_budget()
+    if budget is not None and Path(budget).resolve() != checked_in.resolve():
+        raise SpendDenied(
+            f"--budget names {Path(budget)}, which is not this repository's checked-in budget "
+            f"at {checked_in}; spending against another file is spelled --budget-override "
+            "(docs/specs/m5.md §6, owner ruling D0240)"
+        )
+    if not checked_in.is_file():
+        raise SpendDenied(
+            f"there is no checked-in budget at {checked_in}, so nothing here authorises a "
+            "spend; --budget-override names a budget from elsewhere"
+        )
+    return load_budget(checked_in)
+
+
+def _refused(exc: BaseException) -> int:
+    print(f"{type(exc).__name__}: {exc}", file=sys.stderr)
+    return 1
+
+
 def _run(args: argparse.Namespace) -> int:
     module, attr = args.target
+    # The clamp comes FIRST, before the pipeline is imported and before a store is opened:
+    # a refusal that arrives after the module ran, or after anything was written, is a
+    # refusal that already happened (L5.1's `calls` and `wrote` clauses).
+    try:
+        budget = admitting_budget(args.spend, args.budget, args.budget_override)
+    except SpendDenied as exc:
+        return _refused(exc)
     # A console script's sys.path[0] is its bin directory, not the working directory;
     # `tannen run pipeline:main` should find the `pipeline.py` it is run beside.
     here = str(Path.cwd())
@@ -99,13 +163,12 @@ def _run(args: argparse.Namespace) -> int:
     context = Oracles(
         Store(args.store),
         mode=SPEND if args.spend else REPLAY,
-        budget=load_budget(args.budget) if args.budget is not None else None,
+        budget=budget,
     )
     try:
         result = callable_(context)
     except REFUSALS as exc:
-        print(f"{type(exc).__name__}: {exc}", file=sys.stderr)
-        return 1
+        return _refused(exc)
     if isinstance(result, str):
         print(result)
     return 0

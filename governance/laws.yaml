@@ -72,8 +72,6 @@ superseded:
       unconstructible. The annotation was never what the law was about. The file is frozen
       and sealed, so it cannot be edited; L2.2 restates the claim with a witnessed filler
       and this entry retires the node that cannot survive the new door.
-
-pending:
   - node: "tests/laws/m4/test_l4_modes.py::test_l4_4_tannen_run_spend_is_the_one_spelling_that_can_call"
     successor: "L5.1"
     record: "D0258"
@@ -83,7 +81,12 @@ pending:
       any other file requiring `--budget-override`; under that clamp the node's `--budget` is
       refused as SpendDenied, so it must fail. Its claim — that exactly one spelling can spend
       against another budget, and that what it captured replays without --spend — is carried
-      forward by L5.1 under the spelling the ruling names. PENDING, not superseded, at the
-      m5-laws-freeze commit: the clamp has not landed, the node still passes, and a strict xfail
-      on a passing node is a red gate (D0128). Session B promotes it in the change that lands the
-      clamp. Watched: a prototype clamp fails this node and only this one of L4.4's five.
+      forward by L5.1 under the spelling the ruling names. PROMOTED from `pending` by the M5
+      Session B1 change that lands the clamp (docs/specs/m5.md §6, D0263): the clamp is in
+      `tannen.cli`, so the node now FAILS and the strict xfail is a live assertion rather than a
+      claim about the future. Nothing else about the entry changed — its node, successor, record
+      and reason are the text Session A froze, with this paragraph appended.
+
+# EMPTY, and deliberately kept rather than deleted: `pending` is half of D0128's mechanism,
+# and the next Session A to freeze a supersession ahead of its behaviour writes it here.
+pending: []

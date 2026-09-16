@@ -131,13 +131,25 @@ def test_the_lock_is_not_armed_today_and_that_is_measured_not_assumed() -> None:
 
 
 def test_each_d0240_precondition_is_open_today_and_the_gate_names_it() -> None:
-    """Non-vacuous by construction: the gate can only pass today by naming all four.
+    """Non-vacuous by construction: the gate can only pass today by naming exactly what is
+    still open.
 
     Each identifier disappears when its precondition LANDS, and this is what says so out loud
-    rather than letting the gate quietly weaken to a tautology (produce-the-failure).
+    rather than letting the gate quietly weaken to a tautology (produce-the-failure). The set
+    shrinks as the preconditions land, and shrinking it is part of the change that lands one:
+
+      policy-sentence    closed at the M4 boundary sitting (D0240 item 1).
+      successor-law      closed by M5 Session B1, which promoted governance/laws.yaml's
+      clamp              `pending` entry to `superseded` in the same change that landed the
+                         `--budget-override` clamp in `tannen.cli` (docs/specs/m5.md §6, D0263).
+      current-envelope   STILL OPEN, and the lock below is still armed on it: D0253 measured
+                         that D0244's fold never reached scripts/check_manifest.py, which is
+                         still D0243's bytes and still compares each ceiling against the
+                         MAXIMUM envelope over all milestones. Re-queued for the pre-budget
+                         sitting, not for Session B.
     """
     open_now = {item.split(":", 1)[0] for item in unmet_spend_preconditions()}
-    assert open_now == {"current-envelope", "successor-law", "clamp"}
+    assert open_now == {"current-envelope"}
 
 
 def test_a_nonzero_envelope_is_refused_while_any_precondition_is_open() -> None:

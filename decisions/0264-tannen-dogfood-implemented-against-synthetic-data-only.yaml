@@ -1,0 +1,95 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0264
+title: "`tannen.dogfood` — select, compare and run — implemented against SYNTHETIC data only: it reads no governance file, compares bytes rather than refs, and refuses an item answered with something that is not a content address"
+tier: A
+date: "2026-09-16"
+risk_flags: []
+decision: >-
+  M5 Session B1 lands docs/specs/m5.md §1's library half. No Renavon byte was read: Tier-C door
+  renavon-first-contact is unopened (D0257 is queued `blocked-on-owner` and unsigned), so
+  everything below was exercised against synthetic material the session wrote itself, and B2
+  begins only after the gate sitting.
+  .
+  THE THREE VERBS. `select(measurement)` is BRIEF §8's rule as D0261 pins it, against
+  `tannen.kernel.ops.OPERATORS` itself. `run(store, corpus)` imports the corpus's
+  MODULE:CALLABLE, opens a replay-only `Oracles(store)` and answers each item in corpus order.
+  `compare(store, corpus, outputs)` returns one `unanalysed` divergence/1 per differing item,
+  in corpus order, and classifies nothing.
+  .
+  (1) THE LIBRARY READS NO GOVERNANCE FILE, and the rule bites wider than door 3. D0240 settles
+  that a library enforces the authorisation it is handed; `tannen.dogfood` therefore never opens
+  governance/tier-c.yaml, never resolves a decisions/ path, and — the part that is easy to get
+  wrong — never validates a corpus, measurement or divergence against the frozen Grade-S
+  schemas either. Those schemas are the LAWS' (L5.3, L5.5, L5.6), and a library that re-read
+  them would be a second copy of an owned definition, drifting the moment one of them is
+  superseded. What the library owes instead is totality over what it is handed: a measurement
+  missing a field the rule reads is SelectionRefused by name rather than a KeyError out of a
+  sort key.
+  .
+  (2) THE COMPARATOR READS BYTES, NEVER REFS. Two equal content addresses do imply equal bytes,
+  so comparing refs would be cheaper and would pass every law. It compares
+  `store.get_bytes(...)` anyway: byte identity against production is M5's entire claim, and a
+  comparator that compared addresses would be reporting on the store's arithmetic rather than
+  on the vertical's output. §10 excludes performance; this is what that exclusion is for.
+  .
+  (3) `IncompleteRun` GAINS A SECOND USE, and no new class is invented. An item answered with
+  something that is not a ref in the pinned grammar is refused as IncompleteRun — an answer that
+  is not a content address does not answer the item — rather than left to surface as a KeyError
+  inside the store three frames later. §1 declares two refusal names for this module and it
+  still has exactly two.
+  .
+  (4) THE SYNTHETIC MATERIAL, and where it went. A `.dogfood/` of three items over a
+  content-addressed store, a `measurement/1` selecting the vertical the corpus is of, one
+  perturbed item with an ANALYSED `production-defect` divergence, and a synthetic vertical
+  module at the repository root reading its one worldly value (a timestamp) from a capture
+  already in the store, so the whole thing replays. `.dogfood/` is gitignored; the vertical
+  module was untracked and deleted before the commit; the capture was seeded with an in-memory
+  budget under a synthetic scope and a local transport, so no file in this repository authorised
+  anything and every ceiling in budget.yaml is still zero.
+  .
+  MEASURED, in both sentinel states and in both authorisation states.
+  * Corpus absent, `tannen.dogfood` importable: 10 skipped — the correct green for a session
+    before the gate, and the state this commit leaves behind.
+  * Corpus present in the real tree: 123 passed, 1 failed — and the failure is the door working.
+    L5.8 refuses the synthetic corpus by name and gives three reasons at once: D0257's status is
+    `blocked-on-owner`, its links do not name the door, and it carries no signature.
+  * The positive control, because a refusal nobody has seen succeed proves only half of it
+    (the D0174 lesson): in a scratch COPY of the repository, with an ephemeral owner key
+    enrolled in the copy's own allowed_signers and an accepted Tier-C record signed under
+    namespace tannen-decision, the frozen suite is 124 passed, ZERO skipped, zero failed. The
+    real allowed_signers was never touched — it is author-key territory — and the copy differs
+    from the real tree in exactly the one node that separates 123+1 from 124.
+  .
+  A LIMIT, stated. `run` imports the pipeline by the name the corpus gives it, so the operator's
+  code must be importable by the interpreter that calls it — the same contract `tannen run`
+  has. Nothing in the library puts anything on sys.path on the caller's behalf.
+rationale: >-
+  The dogfood is the milestone where a demonstration is cheapest to mistake for a result. Every
+  choice above is the one that makes the code LESS able to flatter itself: bytes instead of
+  addresses, no schema validation the laws already own, a refusal where a convenient coercion
+  would do, and a synthetic corpus whose unauthorised state is measured by watching the door
+  refuse it rather than by asserting that it would.
+reversibility: >-
+  A new module and nothing else: no frozen path, no kernel contract, no stored value. The
+  synthetic corpus and vertical are outside git entirely, so B2 starts from the real corpus with
+  nothing of this session's scaffolding to unwind.
+status: accepted
+bindings_count: 4
+bindings:
+  - type: file
+    target: src/tannen/dogfood.py
+    strength: enforced
+    detail: The module itself — select, run, compare, SelectionRefused, IncompleteRun.
+  - type: manifest
+    target: tests/laws/m5/test_l5_selection.py
+    strength: enforced
+    detail: L5.4 over the rule and the package's own operator catalogue. `manifest`, not `pytest` — M5's laws skip until an authorised corpus is present (D0259).
+  - type: manifest
+    target: tests/laws/m5/test_l5_comparator.py
+    strength: enforced
+    detail: L5.7, byte identity with no normalisation, over named and drawn cases.
+  - type: pytest
+    target: "tests/test_law_validation.py::test_the_model_passes_every_family"
+    strength: enforced
+    detail: The model matrix, which runs at EVERY commit including this one — the M5 clamp, selection and comparator families against the frozen model while the laws themselves skip.
+links: ["D0240", "D0255", "D0256", "D0257", "D0259", "D0261", "D0262", "D0263"]
