@@ -1,0 +1,33 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0266
+title: "The real-tree check_decisions case in tests/test_governance_scripts.py ran the guard's 15-minute pytest batch a second time inside every gate, and is dropped"
+tier: A
+date: "2026-09-16"
+risk_flags: ["governance-paths"]
+decision: >-
+  `CHECKS` in tests/test_governance_scripts.py loses `check_decisions.py`; `check_manifest.py` and
+  `check_concepts.py` stay. Measured on CI run 35070184920: check_decisions as make verify's own
+  step took 15:24, and the pytest step 24:58, of which this one case re-ran the same 130-node
+  batch because it spawned the guard without TANNEN_CHECK_DECISIONS_NESTED. The pre-commit hook
+  runs the guard at every commit and make verify and CI run it as their step 3, so the case proved
+  nothing those did not prove seconds earlier. Its poison fixtures (test_guard_fails_its_poison)
+  are untouched and remain the liveness proof. D0177 binds the function, which keeps two cases;
+  no fixture or custodian line names this one. Expected: make verify and CI each lose ~15 minutes,
+  and the D0063/D0177 cascade on a stale DECISIONS.md, which ran through this case, cannot recur.
+rationale: >-
+  The gate's cost should be the cost of checking each thing once. Owner ruling of 2026-09-16
+  (D0267, ruling 3): CI is the gate and the full verify runs there; a duplicate inside it is time,
+  not rigour.
+reversibility: >-
+  One list literal; reverting restores the duplicate run and nothing else.
+status: accepted
+bindings:
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_check_passes_on_real_tree"
+    strength: enforced
+    detail: The function that keeps the two fast cases; it collects and passes with check_decisions gone.
+  - type: file
+    target: tests/test_governance_scripts.py
+    strength: enforced
+    detail: The CHECKS literal and the comment saying why the third entry is absent.
+links: ["D0063", "D0177", "D0267"]

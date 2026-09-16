@@ -1,6 +1,7 @@
 """The guards guard, and the poison proves it (BRIEF §9, §9.1).
 
-Success path: every check script exits 0 against the real tree. Liveness: every guard
+Success path: the fast check scripts exit 0 against the real tree (check_decisions is
+not among them, deliberately — see CHECKS). Liveness: every guard
 exits non-zero against its tests/poison/ fixture AND emits the fixture's intended
 marker — the same matrix scripts/custodian.sh enforces, exercised here from pytest so
 plain `uv run pytest` catches a weakened guard too.
@@ -22,7 +23,13 @@ def run(args: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(args, cwd=REPO_ROOT, capture_output=True, text=True, **kwargs)
 
 
-CHECKS = ["check_manifest.py", "check_concepts.py", "check_decisions.py"]
+#: check_decisions.py is deliberately NOT here (D0266). It resolves its pytest bindings by
+#: running a real pytest over every bound node (~15 min on CI), and this case used to spawn
+#: it WITHOUT the nested flag — so `make verify` and CI ran that whole batch a second time
+#: inside the pytest step, seconds after running it directly as their own step 3. The guard
+#: still runs on the real tree at every commit (the pre-commit hook) and at every gate; its
+#: liveness is proved below by its poison fixtures, like every other guard's.
+CHECKS = ["check_manifest.py", "check_concepts.py"]
 
 
 @pytest.mark.parametrize("script", CHECKS)

@@ -1,18 +1,15 @@
-# M5 gate-sitting prep — the session brief
+# M5 gate sitting — the agenda, and the prep brief
 
-Builder-only. **The gate stays shut.** This session writes the sitting's materials; it never
-performs the sitting and never takes the measurement.
-
-Drafted at the close of M5 Session B1 (D0263, D0264, D0265) so the prep session starts from
-what B1 measured instead of re-deriving it.
+One owner sitting, no driver, no dates. It opens the M5 gate and applies the four rulings of
+2026-09-16 (D0267). A builder prep session drafts what it signs; the sitting is one command chain,
+rehearsed once with an ephemeral key before the owner runs it. The receipt is renewed by the
+sitting whenever it happens — a stale one blocks only Tier-B silence-consent (D0267).
 
 ## State
 
-M5 Session B1 closed at `924ef46` on `m5`, pushed, CI green: the CLI spend clamp (D0263),
-`tannen.dogfood` (D0264), and D0265 filed `blocked-on-owner`. `make verify` green — 1254
-passed, 11 skipped, 3 xfailed; M0–M4 fresh, L5.1–L5.10 frozen awaiting their corpus.
-
-Work in the existing `m5` worktree. One worktree per milestone; do not create another.
+M5 Session B1 closed at `924ef46` (D0263, D0264, D0265). D0266 dropped the duplicate
+check_decisions run from the pytest step, so `make verify` and CI each lose ~15 minutes. D0267
+records the rulings and waits for this sitting's signature. Work stays in the `m5` worktree.
 
 ## The gate
 
@@ -20,106 +17,99 @@ Work in the existing `m5` worktree. One worktree per milestone; do not create an
 monorepo, `.reference/` included** — not to measure it, not to survey exports, not "just to
 check". If you think you need a Renavon byte to make progress, you are in B2 and you stop.
 
-## Read first
+## What the sitting signs (owner)
 
-- `docs/specs/m5.md` §0.2, §2, §3, §8
-- decisions D0255–D0257, D0261, D0262, D0263–D0265
-- `tests/laws/m5/test_l5_authorisation.py` — the judge of the record you draft
-- `tests/laws/m5/test_l5_replay.py` — the fresh-interpreter law that constrains where the
-  vertical may live
-- `docs/proposals/2026-09-11-m4-boundary-sitting/` — the shape precedent for sitting materials
+In this directory: `tier-c-custody-set.patch` (D0267 ruling 1; `custody.sha256.preview` is the
+regenerated set it produces, 91 rows, 16 of them outside `tests/poison/`), `claude-md.patch`
+(rulings 2 and 3 reach the manual), and by reference
+`../2026-09-15-ci-tag-event-checkout/ci.yml.patch` (D0252, so tag-event runs stop being red).
+The prep session adds the door record (`decisions/<door>.yaml`, the shape L5.8 reads).
 
-## Already measured (B1, 2026-09-16)
+From a green CI on `m5`, with the owner key loaded once (`ssh-add ~/.ssh/tannen_owner`, D0185),
+the sitting is this chain — the prep session rehearses it and corrects it here before you run it:
 
-Do not re-derive these. Do re-run any you intend to rely on.
+```sh
+P=docs/proposals/2026-09-16-m5-gate-sitting-prep \
+&& git apply "$P/tier-c-custody-set.patch" \
+&& git apply "$P/claude-md.patch" \
+&& git apply docs/proposals/2026-09-15-ci-tag-event-checkout/ci.yml.patch \
+&& for f in governance/tier-c.yaml CLAUDE.md .github/workflows/ci.yml; do \
+     grep -v "  $f\$" MANIFEST.sha256 > MANIFEST.tmp && sha256sum "$f" >> MANIFEST.tmp && mv MANIFEST.tmp MANIFEST.sha256; done \
+&& .venv/bin/python -I -P scripts/gen_custody.py \
+&& ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-custody governance/custody.sha256 \
+&& sed -i 's/^status: blocked-on-owner$/status: accepted/' decisions/0267-*.yaml decisions/<door>.yaml \
+&& ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision decisions/0267-*.yaml \
+&& ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision decisions/<door>.yaml \
+&& bash scripts/custodian.sh \
+&& make projections && .venv/bin/python -I -P scripts/gen_roadmap.py \
+&& git add -A && git commit -m "M5 gate sitting: the door opened, the custody set is the trust root, D0252 applied" \
+&& git push origin m5
+```
 
-- **L5.10 spawns a fresh interpreter that inherits ENV, not `sys.path`.** A conftest
-  `sys.path.insert` makes the pytest parent pass and the child FAIL (assertion at line 72).
-  `PYTHONPATH=<root>/.dogfood` makes both pass — 123 passed, only L5.8 failing, which is the
-  shut door refusing an unauthorised corpus by name. So "make `.dogfood/` importable" is an
-  ENVIRONMENT act; the library is untouched and no superseding law is needed. D0265's option
-  (c) says otherwise and is wrong; correcting it is item 1 below.
-- **`Makefile` and `conftest.py` are both in `governance/custody.sha256`**, so any automatic
-  PYTHONPATH wiring is an owner-signed act — drafted here as a patch, never applied.
-- **`.gitignore` is builder-editable.** `.dogfood/` is already ignored; the repository root is
-  not, and a sitting commits with `git add -A`. An unpublished vertical therefore belongs
-  inside `.dogfood/`, never loose at the root.
-- **`lint-imports`' `no-cross-repo` contract has `source_modules = ["tannen"]`**, so a vertical
-  anywhere outside `src/tannen/` is invisible to the Tier-C guard that forbids importing
-  `renavon` — the exact shortcut a byte-for-byte re-implementation is tempted into.
+Then read every run the push starts. The custodian's bare run must print the receipt as signed
+(D0177: run it `--check-only` first if in doubt); `ssh-add -d` afterwards. Six key touches.
 
-## Produce, in this order
+## What the prep session produces (builder, fresh session)
 
-### 1. A record correcting D0265 by measurement
+Read first: `docs/specs/m5.md` §0.2, §2, §3, §8; D0255–D0257, D0261–D0267;
+`tests/laws/m5/test_l5_authorisation.py` (the judge of the door record);
+`tests/laws/m5/test_l5_replay.py` (the fresh-interpreter law that constrains the wiring).
 
-D0265's option (c) claims that making `.dogfood/` importable changes `run`'s contract and needs
-a superseding law. It does not. D0045: never edit D0265 — write a new record.
+1. **The door record**, in exactly the shape L5.8 accepts: a file under `decisions/`, `tier: C`,
+   `status: blocked-on-owner` (the chain flips it), `links` naming the door id **read from**
+   `governance/tier-c.yaml`, answering D0257's asks (1)–(5) and D0265 as fields the record STATES.
+   D0265 is policy-answerable: `governance/policy.yaml#external_surface` defaults to nothing
+   leaving, so the vertical lives in `.dogfood/` (gitignored) and is importable through
+   environment wiring; publishing its name, code, measurement or analyses is a later door-2
+   record, never this one's act. Watch L5.8 accept it signed and refuse it unsigned, in a scratch
+   repository COPY under an ephemeral owner key (B1's method, D0264). The real `allowed_signers`
+   is never touched.
+2. **The commit-time guard, drafted and watched** (lands as a normal commit right after the
+   sitting releases `scripts/check_decisions.py`, `Makefile` and `.pre-commit-config.yaml`):
+   `check_decisions.py --collect-only` resolves pytest bindings by collection for the hook;
+   `--pytest-report FILE` resolves them from the gate's own `pytest --junitxml` run; the default
+   keeps running pytest, so all six `tests/poison/check-decisions*` fixtures and every custodian
+   call are untouched. Watch: each fixture still bites under the new script; a planted failing
+   bound node passes `--collect-only` and fails `--pytest-report`; the hook entry and the
+   `Makefile` order (pytest, then the guard) drafted beside them. Expected: commits ~3 min, CI
+   ~12 min.
+3. **Rehearse the chain above once**, in a scratch clone with an ephemeral owner key appended to
+   its copy of `allowed_signers` (FAST: no full `make verify` inside). Correct the chain in this
+   README from what the rehearsal finds; do not add steps.
+4. **The measurement recipe**: the steps that take `measurement/1` over the candidate sources ON
+   the owner's machine AFTER the signature and write `.dogfood/measurement.json`. It must not run
+   here. L5.4 then selects the vertical and nobody chooses it.
+5. **The vertical's cross-repo guard** (unfrozen): the vertical imports nothing from the
+   constellation, the forbidden list DERIVED from `governance/importlinter.toml`'s `no-cross-repo`
+   contract (D0211; D0171 ruling (3)); skips cleanly with no corpus; watched FAILING on a planted
+   `import renavon` before it is trusted green.
 
-Carry two things the original lacks:
+Facts the prep relies on (measured in B1, 2026-09-16): L5.10 spawns a fresh interpreter that
+inherits ENV, not `sys.path` — a conftest `sys.path.insert` makes the parent pass and the child
+fail; `PYTHONPATH=<root>/.dogfood` makes both pass. `lint-imports`' `no-cross-repo` contract has
+`source_modules = ["tannen"]`, so a vertical outside `src/tannen/` is invisible to it — item 5.
 
-- the guard-coverage comparison — `src/tannen/` vs tracked-outside vs untracked, against the
-  doorway law, the `no-cross-repo` contract, and `test_no_pii`. The doorway column is a red
-  herring (L5.2's own limits already exclude the pipeline module as "the operator's code"); the
-  cross-repo column is the one that bites;
-- the sequencing point: ask (6) is better answered AFTER the measurement, because the selection
-  rule minimises parser LOC × distinct operators, so the disclosure at stake is by construction
-  the smallest parser in the candidate set. Decide with the number, not with a worry.
+## Right after the sitting (builder, normal commits)
 
-### 2. The unsigned Tier-C record that opens the door
-
-In exactly the shape L5.8 accepts: a file under `decisions/`, `tier: C`, `status: accepted` on
-signature, `links` naming the door id **read from** `governance/tier-c.yaml`, signed by
-`owner@tannen` under namespace `tannen-decision`.
-
-It carries D0257's five asks and D0265's sixth as fields the record **states**, not as prose the
-owner has to reconstruct into a decision.
-
-Watch L5.8 accept it, and refuse it unsigned, in a scratch repository COPY under an ephemeral
-owner key. The real `allowed_signers` is author-key territory and is never touched. B1's
-scratch-copy method is in D0264 if you want the shape.
-
-### 3. The PYTHONPATH patch, for the owner to sign at the same sitting
-
-One sitting, two signatures — the door and the wiring — or B2 is blocked again a week later.
-
-Choose `Makefile` or `conftest.py` and say why in the record. It must make BOTH the pytest
-parent and L5.10's fresh interpreter see `.dogfood/`, and be **inert when `.dogfood/` is
-absent**: CI must stay exactly as it is today, 10 skipped. Drafted as a patch, never applied.
-
-Skipping it is survivable but should be a stated choice, not an oversight: without it, forgetting
-the environment variable makes the gate red, never falsely green.
-
-### 4. An unfrozen guard: the vertical imports nothing from the constellation
-
-The compensating control for the gap in the table above — it applies whichever home the owner
-picks. The forbidden list is DERIVED from `governance/importlinter.toml`'s `no-cross-repo`
-contract, never hand-written (D0211; D0171 ruling (3)).
-
-It must skip cleanly with no corpus present, and you must watch it FAIL against a planted
-`import renavon` before trusting it green (produce the failure).
-
-Unfrozen on purpose: it is a compensating control, not a law, so it needs no freeze and can be
-tightened once the real vertical exists.
-
-### 5. The measurement recipe
-
-The steps that take `measurement/1` over the candidate sources ON the owner's machine AFTER the
-signature, and write `.dogfood/measurement.json`. **It must not run here.**
-
-State plainly that L5.4 then selects the vertical and nobody chooses it.
+Item 2 lands; D0253's `check_manifest.py` current-envelope fix and the pre-budget lock fold;
+D0251's confirm fix into `scripts/boundary_sitting.sh`; the `.dogfood/` wiring in `conftest.py`
+or `Makefile`, inert when `.dogfood/` is absent (CI stays 10 skipped); D0257 and D0265 marked
+`superseded` by the door record; D0251–D0253 flipped with enforced bindings; RT-M4-02 closed in
+the ledger (L5.2, D0260). Then B2, in a fresh session.
 
 ## Hard constraints
 
-Nothing spends; every ceiling stays zero. No network from any test. Frozen paths are read-only.
-Custody-set files are drafted as patches, never applied. Never `--no-verify`; never set
-`TANNEN_CHECK_DECISIONS_NESTED`. Carry `TANNEN_NO_EVIDENCE=1` on ad-hoc pytest. Run
-`make projections && .venv/bin/python -I -P scripts/gen_roadmap.py` before `git add`. A commit is
-~15–20 min of hooks and `make verify` ~30–45 min: run each setsid-detached into a log, never two
-at once, and never edit the tree while they run. Scrub absolute paths from tracked files.
+Nothing spends; every ceiling stays zero. No network from any test. Frozen paths are read-only;
+custody-set files are drafted as patches until the sitting releases them. Never `--no-verify`;
+never set `TANNEN_CHECK_DECISIONS_NESTED`. Carry `TANNEN_NO_EVIDENCE=1` on ad-hoc pytest. Run
+`make projections && .venv/bin/python -I -P scripts/gen_roadmap.py` before `git add`. Until item
+2 lands a commit is ~18 min of hooks: run it setsid-detached into a log, never two at once, never
+edit the tree while it runs. CI is the gate; no local `make verify` unless before a merge or a
+sitting. Scrub absolute paths from tracked files.
 
 ## Done
 
-The full verification list green (CLAUDE.md), the sitting's materials complete enough that the
-owner's part is read–answer–sign, and a one-page agenda saying in what order.
+The door record watched both ways; every `check-decisions*` fixture watched biting under the
+drafted guard; the chain rehearsed green once and corrected here; CI green on the push.
 
 **Do not open the gate. Do not start B2.**

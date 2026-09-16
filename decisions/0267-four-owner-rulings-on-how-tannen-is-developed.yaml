@@ -1,0 +1,62 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0267
+title: "Four owner rulings of 2026-09-16 on how tannen is developed: the custody set shrinks to the trust root, records are proportional, CI is the gate, and post-M5 is decided at the M5 close"
+tier: C
+date: "2026-09-16"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE OWNER RULED IN CONVERSATION ON 2026-09-16, in an interview put after the session measured
+  where the time goes. Recorded verbatim in substance and UNSIGNED until the next sitting, on
+  D0171's precedent. Ruling (1) is a trust-root change (door 5) and reverses D0063 ruling 3, which
+  is why this record is Tier C and its signature is the sitting's. The owner's frame: "we need to
+  speed up development without losing too much rigour"; "we need to reconsider the way development
+  is done... it's rigorous but too slow".
+  .
+  (1) CUSTODY SET: TRUST ROOT ONLY. governance/tier-c.yaml#custody.set keeps BRIEF.md, CLAUDE.md,
+  DELEGATIONS.md, .github/workflows/ci.yml, allowed_signers, governance/policy.yaml, tier-c.yaml,
+  tag-roles.yaml, importlinter.toml, governance/schemas/*.json, scripts/custodian.sh,
+  scripts/check_tag_signers.py, scripts/check_receipts.py, scripts/_gov.py and tests/poison/**/*.
+  It releases Makefile, conftest.py, .pre-commit-config.yaml, scripts/check_manifest.py,
+  check_concepts.py, check_decisions.py, check_laws.py, check_doorway.py, gen_projections.py,
+  gen_custody.py, opening_sitting.sh, boundary_sitting.sh and rehearse_sitting.sh. The custodian's
+  poison matrix is the liveness proof at every gate and the boundary red team the audit. The two
+  signature verifiers and the library they import stay with the signatures they verify, because no
+  poison fixture covers check_receipts. Sittings shrink to doors plus signatures.
+  (2) RECORDS PROPORTIONAL. A record only for a decision, at most about 25 lines, bindings as the
+  substance; measurements go in the commit message. Red-team findings go straight into
+  docs/redteam/LEDGER.yaml rows with a disposition, no separate report; fixtures only for confirmed
+  high findings. Digest sampling is unchanged.
+  (3) CI IS THE GATE. Commit hooks do structural checks only (frozen paths, projections, records
+  valid, bindings collect); the full verify runs in CI on every push, and locally only before a
+  merge to master or a sitting. A red bound node may sit on a branch until CI; master stays gated.
+  (4) POST-M5 IS DECIDED AT THE M5 CLOSE, with the divergence results in hand.
+  .
+  Also settled: no dates on builder work. A stale receipt flips three vestigial Tier-B records from
+  consented to blocked and nothing else (scripts/check_decisions.py, the veto clock); the sitting
+  renews it whenever it happens. The measurements that put the questions: 18 minutes of hooks per
+  commit (19 for a one-file docs commit), make verify 46 minutes, CI 41, of which check_decisions'
+  130-node pytest batch was 15:24 and ran three times per change; the M4 sitting driver 19 steps
+  and 3h03m; 265 records in 23 days at 79 lines each.
+rationale: >-
+  The rigour that matters — laws frozen before implementation, the poison matrix, the one-way
+  doors, the append-only store, bindings that resolve — is not where the time went. D0063 ruling 3
+  put guard code under the owner's key so a weakened guard could not pass unnoticed; the poison
+  matrix already makes a weakened guard fail its fixture at every gate, in eight seconds.
+reversibility: >-
+  (1) is reversible by re-listing any path and re-signing; (2) and (3) are conventions; (4)
+  decides nothing yet. Nothing here touches a frozen law, a ceiling, or any door but 5.
+status: blocked-on-owner
+bindings:
+  - type: config
+    target: "governance/tier-c.yaml#custody.set"
+    strength: documentary
+    detail: The set ruling (1) shrinks. The patch is docs/proposals/2026-09-16-m5-gate-sitting-prep/tier-c-custody-set.patch, applied and re-signed at the sitting.
+  - type: file
+    target: docs/proposals/2026-09-16-m5-gate-sitting-prep/README.md
+    strength: documentary
+    detail: The sitting's agenda, which carries this record's signature, the door record, the custody re-sign and D0252.
+  - type: pytest
+    target: "tests/test_governance_scripts.py::test_guard_fails_its_poison"
+    strength: enforced
+    detail: The liveness proof ruling (1) rests on — every guard fails its fixture — run from plain pytest at every gate.
+links: ["D0061", "D0063", "D0171", "D0252", "D0257", "D0265", "D0266"]

@@ -119,9 +119,18 @@ key in the path of every milestone's Session A — spending exactly the attentio
 delegation exists to save.
 
 So the owner signs `governance/custody.sha256` instead: a generated, positive enumeration
-(declared as `custody.set` in `governance/tier-c.yaml`) of the stable subset — the trust
-root, the guards, the poison corpus, the gate's own call sites. It changes only when the
-custody floor changes, so it costs one signature per sitting.
+(declared as `custody.set` in `governance/tier-c.yaml`) of the **trust root** — the
+constitution, the manual and the delegation; the CI config; the signers; the policy, door and
+signer-role files; the import contracts; the schemas; the custodian; the two signature
+verifiers and the library they import; and the poison corpus. It changes only when the trust
+root changes, so it costs one signature per sitting.
+
+From the owner's rulings of 2026-09-16 (D0267, reversing D0063 ruling 3) the builder-facing
+guards, the generators, the Makefile, `conftest.py`, the pre-commit config and the sitting
+drivers are **outside** the set. Their liveness is proved by the custodian's poison matrix at
+every gate, in seconds, and audited by the boundary red team. Keeping every guard's code under
+the owner's key had put every guard fix and every tooling change on a sitting, and grew each
+sitting — that was time, not rigour.
 
 It also answers the biggest red-team finding in the direction the manifest cannot. A
 manifest **row** can be deleted, silently unfreezing its path, because nothing enumerates
@@ -129,9 +138,8 @@ what the manifest should contain (RT-01). The custody set *is* that enumeration:
 pattern that matches nothing is reported as a hole, not skipped.
 
 **The cost, stated plainly:** after a sitting, any edit to a custody-set path turns the
-gate red until the next sitting re-signs. For the guards that is the intended property —
-you cannot weaken the custody floor without the owner noticing. It means guard changes
-batch to boundary sittings like every other Tier-C act. `pyproject.toml` is deliberately
+gate red until the next sitting re-signs. For the trust root that is the intended property —
+you cannot move the floor without the owner noticing. `pyproject.toml` is deliberately
 outside the set so dependency work does not halt mid-milestone; its import contracts are
 covered instead by the contract-shape check inside `check_manifest`.
 
