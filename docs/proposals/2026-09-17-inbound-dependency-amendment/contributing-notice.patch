@@ -1,0 +1,33 @@
+--- a/CONTRIBUTING.md	2026-09-11 17:07:14.895788468 +0800
++++ b/CONTRIBUTING.md	2026-09-17 09:59:05.276543562 +0800
+@@ -36,9 +36,11 @@
+   enforces it. A frozen law that turns out to be wrong is superseded forward — write the
+   corrected law as a new file and mark the old one superseded. Do not work around the
+   hook.
+-- **Add a dependency on, or an import from, another repository of the constellation**
+-  (see BRIEF §1) — in either direction. Cross-repo unification happens through the
+-  concept registry and the Governor seam, never through code.
++- **Add tannen's code as a dependency on, or import from, another repository of the
++  constellation** (see BRIEF §1). A sibling repo may depend on tannen's code at an
++  owner-signed `<milestone>-close` tag or a published version (BRIEF §1.1); tannen never
++  depends on theirs. Cross-repo *concept* unification still happens through the concept
++  registry and the Governor seam, never through restating a definition.
+ - **Restate a definition owned elsewhere.** Cite it. `concepts/*.yaml` pins owner,
+   document, section, commit and content hash; paraphrasing an owned definition is a CI
+   failure by design.
+--- a/NOTICE	2026-09-11 17:07:14.898788476 +0800
++++ b/NOTICE	2026-09-17 09:59:05.276617592 +0800
+@@ -20,8 +20,11 @@
+ This repository adopts concepts owned by other documents, by pinned citation and
+ conformance test rather than by restatement. `concepts/*.yaml` records the owner,
+ document, section, commit and content hash for each. Those owners are named there and
+-in BRIEF.md §1; nothing in this repository restates their definitions, and no code from
+-any of them is vendored or imported in either direction.
++in BRIEF.md §1; nothing in this repository restates their definitions, and this
++repository vendors or imports no code from any of them (BRIEF §1). A sibling repository
++may depend on a pinned release of this one (BRIEF §1.1); that is the only cross-repo code
++dependency the constellation permits, and it runs in the opposite direction from a
++concept citation.
+ 
+ The verbatim excerpts that once backed those citations are not part of this repository's
+ history (decision D0176). A citation resolves here to a pinned hash; anyone holding the

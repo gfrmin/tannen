@@ -26,39 +26,66 @@ regenerated set it produces, 91 rows, 16 of them outside `tests/poison/`), `clau
 The prep session adds the door record, `decisions/0268-the-m5-gate-door-record-answering-d0257-and-d0265-drafted-for-signature.yaml`
 (D0268 — the shape L5.8 reads, watched accepting it signed and refusing it unsigned).
 
+Also by reference, drafted by the M4 session and folded in here 2026-09-17:
+`../2026-09-17-inbound-dependency-amendment/` (`brief.patch`, `claude-md.patch`) — the owner's
+asymmetric ruling on cross-repo imports (outbound stays banned; inbound opens by pinned release
+only), landed as additive BRIEF §1.1 plus one CLAUDE.md clause, both custody-set, and filed as
+`decisions/0269-a-sibling-repo-may-depend-on-tannen-at-a-pinned-release-tannen-imports-none-of-theirs.yaml`
+(D0269, `links` naming D0268 since both sign at this sitting).
+`../2026-09-17-inbound-dependency-amendment/contributing-notice.patch` is unfrozen and applied by
+the builder after the sitting (see "Right after the sitting"), same as the rest of that list.
+
 From a green CI on `m5`, with the owner key loaded once (`ssh-add ~/.ssh/tannen_owner`, D0185),
-the sitting is this chain — rehearsed once end to end in a scratch clone under an ephemeral
+the sitting is this chain — rehearsed twice end to end in a scratch clone under an ephemeral
 owner key (item 3 below; origin pointed at a disposable bare repo, never the real remote), and
-corrected here from what the rehearsal found. The one real defect: `governance/custody.sha256.sig`
-already exists (signed at the last sitting), and `ssh-keygen -Y sign` over an existing `.sig`
-prompts `Overwrite (y/n)?` on a terminal that has nothing to answer with — measured hanging (and,
-worse, failing non-zero when stdin is closed) rather than signing. The decision records carry no
-prior `.sig`, so only this one line needed the `rm -f` first. Everything else in the chain ran
-clean: 91 custody rows (matching the number stated above), the two status flips, `custodian.sh`
-green in ~10s including the full poison matrix, and a clean receipt:
+corrected here from what the rehearsals found. The one real defect (first rehearsal):
+`governance/custody.sha256.sig` already exists (signed at the last sitting), and
+`ssh-keygen -Y sign` over an existing `.sig` prompts `Overwrite (y/n)?` on a terminal that has
+nothing to answer with — measured hanging (and, worse, failing non-zero when stdin is closed)
+rather than signing. The decision records carry no prior `.sig`, so only this one line needed the
+`rm -f` first. The second rehearsal folded in the inbound-dependency amendment and confirmed its
+`claude-md.patch` must apply *before* this directory's own `claude-md.patch` — the two touch
+disjoint hunks of the file (the amendment's is the "Hard rules" bullet near the top; this
+directory's are the "Decisions"/"Verification"/"Session discipline" headings further down), so
+either order patches cleanly by itself, but composing both onto the same working tree in one
+chain only succeeds amendment-first (checked directly: amendment-then-prep composes with a
+three-line hunk offset and no conflict; the reverse was not needed once the working order was
+found and is not asserted here). Everything else in both chains ran clean: 91 custody rows plus
+the two amendment rows (BRIEF.md, CLAUDE.md's now-doubled diff), the four status flips,
+`custodian.sh` green in ~10s including the full poison matrix, and a clean receipt:
 
 ```sh
 P=docs/proposals/2026-09-16-m5-gate-sitting-prep \
+&& A=docs/proposals/2026-09-17-inbound-dependency-amendment \
 && DOOR=decisions/0268-the-m5-gate-door-record-answering-d0257-and-d0265-drafted-for-signature.yaml \
+&& AMEND=decisions/0269-a-sibling-repo-may-depend-on-tannen-at-a-pinned-release-tannen-imports-none-of-theirs.yaml \
 && git apply "$P/tier-c-custody-set.patch" \
+&& git apply "$A/brief.patch" \
+&& git apply "$A/claude-md.patch" \
 && git apply "$P/claude-md.patch" \
 && git apply docs/proposals/2026-09-15-ci-tag-event-checkout/ci.yml.patch \
-&& for f in governance/tier-c.yaml CLAUDE.md .github/workflows/ci.yml; do \
+&& for f in governance/tier-c.yaml CLAUDE.md .github/workflows/ci.yml BRIEF.md; do \
      grep -v "  $f\$" MANIFEST.sha256 > MANIFEST.tmp && sha256sum "$f" >> MANIFEST.tmp && mv MANIFEST.tmp MANIFEST.sha256; done \
 && .venv/bin/python -I -P scripts/gen_custody.py \
 && rm -f governance/custody.sha256.sig \
 && ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-custody governance/custody.sha256 \
-&& sed -i 's/^status: blocked-on-owner$/status: accepted/' decisions/0267-*.yaml "$DOOR" \
+&& sed -i 's/^status: blocked-on-owner$/status: accepted/' decisions/0267-*.yaml "$DOOR" "$AMEND" \
 && ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision decisions/0267-*.yaml \
 && ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision "$DOOR" \
+&& ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision "$AMEND" \
 && bash scripts/custodian.sh \
 && make projections && .venv/bin/python -I -P scripts/gen_roadmap.py \
-&& git add -A && git commit -m "M5 gate sitting: the door opened, the custody set is the trust root, D0252 applied" \
+&& git add -A && git commit -m "M5 gate sitting: the door opened, the custody set is the trust root, D0252 and D0269 applied" \
 && git push origin m5
 ```
 
 Then read every run the push starts. The custodian's bare run must print the receipt as signed
-(D0177: run it `--check-only` first if in doubt); `ssh-add -d` afterwards. Six key touches.
+(D0177: run it `--check-only` first if in doubt); `ssh-add -d` afterwards. Seven key touches.
+(`scripts/custodian.sh`'s own bare-mode receipt signature is a separate, eighth touch the
+script makes internally — `ssh-add` makes it silent for the owner exactly as D0185 says; a
+future rehearsal under an ephemeral key needs `TANNEN_OWNER_KEY=<ephemeral private key>`
+exported too, the script's own documented override, or that one step prompts for the real
+key's passphrase instead of using the rehearsal key — found rehearsing this correction.)
 
 ## What the prep session produces (builder, fresh session)
 
@@ -102,11 +129,13 @@ fail; `PYTHONPATH=<root>/.dogfood` makes both pass. `lint-imports`' `no-cross-re
 
 ## Right after the sitting (builder, normal commits)
 
-Item 2 lands; D0253's `check_manifest.py` current-envelope fix and the pre-budget lock fold;
-D0251's confirm fix into `scripts/boundary_sitting.sh`; the `.dogfood/` wiring in `conftest.py`
-or `Makefile`, inert when `.dogfood/` is absent (CI stays 10 skipped); D0257 and D0265 marked
-`superseded` by the door record; D0251–D0253 flipped with enforced bindings; RT-M4-02 closed in
-the ledger (L5.2, D0260). Then B2, in a fresh session.
+Item 2 lands; `../2026-09-17-inbound-dependency-amendment/contributing-notice.patch` applies
+(unfrozen, no signature needed — D0269 already authorised it); D0253's `check_manifest.py`
+current-envelope fix and the pre-budget lock fold; D0251's confirm fix into
+`scripts/boundary_sitting.sh`; the `.dogfood/` wiring in `conftest.py` or `Makefile`, inert when
+`.dogfood/` is absent (CI stays 10 skipped); D0257 and D0265 marked `superseded` by the door
+record; D0251–D0253 flipped with enforced bindings; RT-M4-02 closed in the ledger (L5.2, D0260).
+Then B2, in a fresh session.
 
 ## Hard constraints
 

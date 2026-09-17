@@ -30,17 +30,33 @@ rather than after.
 
 OUTPUT (`--out`, default `.dogfood/measurement.json`): `measurement/1` (docs/specs/m5.md
 §2) — `source`, `visible_export` and `operators` copied from the input; `parser_files` and
-`parser_loc` computed here.
+`parser_loc` computed here. Validated against the FROZEN schema
+(`tests/laws/m5/measurement/schema.json`) before it is written — a shape violation refuses
+whole and writes nothing, same discipline as the duplicate-source and unknown-operator
+refusals below.
+
+`--preview-selection` prints what `tannen.dogfood.select` (the implementation) would choose
+over this measurement, cross-checked against the FROZEN model
+(`tests/laws/m5/_dogfood_model.py::expected_selection`, bound from its bytes — the same
+discipline `tests/laws/m5/_dogfood_bind.py` uses, because that directory is sealed and must
+never gain a `__pycache__`). A disagreement is printed loudly and does not stop the script —
+the measurement is already written by this point, and this is a preview of L5.4's answer,
+never a choice (D0257 ask (2)); a real disagreement is a defect in this script or in
+`tannen.dogfood`, to hand to a builder session, never a reason to trust either blindly.
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import yaml
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 #: `loc/1`'s comment marker per extension — the one thing this script must get right to
 #: own the counter. An extension not listed refuses rather than guessing (silently
@@ -93,6 +109,51 @@ def build_candidate(root: Path, entry: dict) -> dict:
     }
 
 
+def validate_against_frozen_schema(measurement: dict) -> None:
+    """Refuse whole a measurement that does not conform to the FROZEN measurement/1 schema
+    (docs/specs/m5.md §2) — read by path, never copied, so a schema edit at a future freeze
+    moves this check with it rather than drifting from a second, stale copy."""
+    import jsonschema
+
+    schema_path = REPO_ROOT / "tests" / "laws" / "m5" / "measurement" / "schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator.check_schema(schema)
+    try:
+        jsonschema.Draft202012Validator(schema).validate(measurement)
+    except jsonschema.ValidationError as exc:
+        where = "/".join(str(p) for p in exc.absolute_path) or "(root)"
+        raise ValueError(
+            f"the measurement does not conform to the frozen measurement/1 schema at "
+            f"{where}: {exc.message}"
+        ) from exc
+
+
+def bind_frozen_model() -> ModuleType:
+    """`tests/laws/m5/_dogfood_model.py`, FROM ITS BYTES, under a private dotted name — the
+    same two rules `tests/laws/m5/_dogfood_bind.py` uses and for the same measured reasons:
+    never read `sys.modules` first (a cached answer is the channel a decoy uses), and never
+    write a `__pycache__` into `tests/laws` (it is a sealed directory, docs/specs/m5.md §10)."""
+    path = REPO_ROOT / "tests" / "laws" / "m5" / "_dogfood_model.py"
+    if not path.is_file():
+        raise FileNotFoundError(f"the frozen model is not at {path} — is this a tannen checkout?")
+    name = "tannen_measure_script._dogfood_model"
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load the frozen model at {path}")
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
+
+
 def check_operators(candidates: list[dict]) -> list[str]:
     """A courtesy pre-check, not the authority — L5.4 is (docs/specs/m5.md §2: membership
     is decided against tannen.kernel.ops.OPERATORS, derived from the package, never listed
@@ -143,6 +204,12 @@ def main() -> int:
         return 2
 
     measurement = {"tannen": "measurement/1", "counter": "loc/1", "candidates": candidates}
+    try:
+        validate_against_frozen_schema(measurement)
+    except ValueError as exc:
+        print(f"{exc} — refused whole, nothing written", file=sys.stderr)
+        return 2
+
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(measurement, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"wrote {args.out} ({len(candidates)} candidate(s))")
@@ -153,6 +220,7 @@ def main() -> int:
     if args.preview_selection:
         try:
             from tannen.dogfood import SelectionRefused, select
+            from tannen.kernel.ops import OPERATORS
         except ImportError:
             print("tannen.dogfood not importable — cannot preview a selection", file=sys.stderr)
             return 1
@@ -160,7 +228,24 @@ def main() -> int:
             chosen = select(measurement)
             print(f"preview only, NOT a choice — L5.4 over this measurement selects: {chosen}")
         except SelectionRefused as exc:
+            chosen = None
             print(f"preview only, NOT a choice — L5.4 over this measurement refuses: {exc}")
+
+        model = bind_frozen_model()
+        expected = model.expected_selection(measurement, tuple(OPERATORS))
+        agrees = expected == (chosen if chosen is not None else model.REFUSED)
+        if not agrees:
+            print(
+                "\nWARNING: this preview and the FROZEN model DISAGREE — the frozen model is\n"
+                "the authority (L5.4 is stated over it), so this is a defect in\n"
+                "tannen.dogfood.select or in this script, not something to trust either side\n"
+                "of blindly. Hand this to a builder session before relying on the preview.\n"
+                f"    tannen.dogfood.select                       -> {chosen!r}\n"
+                f"    tests/laws/m5/_dogfood_model.py::expected_selection -> {expected!r}",
+                file=sys.stderr,
+            )
+        else:
+            print(f"  the frozen model agrees: expected_selection -> {expected}")
 
     return 0
 

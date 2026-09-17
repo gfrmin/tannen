@@ -130,6 +130,76 @@ def test_refuses_an_operator_outside_the_catalogue(tmp_path: Path) -> None:
     assert "not_a_real_operator" in result.stderr
 
 
+def test_refuses_a_measurement_the_frozen_schema_rejects(tmp_path: Path) -> None:
+    """A shape the mechanical build never produces on its own (an uppercase source id),
+    refused whole and nothing written — the FROZEN schema (tests/laws/m5/measurement/
+    schema.json) is the authority, read by path, not restated here."""
+    root = _write_root(tmp_path)
+    spec = tmp_path / "candidates.yaml"
+    spec.write_text(yaml.safe_dump({
+        "root": str(root),
+        "candidates": [
+            {"source": "Alpha", "visible_export": True,
+             "parser_files": ["parsers/alpha.py"], "operators": ["select"]},
+        ],
+    }))
+    out = tmp_path / "measurement.json"
+    result = run("--input", str(spec), "--out", str(out))
+    assert result.returncode != 0
+    assert "frozen measurement/1 schema" in result.stderr
+    assert not out.exists()
+
+
+def test_watched_firing_on_a_genuine_frozen_model_disagreement(tmp_path: Path, monkeypatch,
+                                                                 capsys) -> None:
+    """Before this cross-check is trusted, it must be watched catching a REAL mismatch — the
+    handoff's own lesson: a sabotage whose wrong answer happens to coincide with the right one
+    proves nothing. `tannen.dogfood.select` is forced to refuse unconditionally; independently
+    computed via the frozen model, the real answer for this measurement is a source id, never
+    "refused", so the two are checked to actually differ before the warning is trusted."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        import measure_dogfood_candidates as mdc
+        import tannen.dogfood as dogfood
+
+        def _sabotaged_select(measurement: dict) -> str:
+            raise dogfood.SelectionRefused("sabotaged for a genuine-mismatch test")
+
+        monkeypatch.setattr(dogfood, "select", _sabotaged_select)
+
+        root = _write_root(tmp_path)
+        spec = tmp_path / "candidates.yaml"
+        spec.write_text(yaml.safe_dump({
+            "root": str(root),
+            "candidates": [
+                {"source": "alpha", "visible_export": True,
+                 "parser_files": ["parsers/alpha.py"], "operators": ["select"]},
+            ],
+        }))
+        out = tmp_path / "measurement.json"
+        monkeypatch.setattr(sys, "argv", [
+            "measure_dogfood_candidates.py", "--input", str(spec), "--out", str(out),
+            "--preview-selection",
+        ])
+        rc = mdc.main()
+        captured = capsys.readouterr()
+        assert rc == 0  # the measurement itself still writes; the preview only warns
+
+        written = json.loads(out.read_text())
+        model = mdc.bind_frozen_model()
+        from tannen.kernel.ops import OPERATORS
+        real_expected = model.expected_selection(written, tuple(OPERATORS))
+        assert real_expected != model.REFUSED, (
+            "the fixture must have a real winner or this sabotage proves nothing "
+            "(both sides would agree on 'refused')"
+        )
+        assert "WARNING" in captured.err
+        assert real_expected in captured.err
+    finally:
+        sys.path.remove(str(REPO_ROOT / "scripts"))
+        sys.modules.pop("measure_dogfood_candidates", None)
+
+
 def test_preview_selection_is_labelled_a_preview_not_a_choice(tmp_path: Path) -> None:
     root = _write_root(tmp_path)
     spec = tmp_path / "candidates.yaml"
