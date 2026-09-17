@@ -23,23 +23,34 @@ In this directory: `tier-c-custody-set.patch` (D0267 ruling 1; `custody.sha256.p
 regenerated set it produces, 91 rows, 16 of them outside `tests/poison/`), `claude-md.patch`
 (rulings 2 and 3 reach the manual), and by reference
 `../2026-09-15-ci-tag-event-checkout/ci.yml.patch` (D0252, so tag-event runs stop being red).
-The prep session adds the door record (`decisions/<door>.yaml`, the shape L5.8 reads).
+The prep session adds the door record, `decisions/0268-the-m5-gate-door-record-answering-d0257-and-d0265-drafted-for-signature.yaml`
+(D0268 — the shape L5.8 reads, watched accepting it signed and refusing it unsigned).
 
 From a green CI on `m5`, with the owner key loaded once (`ssh-add ~/.ssh/tannen_owner`, D0185),
-the sitting is this chain — the prep session rehearses it and corrects it here before you run it:
+the sitting is this chain — rehearsed once end to end in a scratch clone under an ephemeral
+owner key (item 3 below; origin pointed at a disposable bare repo, never the real remote), and
+corrected here from what the rehearsal found. The one real defect: `governance/custody.sha256.sig`
+already exists (signed at the last sitting), and `ssh-keygen -Y sign` over an existing `.sig`
+prompts `Overwrite (y/n)?` on a terminal that has nothing to answer with — measured hanging (and,
+worse, failing non-zero when stdin is closed) rather than signing. The decision records carry no
+prior `.sig`, so only this one line needed the `rm -f` first. Everything else in the chain ran
+clean: 91 custody rows (matching the number stated above), the two status flips, `custodian.sh`
+green in ~10s including the full poison matrix, and a clean receipt:
 
 ```sh
 P=docs/proposals/2026-09-16-m5-gate-sitting-prep \
+&& DOOR=decisions/0268-the-m5-gate-door-record-answering-d0257-and-d0265-drafted-for-signature.yaml \
 && git apply "$P/tier-c-custody-set.patch" \
 && git apply "$P/claude-md.patch" \
 && git apply docs/proposals/2026-09-15-ci-tag-event-checkout/ci.yml.patch \
 && for f in governance/tier-c.yaml CLAUDE.md .github/workflows/ci.yml; do \
      grep -v "  $f\$" MANIFEST.sha256 > MANIFEST.tmp && sha256sum "$f" >> MANIFEST.tmp && mv MANIFEST.tmp MANIFEST.sha256; done \
 && .venv/bin/python -I -P scripts/gen_custody.py \
+&& rm -f governance/custody.sha256.sig \
 && ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-custody governance/custody.sha256 \
-&& sed -i 's/^status: blocked-on-owner$/status: accepted/' decisions/0267-*.yaml decisions/<door>.yaml \
+&& sed -i 's/^status: blocked-on-owner$/status: accepted/' decisions/0267-*.yaml "$DOOR" \
 && ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision decisions/0267-*.yaml \
-&& ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision decisions/<door>.yaml \
+&& ssh-keygen -Y sign -f ~/.ssh/tannen_owner -n tannen-decision "$DOOR" \
 && bash scripts/custodian.sh \
 && make projections && .venv/bin/python -I -P scripts/gen_roadmap.py \
 && git add -A && git commit -m "M5 gate sitting: the door opened, the custody set is the trust root, D0252 applied" \

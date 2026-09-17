@@ -1,0 +1,61 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0268
+title: "The M5 gate door record: door renavon-first-contact, the measurement's and store's home, publication left at policy's default, and the vertical's code kept off git — D0257's five asks and D0265's sixth, drafted for the owner's signature"
+tier: C
+date: "2026-09-17"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  DRAFTED BY THE PREP SESSION for the owner to sign as-is or amend at the sitting (D0257:
+  "a record the owner authors or accepts"). `status` is `blocked-on-owner` until the sitting's
+  chain flips it. This is the record `tests/laws/m5/test_l5_authorisation.py` (L5.8) reads: it
+  names door `renavon-first-contact` (read out of governance/tier-c.yaml) in `links`, and opens
+  by nothing but the owner's signature over it under namespace `tannen-decision`.
+  .
+  ANSWERING D0257's FIVE ASKS AND D0265's SIXTH, each on the term this repository's own
+  defaults already fix where one exists — none of this is a builder recommendation on a
+  question D0257/D0265 named as the owner's.
+  .
+  (1) THE DOOR OPENS, on these terms: Renavon material may be read only to take BRIEF §8's
+  measurement (source names, parser file lists, `loc/1` counts, operators) and to build
+  `.dogfood/corpus.json` and `.dogfood/store/` from the bytes the measurement names. Nothing
+  else is authorised by this record.
+  (2) THE MEASUREMENT is `measurement/1` at `.dogfood/measurement.json` (docs/specs/m5.md §2);
+  L5.4 selects the vertical from it — no one chooses.
+  (3) RENAVON BYTES LIVE at `.dogfood/` (gitignored in this checkout), on the owner's machine
+  only; frozen inputs and production outputs go to `.dogfood/store/`.
+  (4) PUBLICATION (door 2) DEFAULTS TO NONE, per governance/policy.yaml#external_surface: the
+  vertical's name, the measurement and any divergence analysis stay out of this public
+  repository. A `production-defect` divergence is reported to Renavon's owner by the owner's
+  hand, outside this repository; publishing any of it is a later, separate door-2 record.
+  (5) THIS RECORD IS the authorisation L5.8 requires: Tier C, a file under `decisions/`,
+  `links` naming `renavon-first-contact`, owner-signed under `tannen-decision` — no different
+  shape is adopted here.
+  (6) D0265: THE VERTICAL'S CODE STAYS OUT OF GIT, kept on the owner's machine and reached by
+  environment wiring (`PYTHONPATH` naming `.dogfood/` or a sibling directory) — D0265 option
+  (b). Option (a) (commit it) is not taken, consistent with (4)'s default. Option (c) (make
+  `.dogfood/` importable inside `run` itself) is refused: it would supersede docs/specs/m5.md
+  §1's contract, which this record has no standing to change. Option (d) (a separate installed
+  package) was already refused before asking.
+rationale: >-
+  Every one of D0257's asks is a one-way door or the terms of one, so the builder does not
+  choose among them: this record states the terms this repository's own defaults already
+  imply (policy.yaml's external_surface, and the PYTHONPATH facts B1 measured), so signing it
+  changes nothing the repository was not already going to do once the door opened. Where a
+  real choice exists (D0265 option (a) vs (b)), the record takes the one policy already
+  implies and leaves the other to a superseding record if the owner prefers it.
+reversibility: >-
+  (1) is irreversible by nature — first contact, once made, has happened. (2)-(6) are policy
+  the owner can revise under later records without touching a frozen law; (6) option (c) would
+  need a superseding law, stated so at D0265.
+status: blocked-on-owner
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_authorisation.py
+    strength: enforced
+    detail: L5.8 reads this record's tier, status, links and signature to decide whether the corpus present is authorised.
+  - type: config
+    target: "governance/policy.yaml#external_surface"
+    strength: documentary
+    detail: The default (publishing this-repo-public, nothing leaves) this record's asks (3), (4) and (6) state rather than override.
+links: ["renavon-first-contact", "D0257", "D0265", "D0255", "D0256", "D0262"]

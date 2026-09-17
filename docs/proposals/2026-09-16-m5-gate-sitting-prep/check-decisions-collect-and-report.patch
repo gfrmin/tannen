@@ -1,0 +1,377 @@
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+index 4a46fa7..6ff66dc 100644
+--- a/.pre-commit-config.yaml
++++ b/.pre-commit-config.yaml
+@@ -30,8 +30,8 @@ repos:
+         pass_filenames: false
+         always_run: true
+       - id: check-decisions
+-        name: decision records valid; bindings resolve
+-        entry: env -u TANNEN_CHECK_DECISIONS_NESTED .venv/bin/python -I -P scripts/check_decisions.py
++        name: decision records valid; bindings collect (structural only — D0267 ruling 3; CI runs bindings to green)
++        entry: env -u TANNEN_CHECK_DECISIONS_NESTED .venv/bin/python -I -P scripts/check_decisions.py --collect-only
+         language: system
+         pass_filenames: false
+         always_run: true
+diff --git a/Makefile b/Makefile
+index d185b8f..d9f737b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,7 +1,9 @@
+ # tannen — governance targets. `make verify` is the session-closing gate (CLAUDE.md).
+ # `uv run tannen laws report` joined `verify` at M0, as decision D0012 said it would.
+ # Order is load-bearing: pytest runs the laws and emits their evidence records, then
+-# the report judges that evidence against the current descriptors.
++# the report judges that evidence against the current descriptors. pytest now also
++# runs BEFORE check_decisions.py, which reads its --junitxml report instead of
++# spawning a second pytest over the same bound nodes (D0266 item 2).
+ 
+ .PHONY: verify projections digest drift laws-sweep
+ 
+@@ -34,12 +36,12 @@ verify:
+ 	@test -x $(PY) || { echo "no interpreter at $(PY) — run 'uv sync --frozen'"; exit 1; }
+ 	$(UNHATCH) $(PY) -I -P scripts/check_manifest.py
+ 	$(UNHATCH) $(PY) -I -P scripts/check_concepts.py
+-	$(UNHATCH) $(PY) -I -P scripts/check_decisions.py
++	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run pytest -q --junitxml=$(VERIFY_EVIDENCE)/pytest-report.xml
++	$(UNHATCH) $(PY) -I -P scripts/check_decisions.py --pytest-report $(VERIFY_EVIDENCE)/pytest-report.xml
+ 	$(UNHATCH) $(PY) -I -P scripts/check_tag_signers.py
+ 	$(UNHATCH) $(PY) -I -P scripts/check_receipts.py
+ 	$(UNHATCH) $(PY) -I -P scripts/check_laws.py
+ 	$(UNHATCH) $(PY) -I -P scripts/check_doorway.py
+-	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run pytest -q
+ 	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run tannen laws report
+ 	$(UNHATCH) $(PY) -I -P -c 'import sys; from importlinter.cli import lint_imports_command; sys.exit(lint_imports_command())' --config governance/importlinter.toml
+ 	$(UNHATCH) bash scripts/custodian.sh --check-only
+diff --git a/scripts/check_decisions.py b/scripts/check_decisions.py
+index b436bca..db2a02e 100755
+--- a/scripts/check_decisions.py
++++ b/scripts/check_decisions.py
+@@ -26,6 +26,14 @@ load-bearing; CI fails if a binding's target is missing or skipped. This check:
+     that (record, target) pair, the binding is DOCUMENTARY, and the target is still
+     absent — and prints every retirement it honours.
+ 
++Three ways to resolve a `pytest` binding (D0266 item 2; D0267 ruling 3 — commit hooks are
++structural, CI is the gate): the default spawns pytest itself, batching every binding into
++one invocation; `--collect-only` checks that a bound node still collects and nothing more
++(cheap enough for the pre-commit hook; a red-but-collecting node is CI's to catch, not the
++hook's); `--pytest-report FILE` reads a prior `pytest --junitxml=FILE` run instead of
++spawning a second one over the same nodes (the gate's own run, Makefile order: pytest,
++then this guard).
++
+ Exits non-zero on any violation.
+ """
+ 
+@@ -239,13 +247,133 @@ def pytest_violation(root: Path, targets: list[str], label: str) -> str | None:
+     return None
+ 
+ 
+-def resolve_pytest_bindings(root: Path, targets: list[str]) -> dict[str, str | None]:
++# ------------------------------------------------------- --collect-only (D0266 item 2)
++#
++# The pre-commit hook (D0267 ruling 3: "commit hooks do structural checks only ...
++# bindings collect") does not need to know that a bound node PASSES — only that it still
++# EXISTS and still imports: a rename or a deleted test is a typo the author should see at
++# commit time, and a red assertion is CI's to catch, not the hook's (a red node may sit on
++# a branch until CI; master stays gated). `--collect-only` resolves every binding with one
++# `pytest --collect-only` batch, which does not execute a single test body, so it costs
++# seconds against the same target set that costs minutes to actually run.
++
++
++def run_pytest_collect(root: Path, targets: list[str]) -> subprocess.CompletedProcess:
++    return subprocess.run(
++        [sys.executable, "-m", "pytest", *targets, "--collect-only", "-q", "--no-header",
++         "-p", "no:cacheprovider"],
++        cwd=root, capture_output=True, text=True, check=False,
++        env={**os.environ, NESTED_ENV: "1"},
++    )
++
++
++def collect_violation(root: Path, target: str) -> str | None:
++    run = run_pytest_collect(root, [target])
++    out = run.stdout + run.stderr
++    if run.returncode == 4 or "no tests ran" in out or "error" in out.lower():
++        return f"pytest node does not collect: {target}"
++    return None
++
++
++def resolve_by_collection(root: Path, targets: list[str]) -> dict[str, str | None]:
++    batch = run_pytest_collect(root, targets)
++    combined = batch.stdout + batch.stderr
++    if batch.returncode in (0, 5) and "error" not in combined.lower():
++        # exit 5 is pytest's own "no tests collected" for the WHOLE batch, which cannot
++        # happen here (targets is non-empty and each names something); kept only so a
++        # future empty-batch caller does not read exit 5 as a failure of every target.
++        return {target: None for target in targets}
++    return {target: collect_violation(root, target) for target in targets}
++
++
++# --------------------------------------------------- --pytest-report FILE (D0266 item 2)
++#
++# The gate's own `uv run pytest -q --junitxml=FILE` (Makefile: pytest now runs BEFORE
++# this guard) already executed every bound node once. Reading its report resolves every
++# binding from that one run instead of spawning a second pytest process over the same
++# ~130 nodes — the duplicate D0266 measured at 15:24 of make verify's 41-minute CI. A
++# node this report does not mention was not run at all, which is refused exactly as a
++# node that does not collect: an absent result is not silent success.
++
++_JUNIT_NS = ""  # pytest's junitxml carries no namespace
++
++
++def _junit_classname(rel: str) -> str:
++    """The dotted module path pytest's junitxml reports a file under (no `file` attribute
++    is emitted by this pytest; `classname` is module-path-dotted, optionally with a test
++    class appended) — verified against a live report before this was trusted (D0266 note)."""
++    stem = rel[:-3] if rel.endswith(".py") else rel
++    return stem.replace("/", ".")
++
++
++def _junit_cases(report: Path) -> list[tuple[str, str, str | None]]:
++    """`(classname, name, verdict)` for every `<testcase>`, `verdict` one of
++    None (passed), 'failure', 'error', 'skipped'."""
++    import xml.etree.ElementTree as ET
++    root = ET.parse(report).getroot()
++    cases = []
++    for case in root.iter("testcase"):
++        verdict = None
++        for tag in ("failure", "error", "skipped"):
++            if case.find(tag) is not None:
++                verdict = tag
++                break
++        cases.append((case.get("classname", ""), case.get("name", ""), verdict))
++    return cases
++
++
++def _matches(target: str, classname: str, name: str) -> bool:
++    """Whether a `<testcase>` answers a binding `target` — a bare file (every case under
++    it, function- or class-scoped) or `file.py::[Class::]func` (that one case, a
++    parametrized name matched by prefix: `pytest_violation`'s own batching already
++    treats a whole-file binding as "every case", so a single-node binding is the same
++    rule narrowed to one classname/name pair)."""
++    file_part, sep, rest = target.partition("::")
++    base = _junit_classname(file_part)
++    if not sep:
++        return classname == base or classname.startswith(base + ".")
++    parts = rest.split("::")
++    want_class, want_name = (parts[0], parts[1]) if len(parts) == 2 else (None, parts[0])
++    want_classname = f"{base}.{want_class}" if want_class else base
++    return classname == want_classname and (name == want_name or name.startswith(want_name + "["))
++
++
++def report_violation(cases: list[tuple[str, str, str | None]], target: str) -> str | None:
++    matches = [(c, n, v) for c, n, v in cases if _matches(target, c, n)]
++    if not matches:
++        return f"pytest node is absent from the gate's report (not run): {target}"
++    failed = [f"{c}::{n} ({v})" for c, n, v in matches if v in ("failure", "error")]
++    if failed:
++        return f"pytest node fails: {target}: {'; '.join(failed)}"
++    skipped = [f"{c}::{n}" for c, n, v in matches if v == "skipped"]
++    if skipped and len(skipped) == len(matches):
++        return f"pytest node is skipped (a skipped binding is not enforcement): {target}"
++    if skipped:
++        return (
++            f"pytest node has an unexplained skip inside an otherwise-passing run "
++            f"(RT-M1-05) — {target}: {', '.join(skipped)}"
++        )
++    return None
++
++
++def resolve_from_report(report: Path, targets: list[str]) -> dict[str, str | None]:
++    if not report.is_file():
++        return {target: f"--pytest-report names a file that does not exist: {report}"
++                for target in targets}
++    cases = _junit_cases(report)
++    return {target: report_violation(cases, target) for target in targets}
++
++
++def resolve_pytest_bindings(root: Path, targets: list[str], *, collect_only: bool = False,
++                            report: Path | None = None) -> dict[str, str | None]:
+     """Resolve every pytest binding, batching the healthy case.
+ 
+-    All targets run in one invocation; only if that is not cleanly green does each
+-    target run alone, so a real violation is still attributed to the exact binding that
+-    caused it. The cost of the guard should not be a reason to stop binding decisions
+-    to tests.
++    Three modes, and exactly one applies: `report` replays the gate's own junitxml
++    (the CI/local-verify path, D0266 item 2); `collect_only` checks that every node
++    still collects and nothing more (the pre-commit path, D0267 ruling 3); the default
++    runs pytest itself, all targets in one invocation, only re-running alone the ones a
++    dirty batch cannot attribute individually. The cost of the guard should not be a
++    reason to stop binding decisions to tests.
+     """
+     if not targets:
+         return {}
+@@ -254,6 +382,10 @@ def resolve_pytest_bindings(root: Path, targets: list[str]) -> dict[str, str | N
+               "enforces). If you did not expect a nested run, this variable is set in your "
+               "ambient environment and binding enforcement is OFF (RT-08).")
+         return {target: NOT_RESOLVED for target in targets}
++    if report is not None:
++        return resolve_from_report(report, targets)
++    if collect_only:
++        return resolve_by_collection(root, targets)
+     batch = run_pytest(root, targets)
+     combined = batch.stdout + batch.stderr
+     if batch.returncode == 0 and not re.search(r"\b[1-9]\d* skipped\b", combined):
+@@ -298,6 +430,14 @@ def main() -> int:
+     parser.add_argument("--root", type=Path, default=REPO_ROOT)
+     parser.add_argument("--today", type=dt.date.fromisoformat, default=dt.date.today(),
+                         help="override 'today' for veto-clock computation (tests)")
++    resolution = parser.add_mutually_exclusive_group()
++    resolution.add_argument("--collect-only", action="store_true",
++                            help="resolve pytest bindings by collection only, not execution "
++                                 "(the pre-commit hook; D0267 ruling 3 — structural checks only)")
++    resolution.add_argument("--pytest-report", type=Path, metavar="FILE",
++                            help="resolve pytest bindings from a prior `pytest --junitxml=FILE` "
++                                 "run instead of spawning a second one (the gate's own run; "
++                                 "D0266 item 2)")
+     args = parser.parse_args()
+     root = args.root.resolve()
+     fail = Failures("check_decisions")
+@@ -426,7 +566,8 @@ def main() -> int:
+                 "binding, or it is a permission waiting for a path"
+             )
+ 
+-    resolved = resolve_pytest_bindings(root, sorted(pytest_bindings))
++    resolved = resolve_pytest_bindings(root, sorted(pytest_bindings), collect_only=args.collect_only,
++                                       report=args.pytest_report)
+     unresolved = sum(1 for v in resolved.values() if v is NOT_RESOLVED)
+     for target, problem in resolved.items():
+         if problem and problem is not NOT_RESOLVED:
+diff --git a/tests/test_check_decisions_resolution_modes.py b/tests/test_check_decisions_resolution_modes.py
+new file mode 100644
+index 0000000..cf017aa
+--- /dev/null
++++ b/tests/test_check_decisions_resolution_modes.py
+@@ -0,0 +1,132 @@
++"""check_decisions.py's three pytest-binding resolution modes (D0266 item 2; D0267 ruling
++3): the default spawns pytest itself; `--collect-only` checks collection only, for the
++pre-commit hook; `--pytest-report FILE` replays a prior `pytest --junitxml=FILE` run, for
++the gate (Makefile order: pytest, then this guard).
++
++Hermetic: a throwaway tree with one bound node that PASSES and one PLANTED FAILING bound
++node that still collects cleanly — the shape D0266 item 2 names: `--collect-only` must let
++the planted failure through (it only checks collection), and `--pytest-report` must catch
++it (D0267 ruling 3's split: commit hooks structural, CI the gate).
++"""
++
++from __future__ import annotations
++
++import datetime as dt
++import subprocess
++import sys
++from pathlib import Path
++
++REPO_ROOT = Path(__file__).resolve().parent.parent
++sys.path.insert(0, str(REPO_ROOT / "scripts"))
++
++from _gov import git_env, input_hash, receipt_line  # noqa: E402
++from gen_projections import gen_decisions, header  # noqa: E402
++
++GUARD = REPO_ROOT / "scripts" / "check_decisions.py"
++TODAY = dt.date(2026, 9, 17)
++
++
++def tree(root: Path) -> Path:
++    (root / "decisions").mkdir(parents=True)
++    common = ('date: "2026-09-17"\ndecision: Probe.\nrationale: Probe.\n'
++              "reversibility: Probe.\nstatus: accepted\n")
++    (root / "decisions" / "0001-ok.yaml").write_text(
++        "id: D0001\ntitle: OK\ntier: A\n" + common +
++        "bindings:\n  - type: pytest\n    target: tests/sample.py::test_ok\n")
++    (root / "decisions" / "0002-bad.yaml").write_text(
++        "id: D0002\ntitle: Bad\ntier: A\n" + common +
++        "bindings:\n  - type: pytest\n    target: tests/sample.py::test_bad\n")
++    (root / "tests").mkdir()
++    (root / "tests" / "sample.py").write_text(
++        "def test_ok():\n    assert True\n\n\ndef test_bad():\n    assert False\n")
++    (root / "receipts").mkdir()
++    (root / "receipts" / "2026-09-10.md").write_text("# Attention receipt — 2026-09-10\n")
++    paths = sorted((root / "decisions").glob("*.yaml"))
++    (root / "DECISIONS.md").write_text(
++        header(input_hash(paths, root)) + f"\n{receipt_line(root)}\n")
++    return root
++
++
++def guard(root: Path, *extra: str) -> subprocess.CompletedProcess:
++    return subprocess.run(
++        [sys.executable, str(GUARD), "--root", str(root), "--today", TODAY.isoformat(), *extra],
++        capture_output=True, text=True, check=False, env=git_env(),
++    )
++
++
++def test_default_resolution_catches_the_planted_failure(tmp_path: Path) -> None:
++    root = tree(tmp_path / "t")
++    result = guard(root)
++    assert result.returncode != 0
++    assert "tests/sample.py::test_bad" in result.stdout + result.stderr
++
++
++def test_collect_only_lets_the_planted_failure_through(tmp_path: Path) -> None:
++    """`--collect-only` checks that a bound node still COLLECTS, nothing more — a red node
++    may sit on a branch until CI (D0267 ruling 3)."""
++    root = tree(tmp_path / "t")
++    result = guard(root, "--collect-only")
++    assert result.returncode == 0, result.stdout + result.stderr
++
++
++def test_collect_only_still_catches_a_node_that_does_not_collect(tmp_path: Path) -> None:
++    root = tree(tmp_path / "t")
++    (root / "decisions" / "0002-bad.yaml").write_text(
++        (root / "decisions" / "0002-bad.yaml").read_text().replace("test_bad", "test_missing"))
++    paths = sorted((root / "decisions").glob("*.yaml"))
++    (root / "DECISIONS.md").write_text(
++        header(input_hash(paths, root)) + f"\n{receipt_line(root)}\n")
++    result = guard(root, "--collect-only")
++    assert result.returncode != 0
++    assert "does not collect" in result.stdout + result.stderr
++
++
++def test_pytest_report_catches_the_planted_failure(tmp_path: Path) -> None:
++    root = tree(tmp_path / "t")
++    report = root / "pytest-report.xml"
++    run = subprocess.run(
++        [sys.executable, "-m", "pytest", "tests/sample.py", "-q",
++         f"--junitxml={report}", "--no-header", "-p", "no:cacheprovider"],
++        cwd=root, capture_output=True, text=True, check=False,
++    )
++    assert report.is_file(), run.stdout + run.stderr
++    result = guard(root, "--pytest-report", str(report))
++    assert result.returncode != 0
++    assert "tests/sample.py::test_bad" in result.stdout + result.stderr
++
++
++def test_pytest_report_passes_when_the_report_is_clean(tmp_path: Path) -> None:
++    root = tree(tmp_path / "t")
++    (root / "tests" / "sample.py").write_text(
++        "def test_ok():\n    assert True\n\n\ndef test_bad():\n    assert True\n")
++    report = root / "pytest-report.xml"
++    subprocess.run(
++        [sys.executable, "-m", "pytest", "tests/sample.py", "-q",
++         f"--junitxml={report}", "--no-header", "-p", "no:cacheprovider"],
++        cwd=root, capture_output=True, text=True, check=False,
++    )
++    result = guard(root, "--pytest-report", str(report))
++    assert result.returncode == 0, result.stdout + result.stderr
++
++
++def test_pytest_report_refuses_a_node_absent_from_the_report(tmp_path: Path) -> None:
++    """A node the report never mentions was not run at all — refused exactly as a node
++    that does not collect, never read as silent success."""
++    root = tree(tmp_path / "t")
++    report = root / "pytest-report.xml"
++    subprocess.run(
++        [sys.executable, "-m", "pytest", "tests/sample.py::test_ok", "-q",
++         f"--junitxml={report}", "--no-header", "-p", "no:cacheprovider"],
++        cwd=root, capture_output=True, text=True, check=False,
++    )
++    result = guard(root, "--pytest-report", str(report))
++    assert result.returncode != 0
++    assert "not run" in result.stdout + result.stderr
++
++
++def test_collect_only_and_pytest_report_are_mutually_exclusive() -> None:
++    result = subprocess.run(
++        [sys.executable, str(GUARD), "--collect-only", "--pytest-report", "x.xml"],
++        capture_output=True, text=True, check=False,
++    )
++    assert result.returncode != 0
