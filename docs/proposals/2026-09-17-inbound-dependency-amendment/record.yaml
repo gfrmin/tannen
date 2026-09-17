@@ -1,0 +1,54 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+# Drafted by the m4 session; NOT filed. The m5 session files this under the next free id
+# (D0269 as of this draft — check before filing) and applies BRIEF.md/CLAUDE.md's custody-set
+# patches at the same sitting that signs it (D0045: never renumber or edit after filing).
+id: D0269
+title: "BRIEF §1.1: a sibling repo may depend on tannen's code at a pinned close tag or release; tannen still imports none of theirs"
+tier: C
+date: "2026-09-17"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  THE OWNER ASKED, in conversation, why a library nobody may import is only a proof of
+  concept, and ruled (AskUserQuestion, 2026-09-17): the dependency direction is asymmetric.
+  .
+  OUTBOUND IS UNCHANGED: tannen imports no constellation code, in any form. The
+  `no-cross-repo` import-linter contract (source_modules = ["tannen"]) and §9's
+  guard-enforced list are untouched; they were always outbound-only in what they check,
+  even while BRIEF §1's prose read "either direction".
+  .
+  INBOUND IS NOW ALLOWED, BY PINNED RELEASE ONLY: a constellation repo may depend on tannen
+  at an owner-signed `<milestone>-close` tag or a published version — never by path,
+  submodule, vendoring, or a moving branch. §9's Tier-C "any cross-repo code dependency"
+  reads outbound from here on. §2's pin-and-conformance mechanism still governs *concept*
+  adoption regardless of a code dependency. §10's "No repo unification, in either direction"
+  is untouched: a pinned dependency is not a unification, and its own last sentence — no
+  dependency on sibling *code* — is outbound and stands verbatim, so door
+  constitution-amendments is not opened by this record.
+  .
+  Landed as BRIEF.md §1.1 and one CLAUDE.md sentence (patches in this directory), both
+  custody-set: this record authorises the sitting to apply them and refreshes the two
+  manifest rows in the same step. CONTRIBUTING.md and NOTICE (unfrozen) are corrected by
+  the builder after signature.
+rationale: >-
+  A guard that only tannen can trip was doing the work of a rule that read as mutual. The
+  DRY and publication-hygiene motives BRIEF §1 serves (concepts adopted by pin, not
+  reference; no private-sibling code in a public repo, D0115) both bite only on what tannen
+  imports, never on what imports tannen. Making the rule match its own guard removes a
+  constraint the tree never enforced, without loosening the one it does.
+reversibility: "Revert the two patches and drop this record's binding; nothing downstream depends on the wording until a sibling repo actually pins a release, at which point reverting is a decision for whoever made that pin."
+status: blocked-on-owner
+bindings_count: 3
+bindings:
+  - type: manifest
+    target: BRIEF.md
+    strength: documentary
+    detail: "§1.1, added by brief.patch; becomes enforced the moment the sitting applies it and MANIFEST.sha256's row is refreshed."
+  - type: manifest
+    target: CLAUDE.md
+    strength: documentary
+    detail: "Hard rule 1's amended sentence, added by claude-md.patch; enforced the same way."
+  - type: file
+    target: governance/importlinter.toml
+    strength: documentary
+    detail: "The no-cross-repo contract's source_modules = [\"tannen\"] is the evidence that the guard was always outbound-only; this record does not change the contract."
+links: ["D0115", "D0212", "D0255"]
