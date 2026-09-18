@@ -103,8 +103,19 @@ frozen_paths:
 #
 # COST, stated plainly: any edit to a listed path invalidates the owner signature and
 # the gate goes red until the next sitting re-signs. That is the intended property for
-# the guards — you cannot weaken the custody floor without the owner noticing — and it
-# means guard changes batch to boundary sittings like every other Tier-C act.
+# the TRUST ROOT — you cannot move the floor without the owner noticing.
+#
+# WHAT IS LISTED, since the owner's rulings of 2026-09-16 (D0267, reversing D0063 ruling
+# 3): the trust root only. The constitution, the manual and the delegation; the CI config;
+# the signers; the policy, door and signer-role files; the import contracts (the cross-repo
+# RULE, whose change is Tier C); the schemas; the custodian; the two signature verifiers and
+# the library they import (no poison fixture covers check_receipts, so they stay with the
+# signatures they verify); and the poison corpus. The builder-facing guards, the generators,
+# the Makefile, conftest.py, the pre-commit config and the sitting drivers are OUTSIDE it:
+# their liveness is proved by the custodian's poison matrix at every gate, in seconds, and
+# audited by the boundary red team. Keeping every guard's code under the owner's key put
+# every guard fix and every tooling change on a sitting, and grew each sitting; that was
+# time, not rigour.
 # pyproject.toml is deliberately NOT listed: dependency work would otherwise halt
 # mid-milestone. The import contracts it used to hold have MOVED to
 # governance/importlinter.toml, which IS listed — a guard's configuration is part of the
@@ -116,9 +127,6 @@ custody:
     - BRIEF.md
     - CLAUDE.md
     - DELEGATIONS.md
-    - Makefile
-    - .pre-commit-config.yaml
-    - conftest.py
     - .github/workflows/ci.yml
     - allowed_signers
     - governance/policy.yaml
@@ -128,18 +136,8 @@ custody:
     - governance/schemas/*.json
     - scripts/_gov.py
     - scripts/custodian.sh
-    - scripts/check_manifest.py
-    - scripts/check_concepts.py
-    - scripts/check_decisions.py
     - scripts/check_tag_signers.py
     - scripts/check_receipts.py
-    - scripts/check_laws.py
-    - scripts/check_doorway.py
-    - scripts/gen_projections.py
-    - scripts/gen_custody.py
-    - scripts/opening_sitting.sh
-    - scripts/boundary_sitting.sh
-    - scripts/rehearse_sitting.sh
     - tests/poison/**/*
 
 # Files whose owner signature is REQUIRED, not merely verified-if-present. RT-04: the

@@ -15,7 +15,10 @@ it; where they appear to disagree, the brief wins and the discrepancy is a bug t
 ## Hard rules (Tier C — stop and ask the owner; full list in BRIEF §9–§10)
 
 - Never add a dependency on, or import from, any other repo of the constellation
-  (pkm, life-agent, credence, proplang, the Renavon monorepo). In either direction.
+  (pkm, life-agent, credence, proplang, the Renavon monorepo) as tannen's code. A sibling
+  repo may depend on tannen, but only at an owner-signed `<milestone>-close` tag or a
+  published version — never by path, submodule, vendoring, or a moving branch
+  (BRIEF §1.1).
 - Never spend beyond `budget.yaml`. Never delete or overwrite store content.
 - Never edit a frozen path (anything listed in `MANIFEST.sha256`).
 - Never change BRIEF §3 (principles), §10 (non-goals), or an owned concept's definition.
@@ -43,7 +46,9 @@ old one superseded in the manifest notes. The record of the mistake is part of t
 
 ## Decisions (BRIEF §9)
 
-Every non-trivial choice is one new schema-validated record under `decisions/`
+Every decision is one new schema-validated record under `decisions/` — proportional (D0267
+ruling 2): at most about 25 lines, bindings as the substance; a red-team finding is a
+`docs/redteam/LEDGER.yaml` row, a measurement is commit text, neither is a record. Record under
 (`<seq>-<slug>.yaml`: id, tier, decision, rationale, reversibility, status, `veto_by` for
 Tier B, bindings). Never hand-edit `DECISIONS.md` — it is generated. Bind the record to
 the artifact that enforces it wherever one exists; an unbound record will be flagged
@@ -80,7 +85,7 @@ defaults discovered during work are proposed as Tier-B additions to the §5 cata
   write the vectors on the owner's behalf.
 - Paraphrasing an owned definition anywhere in this repo is a CI failure by design. Cite.
 
-## Verification (run before ending any implementation session)
+## Verification (before a merge to master or a sitting; CI runs the same list on every push)
 
 ```
 uv run pytest                     # unit + law suites
@@ -91,8 +96,10 @@ uv run python scripts/check_decisions.py   # records schema-valid; bindings reso
 uv run lint-imports --config governance/importlinter.toml   # kernel has no IO; no cross-repo imports
 ```
 
-CI runs the same five. A session that leaves any of them red leaves a note at the top of
-the generated decision report saying so and why (via a decision record).
+CI runs the same five, and CI is the gate (D0267 ruling 3): commit hooks are structural, a red
+run on a branch is fixed by the next commit, and `master` is never merged red. A session that
+leaves master red leaves a note at the top of the generated decision report saying so and why
+(via a decision record).
 
 ## Session discipline
 
@@ -100,5 +107,7 @@ the generated decision report saying so and why (via a decision record).
 - Fresh session per phase; do not carry a spec session into implementation.
 - Start by reading (Orientation above); end by adding decision records, regenerating projections, and, if a phase
   closed, generating the digest.
+- No dates on builder work: a stale attention receipt blocks only Tier-B silence-consent, and the
+  next sitting renews it. Sittings are doors plus signatures, run once from a rehearsed chain.
 - Small PRs; every PR description states which laws it moves from red to green, or which
   brief section it executes.

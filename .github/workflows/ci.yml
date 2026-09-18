@@ -37,6 +37,11 @@ jobs:
           #   * the receipt chain asserts ancestry between the HEADs recorded in
           #     owner-signed receipts, which a shallow clone cannot answer (D0063).
           fetch-depth: 0
+      # On a TAG push, actions/checkout re-fetches the triggering tag as
+      # `+<commit sha>:refs/tags/<tag>`, overwriting the signed annotated tag with a
+      # lightweight ref, so check_tag_signers refuses it ("tag does not verify") and
+      # every boundary tag's own run went red (D0252). Re-fetch the tags as they are.
+      - run: git fetch --force --tags origin
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen
       - run: make verify

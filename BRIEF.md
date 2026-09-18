@@ -23,6 +23,22 @@
 
 **Standing rule: repos never import each other.** Unification happens in §2's registry and §7's seam. Any PR that adds a cross-repo code dependency is wrong by definition.
 
+### 1.1 Inbound dependency (owner amendment, 2026-09-17 — applied additively at the M5 gate sitting; decision record D0269)
+
+**Outbound is unchanged.** Tannen imports no code from pkm, life-agent, credence, proplang or the
+Renavon monorepo, in any form. The `no-cross-repo` import-linter contract and §9's guard-enforced
+list are exactly as they were; this amendment adds nothing to what they check.
+
+**Inbound is now allowed, by pinned release only.** A constellation repo may depend on tannen at
+an owner-signed `<milestone>-close` tag or a published version of it — never by path, submodule,
+vendoring, or a moving branch. §9's Tier-C item "any cross-repo code dependency" is henceforth read
+as outbound (§1's standing rule, unchanged, already says which direction that is). Adoption of a
+tannen-owned *concept* still goes through §2's pin-and-conformance mechanism regardless of whether
+the consumer also depends on the code; importing tannen confers no licence to restate its
+definitions. §10's non-goal "No repo unification, in either direction" is unaffected: a pinned
+dependency is not a unification, and §10's own last sentence — no dependency on sibling *code* — is
+outbound and stands verbatim. This section resolves no Tier-C door; §10 was never in question.
+
 ---
 
 ## 2. Concept ownership registry (the DRY mechanism)

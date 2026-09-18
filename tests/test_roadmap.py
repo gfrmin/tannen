@@ -174,9 +174,16 @@ def _drop_a_manifest_row(root: Path) -> None:
 
 
 def _drop_a_custody_row(root: Path) -> None:
+    """`scripts/check_receipts.py` anchors this: it must be custody-set but NOT also
+    frozen (in MANIFEST.sha256), or dropping it from custody.sha256 only trims one word
+    from `owner_held()`'s `why` annotation instead of removing the path from `frozen |
+    custody` entirely, and the perturbation changes nothing a reader would see. `Makefile`
+    was that kind of row until the custody set shrank to trust-root-only (D0267 ruling 1)
+    and dropped it — this test then failed loud (a real assertion, not a stale-green
+    pass), which is how the wrong anchor was caught rather than missed."""
     path = root / "governance" / "custody.sha256"
     kept = [ln for ln in path.read_text(encoding="utf-8").splitlines()
-            if not ln.endswith("  Makefile")]
+            if not ln.endswith("  scripts/check_receipts.py")]
     assert len(kept) < len(path.read_text(encoding="utf-8").splitlines())
     path.write_text("\n".join(kept) + "\n", encoding="utf-8")
 

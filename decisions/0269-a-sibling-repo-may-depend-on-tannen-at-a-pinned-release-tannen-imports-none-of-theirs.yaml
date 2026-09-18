@@ -34,7 +34,7 @@ rationale: >-
   never on what imports tannen. Making the rule match its own guard removes a constraint
   the tree never enforced, without loosening the one it does.
 reversibility: "Revert the two patches and drop this record's binding; nothing downstream depends on the wording until a sibling repo actually pins a release, at which point reverting is a decision for whoever made that pin."
-status: blocked-on-owner
+status: accepted
 bindings_count: 3
 bindings:
   - type: manifest

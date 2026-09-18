@@ -45,7 +45,7 @@ rationale: >-
 reversibility: >-
   (1) is reversible by re-listing any path and re-signing; (2) and (3) are conventions; (4)
   decides nothing yet. Nothing here touches a frozen law, a ceiling, or any door but 5.
-status: blocked-on-owner
+status: accepted
 bindings:
   - type: config
     target: "governance/tier-c.yaml#custody.set"
