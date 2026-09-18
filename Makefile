@@ -1,7 +1,9 @@
 # tannen — governance targets. `make verify` is the session-closing gate (CLAUDE.md).
 # `uv run tannen laws report` joined `verify` at M0, as decision D0012 said it would.
 # Order is load-bearing: pytest runs the laws and emits their evidence records, then
-# the report judges that evidence against the current descriptors.
+# the report judges that evidence against the current descriptors. pytest now also
+# runs BEFORE check_decisions.py, which reads its --junitxml report instead of
+# spawning a second pytest over the same bound nodes (D0266 item 2).
 
 .PHONY: verify projections digest drift laws-sweep
 
@@ -29,17 +31,26 @@ VERIFY_EVIDENCE := $(CURDIR)/.verify-evidence
 UNHATCH := env -u TANNEN_CHECK_DECISIONS_NESTED
 PY := $(CURDIR)/.venv/bin/python
 
+# The M5 vertical, when it exists, lives at .dogfood/ (gitignored, never a git path —
+# D0265) and is named by module stem, never a package under this leading-dot directory.
+# pytest needs it on sys.path both in this process (dogfood.run imports it directly) and
+# in L5.10's fresh child interpreters (they inherit os.environ, not sys.path — a
+# conftest sys.path.insert reaches only the parent). Setting PYTHONPATH here, rather
+# than in conftest.py, reaches both for that reason. Inert when .dogfood/ is absent: an
+# unresolvable PYTHONPATH entry is silently skipped, same as CI's checkout.
+DOGFOOD_PYTHONPATH := $(CURDIR)/.dogfood
+
 verify:
 	rm -rf $(VERIFY_EVIDENCE)
 	@test -x $(PY) || { echo "no interpreter at $(PY) — run 'uv sync --frozen'"; exit 1; }
 	$(UNHATCH) $(PY) -I -P scripts/check_manifest.py
 	$(UNHATCH) $(PY) -I -P scripts/check_concepts.py
-	$(UNHATCH) $(PY) -I -P scripts/check_decisions.py
+	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) PYTHONPATH=$(DOGFOOD_PYTHONPATH) uv run pytest -q --junitxml=$(VERIFY_EVIDENCE)/pytest-report.xml
+	$(UNHATCH) $(PY) -I -P scripts/check_decisions.py --pytest-report $(VERIFY_EVIDENCE)/pytest-report.xml
 	$(UNHATCH) $(PY) -I -P scripts/check_tag_signers.py
 	$(UNHATCH) $(PY) -I -P scripts/check_receipts.py
 	$(UNHATCH) $(PY) -I -P scripts/check_laws.py
 	$(UNHATCH) $(PY) -I -P scripts/check_doorway.py
-	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run pytest -q
 	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run tannen laws report
 	$(UNHATCH) $(PY) -I -P -c 'import sys; from importlinter.cli import lint_imports_command; sys.exit(lint_imports_command())' --config governance/importlinter.toml
 	$(UNHATCH) bash scripts/custodian.sh --check-only
@@ -56,4 +67,4 @@ digest:
 # counterexamples the fixed examples never reach. The seed is recorded in every
 # record the run emits, so a failure found here is replayable from the record.
 laws-sweep:
-	uv run pytest tests/laws -q --hypothesis-seed=$${SEED:-$$RANDOM}
+	PYTHONPATH=$(DOGFOOD_PYTHONPATH) uv run pytest tests/laws -q --hypothesis-seed=$${SEED:-$$RANDOM}

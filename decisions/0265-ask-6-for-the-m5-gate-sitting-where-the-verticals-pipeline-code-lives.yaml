@@ -54,7 +54,7 @@ rationale: >-
 reversibility: >-
   Nothing changes by filing it. (a) is irreversible by nature — published bytes stay published.
   (b) and (c) are revisable under later records, (c) at the cost of a superseding law.
-status: blocked-on-owner
+status: superseded
 bindings_count: 2
 bindings:
   - type: manifest

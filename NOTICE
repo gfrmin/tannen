@@ -20,8 +20,11 @@ Attribution of adopted concepts (BRIEF.md §2)
 This repository adopts concepts owned by other documents, by pinned citation and
 conformance test rather than by restatement. `concepts/*.yaml` records the owner,
 document, section, commit and content hash for each. Those owners are named there and
-in BRIEF.md §1; nothing in this repository restates their definitions, and no code from
-any of them is vendored or imported in either direction.
+in BRIEF.md §1; nothing in this repository restates their definitions, and this
+repository vendors or imports no code from any of them (BRIEF §1). A sibling repository
+may depend on a pinned release of this one (BRIEF §1.1); that is the only cross-repo code
+dependency the constellation permits, and it runs in the opposite direction from a
+concept citation.
 
 The verbatim excerpts that once backed those citations are not part of this repository's
 history (decision D0176). A citation resolves here to a pinned hash; anyone holding the

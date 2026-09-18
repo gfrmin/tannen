@@ -28,7 +28,7 @@ rationale: >-
 reversibility: >-
   Nothing changes by filing it. Answering (1) is irreversible by nature; (2)–(5) are policy the
   owner can later revise under new records.
-status: blocked-on-owner
+status: superseded
 bindings_count: 2
 bindings:
   - type: manifest

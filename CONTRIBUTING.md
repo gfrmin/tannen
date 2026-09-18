@@ -36,9 +36,11 @@ from one where the tags were deleted.
   enforces it. A frozen law that turns out to be wrong is superseded forward — write the
   corrected law as a new file and mark the old one superseded. Do not work around the
   hook.
-- **Add a dependency on, or an import from, another repository of the constellation**
-  (see BRIEF §1) — in either direction. Cross-repo unification happens through the
-  concept registry and the Governor seam, never through code.
+- **Add tannen's code as a dependency on, or import from, another repository of the
+  constellation** (see BRIEF §1). A sibling repo may depend on tannen's code at an
+  owner-signed `<milestone>-close` tag or a published version (BRIEF §1.1); tannen never
+  depends on theirs. Cross-repo *concept* unification still happens through the concept
+  registry and the Governor seam, never through restating a definition.
 - **Restate a definition owned elsewhere.** Cite it. `concepts/*.yaml` pins owner,
   document, section, commit and content hash; paraphrasing an owned definition is a CI
   failure by design.
