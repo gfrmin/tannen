@@ -132,6 +132,72 @@ def test_pytest_report_passes_when_the_report_is_clean(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_pytest_report_does_not_read_a_strict_xfail_retirement_as_a_skip(tmp_path: Path) -> None:
+    """`conftest.py`'s law-retirement machinery marks a superseded node `xfail(strict=True)`
+    rather than skip it, specifically so the DEFAULT resolution mode's text scan (no
+    "SKIPPED" line for an xfail) never sees it as a skip (D0124). pytest's junitxml
+    plugin reports that same xfail as `<skipped type="pytest.xfail">` — caught live
+    against this repo's own tests/laws/m1/test_l1_rel.py right after the collect/report
+    split landed, where a genuinely retired, strict-xfail node was read as an
+    "unexplained skip" and failed a green tree."""
+    root = tree(tmp_path / "t")
+    (root / "tests" / "sample.py").write_text(
+        "import pytest\n\n\n"
+        "def test_ok():\n    assert True\n\n\n"
+        "@pytest.mark.xfail(strict=True, reason='retired forward, D0124 shape')\n"
+        "def test_bad():\n    assert False\n")
+    report = root / "pytest-report.xml"
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/sample.py", "-q",
+         f"--junitxml={report}", "--no-header", "-p", "no:cacheprovider"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    result = guard(root, "--pytest-report", str(report))
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_pytest_report_lets_a_documented_skip_through_but_flags_an_undocumented_one(
+    tmp_path: Path,
+) -> None:
+    """A single-node binding on a skipped node is always "not enforcement" (RT-M1-05
+    does not apply — there is nothing else in the match set to be "otherwise-passing").
+    The reason-check only has something to disagree with when the binding covers a
+    MIX of outcomes — a whole-file binding here, matching D0087's real shape — so
+    0002-bad.yaml is retargeted to the file, not the single node."""
+    root = tree(tmp_path / "t")
+    (root / "decisions" / "0002-bad.yaml").write_text(
+        (root / "decisions" / "0002-bad.yaml").read_text()
+        .replace("tests/sample.py::test_bad", "tests/sample.py"))
+    paths = sorted((root / "decisions").glob("*.yaml"))
+    (root / "DECISIONS.md").write_text(
+        header(input_hash(paths, root)) + f"\n{receipt_line(root)}\n")
+    (root / "tests" / "sample.py").write_text(
+        "import pytest\n\n\n"
+        "def test_ok():\n    assert True\n\n\n"
+        "def test_bad():\n    pytest.skip('no reason given')\n")
+    report = root / "pytest-report.xml"
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/sample.py", "-q",
+         f"--junitxml={report}", "--no-header", "-p", "no:cacheprovider"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    result = guard(root, "--pytest-report", str(report))
+    assert result.returncode != 0
+    assert "unexplained skip" in result.stdout + result.stderr
+
+    (root / "tests" / "sample.py").write_text(
+        "import pytest\n\n\n"
+        "def test_ok():\n    assert True\n\n\n"
+        "def test_bad():\n    pytest.skip('S-pending: owner has not published vectors')\n")
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/sample.py", "-q",
+         f"--junitxml={report}", "--no-header", "-p", "no:cacheprovider"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    result = guard(root, "--pytest-report", str(report))
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_pytest_report_refuses_a_node_absent_from_the_report(tmp_path: Path) -> None:
     """A node the report never mentions was not run at all — refused exactly as a node
     that does not collect, never read as silent success."""

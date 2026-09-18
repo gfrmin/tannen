@@ -313,19 +313,31 @@ def _junit_classname(rel: str) -> str:
     return stem.replace("/", ".")
 
 
-def _junit_cases(report: Path) -> list[tuple[str, str, str | None]]:
-    """`(classname, name, verdict)` for every `<testcase>`, `verdict` one of
-    None (passed), 'failure', 'error', 'skipped'."""
+def _junit_cases(report: Path) -> list[tuple[str, str, str | None, str]]:
+    """`(classname, name, verdict, message)` for every `<testcase>`, `verdict` one of
+    None (passed), 'failure', 'error', 'skipped', 'xfail'.
+
+    pytest's junitxml plugin reports a strict xfail as `<skipped type="pytest.xfail">`
+    (verified against a live report: D0124's law-retirement xfail carries no SKIP line
+    in `-rs` text output, but IS a `<skipped>` element here) — conflating that with a
+    real skip is exactly the D0124 hole this guard exists to keep closed, so `type` is
+    read to tell the two apart before either is judged. `message` is the skip reason
+    (`pytest.skip(reason=...)`'s text lands here verbatim, confirmed against a live
+    report), the same text the default mode's `_SKIP_REASON_RE` extracts from `-rs`.
+    """
     import xml.etree.ElementTree as ET
     root = ET.parse(report).getroot()
     cases = []
     for case in root.iter("testcase"):
         verdict = None
+        message = ""
         for tag in ("failure", "error", "skipped"):
-            if case.find(tag) is not None:
-                verdict = tag
+            node = case.find(tag)
+            if node is not None:
+                verdict = "xfail" if tag == "skipped" and node.get("type") == "pytest.xfail" else tag
+                message = node.get("message", "")
                 break
-        cases.append((case.get("classname", ""), case.get("name", ""), verdict))
+        cases.append((case.get("classname", ""), case.get("name", ""), verdict, message))
     return cases
 
 
@@ -345,20 +357,27 @@ def _matches(target: str, classname: str, name: str) -> bool:
     return classname == want_classname and (name == want_name or name.startswith(want_name + "["))
 
 
-def report_violation(cases: list[tuple[str, str, str | None]], target: str) -> str | None:
-    matches = [(c, n, v) for c, n, v in cases if _matches(target, c, n)]
+def report_violation(cases: list[tuple[str, str, str | None, str]], target: str) -> str | None:
+    matches = [(c, n, v, m) for c, n, v, m in cases if _matches(target, c, n)]
     if not matches:
         return f"pytest node is absent from the gate's report (not run): {target}"
-    failed = [f"{c}::{n} ({v})" for c, n, v in matches if v in ("failure", "error")]
+    failed = [f"{c}::{n} ({v})" for c, n, v, m in matches if v in ("failure", "error")]
     if failed:
         return f"pytest node fails: {target}: {'; '.join(failed)}"
-    skipped = [f"{c}::{n}" for c, n, v in matches if v == "skipped"]
-    if skipped and len(skipped) == len(matches):
+    # An xfail retirement (D0124) is a live, strict assertion, not a skip — excluded
+    # before either "all skipped" or "some skipped" is judged, same as the default
+    # mode never seeing it (no SKIPPED line in -rs text for an xfail).
+    live = [(c, n, v, m) for c, n, v, m in matches if v != "xfail"]
+    if not live:
+        return None
+    skipped = [(c, n, m) for c, n, v, m in live if v == "skipped"]
+    if skipped and len(skipped) == len(live):
         return f"pytest node is skipped (a skipped binding is not enforcement): {target}"
-    if skipped:
+    unexplained = [f"{c}::{n}" for c, n, m in skipped if not m.startswith(ALLOWED_SKIP_REASON_PREFIXES)]
+    if unexplained:
         return (
             f"pytest node has an unexplained skip inside an otherwise-passing run "
-            f"(RT-M1-05) — {target}: {', '.join(skipped)}"
+            f"(RT-M1-05) — {target}: {', '.join(unexplained)}"
         )
     return None
 
