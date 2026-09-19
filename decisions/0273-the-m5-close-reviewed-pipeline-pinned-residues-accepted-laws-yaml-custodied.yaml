@@ -1,0 +1,43 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0273
+title: "The M5 close: the reviewed pipeline pinned, six residues accepted, laws.yaml into custody, the red-team fixes evidenced by their own tests, and a sibling's pin of m5-close as the first post-M5 work"
+tier: A
+date: "2026-09-19"
+risk_flags: ["governance-paths", "public-surface"]
+decision: >-
+  THE OWNER RULED ON 2026-09-19 (interview), for the m5-close sitting. (1) RT-M5-02: the pipeline
+  behind M5's evidence was reviewed by a session that did not write it (all six checks passed: its output reads only the item's input, the filter and the row construction run through tannen's select and map_rows while the payload walk, the order restore and the serialisation are plain Python (the kernel has no unnest), it imports nothing but the stdlib and tannen.kernel, and it touches neither the judge nor the world), and it is
+  pinned as vertical.py sha256 d96270452959e22e05ea5d060b98ec868a79c876f443750e822afbac3aac1f16. The sitting's chain refuses to sign unless the file on
+  the owner's machine still hashes to exactly this value. (2) RT-05, RT-M1-03, RT-07, RT-10,
+  RT-11 and RT-M1-02 are ACCEPTED as residue, on the argument in each ledger row.
+  (3) governance/laws.yaml joins the custody set with doors.yaml and xfail-retirements.yaml, in
+  the sitting's doors-custody.patch. That closes RT-M2-02, and RT-14 by pattern: the guards'
+  data is custodied and their code is poison-tested. (4) The five red-team fixes of D0272 are
+  accepted on their own regression tests, each watched failing without its fix, in place of an
+  independent retest; the red team's retest was interrupted twice by a safety classifier.
+  (5) Post-M5 (D0267 ruling 4): a private sibling repository pins m5-close (BRIEF §1.1, D0269),
+  the version is 0.5.0, and RT-12's record-immutability guard is the first builder work. M5b,
+  a persisted-output vertical and the pre-budget sitting wait until use asks for them.
+rationale: >-
+  Each ruling takes the remedy that closes the attack at the lowest cost to the velocity D0267
+  asked for: a pinned review instead of superseding laws, custody of the guards' data instead of
+  their code, and the first real use as the demand signal for what comes next.
+reversibility: >-
+  Reversible. The accepted residues can be reopened by a later record, the custody set can be
+  shrunk again, and the post-M5 order is a plan, not a door.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: file
+    target: docs/proposals/2026-09-19-m5-close-sitting/README.md
+    strength: documentary
+    detail: The chain's first test refuses to sign unless .dogfood/vertical.py hashes to the pin above.
+  - type: file
+    target: docs/proposals/2026-09-19-m5-close-sitting/doors-custody.patch
+    strength: documentary
+    detail: Ruling (3), applied at the sitting.
+  - type: file
+    target: docs/redteam/LEDGER.yaml
+    strength: documentary
+    detail: The rows rulings (2)-(4) close.
+links: ["D0267", "D0268", "D0269", "D0270", "D0271", "D0272"]

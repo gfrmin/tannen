@@ -61,14 +61,12 @@ findings:
   - id: RT-05
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      PROPOSED FOR ACCEPTANCE AS RESIDUE. The gate is `make verify`, which runs the laws against
-      a freshly removed store (D0057), so a forged record cannot pass it. The bare `tannen laws
-      report` over a standing evidence/ store is advisory by construction and no gate reads it.
-      Authenticating evidence would need a signing key per run, which no milestone has asked
-      for. The owner accepts it, or charters the remedy.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      Accepted as residue by the owner at the m5-close sitting (D0273), on the argument this row
+      carried: make verify is the gate and runs against a freshly removed evidence store; the
+      bare report is advisory.
   - id: RT-06
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: High
@@ -78,13 +76,11 @@ findings:
   - id: RT-07
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      PROPOSED FOR ACCEPTANCE AS RESIDUE. A digest is a dated rendering for the owner to read,
-      never compared against a later recomputation and never read by a guard (D0215 put the
-      clock verdict there for exactly that reason). A forged digest misleads a reader, not a
-      gate, and `make digest` regenerates it from the records in seconds.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      Accepted as residue by the owner at the m5-close sitting (D0273), on the argument this row
+      carried: a digest is a dated rendering no guard reads.
   - id: RT-08
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: High
@@ -100,35 +96,27 @@ findings:
   - id: RT-10
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium
-    disposition: deferred
-    reason: >-
-      PROPOSED FOR ACCEPTANCE AS RESIDUE. Whether a resolving binding really enforces its
-      decision is not mechanically decidable. `strength` (D0052) states the claim,
-      `bindings_count` (D0106) guards against dropped bindings, and the watch-it-fail discipline
-      plus the poison matrix are the evidence. Nothing further is proposed.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      Accepted as residue by the owner at the m5-close sitting (D0273), on the argument this row
+      carried: whether a binding really enforces is not mechanically decidable; strength,
+      bindings_count and watched failures are the evidence.
   - id: RT-11
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium
-    disposition: deferred
-    reason: >-
-      PROPOSED FOR ACCEPTANCE AS RESIDUE. `tier` and `risk_flags` are judgements, so no guard
-      can check them. The K-sample in the digest and the owner reading every risk-flagged record
-      at a sitting are the check, as BRIEF §9.1 designed.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      Accepted as residue by the owner at the m5-close sitting (D0273), on the argument this row
+      carried: tier and risk_flags are judgements, checked by the digest's K-sample and the
+      owner's reading.
   - id: RT-12
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium
-    disposition: deferred
-    reason: >-
-      A REMEDY IS NOW DRAFTED, and it is builder-landable. check_decisions compares every field
-      of each record except `status` against the blob that first added the file (`git log
-      --diff-filter=A`), and fails on any difference. That enforces D0045, which today no guard
-      does. CI already checks out full history (`fetch-depth: 0`), so no owner patch is needed.
-      It is not landed yet because 270 records' histories must be measured first: any legitimate
-      past edit other than a status flip needs a declared exception, not a silent pass. Builder
-      work, for the first post-M5 session.
-    revisit: post-m5-ruling
+    disposition: scheduled
+    record: D0273
+    where: "the first post-M5 builder session, by owner ruling (D0273): check_decisions compares every field of each record except status against the blob that first added the file (git log --diff-filter=A), with a declared exception for any legitimate past edit; CI already fetches full history"
   - id: RT-13
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium
@@ -138,13 +126,12 @@ findings:
   - id: RT-14
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium
-    disposition: deferred
-    reason: >-
-      RE-AUDITED OPEN by the M5 boundary red team (RT-M5-08), wider than at M0: D0267 took every
-      builder-facing guard out of custody on the premise that the poison matrix proves liveness,
-      and RT-M5-04 and RT-M5-05 are two one-line guard weakenings that keep every fixture failing
-      and the full make verify green. Revisiting D0267's tradeoff is the owner's.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      Closed by pattern at the m5-close sitting: the guards' data (doors.yaml,
+      xfail-retirements.yaml, laws.yaml) is custody-set, their code is poison-tested, and the
+      boundary red team is the audit (D0267, D0272, D0273).
   - id: RT-15
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: High
@@ -162,30 +149,27 @@ findings:
   - id: RT-M1-02
     report: docs/redteam/2026-08-26-m1-boundary.md
     severity: Medium
-    disposition: deferred
-    reason: >-
-      PROPOSED FOR ACCEPTANCE AS RESIDUE. site-packages is what `uv sync --frozen` installs from
-      uv.lock's hashes, so it is pinned, though not custody-set. Custody-setting a venv would
-      re-sign on every dependency bump, which D0267 ruling 1 moved away from.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      Accepted as residue by the owner at the m5-close sitting (D0273), on the argument this row
+      carried: site-packages is pinned by uv.lock's hashes.
   - id: RT-M1-03
     report: docs/redteam/2026-08-26-m1-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      PROPOSED FOR ACCEPTANCE AS RESIDUE, with RT-05: it is the same hazard. The bare report is
-      advisory and `make verify` is the gate.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      Accepted as residue by the owner at the m5-close sitting (D0273), on the argument this row
+      carried: the same hazard as RT-05.
   - id: RT-M1-04
     report: docs/redteam/2026-08-26-m1-boundary.md
     severity: Medium-high
     disposition: deferred
     reason: >-
-      A REMEDY IS NOW DRAFTED: each evidence record carries the content address of the trace
-      file it read, and the report refuses a mismatch. That touches the evidence schema, which
-      is Grade S and frozen, so it needs a superseding law. It is a milestone's work, for the
-      post-M5 ruling.
-    revisit: post-m5-ruling
+      A remedy is drafted (each evidence record carries its trace file's content address) but
+      needs a superseding law. The post-M5 ruling (D0273) did not charter it yet.
+    revisit: m6-boundary
   - id: RT-M1-05
     report: docs/redteam/2026-08-26-m1-boundary.md
     severity: High
@@ -209,24 +193,20 @@ findings:
   - id: RT-M2-02
     report: docs/redteam/2026-09-01-m2-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      RE-AUDITED OPEN by the M5 boundary red team (RT-M5-08), in its original form: an L2.7
-      regression hidden by retiring both broken nodes under an unrelated successor and record
-      reads L2.7 fresh pass. conftest.py and check_laws.py left custody at D0267;
-      check_supersessions still validates existence, not relevance; xfails still resolve green
-      (RT-M5-04). Only the gate-step remedy landed.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0273
+    note: >-
+      governance/laws.yaml joins the custody set at the m5-close sitting, so a supersession,
+      genuine or not, needs the owner's signature.
   - id: RT-M2-03
     report: docs/redteam/2026-09-01-m2-boundary.md
     severity: High
     disposition: deferred
     reason: >-
-      RE-AUDITED OPEN, unchanged, by the M5 boundary red team (RT-M5-08): a forged srcrow/1 still
-      classifies as source-row, ingest still accepts a never-stored source, and the frozen
-      docs/specs/m2.md:58 sentence is still unsuperseded. sources.py is untouched since m4-close.
-      Its remedy is a superseding law, for the post-M5 ruling.
-    revisit: post-m5-ruling
+      Re-audited open at the M5 boundary (unchanged). The post-M5 ruling (D0273) chartered the
+      sibling pin and RT-12 first; nothing yet charters authenticating a srcrow's cited
+      document.
+    revisit: m6-boundary
   - id: RT-M2-04
     report: docs/redteam/2026-09-01-m2-boundary.md
     severity: High
@@ -324,11 +304,10 @@ findings:
     severity: Medium
     disposition: deferred
     reason: >-
-      Excluded from M5 by owner ruling of 2026-09-15 (docs/specs/m5.md, out of scope). It is
-      still a design question: refuse an unaddressable closure, or fold encodable captures into
-      the code address. Both touch M1's frozen transform laws, so it waits for the post-M5
-      ruling. Closing it must account for fixture candidate code-address-closure (D0246 A4).
-    revisit: post-m5-ruling
+      A design question that touches M1's frozen transform laws. The post-M5 ruling (D0273) did
+      not charter it. Closing it must account for fixture candidate code-address-closure (D0246
+      A4).
+    revisit: m6-boundary
   - id: RT-M4-05
     report: docs/redteam/2026-09-12-m4-boundary.md
     severity: Low
@@ -364,9 +343,11 @@ findings:
   - id: RT-M5-02
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: High
-    disposition: scheduled
-    record: D0272
-    where: "the m5-close sitting: the owner ruled (2026-09-19) that M5 attests a REVIEWED pipeline, pinned by sha256 in the sitting's record after an independent review"
+    disposition: closed
+    record: D0273
+    note: >-
+      An independent review found .dogfood/vertical.py fit to pin, and D0273 pins its sha256.
+      The sitting's chain refuses to sign unless the file still hashes to that value.
   - id: RT-M5-03
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: High
@@ -390,9 +371,10 @@ findings:
   - id: RT-M5-05
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: Medium
-    disposition: scheduled
-    record: D0272
-    where: "the m5-close sitting: docs/proposals/2026-09-19-m5-close-sitting/doors-custody.patch puts governance/doors.yaml in the custody set (owner ruling 2026-09-19)"
+    disposition: closed
+    record: D0273
+    note: >-
+      doors-custody.patch puts governance/doors.yaml in the custody set at the m5-close sitting.
   - id: RT-M5-06
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: Medium (inert today)
