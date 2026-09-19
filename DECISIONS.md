@@ -10,7 +10,7 @@ today and on attention-receipt freshness, which depends on the tag set — so th
 is computed and printed by `check_decisions` at run time and rendered in the dated
 `digest/<date>.md`, never stored here (D0215).
 
-Latest attention receipt: `receipts/2026-09-18.md` — signature file present.
+Latest attention receipt: `receipts/2026-09-19.md` — signature file present.
 
 | Id | Tier | Title | Decision | Status (recorded) | Veto by | Risk flags | Enforcement |
 |---|---|---|---|---|---|---|---|

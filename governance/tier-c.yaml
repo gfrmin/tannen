@@ -133,6 +133,9 @@ custody:
     - governance/tier-c.yaml
     - governance/tag-roles.yaml
     - governance/importlinter.toml
+    - governance/doors.yaml
+    - governance/xfail-retirements.yaml
+    - governance/laws.yaml
     - governance/schemas/*.json
     - scripts/_gov.py
     - scripts/custodian.sh
