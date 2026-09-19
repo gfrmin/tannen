@@ -600,7 +600,7 @@ wheels = [
 
 [[package]]
 name = "tannen"
-version = "0.0.0"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "jsonschema" },

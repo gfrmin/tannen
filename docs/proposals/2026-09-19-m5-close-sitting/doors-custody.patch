@@ -1,13 +1,14 @@
 diff --git a/governance/tier-c.yaml b/governance/tier-c.yaml
-index 5106af6..7a8b05f 100644
+index 5106af6..d5d61e4 100644
 --- a/governance/tier-c.yaml
 +++ b/governance/tier-c.yaml
-@@ -133,6 +133,8 @@ custody:
+@@ -133,6 +133,9 @@ custody:
      - governance/tier-c.yaml
      - governance/tag-roles.yaml
      - governance/importlinter.toml
 +    - governance/doors.yaml
 +    - governance/xfail-retirements.yaml
++    - governance/laws.yaml
      - governance/schemas/*.json
      - scripts/_gov.py
      - scripts/custodian.sh

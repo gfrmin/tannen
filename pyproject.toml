@@ -2,7 +2,7 @@
 # identity, and the law/evidence runner behind `tannen laws report` (docs/specs/m0.md).
 [project]
 name = "tannen"
-version = "0.0.0"
+version = "0.5.0"
 description = "A kernel for pure, content-addressed, provenance-native data pipelines"
 requires-python = ">=3.13"
 # jsonschema is a runtime dependency because the laws runner CONSUMES the frozen

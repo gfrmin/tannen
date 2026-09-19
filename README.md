@@ -47,6 +47,14 @@ uv run tannen laws report
 the tag set is part of the custody floor, and a checkout arriving without tags is
 indistinguishable from one where they were deleted. Clone with full history and tags.
 
+## Depending on it
+
+A sibling repository may depend on tannen only at an owner-signed `<milestone>-close` tag or a
+published version, never by path, submodule, vendoring or a moving branch (BRIEF §1.1, D0269).
+For example: `tannen @ git+https://github.com/gfrmin/tannen@m5-close`. Verify the tag first
+(`git verify-tag` against `allowed_signers`). Nothing promises that the API stays the same
+between close tags: pin one and move deliberately.
+
 ## Reading it
 
 1. [`BRIEF.md`](./BRIEF.md) §1–§2 — what this is, and the concept registry.
