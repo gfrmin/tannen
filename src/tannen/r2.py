@@ -252,3 +252,8 @@ class R2Client:
                 f"R2 {method}: the connection failed mid-response ({type(exc).__name__}); "
                 "the outcome is unknown"
             ) from exc
+        except OSError as exc:
+            # A timeout or URLError: the same unknown outcome as above (RT-M4-05).
+            raise R2Error(
+                f"R2 {method}: the connection failed ({type(exc).__name__}); the outcome is unknown"
+            ) from exc

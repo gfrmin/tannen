@@ -1,0 +1,37 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0271
+title: "M5 close prep: RT-M4-03 and RT-M4-05 fixed, RT-M4-02 closed by L5.2 going live, and the other twelve findings deferred to m5-boundary are redispositioned for the owner to confirm at the close sitting"
+tier: A
+date: "2026-09-19"
+risk_flags: []
+decision: >-
+  THE OWNER RULED ON 2026-09-19 (interview) that the builder redispositions the findings
+  deferred to m5-boundary, and that a boundary red team runs before m5-close. In
+  docs/redteam/LEDGER.yaml: RT-M4-03 CLOSED, because export() re-derives the layer from what
+  ran. RT-M4-05 CLOSED, because r2 maps a bare OSError to R2Error ("outcome is unknown"); the
+  CLI exit-code half is left, since stderr already tells a crash from a refusal. RT-M4-02
+  CLOSED by D0260, because L5.2 passed live on the owner's machine. RT-14, RT-M2-02 and
+  RT-M2-03 SCHEDULED into the M5 boundary red team, to be re-audited by name. RT-05, RT-M1-03,
+  RT-07, RT-10, RT-11 and RT-M1-02 are PROPOSED FOR ACCEPTANCE AS RESIDUE, each with its
+  argument in its row, and revisit at the close sitting. RT-12 and RT-M1-04 now have drafted
+  remedies, and with RT-M4-04 (excluded from M5 on 2026-09-15) they wait for the post-M5
+  ruling. Every deferred row stays a proposal until the owner confirms it.
+rationale: >-
+  The rows had rolled across four boundaries unchanged (RT-M4-06). Each now carries a
+  disposition someone can act on: fixed, re-audited by name, a residue argued for acceptance,
+  or a drafted remedy.
+reversibility: Reversible. The two fixes are additive, and the ledger rows are proposals the sitting can change.
+status: accepted
+bindings_count: 3
+bindings:
+  - type: pytest
+    target: tests/test_export_door.py::test_a_serve_label_over_wider_operators_is_refused
+    strength: enforced
+  - type: pytest
+    target: tests/test_r2.py::test_a_connection_failure_before_any_response_is_an_r2error_with_unknown_outcome
+    strength: enforced
+  - type: file
+    target: docs/redteam/LEDGER.yaml
+    strength: documentary
+    detail: Where each redisposition lives.
+links: ["D0267", "D0260", "D0245", "D0249"]

@@ -201,6 +201,17 @@ def test_a_connection_that_breaks_mid_response_is_an_oserror() -> None:
         _client(opener).put_if_absent("objects/ab/cd", b"x")
 
 
+@pytest.mark.parametrize("exc", [TimeoutError("timed out"), OSError("connection reset")])
+def test_a_connection_failure_before_any_response_is_an_r2error_with_unknown_outcome(exc) -> None:
+    """RT-M4-05: a timeout mid-PUT used to escape as a bare OSError, without the
+    "outcome is unknown" a mid-response break gets."""
+    def opener(request, timeout=None):
+        raise exc
+
+    with pytest.raises(R2Error, match="outcome is unknown"):
+        _client(opener).put_if_absent("objects/ab/cd", b"x")
+
+
 def test_the_default_opener_follows_no_redirect() -> None:
     from tannen import r2
 

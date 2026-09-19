@@ -14,7 +14,7 @@ emitter is a consumer of this function and inherits its door rather than re-deci
 from __future__ import annotations
 
 from tannen.executor import Built
-from tannen.kernel.layers import Layer, LayerError
+from tannen.kernel.layers import Layer, LayerError, layer_of
 from tannen.store import Store
 
 __all__ = ["export"]
@@ -30,6 +30,12 @@ def export(store: Store, built: Built) -> bytes:
         raise LayerError(
             f"an export admits only a serve-layer node (project and select); {built.derivation_id} "
             f"is {ran} after running {sorted(built.operators)} (docs/specs/m4.md §7)"
+        )
+    # `Built` has a public constructor, so `.layer` is a caller's claim; the operators decide (RT-M4-03).
+    if layer_of(built.operators) is not Layer.SERVE:
+        raise LayerError(
+            f"{built.derivation_id} is labelled SERVE but ran {sorted(built.operators)}, which "
+            f"needs {layer_of(built.operators).name}: an export re-derives the layer (RT-M4-03)"
         )
     if built.output_ref is None:
         raise LayerError(f"{built.derivation_id} quarantined as a whole; there is nothing to export")
