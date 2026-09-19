@@ -18,27 +18,20 @@ This guard closes both without a hand-maintained list (D0171 ruling (3), D0211):
             closure reaches a SEED. The set of network modules is therefore DERIVED — from
             the source of the interpreter running this guard — rather than enumerated, so a
             module nobody thought to list is caught the day it is imported.
-  PROCESS   An import of a PROCESS module, or a call to one of `os`'s process-spawning
-            functions, is refused outside the network doors. A child process can read the
-            world through any binary on PATH, so no closure can bound it; it is refused by
-            name, and the names are the POSIX primitives, not a list of network tools.
+  PROCESS   An import whose static closure reaches a PROCESS seed (`subprocess`,
+            `_posixsubprocess`, `multiprocessing`, `pty`), or a call to one of `os`'s spawners
+            under any name `os` is bound to, is refused outside the process doors. A child
+            process can read the world through any binary on PATH, so it is refused as a
+            capability, derived like the network set (RT-M5-03).
 
 THE SEEDS are the one irreducible constant, and they are the operating system's socket
 primitives rather than a list of protocols: every stdlib or third-party route to the
 network bottoms out in `_socket` (and TLS in `_ssl`), so a closure that reaches neither
 cannot open a connection. Naming protocols instead is exactly the enumeration L4.9 froze.
 
-THE DOORS, each with its reason:
-  tannen.oracles   network  the doorway itself (BRIEF §5.3): capture handles and transports.
-  tannen.r2        network  the R2 client the store backend speaks through — a store
-                            transport, not a way to read the world (L4.9's own door).
-  tannen.laws      network  the evidence RUNNER, a pytest plugin. Measured 2026-09-13 with
-                            this door removed, exactly three imports in the whole shell
-                            reach a socket, and all three are here: `hypothesis` and
-                            `pytest` (plugin.py) and `jsonschema` (evidence.py). It is
-                            runner-side and never product IO — the same reason L4.9 gives
-                            it as the clock door. It is NOT a process door: it has no
-                            reason to spawn anything, and the process rule still scans it.
+THE DOORS are exact module names in governance/doors.yaml, each with its reason there. That
+file is custody-set (RT-M5-05), so widening a door is the owner's signature, and a module added
+under a door's package is not a door until it is listed (RT-M5-03).
 
 WHAT THIS DOES NOT CLAIM, stated rather than implied:
   - Dynamic imports. `importlib.import_module(name)` and `__import__(name)` with a computed
@@ -72,16 +65,26 @@ from _gov import Failures, REPO_ROOT  # noqa: E402
 #: only constant the network rule rests on.
 SEEDS = frozenset({"socket", "_socket", "ssl", "_ssl"})
 
-#: Modules whose import is refused outside NETWORK_DOORS, by name. POSIX process creation;
-#: measured absent from src/tannen on 2026-09-13.
-PROCESS_MODULES = frozenset({"subprocess", "multiprocessing", "pty"})
+#: The process rule's seeds, derived the same way as the network rule's (RT-M5-03 (b)): an
+#: import whose static closure reaches one of these can create a process. `webbrowser`
+#: reaches `subprocess` without reaching a socket, and a by-name list missed it.
+PROCESS_SEEDS = frozenset({"subprocess", "_posixsubprocess", "multiprocessing", "pty"})
 
 #: `os` attributes that create a process or replace this one. Prefix matches, so the
 #: exec*/spawn*/posix_spawn*/fork* families are covered whole.
 OS_PROCESS_PREFIXES = ("system", "popen", "exec", "spawn", "posix_spawn", "fork")
 
-NETWORK_DOORS = ("tannen.oracles", "tannen.r2", "tannen.laws")
-PROCESS_DOORS = ("tannen.oracles", "tannen.r2")
+#: The doors are EXACT module names, read from custody-set governance/doors.yaml (RT-M5-05):
+#: widening one is the owner's signature, and a new module under a door's package is not a
+#: door until it is listed there (RT-M5-03 (c)). Always this checkout's file, never --root's,
+#: so a tree under judgement cannot choose its own doors.
+def _doors() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    import yaml
+    data = yaml.safe_load((REPO_ROOT / "governance" / "doors.yaml").read_text(encoding="utf-8"))
+    return tuple(data["network"]), tuple(data["process"])
+
+
+NETWORK_DOORS, PROCESS_DOORS = _doors()
 
 #: The marker the custodian and the suite key on. One phrase for both rules, so a single
 #: fixture carrying both kinds of payload has one marker to fail for.
@@ -92,12 +95,14 @@ MARKER = "reads the world outside the doorway"
 #: wrong and every verdict below it is worthless — so the guard refuses to give one.
 MUST_REACH = ("imaplib", "http.client")
 MUST_NOT_REACH = ("os", "pathlib", "json")
+MUST_REACH_PROCESS = ("subprocess", "webbrowser")
+MUST_NOT_REACH_PROCESS = ("os", "pathlib", "json")
 #: Modules the scan must reach in a real shell, so a scan over nothing cannot pass.
 MUST_SCAN = ("tannen.store", "tannen.executor", "tannen.cli")
 
 
 def _inside(module: str, doors: tuple[str, ...]) -> bool:
-    return any(module == door or module.startswith(door + ".") for door in doors)
+    return module in doors
 
 
 def locate(name: str) -> Path | None:
@@ -185,17 +190,17 @@ def import_time_names(name: str, path: Path) -> set[str]:
     return with_parents
 
 
-_REACHES: dict[str, bool] = {}
+_REACHES: dict[tuple[str, frozenset[str]], bool] = {}
 
 
-def reaches_seed(name: str) -> bool:
+def reaches_seed(name: str, seeds: frozenset[str] = SEEDS) -> bool:
     """Whether importing `name` can, through module-level imports, load a SEED.
 
     Iterative rather than recursive (third-party closures run hundreds deep), and memoised
     per name. A cycle is not a route: a name already on the path contributes nothing new.
     """
-    if name in _REACHES:
-        return _REACHES[name]
+    if (name, seeds) in _REACHES:
+        return _REACHES[(name, seeds)]
     seen: set[str] = set()
     frontier = [name]
     hit = False
@@ -204,17 +209,17 @@ def reaches_seed(name: str) -> bool:
         if current in seen:
             continue
         seen.add(current)
-        if current.split(".")[0] in SEEDS or current in SEEDS:
+        if current.split(".")[0] in seeds or current in seeds:
             hit = True
             break
-        if _REACHES.get(current):
+        if _REACHES.get((current, seeds)):
             hit = True
             break
         path = locate(current)
         if path is None:
             continue
         frontier.extend(n for n in import_time_names(current, path) if n not in seen)
-    _REACHES[name] = hit
+    _REACHES[(name, seeds)] = hit
     return hit
 
 
@@ -244,11 +249,14 @@ def every_import(tree: ast.Module) -> list[tuple[int, str]]:
 
 
 def os_process_calls(tree: ast.Module) -> list[tuple[int, str]]:
-    """`os.<spawner>` attribute uses, and names imported `from os` that are spawners."""
+    """`os.<spawner>` attribute uses under any name `os` is bound to (RT-M5-03 (a): `import os
+    as o; o.system(...)`), and names imported `from os` that are spawners."""
+    bound = {"os"} | {alias.asname for node in ast.walk(tree) if isinstance(node, ast.Import)
+                      for alias in node.names if alias.name == "os" and alias.asname}
     found: list[tuple[int, str]] = []
     for node in ast.walk(tree):
         if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
-                and node.value.id == "os" and node.attr.startswith(OS_PROCESS_PREFIXES)):
+                and node.value.id in bound and node.attr.startswith(OS_PROCESS_PREFIXES)):
             found.append((node.lineno, f"os.{node.attr}"))
         elif isinstance(node, ast.ImportFrom) and node.module == "os":
             found += [(node.lineno, f"os.{alias.name}") for alias in node.names
@@ -264,6 +272,14 @@ def check(root: Path, fail: Failures) -> int:
     for name in MUST_NOT_REACH:
         if reaches_seed(name):
             fail.add(f"positive control: the derived closure says {name} reaches a socket "
+                     f"— the derivation over-approximates, so no verdict is given")
+    for name in MUST_REACH_PROCESS:
+        if not reaches_seed(name, PROCESS_SEEDS):
+            fail.add(f"positive control: the derived closure says {name} cannot create a "
+                     f"process — the derivation is broken, so no verdict is given")
+    for name in MUST_NOT_REACH_PROCESS:
+        if reaches_seed(name, PROCESS_SEEDS):
+            fail.add(f"positive control: the derived closure says {name} can create a process "
                      f"— the derivation over-approximates, so no verdict is given")
     modules = shell_modules(root)
     missing = [m for m in MUST_SCAN if m not in modules]
@@ -286,7 +302,9 @@ def check(root: Path, fail: Failures) -> int:
                              f"closure reaches a socket; it {MARKER} (BRIEF §5.3, RT-M4-02)")
         if not _inside(module, PROCESS_DOORS):
             for lineno, name in imports:
-                if name.split(".")[0] in PROCESS_MODULES:
+                # One finding per import: one the network rule already refused is not repeated.
+                refused = not _inside(module, NETWORK_DOORS) and reaches_seed(name)
+                if name.split(".")[0] != "tannen" and not refused and reaches_seed(name, PROCESS_SEEDS):
                     fail.add(f"{rel}:{lineno}: process — {module} imports {name}; a child "
                              f"process {MARKER} (BRIEF §5.3, RT-M4-02)")
             for lineno, call in os_process_calls(tree):

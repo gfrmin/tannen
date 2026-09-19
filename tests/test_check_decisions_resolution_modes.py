@@ -47,6 +47,15 @@ def tree(root: Path) -> Path:
     return root
 
 
+def freeze(root: Path, rel: str) -> None:
+    """List `rel` in the tree's MANIFEST.sha256, which is what makes an xfail in it a
+    sanctioned retirement (RT-M5-04)."""
+    import hashlib
+    digest = hashlib.sha256((root / rel).read_bytes()).hexdigest()
+    with (root / "MANIFEST.sha256").open("a", encoding="utf-8") as fh:
+        fh.write(f"{digest}  {rel}\n")
+
+
 def guard(root: Path, *extra: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(GUARD), "--root", str(root), "--today", TODAY.isoformat(), *extra],
@@ -146,6 +155,7 @@ def test_pytest_report_does_not_read_a_strict_xfail_retirement_as_a_skip(tmp_pat
         "def test_ok():\n    assert True\n\n\n"
         "@pytest.mark.xfail(strict=True, reason='retired forward, D0124 shape')\n"
         "def test_bad():\n    assert False\n")
+    freeze(root, "tests/sample.py")
     report = root / "pytest-report.xml"
     subprocess.run(
         [sys.executable, "-m", "pytest", "tests/sample.py", "-q",
@@ -153,6 +163,48 @@ def test_pytest_report_does_not_read_a_strict_xfail_retirement_as_a_skip(tmp_pat
         cwd=root, capture_output=True, text=True, check=False,
     )
     result = guard(root, "--pytest-report", str(report))
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+XFAIL_SAMPLE = (
+    "import pytest\n\n\n"
+    "def test_ok():\n    assert True\n\n\n"
+    "def test_bad():\n    pytest.xfail('RT-M4-03 fix reverted, binding kept green')\n")
+
+
+def _report(root: Path) -> Path:
+    report = root / "pytest-report.xml"
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/sample.py", "-q",
+         f"--junitxml={report}", "--no-header", "-p", "no:cacheprovider"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    return report
+
+
+def test_pytest_report_refuses_an_xfail_in_an_unfrozen_test(tmp_path: Path) -> None:
+    """RT-M5-04: one `pytest.xfail()` line in an unfrozen test kept a binding green with the
+    fix it enforces reverted. Only a frozen file may carry a sanctioned retirement."""
+    root = tree(tmp_path / "t")
+    (root / "tests" / "sample.py").write_text(XFAIL_SAMPLE)
+    result = guard(root, "--pytest-report", str(_report(root)))
+    assert result.returncode != 0
+    assert "RT-M5-04" in result.stdout + result.stderr
+
+
+def test_default_mode_refuses_an_xfail_in_an_unfrozen_test(tmp_path: Path) -> None:
+    root = tree(tmp_path / "t")
+    (root / "tests" / "sample.py").write_text(XFAIL_SAMPLE)
+    result = guard(root)
+    assert result.returncode != 0
+    assert "RT-M5-04" in result.stdout + result.stderr
+
+
+def test_default_mode_accepts_an_xfail_in_a_frozen_test(tmp_path: Path) -> None:
+    root = tree(tmp_path / "t")
+    (root / "tests" / "sample.py").write_text(XFAIL_SAMPLE)
+    freeze(root, "tests/sample.py")
+    result = guard(root)
     assert result.returncode == 0, result.stdout + result.stderr
 
 
@@ -219,3 +271,17 @@ def test_collect_only_and_pytest_report_are_mutually_exclusive() -> None:
         capture_output=True, text=True, check=False,
     )
     assert result.returncode != 0
+
+
+def test_an_unfrozen_xfail_listed_in_xfail_retirements_is_accepted(tmp_path: Path) -> None:
+    """RT-M5-04's one legitimate exception: a retirement outside a frozen file, declared by exact
+    node id in the custody-set governance/xfail-retirements.yaml (D0232's pin is the real one)."""
+    root = tree(tmp_path / "t")
+    (root / "tests" / "sample.py").write_text(XFAIL_SAMPLE)
+    (root / "governance").mkdir()
+    (root / "governance" / "xfail-retirements.yaml").write_text(
+        "retired:\n  - node: tests/sample.py::test_bad\n    record: D0002\n    reason: probe\n")
+    (root / "decisions" / "0002-bad.yaml").write_text(
+        (root / "decisions" / "0002-bad.yaml").read_text())
+    assert guard(root).returncode == 0
+    assert guard(root, "--pytest-report", str(_report(root))).returncode == 0

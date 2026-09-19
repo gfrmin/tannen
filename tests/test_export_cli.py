@@ -268,3 +268,16 @@ def test_a_failure_that_is_not_a_refusal_propagates(tmp_path, monkeypatch) -> No
     name = _target(tmp_path, monkeypatch, "cli_failing_target")
     with pytest.raises(RuntimeError, match="not one of the four refusals"):
         cli.main(["run", f"{name}:fail", "--store", str(tmp_path / "s")])
+
+
+def test_spend_outside_a_checkout_is_refused_even_with_a_budget_in_the_cwd(
+        tmp_path, monkeypatch, capsys) -> None:
+    """RT-M5-06: `find_root` falls back to the cwd, so outside a checkout the "checked-in"
+    budget was whatever budget.yaml the cwd held, unreviewed and with no override flag."""
+    name = _target(tmp_path, monkeypatch, "cli_outside_checkout_target")
+    root = _repo_root(tmp_path, monkeypatch, 10**6)
+    (root / "MANIFEST.sha256").unlink()
+    assert cli.main(["run", f"{name}:read_the_clock", "--store", str(tmp_path / "s"),
+                     "--spend"]) == 1
+    assert "not inside a tannen checkout" in capsys.readouterr().err
+    assert not (tmp_path / "s").exists(), "a refused run wrote to the store"

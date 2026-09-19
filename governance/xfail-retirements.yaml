@@ -1,0 +1,15 @@
+# governance/xfail-retirements.yaml — xfailed test nodes OUTSIDE frozen files that a binding may
+# still resolve green on (RT-M5-04).
+#
+# check_decisions reads a strict xfail as a live retirement: the retired claim must keep failing.
+# Inside a frozen file (MANIFEST.sha256) nobody can add one. Outside, one `pytest.xfail()` line or
+# one decorator turns any enforced binding green with its fix reverted, so an unfrozen xfail
+# counts only if it is listed here. This file is custody-set, so a new entry is the owner's
+# signature. Retirements of LAW nodes go in governance/laws.yaml instead.
+
+retired:
+  - node: tests/test_incremental.py::test_a_binary_step_id_inherits_derivation_ids_order_insensitivity
+    record: D0232
+    reason: >-
+      D0232 retired this pin as a strict xfail rather than deleting it, because D0167 and D0211
+      bind the node. It asserts that the old order-insensitivity claim now FAILS.

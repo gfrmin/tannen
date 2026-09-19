@@ -92,11 +92,33 @@ def test_the_doors_are_honoured_and_only_for_their_own_rule(tmp_path: Path) -> N
     result = run_guard(root)
     assert result.returncode == 0, result.stdout + result.stderr
 
-    # The runner is a NETWORK door only: a process spawned from it is still refused.
-    (root / "src" / "tannen" / "laws" / "plugin.py").write_text("import subprocess\n")
+    # tannen.laws.evidence is a NETWORK door only (governance/doors.yaml): a process spawned
+    # from it is still refused.
+    (root / "src" / "tannen" / "laws" / "evidence.py").write_text("import subprocess\n")
     result = run_guard(root)
     assert result.returncode != 0
-    assert "tannen.laws.plugin imports subprocess" in result.stdout + result.stderr
+    assert "tannen.laws.evidence imports subprocess" in result.stdout + result.stderr
+
+
+# RT-M5-03: three evasions the M5 boundary red team found, each planted in tannen.store.
+@pytest.mark.parametrize("payload, names", [
+    ("import os as o\no.system('true')\n", "uses os.system"),
+    ("import webbrowser\n", "imports webbrowser"),
+])
+def test_rt_m5_03_an_aliased_os_and_a_process_reaching_module_are_refused(
+        tmp_path: Path, payload: str, names: str) -> None:
+    result = run_guard(tree(tmp_path, {"store.py": payload}))
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, out
+    assert names in out, out
+
+
+def test_rt_m5_03_a_new_module_under_a_door_package_is_not_a_door(tmp_path: Path) -> None:
+    """The doors are exact modules: a module added under tannen/laws/ scans like any other."""
+    result = run_guard(tree(tmp_path, {"laws/__init__.py": "", "laws/sidecar.py": "import xmlrpc.client\n"}))
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, out
+    assert "tannen.laws.sidecar imports xmlrpc.client" in out, out
 
 
 def test_a_scan_over_nothing_is_refused(tmp_path: Path) -> None:

@@ -1,0 +1,48 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0272
+title: "The M5 boundary red team answered: five findings fixed by the builder, RT-M5-02 ruled a reviewed and pinned pipeline, RT-M5-05 ruled door data into the custody set"
+tier: A
+date: "2026-09-19"
+risk_flags: ["governance-paths"]
+decision: >-
+  Answering docs/redteam/2026-09-19-m5-boundary.md (a589534). FIXED, each with a test watched
+  failing without its fix: RT-M5-01, the gate stages only the pipeline module corpus.json names
+  (scripts/stage_dogfood.py) and unsets the pytest plugin variables, instead of putting .dogfood/
+  on PYTHONPATH. RT-M5-03, check_doorway resolves aliases of os, derives the process set from
+  import closures, and reads EXACT door modules from governance/doors.yaml; frozen L5.2 still
+  passes, including its law-and-guard agreement. RT-M5-04, an xfail counts only inside a frozen
+  file or as a node listed in governance/xfail-retirements.yaml. The one such retirement today is
+  D0232's, which the first full gate run caught when the frozen-only rule refused it.
+  RT-M5-06, --spend refuses outside a checkout. RT-M5-07, loc/1 excludes block comments;
+  the real candidates are all .py, so the selection stands.
+  OWNER RULINGS, 2026-09-19 (interview). RT-M5-02: M5 attests a REVIEWED pipeline. An
+  independent session reviews .dogfood/vertical.py, and the close sitting's record pins its
+  sha256. RT-M5-05: the guards' door lists become custody-set data, not the guard code. The same
+  principle covers xfail-retirements.yaml, and doors-custody.patch puts both in the custody set
+  at the sitting.
+rationale: >-
+  The fixes are builder-landable and stricter than every frozen law they touch. The two rulings
+  choose the cheaper remedy that closes the attack: a pinned review instead of superseding laws,
+  and custody of the doors instead of re-custodying the guards D0267 released.
+reversibility: >-
+  Reversible. Each fix is additive, and a later record can supersede either ruling with the
+  heavier remedy.
+status: accepted
+bindings_count: 5
+bindings:
+  - type: pytest
+    target: tests/test_stage_dogfood.py::test_a_sitecustomize_beside_the_pipeline_is_not_staged
+    strength: enforced
+  - type: pytest
+    target: tests/test_check_doorway.py::test_rt_m5_03_a_new_module_under_a_door_package_is_not_a_door
+    strength: enforced
+  - type: pytest
+    target: tests/test_check_decisions_resolution_modes.py::test_pytest_report_refuses_an_xfail_in_an_unfrozen_test
+    strength: enforced
+  - type: pytest
+    target: tests/test_export_cli.py::test_spend_outside_a_checkout_is_refused_even_with_a_budget_in_the_cwd
+    strength: enforced
+  - type: pytest
+    target: tests/test_measure_dogfood_candidates.py::test_loc_1_excludes_block_comments
+    strength: enforced
+links: ["D0267", "D0268", "D0270", "D0271"]

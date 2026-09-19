@@ -1,0 +1,40 @@
+# governance/doors.yaml — the doorway's doors (BRIEF §5.3; RT-M4-02, RT-M5-03, RT-M5-05).
+#
+# scripts/check_doorway.py refuses, in any module of src/tannen/ NOT listed here, an import whose
+# static closure reaches a socket (network) or can create a process (process). Entries are EXACT
+# module names: a new module under a door's package is not a door until it is listed, which is
+# what closed RT-M5-03 (c). This file is custody-set, so widening a door is the owner's signature.
+# That is RT-M5-05: after D0267 released the guard's code, the door lists were the one thing a
+# builder could narrow the guard through while it still failed its poison fixture.
+#
+# Why each door exists (measured 2026-09-19 by removing it and running the guard):
+#   tannen.oracles.*       the doorway itself (BRIEF §5.3): capture handles and transports.
+#   tannen.r2              the R2 client, a store transport.
+#   tannen.laws            the runner package: its __init__ is the fixture's runner-door control.
+#   tannen.laws.evidence   imports jsonschema, whose closure reaches a socket.
+#   tannen.laws.plugin     imports pytest and hypothesis, whose closures reach a socket AND
+#                          subprocess. It is runner-side, never product IO.
+# No other tannen.laws module needs either door.
+
+network:
+  - tannen.oracles
+  - tannen.oracles.budget
+  - tannen.oracles.context
+  - tannen.oracles.errors
+  - tannen.oracles.identity
+  - tannen.oracles.transports
+  - tannen.r2
+  - tannen.laws
+  - tannen.laws.evidence
+  - tannen.laws.plugin
+
+process:
+  - tannen.oracles
+  - tannen.oracles.budget
+  - tannen.oracles.context
+  - tannen.oracles.errors
+  - tannen.oracles.identity
+  - tannen.oracles.transports
+  - tannen.r2
+  - tannen.laws
+  - tannen.laws.plugin

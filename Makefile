@@ -31,21 +31,23 @@ VERIFY_EVIDENCE := $(CURDIR)/.verify-evidence
 UNHATCH := env -u TANNEN_CHECK_DECISIONS_NESTED
 PY := $(CURDIR)/.venv/bin/python
 
-# The M5 vertical, when it exists, lives at .dogfood/ (gitignored, never a git path —
-# D0265) and is named by module stem, never a package under this leading-dot directory.
-# pytest needs it on sys.path both in this process (dogfood.run imports it directly) and
-# in L5.10's fresh child interpreters (they inherit os.environ, not sys.path — a
-# conftest sys.path.insert reaches only the parent). Setting PYTHONPATH here, rather
-# than in conftest.py, reaches both for that reason. Inert when .dogfood/ is absent: an
-# unresolvable PYTHONPATH entry is silently skipped, same as CI's checkout.
-DOGFOOD_PYTHONPATH := $(CURDIR)/.dogfood
+# The M5 vertical lives at .dogfood/ (gitignored, D0265), named by module stem. pytest
+# needs it on sys.path both in this process (dogfood.run imports it) and in L5.10's fresh
+# child interpreters (they inherit os.environ, not sys.path), hence PYTHONPATH. But never
+# .dogfood/ itself: every file there would join the interpreter, and a sitecustomize.py
+# beside the pipeline rewrote L5.9's failure into a pass (RT-M5-01). The gate stages the
+# ONE module corpus.json names into a fresh directory, and unsets the variables that load
+# pytest plugins or options from the environment. Empty when .dogfood/ is absent (CI).
+DOGFOOD_STAGE := $(VERIFY_EVIDENCE)/pipeline
+DOGFOOD_ENV := env -u PYTEST_PLUGINS -u PYTEST_ADDOPTS -u PYTHONSTARTUP PYTHONPATH=$(DOGFOOD_STAGE)
 
 verify:
 	rm -rf $(VERIFY_EVIDENCE)
 	@test -x $(PY) || { echo "no interpreter at $(PY) — run 'uv sync --frozen'"; exit 1; }
 	$(UNHATCH) $(PY) -I -P scripts/check_manifest.py
 	$(UNHATCH) $(PY) -I -P scripts/check_concepts.py
-	$(UNHATCH) env TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) PYTHONPATH=$(DOGFOOD_PYTHONPATH) uv run pytest -q --junitxml=$(VERIFY_EVIDENCE)/pytest-report.xml
+	$(UNHATCH) $(PY) -I -P scripts/stage_dogfood.py $(DOGFOOD_STAGE)
+	$(UNHATCH) $(DOGFOOD_ENV) TANNEN_EVIDENCE_ROOT=$(VERIFY_EVIDENCE) uv run pytest -q --junitxml=$(VERIFY_EVIDENCE)/pytest-report.xml
 	$(UNHATCH) $(PY) -I -P scripts/check_decisions.py --pytest-report $(VERIFY_EVIDENCE)/pytest-report.xml
 	$(UNHATCH) $(PY) -I -P scripts/check_tag_signers.py
 	$(UNHATCH) $(PY) -I -P scripts/check_receipts.py
@@ -67,4 +69,5 @@ digest:
 # counterexamples the fixed examples never reach. The seed is recorded in every
 # record the run emits, so a failure found here is replayable from the record.
 laws-sweep:
-	PYTHONPATH=$(DOGFOOD_PYTHONPATH) uv run pytest tests/laws -q --hypothesis-seed=$${SEED:-$$RANDOM}
+	$(PY) -I -P scripts/stage_dogfood.py $(DOGFOOD_STAGE)
+	$(DOGFOOD_ENV) uv run pytest tests/laws -q --hypothesis-seed=$${SEED:-$$RANDOM}

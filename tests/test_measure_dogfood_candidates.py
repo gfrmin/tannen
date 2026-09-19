@@ -43,6 +43,33 @@ def test_loc_1_excludes_blank_and_comment_only_lines_but_not_trailing_comments(t
     assert count_loc(src) == 3  # import os / x = 1 .../ y = 2
 
 
+def test_loc_1_excludes_block_comments(tmp_path: Path) -> None:
+    """RT-M5-07: a 4-line JSDoc block over 3 code lines counted 7; loc/1 says 3. Code on the
+    same line as a block comment still counts, and so does a Python docstring."""
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from measure_dogfood_candidates import count_loc
+    finally:
+        sys.path.remove(str(REPO_ROOT / "scripts"))
+    ts = tmp_path / "a.ts"
+    ts.write_text(textwrap.dedent("""\
+        /**
+         * Parse a thing.
+         * @returns rows
+         */
+        export function parse(x: string) {
+          return x; /* trailing block */
+        }
+        """))
+    assert count_loc(ts) == 3
+    lua = tmp_path / "a.lua"
+    lua.write_text("--[[ a block\nstill the block ]]\nlocal x = 1\n")
+    assert count_loc(lua) == 1
+    py = tmp_path / "a.py"
+    py.write_text('def f():\n    """A docstring is code under loc/1."""\n    return 1\n')
+    assert count_loc(py) == 3
+
+
 def test_loc_1_refuses_an_unknown_extension(tmp_path: Path) -> None:
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     try:

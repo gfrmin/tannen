@@ -354,67 +354,61 @@ findings:
   - id: RT-M5-01
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      PROPOSED. BEFORE m5-close: the gate's pytest step puts gitignored .dogfood/ on PYTHONPATH,
-      so a file there can rewrite L5.9's verdict and evidence. The remedy likely touches frozen
-      L5.10's child-interpreter contract (a superseding law), so it is the close sitting's to rule
-      on, not a builder one-liner.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0272
+    note: >-
+      The gate no longer puts .dogfood/ on PYTHONPATH: scripts/stage_dogfood.py copies only the
+      module corpus.json names into a fresh directory, refusing autoloaded names, and the pytest
+      step unsets PYTEST_PLUGINS, PYTEST_ADDOPTS and PYTHONSTARTUP. The residue, that the
+      pipeline itself runs in the judge's process, is RT-M5-02's.
   - id: RT-M5-02
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      PROPOSED. BEFORE m5-close: nothing in the M5 laws ties the vertical's bytes to tannen, so
-      the close attests only that some callable reproduces production. Remedies (a tannen-graph
-      law, a deeper cross-repo scan, a divergence bound) are superseding laws; whether M5 closes
-      on the current laws is the owner's ruling.
-    revisit: m5-close-sitting
+    disposition: scheduled
+    record: D0272
+    where: "the m5-close sitting: the owner ruled (2026-09-19) that M5 attests a REVIEWED pipeline, pinned by sha256 in the sitting's record after an independent review"
   - id: RT-M5-03
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      PROPOSED. Three doorway evasions outside its stated limits, and L5.1/L5.2 skip in CI behind
-      the corpus sentinel. The check_doorway.py half is builder-landable; the L5.2 and CI halves
-      need a superseding law.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0272
+    note: >-
+      check_doorway: aliases of os resolved, the process set derived from a closure reaching
+      subprocess/_posixsubprocess/multiprocessing/pty, and the doors are exact modules read from
+      governance/doors.yaml. Frozen L5.2 still passes in full, including the law-and-guard
+      agreement. Still open, for the post-M5 ruling: L5.1/L5.2 have no frozen judge in CI
+      (D0259's sentinel); a superseding law without the sentinel would give them one.
   - id: RT-M5-04
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: High
-    disposition: deferred
-    reason: >-
-      PROPOSED. Builder-landable: resolve an xfail as a retirement only when
-      governance/laws.yaml's superseded list names its node, with a poison fixture carrying an
-      imperative xfail on a bound node. Left for a session that is not the finder's (D0104).
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0272
+    note: >-
+      An xfail is a sanctioned retirement only inside a MANIFEST.sha256 path or as a node listed
+      in governance/xfail-retirements.yaml (custody-set at the m5-close sitting), in both the
+      default and --pytest-report modes.
   - id: RT-M5-05
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: Medium
-    disposition: deferred
-    reason: >-
-      PROPOSED. The premise of D0267's custody shrink, measured: a guard was narrowed to pass a
-      real-tree breach while still failing its poison. Whether to re-custody door constants or add
-      real-tree positive controls is D0267's tradeoff, the owner's.
-    revisit: m5-close-sitting
+    disposition: scheduled
+    record: D0272
+    where: "the m5-close sitting: docs/proposals/2026-09-19-m5-close-sitting/doors-custody.patch puts governance/doors.yaml in the custody set (owner ruling 2026-09-19)"
   - id: RT-M5-06
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: Medium (inert today)
-    disposition: deferred
-    reason: >-
-      PROPOSED. Inert while every ceiling is zero; belongs with RT-M4-01 at the pre-budget
-      sitting, where a superseding L5.1 can pin a stricter reading of the checked-in budget.
-    revisit: pre-budget-sitting
+    disposition: closed
+    record: D0272
+    note: >-
+      tannen run --spend refuses when no MANIFEST.sha256 sits above the working directory,
+      instead of treating the cwd's budget.yaml as checked in.
   - id: RT-M5-07
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: Low
-    disposition: deferred
-    reason: >-
-      PROPOSED. Builder-landable in unfrozen scripts/measure_dogfood_candidates.py. The owner re-
-      measures only if a candidate's parser files include a //-family or Lua file with block
-      comments.
-    revisit: m5-close-sitting
+    disposition: closed
+    record: D0272
+    note: >-
+      loc/1's counter excludes /* */ and Lua --[[ ]] block comments. The real measurement's
+      parser files are all .py, so the selection is unchanged.
   - id: RT-M5-08
     report: docs/redteam/2026-09-19-m5-boundary.md
     severity: Informational

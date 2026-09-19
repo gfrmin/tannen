@@ -118,6 +118,28 @@ ALLOWED_SKIP_REASON_PREFIXES = ("S-pending: ",)
 _SKIP_REASON_RE = re.compile(r"^SKIPPED \[\d+\] [^:\n]+:\d+: (.*)$", re.MULTILINE)
 
 
+def frozen_paths(root: Path) -> frozenset[str]:
+    """Where an xfail may stand for a retirement: every MANIFEST.sha256 path, plus each node
+    governance/xfail-retirements.yaml lists by exact id (RT-M5-04)."""
+    manifest = root / "MANIFEST.sha256"
+    paths = set(parse_manifest(manifest)) if manifest.is_file() else set()
+    listed = root / "governance" / "xfail-retirements.yaml"
+    if listed.is_file():
+        paths |= {entry["node"] for entry in (load_yaml(listed) or {}).get("retired") or []}
+    return frozenset(paths)
+
+
+#: `-rx` adds one line per xfail: `XFAIL <nodeid> - <reason>`.
+_XFAIL_RE = re.compile(r"^XFAIL (\S+)", re.MULTILINE)
+
+
+def unfrozen_xfails(out: str, frozen: frozenset[str]) -> list[str]:
+    """Xfailed nodes outside a frozen file. A strict xfail is a sanctioned retirement only
+    where a builder cannot write one: in a MANIFEST.sha256 path (RT-M5-04)."""
+    return [node for node in _XFAIL_RE.findall(out)
+            if node.split("::")[0] not in frozen and node not in frozen]
+
+
 def unexplained_skips(out: str) -> list[str]:
     """Skip reasons in a pytest run's output that are not on the allowed list."""
     return [
@@ -161,7 +183,7 @@ def binding_violation(root: Path, kind: str, target: str) -> str | None:
             return f"config key {dotted!r} does not resolve in {rel}"
         return None
     if kind == "pytest":
-        return pytest_violation(root, [target], target)
+        return pytest_violation(root, [target], target, frozen_paths(root))
     return f"unknown binding type: {kind}"
 
 
@@ -221,14 +243,15 @@ def run_pytest(root: Path, targets: list[str]) -> subprocess.CompletedProcess:
     runs under (`uv run python scripts/check_decisions.py`), so this reuses the resolved
     environment instead of paying `uv run`'s resolution cost per binding."""
     return subprocess.run(
-        [sys.executable, "-m", "pytest", *targets, "-q", "--no-header", "-rs",
+        [sys.executable, "-m", "pytest", *targets, "-q", "--no-header", "-rsx",
          "-p", "no:cacheprovider"],
         cwd=root, capture_output=True, text=True, check=False,
         env={**os.environ, NESTED_ENV: "1"},
     )
 
 
-def pytest_violation(root: Path, targets: list[str], label: str) -> str | None:
+def pytest_violation(root: Path, targets: list[str], label: str,
+                     frozen: frozenset[str]) -> str | None:
     run = run_pytest(root, targets)
     out = run.stdout + run.stderr
     if "no tests ran" in out or run.returncode == 4:
@@ -244,6 +267,9 @@ def pytest_violation(root: Path, targets: list[str], label: str) -> str | None:
         )
     if run.returncode != 0:
         return f"pytest node fails: {label}"
+    xfails = unfrozen_xfails(out, frozen)
+    if xfails:
+        return f"{XFAIL_OUTSIDE_FREEZE} — {label}: {', '.join(xfails)}"
     return None
 
 
@@ -357,7 +383,12 @@ def _matches(target: str, classname: str, name: str) -> bool:
     return classname == want_classname and (name == want_name or name.startswith(want_name + "["))
 
 
-def report_violation(cases: list[tuple[str, str, str | None, str]], target: str) -> str | None:
+XFAIL_OUTSIDE_FREEZE = ("pytest node xfails in an unfrozen file; an xfail is a sanctioned "
+                        "retirement only inside a frozen law file (RT-M5-04)")
+
+
+def report_violation(cases: list[tuple[str, str, str | None, str]], target: str,
+                     frozen: frozenset[str]) -> str | None:
     matches = [(c, n, v, m) for c, n, v, m in cases if _matches(target, c, n)]
     if not matches:
         return f"pytest node is absent from the gate's report (not run): {target}"
@@ -367,6 +398,9 @@ def report_violation(cases: list[tuple[str, str, str | None, str]], target: str)
     # An xfail retirement (D0124) is a live, strict assertion, not a skip — excluded
     # before either "all skipped" or "some skipped" is judged, same as the default
     # mode never seeing it (no SKIPPED line in -rs text for an xfail).
+    xfailed = [f"{c}::{n}" for c, n, v, m in matches if v == "xfail"]
+    if xfailed and target.partition("::")[0] not in frozen and target not in frozen:
+        return f"{XFAIL_OUTSIDE_FREEZE} — {target}: {', '.join(xfailed)}"
     live = [(c, n, v, m) for c, n, v, m in matches if v != "xfail"]
     if not live:
         return None
@@ -382,12 +416,13 @@ def report_violation(cases: list[tuple[str, str, str | None, str]], target: str)
     return None
 
 
-def resolve_from_report(report: Path, targets: list[str]) -> dict[str, str | None]:
+def resolve_from_report(report: Path, targets: list[str],
+                        frozen: frozenset[str]) -> dict[str, str | None]:
     if not report.is_file():
         return {target: f"--pytest-report names a file that does not exist: {report}"
                 for target in targets}
     cases = _junit_cases(report)
-    return {target: report_violation(cases, target) for target in targets}
+    return {target: report_violation(cases, target, frozen) for target in targets}
 
 
 def resolve_pytest_bindings(root: Path, targets: list[str], *, collect_only: bool = False,
@@ -408,15 +443,17 @@ def resolve_pytest_bindings(root: Path, targets: list[str], *, collect_only: boo
               "enforces). If you did not expect a nested run, this variable is set in your "
               "ambient environment and binding enforcement is OFF (RT-08).")
         return {target: NOT_RESOLVED for target in targets}
+    frozen = frozen_paths(root)
     if report is not None:
-        return resolve_from_report(report, targets)
+        return resolve_from_report(report, targets, frozen)
     if collect_only:
         return resolve_by_collection(root, targets)
     batch = run_pytest(root, targets)
     combined = batch.stdout + batch.stderr
-    if batch.returncode == 0 and not re.search(r"\b[1-9]\d* skipped\b", combined):
+    if (batch.returncode == 0 and not re.search(r"\b[1-9]\d* skipped\b", combined)
+            and not unfrozen_xfails(combined, frozen)):
         return {target: None for target in targets}
-    return {target: pytest_violation(root, [target], target) for target in targets}
+    return {target: pytest_violation(root, [target], target, frozen) for target in targets}
 
 
 def check_ratchet(root: Path, today: dt.date, records: list[dict], fail: Failures) -> None:

@@ -73,12 +73,45 @@ COMMENT_PREFIXES: dict[str, tuple[str, ...]] = {
 }
 
 
+#: Block-comment delimiters per line-comment marker (RT-M5-07). A line inside or wholly made of
+#: a block comment is "only a comment" under loc/1 exactly as a `//` line is.
+BLOCK_COMMENTS: dict[str, tuple[str, str]] = {"//": ("/*", "*/"), "--": ("--[[", "]]")}
+
+
+def _code_outside_blocks(text: str, block: tuple[str, str] | None) -> list[str]:
+    """`text`'s lines with block comments blanked. Delimiters inside string literals are not
+    recognised, the same limit the line-comment rule has."""
+    if block is None:
+        return text.splitlines()
+    open_, close = block
+    out, inside = [], False
+    for line in text.splitlines():
+        kept, rest = [], line
+        while rest:
+            if inside:
+                end = rest.find(close)
+                if end < 0:
+                    rest = ""
+                else:
+                    rest, inside = rest[end + len(close):], False
+            else:
+                start = rest.find(open_)
+                if start < 0:
+                    kept.append(rest)
+                    rest = ""
+                else:
+                    kept.append(rest[:start])
+                    rest, inside = rest[start + len(open_):], True
+        out.append("".join(kept))
+    return out
+
+
 def count_loc(path: Path) -> int:
     """`loc/1`: non-blank physical lines that are not only a comment (docs/specs/m5.md
-    §2). A line counts unless stripping whitespace leaves it empty, or leaves it starting
-    with the extension's line-comment marker — code followed by a trailing comment still
-    counts, because it is not ONLY a comment. Block comments are not addressed by the spec
-    and are not addressed here."""
+    §2). A line counts unless, once its block comments are removed, stripping whitespace
+    leaves it empty or starting with the extension's line-comment marker. Code followed by
+    a trailing comment still counts, because it is not ONLY a comment. Python docstrings are
+    string expressions, not comments, and count."""
     prefixes = COMMENT_PREFIXES.get(path.suffix.lower())
     if prefixes is None:
         raise ValueError(
@@ -86,8 +119,9 @@ def count_loc(path: Path) -> int:
             "COMMENT_PREFIXES before counting, rather than guess and silently miscount"
         )
     text = path.read_text(encoding="utf-8", errors="replace")
+    lines = _code_outside_blocks(text, BLOCK_COMMENTS.get(prefixes[0]))
     return sum(
-        1 for line in text.splitlines()
+        1 for line in lines
         if (stripped := line.strip()) and not stripped.startswith(prefixes)
     )
 

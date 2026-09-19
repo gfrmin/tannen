@@ -126,6 +126,12 @@ def admitting_budget(spend: bool, budget: Path | None, override: Path | None) ->
     if override is not None:
         return load_budget(override)
     checked_in = checked_in_budget()
+    if not (checked_in.parent / "MANIFEST.sha256").is_file():
+        # find_root falls back to the cwd, so outside a checkout "checked-in" named any file (RT-M5-06).
+        raise SpendDenied(
+            f"{checked_in.parent} is not inside a tannen checkout (no MANIFEST.sha256 above it), "
+            "so there is no checked-in budget; --budget-override names a budget from elsewhere"
+        )
     if budget is not None and Path(budget).resolve() != checked_in.resolve():
         raise SpendDenied(
             f"--budget names {Path(budget)}, which is not this repository's checked-in budget "
