@@ -251,6 +251,80 @@ def test_no_git_history_is_reported_not_passed_silently(tmp_path: Path) -> None:
     assert "NOT CHECKED" in summary, summary
 
 
+def test_a_record_re_added_on_a_merged_side_branch_is_refused(tmp_path: Path) -> None:
+    """Without --full-history, git log follows one parent of a merge and hides the other
+    line's add, so an edited copy merged in over the original became the baseline."""
+    root = repo(tmp_path)
+    original = git(root, "rev-parse", "HEAD")
+    git(root, "checkout", "-q", "--orphan", "side")
+    git(root, "rm", "-rq", "--cached", ".")
+    (root / RECORD).write_text(record(decision="Probe, as the side line would have it."))
+    commit(root, "side adds D0001")
+    git(root, "checkout", "-q", "-f", original)
+    git(root, "merge", "-q", "--allow-unrelated-histories", "-X", "theirs", "side", "-m", "merge")
+    assert "side line" in (root / RECORD).read_text()
+    messages, _ = check(root)
+    assert any("D0001" in m for m in messages), messages
+
+
+def test_a_first_blob_that_does_not_parse_yields_to_the_first_one_that_does(tmp_path: Path) -> None:
+    """A broken commit fixed by the next one (D0267 ruling 3) must not brick the guard."""
+    root = tmp_path / "t"
+    (root / "decisions").mkdir(parents=True)
+    (root / RECORD).write_text("id: D0001\ndecision: [unclosed\n")
+    git(root, "init", "-q")
+    commit(root, "broken add")
+    edit(root, record(), "fixed")
+    messages, summary = check(root)
+    assert messages == [], messages
+    edit(root, record(decision="Probe, amended after the fix."))
+    messages, _ = check(root)
+    assert any("decision" in m for m in messages), messages
+
+
+def test_a_duplicate_declaration_is_refused(tmp_path: Path) -> None:
+    root = repo(tmp_path)
+    at = edit(root, record(decision="Probe. UPDATE, amended in place."))
+    entry = f"  - record: D0001\n    field: decision\n    at: {at}\n    reason: once\n"
+    declare(root, entry + entry)
+    messages, _ = check(root)
+    assert any("declared twice" in m for m in messages), messages
+
+
+def test_a_declaration_made_before_a_rename_still_resolves(tmp_path: Path) -> None:
+    root = repo(tmp_path)
+    at = edit(root, record(decision="Probe. UPDATE, amended in place."))
+    (root / RECORD).rename(root / "decisions" / "0001-renamed.yaml")
+    commit(root, "rename D0001")
+    declare(root, f"  - record: D0001\n    field: decision\n    at: {at}\n    reason: x\n")
+    messages, _ = check(root)
+    assert messages == [], messages
+
+
+def test_a_repository_with_no_commits_is_not_checked(tmp_path: Path) -> None:
+    root = tmp_path / "t"
+    (root / "decisions").mkdir(parents=True)
+    (root / RECORD).write_text(record())
+    git(root, "init", "-q")
+    messages, summary = check(root)
+    assert messages == []
+    assert "NOT CHECKED" in summary, summary
+
+
+def test_a_root_below_the_repository_top_is_compared(tmp_path: Path) -> None:
+    """The poison fixtures run with --root tests/poison/<name>, below the repo's top."""
+    top = tmp_path / "top"
+    root = top / "sub"
+    (root / "decisions").mkdir(parents=True)
+    (root / RECORD).write_text(record())
+    git(top, "init", "-q")
+    commit(top, "add D0001 under sub/")
+    (root / RECORD).write_text(record(decision="Probe, amended below the top."))
+    messages, summary = check(root)
+    assert "1 record(s) compared" in summary, summary
+    assert any("decision" in m for m in messages), messages
+
+
 # ------------------------------------------------------------------ wired into the guard
 def full_tree(tmp_path: Path) -> Path:
     root = repo(tmp_path)

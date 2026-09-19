@@ -559,7 +559,7 @@ def _blobs(root: Path, specs: list[str]) -> list[str | None]:
 
 
 def _declarations(root: Path, fail: Failures) -> dict[tuple[str, str], str]:
-    """{(record id, field): commit} from EDITS_FILE, refusing any malformed entry."""
+    """{(record id, field): commit} from EDITS_FILE, refusing any malformed or repeated entry."""
     path = root / EDITS_FILE
     if not path.is_file():
         return {}
@@ -573,63 +573,123 @@ def _declarations(root: Path, fail: Failures) -> dict[tuple[str, str], str]:
             fail.add(f"{EDITS_FILE} entry {i}: needs exactly record (Dnnnn), field (not "
                      f"{'/'.join(sorted(FREE_FIELDS))}), at (a full commit id) and a reason")
             continue
-        declared[(entry["record"], entry["field"])] = entry["at"]
+        key = (entry["record"], entry["field"])
+        if key in declared:
+            fail.add(f"{EDITS_FILE} entry {i}: {key[0]}.{key[1]} is declared twice — the later "
+                     "entry would silently override the one a reader reviewed")
+            continue
+        declared[key] = entry["at"]
     return declared
+
+
+def _mapping(text: str | None) -> dict | None:
+    try:
+        parsed = yaml.safe_load(text) if text is not None else None
+    except yaml.YAMLError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _is_ancestor(root: Path, a: str, b: str) -> bool:
+    return a == b or _git(root, "merge-base", "--is-ancestor", a, b).returncode == 0
+
+
+def _root_add(root: Path, adds: list[tuple[str, str]]) -> tuple[str, str] | None:
+    """The add every other add of the same number descends from, or None if there is none:
+    two adds on lines of history that do not descend from one another (a merge) are refused,
+    since either could be the edit."""
+    return next((a for a in adds if all(_is_ancestor(root, a[0], b[0]) for b in adds)), None)
+
+
+def _path_at(root: Path, sha: str, seq: str) -> str | None:
+    listing = _git(root, "ls-tree", "-r", "--name-only", sha, "--", "decisions/").stdout.decode()
+    return next((n for n in listing.split() if (m := _RECORD_PATH_RE.match(n)) and m.group(1) == seq),
+                None)
+
+
+def _first_mapping(root: Path, prefix: str, sha: str, path: str) -> tuple[str, dict] | None:
+    """The record's first version from its add on that parses as a mapping. Called only when
+    the add itself does not parse: a broken add fixed by the next commit (D0267 ruling 3)
+    must not brick the guard, and nothing was decided before the record first parsed."""
+    touching = _git(root, "rev-list", "--full-history", "--topo-order", "--reverse", "HEAD",
+                    "--", path).stdout.decode().split()
+    commits = [c for c in touching if _is_ancestor(root, sha, c)]
+    for commit, text in zip(commits, _blobs(root, [f"{c}:{prefix}{path}" for c in commits])):
+        if (parsed := _mapping(text)) is not None:
+            return commit, parsed
+    return None
 
 
 def check_immutability(root: Path, fail: Failures) -> str:
     """Compare every record with the blob that first added its sequence number (RT-12).
 
-    Keyed by sequence number, not path, so a rename cannot reset the baseline. Returns the
+    Keyed by sequence number, not path, so a rename cannot reset the baseline; every add on
+    every line of history is seen (--full-history), so a merge cannot either. Returns the
     summary line; a tree with no git history is reported NOT CHECKED, never passed."""
     prefix = _git(root, "rev-parse", "--show-prefix")
     if prefix.returncode != 0:
         return "record immutability NOT CHECKED (no git history at the root)"
+    if _git(root, "rev-parse", "--verify", "-q", "HEAD").returncode != 0:
+        return "record immutability NOT CHECKED (no commits yet)"
     prefix_s = prefix.stdout.decode().strip()
     if _git(root, "rev-parse", "--is-shallow-repository").stdout.decode().strip() == "true":
         fail.add("record immutability cannot be checked in a shallow clone: every record "
                  "looks added at the graft (fetch full history, fetch-depth: 0)")
         return "record immutability NOT CHECKED (shallow clone)"
 
-    log = _git(root, "log", "--topo-order", "--no-renames", "--diff-filter=A", "--relative",
-               "--format=%x00%H", "--name-only", "--", "decisions/").stdout.decode()
-    first: dict[str, tuple[str, str]] = {}
-    for chunk in log.split("\0")[1:]:
+    log = _git(root, "log", "--full-history", "--topo-order", "--no-renames", "--diff-filter=A",
+               "--relative", "--format=%x00%H", "--name-only", "--", "decisions/")
+    revs = _git(root, "rev-list", "HEAD")
+    if log.returncode or revs.returncode:
+        fail.add(f"record immutability: git failed ({(log.stderr + revs.stderr).decode().strip()})")
+        return "record immutability NOT CHECKED (git failed)"
+    adds: dict[str, list[tuple[str, str]]] = {}
+    for chunk in log.stdout.decode().split("\0")[1:]:
         sha, *names = chunk.split()
         for name in names:
-            m = _RECORD_PATH_RE.match(name)
-            if m:
-                first[m.group(1)] = (sha, name)   # oldest last: the last write is the first add
+            if m := _RECORD_PATH_RE.match(name):
+                adds.setdefault(m.group(1), []).append((sha, name))
 
     current = {p.name[:4]: p for p in sorted((root / "decisions").glob("*.yaml"))
                if FILENAME_RE.match(p.stem)}
-    for seq in sorted(set(first) - set(current)):
-        fail.add(f"D{seq} was deleted: it was added in {first[seq][0][:9]} as {first[seq][1]}, "
-                 "and a decision record is never removed (D0045, RT-12)")
+    for seq in sorted(set(adds) - set(current)):
+        fail.add(f"D{seq} was deleted: it was added in {adds[seq][-1][0][:9]} as "
+                 f"{adds[seq][-1][1]}, and a decision record is never removed (D0045, RT-12)")
+
+    roots = {seq: _root_add(root, adds[seq]) for seq in sorted(set(adds) & set(current))}
+    for seq, add in roots.items():
+        if add is None:
+            fail.add(f"D{seq} was added on {len(adds[seq])} lines of history that do not descend "
+                     f"from one another ({', '.join(a[0][:9] for a in adds[seq])}) — either could "
+                     "carry the edit, so neither is a baseline (RT-12)")
+    found = {seq: add for seq, add in roots.items() if add is not None}
+    texts = _blobs(root, [f"{sha}:{prefix_s}{path}" for sha, path in found.values()])
+    baselines: dict[str, tuple[str, dict]] = {}
+    for (seq, (sha, path)), text in zip(found.items(), texts):
+        parsed = _mapping(text)
+        first = (sha, parsed) if parsed is not None else _first_mapping(root, prefix_s, sha, path)
+        if first is None:
+            fail.add(f"D{seq} has never parsed as a mapping since it was added in {sha[:9]}")
+        else:
+            baselines[seq] = first
 
     declared = _declarations(root, fail)
-    history = set(_git(root, "rev-list", "HEAD").stdout.decode().split())
+    history = set(revs.stdout.decode().split())
     for (rid, field), sha in declared.items():
         if sha not in history:
             fail.add(f"{EDITS_FILE}: {rid}.{field} is declared at {sha[:9]}, which is not in "
                      "HEAD's history")
-
-    seqs = sorted(set(first) & set(current))
-    specs = [f"{first[s][0]}:{prefix_s}{first[s][1]}" for s in seqs]
     decl_keys = sorted(k for k, sha in declared.items() if sha in history)
-    decl_specs = [f"{declared[k]}:{prefix_s}{current[k[0][1:]].relative_to(root).as_posix()}"
-                  if k[0][1:] in current else "" for k in decl_keys]
-    blobs = _blobs(root, specs + decl_specs)
-    baselines = {s: yaml.safe_load(b or "") or {} for s, b in zip(seqs, blobs)}
-    at_values = {k: (yaml.safe_load(b) or {}) if b else None
-                 for k, b in zip(decl_keys, blobs[len(specs):])}
+    paths_at = {k: _path_at(root, declared[k], k[0][1:]) for k in decl_keys}
+    at_values = {k: _mapping(text) for k, text in zip(decl_keys, _blobs(
+        root, [f"{declared[k]}:{prefix_s}{paths_at[k]}" if paths_at[k] else "" for k in decl_keys]))}
 
     used: set[tuple[str, str]] = set()
-    for seq in seqs:
+    for seq, (added_in, base) in sorted(baselines.items()):
         now = load_yaml(current[seq])
         if not isinstance(now, dict):
             continue   # the schema check reports it
-        base, rid, rel = baselines[seq], f"D{seq}", current[seq].relative_to(root)
+        rid, rel = f"D{seq}", current[seq].relative_to(root)
         for field in sorted(set(base) | set(now)):
             problem = field_violation(field, base.get(field), now.get(field))
             key = (rid, field)
@@ -639,7 +699,7 @@ def check_immutability(root: Path, fail: Failures) -> str:
                 used.add(key)
                 at_record = at_values[key]
                 if at_record is None:
-                    fail.add(f"{EDITS_FILE}: {rid} does not exist at {declared[key][:9]}")
+                    fail.add(f"{EDITS_FILE}: {rid} does not exist or parse at {declared[key][:9]}")
                     continue
                 problem = field_violation(field, at_record.get(field), now.get(field))
                 if problem:
@@ -647,7 +707,7 @@ def check_immutability(root: Path, fail: Failures) -> str:
                              f"{declared[key][:9]} (D0045, RT-12)")
             elif problem:
                 fail.add(f"{rel}: {rid}.{field} {problem} since {rid} was added in "
-                         f"{first[seq][0][:9]} — a decision record is immutable (D0045, RT-12): "
+                         f"{added_in[:9]} — a decision record is immutable (D0045, RT-12): "
                          f"a change of mind is a new record, and a legitimate past edit is "
                          f"declared in {EDITS_FILE}")
     for key in decl_keys:
@@ -655,8 +715,8 @@ def check_immutability(root: Path, fail: Failures) -> str:
             fail.add(f"{EDITS_FILE}: stale edit declaration {key[0]}.{key[1]} — no edit since "
                      "the record was added needs it, and an unused declaration is a permission "
                      "waiting for an edit (the D0181 rule)")
-    return (f"{len(seqs)} record(s) compared with the blob that first added them, "
-            f"{len(set(current) - set(first))} new, {len(declared)} declared edit(s)")
+    return (f"{len(baselines)} record(s) compared with the blob that first added them, "
+            f"{len(set(current) - set(adds))} new, {len(declared)} declared edit(s)")
 
 
 def main() -> int:
