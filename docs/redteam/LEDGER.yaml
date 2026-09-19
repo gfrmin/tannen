@@ -138,9 +138,13 @@ findings:
   - id: RT-14
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium
-    disposition: scheduled
-    record: D0271
-    where: the M5 boundary red team, which re-audits it by name
+    disposition: deferred
+    reason: >-
+      RE-AUDITED OPEN by the M5 boundary red team (RT-M5-08), wider than at M0: D0267 took every
+      builder-facing guard out of custody on the premise that the poison matrix proves liveness,
+      and RT-M5-04 and RT-M5-05 are two one-line guard weakenings that keep every fixture failing
+      and the full make verify green. Revisiting D0267's tradeoff is the owner's.
+    revisit: m5-close-sitting
   - id: RT-15
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: High
@@ -205,15 +209,24 @@ findings:
   - id: RT-M2-02
     report: docs/redteam/2026-09-01-m2-boundary.md
     severity: High
-    disposition: scheduled
-    record: D0271
-    where: the M5 boundary red team, which re-audits it by name
+    disposition: deferred
+    reason: >-
+      RE-AUDITED OPEN by the M5 boundary red team (RT-M5-08), in its original form: an L2.7
+      regression hidden by retiring both broken nodes under an unrelated successor and record
+      reads L2.7 fresh pass. conftest.py and check_laws.py left custody at D0267;
+      check_supersessions still validates existence, not relevance; xfails still resolve green
+      (RT-M5-04). Only the gate-step remedy landed.
+    revisit: m5-close-sitting
   - id: RT-M2-03
     report: docs/redteam/2026-09-01-m2-boundary.md
     severity: High
-    disposition: scheduled
-    record: D0271
-    where: the M5 boundary red team, which re-audits it by name
+    disposition: deferred
+    reason: >-
+      RE-AUDITED OPEN, unchanged, by the M5 boundary red team (RT-M5-08): a forged srcrow/1 still
+      classifies as source-row, ingest still accepts a never-stored source, and the frozen
+      docs/specs/m2.md:58 sentence is still unsuperseded. sources.py is untouched since m4-close.
+      Its remedy is a superseding law, for the post-M5 ruling.
+    revisit: post-m5-ruling
   - id: RT-M2-04
     report: docs/redteam/2026-09-01-m2-boundary.md
     severity: High
@@ -336,3 +349,75 @@ findings:
     severity: Informational (process)
     disposition: closed
     record: D0249
+
+  # ------------------------------------------------------------------ M4 → M5 boundary pass (D0271)
+  - id: RT-M5-01
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      PROPOSED. BEFORE m5-close: the gate's pytest step puts gitignored .dogfood/ on PYTHONPATH,
+      so a file there can rewrite L5.9's verdict and evidence. The remedy likely touches frozen
+      L5.10's child-interpreter contract (a superseding law), so it is the close sitting's to rule
+      on, not a builder one-liner.
+    revisit: m5-close-sitting
+  - id: RT-M5-02
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      PROPOSED. BEFORE m5-close: nothing in the M5 laws ties the vertical's bytes to tannen, so
+      the close attests only that some callable reproduces production. Remedies (a tannen-graph
+      law, a deeper cross-repo scan, a divergence bound) are superseding laws; whether M5 closes
+      on the current laws is the owner's ruling.
+    revisit: m5-close-sitting
+  - id: RT-M5-03
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      PROPOSED. Three doorway evasions outside its stated limits, and L5.1/L5.2 skip in CI behind
+      the corpus sentinel. The check_doorway.py half is builder-landable; the L5.2 and CI halves
+      need a superseding law.
+    revisit: m5-close-sitting
+  - id: RT-M5-04
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: High
+    disposition: deferred
+    reason: >-
+      PROPOSED. Builder-landable: resolve an xfail as a retirement only when
+      governance/laws.yaml's superseded list names its node, with a poison fixture carrying an
+      imperative xfail on a bound node. Left for a session that is not the finder's (D0104).
+    revisit: m5-close-sitting
+  - id: RT-M5-05
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: Medium
+    disposition: deferred
+    reason: >-
+      PROPOSED. The premise of D0267's custody shrink, measured: a guard was narrowed to pass a
+      real-tree breach while still failing its poison. Whether to re-custody door constants or add
+      real-tree positive controls is D0267's tradeoff, the owner's.
+    revisit: m5-close-sitting
+  - id: RT-M5-06
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: Medium (inert today)
+    disposition: deferred
+    reason: >-
+      PROPOSED. Inert while every ceiling is zero; belongs with RT-M4-01 at the pre-budget
+      sitting, where a superseding L5.1 can pin a stricter reading of the checked-in budget.
+    revisit: pre-budget-sitting
+  - id: RT-M5-07
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: Low
+    disposition: deferred
+    reason: >-
+      PROPOSED. Builder-landable in unfrozen scripts/measure_dogfood_candidates.py. The owner re-
+      measures only if a candidate's parser files include a //-family or Lua file with block
+      comments.
+    revisit: m5-close-sitting
+  - id: RT-M5-08
+    report: docs/redteam/2026-09-19-m5-boundary.md
+    severity: Informational
+    disposition: closed
+    record: D0271
+    note: Status audit; its items are dispositioned under their own ids (RT-14, RT-M2-02 and RT-M2-03 re-audited open).
