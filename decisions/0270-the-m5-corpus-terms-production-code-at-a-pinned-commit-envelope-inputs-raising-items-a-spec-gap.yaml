@@ -1,0 +1,38 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0270
+title: "The M5 corpus's terms, by owner ruling: production's output is production's code at a pinned commit, an input may carry its capture context, a raising item is a spec gap, and constructed items are labelled"
+tier: A
+date: "2026-09-19"
+risk_flags: ["public-surface"]
+decision: >-
+  THE OWNER RULED IN AN INTERVIEW ON 2026-09-19, after B2 built the authorised corpus (32 items,
+  L5.1-L5.10 green with zero skips on the owner's machine). Per D0268 ask (4) this record names
+  no vertical and carries no Renavon detail. (1) PRODUCTION'S OUTPUT for an item is the bytes
+  production's own parser and canonical serialiser produce for that frozen input, run offline at
+  Renavon commit 9480fa49286fbdf814419aee696c911957506bd5 — not bytes production persisted. So M5 attests that tannen reproduces
+  production's code; it cannot surface a production defect, and "production bugs found" is out of
+  its reach by construction. (2) AN INPUT may be an envelope holding the captured bytes unmodified
+  plus the capture context the parser reads, because §1's pipeline signature carries no context;
+  this is the reading of §3's "source bytes", no law changes. (3) A RAISING ITEM is a spec gap:
+  corpus/1 cannot represent an item whose production output is an exception and run has no
+  per-item boundary, so the vertical's raising branch is out of the corpus; a later superseding
+  law may add it. (4) CONSTRUCTED ITEMS stay, labelled as such beside the corpus, where real
+  captures never reach a branch (3 of 32 here).
+rationale: >-
+  Persisted per-input output was not available byte-reproducibly; the parser at a pinned commit
+  is. Coverage of real branches outweighs a captured-only corpus. None of this touches a frozen law.
+reversibility: >-
+  Reversible: a later record may re-base the corpus on persisted output or add raising items
+  through a superseding law; the corpus is rebuilt from .dogfood/, never from git.
+status: accepted
+bindings_count: 2
+bindings:
+  - type: manifest
+    target: tests/laws/m5/test_l5_charter.py
+    strength: enforced
+    detail: L5.9 compares every item's bytes against the production output this record defines, on the owner's machine.
+  - type: manifest
+    target: tests/laws/m5/corpus/schema.json
+    strength: documentary
+    detail: corpus/1 carries only names and content addresses, so the input envelope of ruling (2) is invisible to it.
+links: ["D0268", "D0262", "D0259"]
