@@ -24,7 +24,10 @@ load-bearing; CI fails if a binding's target is missing or skipped. This check:
   - honours a per-binding retirement (`retires_bindings`, D0181): a `type: file` binding
     whose target was legitimately deleted resolves iff an ACCEPTED record retires exactly
     that (record, target) pair, the binding is DOCUMENTARY, and the target is still
-    absent — and prints every retirement it honours.
+    absent — and prints every retirement it honours;
+  - holds every record to the blob that first added it (RT-12, D0045, D0274): content fields
+    equal, bindings and links only added or hardened, a legitimate past edit declared in
+    governance/record-edits.yaml.
 
 Three ways to resolve a `pytest` binding (D0266 item 2; D0267 ruling 3 — commit hooks are
 structural, CI is the gate): the default spawns pytest itself, batching every binding into
@@ -488,6 +491,174 @@ def check_ratchet(root: Path, today: dt.date, records: list[dict], fail: Failure
     )
 
 
+# ------------------------------------------------------------ record immutability (RT-12)
+#
+# D0045: what a record decided is history, what enforces it is present tense. So every
+# content field must equal the blob that first added the record's sequence number; the
+# bindings, links and unenforced_reason may only move the way D0045 allows; status and
+# bindings_count are free (D0274). A legitimate past edit is declared in EDITS_FILE, which
+# re-baselines one field of one record at one commit on HEAD's history.
+
+EDITS_FILE = "governance/record-edits.yaml"
+FREE_FIELDS = frozenset({"status", "bindings_count"})
+#: Hardening in place (D0045): D0031's manifest -> pytest, D0152's file -> manifest.
+TYPE_HARDENINGS = frozenset({("file", "manifest"), ("file", "pytest"), ("manifest", "pytest")})
+STRENGTH_RANK = {"documentary": 0, "enforced": 1}
+_RECORD_PATH_RE = re.compile(r"^decisions/(\d{4})-[^/]+\.yaml$")
+_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+_DECLARATION_KEYS = {"record", "field", "at", "reason"}
+
+
+def _survives(old: dict, bindings: list) -> bool:
+    rank = lambda b: STRENGTH_RANK[b.get("strength", "enforced")]  # noqa: E731
+    return any(
+        new.get("target") == old.get("target")
+        and (new.get("type") == old.get("type") or (old.get("type"), new.get("type")) in TYPE_HARDENINGS)
+        and rank(new) >= rank(old)
+        for new in bindings if isinstance(new, dict))
+
+
+def field_violation(field: str, before: object, after: object) -> str | None:
+    """Why `after` may not replace `before` in one record field, or None if it may."""
+    if field in FREE_FIELDS:
+        return None
+    if field == "bindings":
+        lost = [str(b.get("target")) for b in before or []
+                if isinstance(b, dict) and not _survives(b, after or [])]
+        return f"binding(s) dropped, retargeted or weakened: {', '.join(lost)}" if lost else None
+    if field == "links":
+        dropped = [str(link) for link in before or [] if link not in (after or [])]
+        return f"link(s) dropped: {', '.join(dropped)}" if dropped else None
+    if field == "unenforced_reason":
+        return None if after in (before, None) else "changed (it may only be dropped)"
+    return None if before == after else "changed"
+
+
+def _git(root: Path, *args: str, stdin: bytes | None = None) -> subprocess.CompletedProcess:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    return subprocess.run(["git", "-C", str(root), *args], input=stdin, capture_output=True,
+                          check=False, env=env)
+
+
+def _blobs(root: Path, specs: list[str]) -> list[str | None]:
+    """`git cat-file --batch` over `<rev>:<path>` specs; None where the object is missing."""
+    data = _git(root, "cat-file", "--batch", stdin="".join(f"{s}\n" for s in specs).encode()).stdout
+    out: list[str | None] = []
+    at = 0
+    for _ in specs:
+        end = data.index(b"\n", at)
+        head = data[at:end].split()
+        at = end + 1
+        if len(head) != 3 or head[1] != b"blob":
+            out.append(None)
+            continue
+        size = int(head[2])
+        out.append(data[at:at + size].decode("utf-8"))
+        at += size + 1
+    return out
+
+
+def _declarations(root: Path, fail: Failures) -> dict[tuple[str, str], str]:
+    """{(record id, field): commit} from EDITS_FILE, refusing any malformed entry."""
+    path = root / EDITS_FILE
+    if not path.is_file():
+        return {}
+    declared: dict[tuple[str, str], str] = {}
+    for i, entry in enumerate((load_yaml(path) or {}).get("edits") or []):
+        ok = (isinstance(entry, dict) and set(entry) == _DECLARATION_KEYS
+              and re.fullmatch(r"D\d{4}", str(entry["record"]))
+              and isinstance(entry["field"], str) and entry["field"] not in FREE_FIELDS
+              and _SHA_RE.match(str(entry["at"])) and str(entry["reason"]).strip())
+        if not ok:
+            fail.add(f"{EDITS_FILE} entry {i}: needs exactly record (Dnnnn), field (not "
+                     f"{'/'.join(sorted(FREE_FIELDS))}), at (a full commit id) and a reason")
+            continue
+        declared[(entry["record"], entry["field"])] = entry["at"]
+    return declared
+
+
+def check_immutability(root: Path, fail: Failures) -> str:
+    """Compare every record with the blob that first added its sequence number (RT-12).
+
+    Keyed by sequence number, not path, so a rename cannot reset the baseline. Returns the
+    summary line; a tree with no git history is reported NOT CHECKED, never passed."""
+    prefix = _git(root, "rev-parse", "--show-prefix")
+    if prefix.returncode != 0:
+        return "record immutability NOT CHECKED (no git history at the root)"
+    prefix_s = prefix.stdout.decode().strip()
+    if _git(root, "rev-parse", "--is-shallow-repository").stdout.decode().strip() == "true":
+        fail.add("record immutability cannot be checked in a shallow clone: every record "
+                 "looks added at the graft (fetch full history, fetch-depth: 0)")
+        return "record immutability NOT CHECKED (shallow clone)"
+
+    log = _git(root, "log", "--topo-order", "--no-renames", "--diff-filter=A", "--relative",
+               "--format=%x00%H", "--name-only", "--", "decisions/").stdout.decode()
+    first: dict[str, tuple[str, str]] = {}
+    for chunk in log.split("\0")[1:]:
+        sha, *names = chunk.split()
+        for name in names:
+            m = _RECORD_PATH_RE.match(name)
+            if m:
+                first[m.group(1)] = (sha, name)   # oldest last: the last write is the first add
+
+    current = {p.name[:4]: p for p in sorted((root / "decisions").glob("*.yaml"))
+               if FILENAME_RE.match(p.stem)}
+    for seq in sorted(set(first) - set(current)):
+        fail.add(f"D{seq} was deleted: it was added in {first[seq][0][:9]} as {first[seq][1]}, "
+                 "and a decision record is never removed (D0045, RT-12)")
+
+    declared = _declarations(root, fail)
+    history = set(_git(root, "rev-list", "HEAD").stdout.decode().split())
+    for (rid, field), sha in declared.items():
+        if sha not in history:
+            fail.add(f"{EDITS_FILE}: {rid}.{field} is declared at {sha[:9]}, which is not in "
+                     "HEAD's history")
+
+    seqs = sorted(set(first) & set(current))
+    specs = [f"{first[s][0]}:{prefix_s}{first[s][1]}" for s in seqs]
+    decl_keys = sorted(k for k, sha in declared.items() if sha in history)
+    decl_specs = [f"{declared[k]}:{prefix_s}{current[k[0][1:]].relative_to(root).as_posix()}"
+                  if k[0][1:] in current else "" for k in decl_keys]
+    blobs = _blobs(root, specs + decl_specs)
+    baselines = {s: yaml.safe_load(b or "") or {} for s, b in zip(seqs, blobs)}
+    at_values = {k: (yaml.safe_load(b) or {}) if b else None
+                 for k, b in zip(decl_keys, blobs[len(specs):])}
+
+    used: set[tuple[str, str]] = set()
+    for seq in seqs:
+        now = load_yaml(current[seq])
+        if not isinstance(now, dict):
+            continue   # the schema check reports it
+        base, rid, rel = baselines[seq], f"D{seq}", current[seq].relative_to(root)
+        for field in sorted(set(base) | set(now)):
+            problem = field_violation(field, base.get(field), now.get(field))
+            key = (rid, field)
+            if key in at_values:
+                if problem is None:
+                    continue   # reported below as stale: no edit needs it
+                used.add(key)
+                at_record = at_values[key]
+                if at_record is None:
+                    fail.add(f"{EDITS_FILE}: {rid} does not exist at {declared[key][:9]}")
+                    continue
+                problem = field_violation(field, at_record.get(field), now.get(field))
+                if problem:
+                    fail.add(f"{rel}: {rid}.{field} {problem} since its declared edit at "
+                             f"{declared[key][:9]} (D0045, RT-12)")
+            elif problem:
+                fail.add(f"{rel}: {rid}.{field} {problem} since {rid} was added in "
+                         f"{first[seq][0][:9]} — a decision record is immutable (D0045, RT-12): "
+                         f"a change of mind is a new record, and a legitimate past edit is "
+                         f"declared in {EDITS_FILE}")
+    for key in decl_keys:
+        if key not in used:
+            fail.add(f"{EDITS_FILE}: stale edit declaration {key[0]}.{key[1]} — no edit since "
+                     "the record was added needs it, and an unused declaration is a permission "
+                     "waiting for an edit (the D0181 rule)")
+    return (f"{len(seqs)} record(s) compared with the blob that first added them, "
+            f"{len(set(current) - set(first))} new, {len(declared)} declared edit(s)")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -638,6 +809,8 @@ def main() -> int:
                 fail.add(f"{rel}: binding does not resolve — {problem}")
 
     check_ratchet(root, args.today, valid_records, fail)
+    immutability = check_immutability(root, fail)
+    print(f"  record immutability: {immutability}")
 
     projection = root / "DECISIONS.md"
     if record_paths:
@@ -695,7 +868,7 @@ def main() -> int:
         f"{enforced_n} enforced / {documentary_n} documentary binding(s); "
         f"{len(clocks)} Tier-B clock(s) computed; "
         f"{len(tier_c_signed)} Tier-C door(s) owner-signed, {len(tier_c_queued)} queued; "
-        "DECISIONS.md fresh"
+        f"{immutability}; DECISIONS.md fresh"
     )
 
 

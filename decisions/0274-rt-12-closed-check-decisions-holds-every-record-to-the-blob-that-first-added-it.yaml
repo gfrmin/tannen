@@ -1,0 +1,27 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0274
+title: "RT-12 closed: check_decisions holds every record to the blob that first added it, on D0045's split"
+tier: A
+date: "2026-09-19"
+risk_flags: ["governance-paths"]
+decision: >-
+  THE OWNER RULED ON 2026-09-19 (interview) for D0045's split over the ledger's "every field but
+  status". Content fields must equal the blob that first added the record's number. Each binding
+  keeps its target and never weakens (types harden only file->manifest->pytest). Links only grow,
+  unenforced_reason may only be dropped, status and bindings_count are free, and no record is
+  deleted. A past edit is declared in governance/record-edits.yaml at a commit on HEAD's history,
+  and an unused declaration is refused. Measured at m5-close: 104 of 273 records were edited, and
+  the 38 edits that break the rule are declared.
+rationale: >-
+  The literal rule made every D0045 hardening an owner-signed exception; the type rule closes
+  RT-12's composition with RT-01 (D0022's manifest binding relabelled `file`).
+reversibility: >-
+  Reversible: one function and one data file. Residue: until record-edits.yaml is custody-set by
+  the drafted patch, a builder can commit an edit and then declare it.
+status: accepted
+bindings_count: 3
+bindings:
+  - {type: pytest, target: tests/test_record_immutability.py}
+  - {type: file, target: governance/record-edits.yaml}
+  - {type: file, target: docs/proposals/2026-09-19-rt12-record-edits-custody/record-edits-custody.patch, strength: documentary}
+links: ["D0045", "D0181", "D0273"]

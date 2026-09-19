@@ -1,0 +1,251 @@
+# governance/record-edits.yaml — the declared past edits of decision records (RT-12, D0274).
+#
+# check_decisions holds every record to the blob that first added it: content fields equal,
+# bindings and links only added or hardened (D0045). An entry here re-baselines ONE field of
+# ONE record to its value at commit `at`, which must be on HEAD's history; later edits of that
+# field are checked against that value. An entry no edit needs is refused as stale.
+#
+# Measured 2026-09-19 at m5-close: 273 records, 104 edited since added; 38 of those edits
+# break the rule and are listed here. Never add an entry to make a new edit pass: a change of
+# mind is a new record.
+
+edits:
+  - record: D0011
+    field: bindings
+    at: 3cd2f2094f7f7da1686d3826647fc810f5ceaa36
+    reason: >-
+      The import-linter contracts moved from pyproject.toml to governance/importlinter.toml
+      under the conferral rulings (D0063); the binding followed its key.
+  - record: D0027
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0036
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0037
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0038
+    field: bindings
+    at: 3cd2f2094f7f7da1686d3826647fc810f5ceaa36
+    reason: >-
+      The import-linter contracts moved from pyproject.toml to governance/importlinter.toml
+      under the conferral rulings (D0063); the binding followed its key.
+  - record: D0043
+    field: bindings
+    at: 3cd2f2094f7f7da1686d3826647fc810f5ceaa36
+    reason: >-
+      The import-linter contracts moved from pyproject.toml to governance/importlinter.toml
+      under the conferral rulings (D0063); the binding followed its key.
+  - record: D0048
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0049
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing. An earlier toolkit commit
+      (4d8e664) had folded a new binding into the previous one's detail by a missing
+      newline; D0105 found it and the m1 sitting repaired it.
+  - record: D0050
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0052
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0053
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0056
+    field: bindings
+    at: 3cd2f2094f7f7da1686d3826647fc810f5ceaa36
+    reason: >-
+      The import-linter contracts moved from pyproject.toml to governance/importlinter.toml
+      under the conferral rulings (D0063); the binding followed its key.
+  - record: D0059
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0060
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0061
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0062
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0063
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      Relabelled enforced to documentary at the m0 boundary sitting, when D0052's strength
+      grade landed: the target records intent and detects nothing.
+  - record: D0064
+    field: bindings
+    at: e80c06bc3cd2486313640a8efa738f2d36c0f25c
+    reason: >-
+      The fixture candidate was installed under tests/poison/ at the m0 boundary sitting,
+      and its binding hardened file to manifest; the binding followed the file.
+  - record: D0103
+    field: bindings
+    at: 7bcc6f2efbd90e3f13fadbcf6d93edf224f483e2
+    reason: >-
+      The documentary binding to the fixture candidate was removed while rehearsing the M1
+      driver's step 5b, which installs that file under tests/poison/; the record's own
+      UPDATE says so.
+  - record: D0103
+    field: decision
+    at: 7bcc6f2efbd90e3f13fadbcf6d93edf224f483e2
+    reason: >-
+      An UPDATE appended in place in the same session, recording the binding removed while
+      rehearsing step 5b. It predates the RT-12 guard and D0045 forbade it; it stays,
+      because the record of the mistake is part of the record.
+  - record: D0104
+    field: bindings
+    at: f52b1bcee5db5485985c5edc5b4b590b99780d0e
+    reason: >-
+      The documentary binding to the oracle-shadow fixture candidate was removed when the M1
+      sitting's fixtures were staged.
+  - record: D0105
+    field: decision
+    at: 7bcc6f2efbd90e3f13fadbcf6d93edf224f483e2
+    reason: >-
+      Rewritten in place in the same session, as the sitting queue's items 2-3 were
+      scripted. It predates the RT-12 guard and D0045 forbade it; it stays, because the
+      record of the mistake is part of the record.
+  - record: D0107
+    field: bindings
+    at: 33a46ad5327559cacac00fd4190cf6b23cf42d9a
+    reason: >-
+      The bound test node was replaced when its claim changed (M2 Session B: an empty why
+      now has support, so the node became a zero-count-retained one); the binding followed
+      it.
+  - record: D0110
+    field: bindings
+    at: 805a301ca7e0e7252a5ec583fb0152e8ac27de50
+    reason: >-
+      The bound test node was replaced when its claim changed (the m2 boundary sitting
+      closed the unwitnessed-row alarm); the binding followed it. rel.py hardened to
+      enforced in the same edit.
+  - record: D0115
+    field: decision
+    at: 534c3a623b9893e93fa19e603f0d53171033272a
+    reason: >-
+      An 'AMENDED 2026-08-30 AFTER REVIEW' addendum written in place instead of a new
+      record. It predates the RT-12 guard and D0045 forbade it; it stays, because the record
+      of the mistake is part of the record.
+  - record: D0116
+    field: rationale
+    at: 534c3a623b9893e93fa19e603f0d53171033272a
+    reason: >-
+      An 'AMENDED 2026-08-30 AFTER REVIEW' addendum written in place instead of a new
+      record. It predates the RT-12 guard and D0045 forbade it; it stays, because the record
+      of the mistake is part of the record.
+  - record: D0128
+    field: bindings
+    at: 33a46ad5327559cacac00fd4190cf6b23cf42d9a
+    reason: >-
+      The bound test node was replaced when its claim changed (M2 Session B: the pending
+      retirement became active); the binding followed it.
+  - record: D0137
+    field: bindings
+    at: 805a301ca7e0e7252a5ec583fb0152e8ac27de50
+    reason: >-
+      The bound test node was replaced when its claim changed (the m2 boundary sitting
+      closed the unwitnessed-row alarm); the binding followed it.
+  - record: D0138
+    field: bindings
+    at: 805a301ca7e0e7252a5ec583fb0152e8ac27de50
+    reason: >-
+      The bound test node was replaced when its claim changed (the m2 boundary sitting
+      closed the unwitnessed-row alarm); the binding followed it.
+  - record: D0141
+    field: bindings
+    at: 805a301ca7e0e7252a5ec583fb0152e8ac27de50
+    reason: >-
+      The fixture candidate was installed under tests/poison/ at the m2 boundary sitting;
+      the binding followed the file.
+  - record: D0179
+    field: bindings
+    at: 63428b423dc9165a143d1301a5ec38f07c8fb87f
+    reason: >-
+      The fixture candidate was installed under tests/poison/ at the publication sitting;
+      the binding followed the file.
+  - record: D0181
+    field: retires_bindings
+    at: 63428b423dc9165a143d1301a5ec38f07c8fb87f
+    reason: >-
+      The publication sitting added the retirement of D0115's binding to the snapshot the
+      owner ruled deleted (D0180), after the record had introduced the mechanism.
+  - record: D0199
+    field: bindings
+    at: e33adf80e387c0181d362cf0f209aba12c6132e6
+    reason: >-
+      The fixture candidate was installed under tests/poison/ at the m3 boundary sitting,
+      and its binding hardened to enforced; the binding followed the file.
+  - record: D0200
+    field: decision
+    at: c60a5e00a4872fe37f9ae6cae59c068802eecd77
+    reason: >-
+      A ninth and tenth finding appended in place by the --from head rehearsal the same day.
+      It predates the RT-12 guard and D0045 forbade it; it stays, because the record of the
+      mistake is part of the record.
+  - record: D0215
+    field: bindings
+    at: 9cff0b793747a83eeef9a7f4a092ef26150dfea3
+    reason: >-
+      At the m4 boundary sitting scripts/boundary_sitting.sh was retired and the documentary
+      binding moved to the archived m3 copy; the check_decisions.py binding hardened to
+      enforced in the same edit.
+  - record: D0245
+    field: bindings
+    at: 9cff0b793747a83eeef9a7f4a092ef26150dfea3
+    reason: >-
+      The fixture candidate was installed under tests/poison/ at the m4 boundary sitting;
+      the binding followed the file.
+  - record: D0246
+    field: bindings
+    at: 9cff0b793747a83eeef9a7f4a092ef26150dfea3
+    reason: >-
+      The fixture candidate was installed under tests/poison/ at the m4 boundary sitting;
+      the binding followed the file.
+  - record: D0248
+    field: bindings
+    at: 9cff0b793747a83eeef9a7f4a092ef26150dfea3
+    reason: >-
+      The fixture candidate was installed under tests/poison/ at the m4 boundary sitting;
+      the binding followed the file.

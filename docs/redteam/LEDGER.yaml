@@ -114,9 +114,14 @@ findings:
   - id: RT-12
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium
-    disposition: scheduled
-    record: D0273
-    where: "the first post-M5 builder session, by owner ruling (D0273): check_decisions compares every field of each record except status against the blob that first added the file (git log --diff-filter=A), with a declared exception for any legitimate past edit; CI already fetches full history"
+    disposition: closed
+    record: D0274
+    note: >-
+      Scheduled by D0273 and landed in the first post-M5 builder session. check_decisions holds
+      each record to the blob that first added its number, on D0045's split as the owner ruled.
+      The 38 past edits that break the rule are declared in governance/record-edits.yaml.
+      Residue: custody for that file waits on the drafted patch in
+      docs/proposals/2026-09-19-rt12-record-edits-custody/.
   - id: RT-13
     report: docs/redteam/2026-08-24-m0-boundary.md
     severity: Medium

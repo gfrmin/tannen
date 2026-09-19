@@ -1,0 +1,12 @@
+diff --git a/governance/tier-c.yaml b/governance/tier-c.yaml
+index d5d61e4..ee7f298 100644
+--- a/governance/tier-c.yaml
++++ b/governance/tier-c.yaml
+@@ -136,6 +136,7 @@ custody:
+     - governance/doors.yaml
+     - governance/xfail-retirements.yaml
+     - governance/laws.yaml
++    - governance/record-edits.yaml
+     - governance/schemas/*.json
+     - scripts/_gov.py
+     - scripts/custodian.sh
