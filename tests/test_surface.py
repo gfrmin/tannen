@@ -49,22 +49,38 @@ def stale(modules: Iterable[str], entries: Iterable[str]) -> list[str]:
     return sorted(set(entries) - set(modules))
 
 
-def public_definitions(module: ModuleType) -> list[str]:
-    """Public names the module defines itself, as opposed to names it imports."""
+def public_bindings(module: ModuleType) -> list[str]:
+    """Public names the module binds, defined or imported, its own submodules aside.
+
+    Deliberately wider than "defined here": a constant has no `__module__`, so asking where a
+    value came from misses a module of constants, and binding any public name is what obliges
+    a surface module to say in `__all__` which of them it promises.
+    """
+
+    def own_submodule(value: object) -> bool:
+        return isinstance(value, ModuleType) and value.__name__.startswith(module.__name__ + ".")
+
     return sorted(
         name
         for name, value in vars(module).items()
-        if not name.startswith("_") and getattr(value, "__module__", None) == module.__name__
+        if not name.startswith("_") and not own_submodule(value)
     )
 
 
+def origin(value: object) -> str:
+    """The module a value comes from; a module is its own origin. A constant has none."""
+    if isinstance(value, ModuleType):
+        return value.__name__
+    return getattr(value, "__module__", None) or ""
+
+
 def leaks(module: ModuleType, not_surface: Iterable[str]) -> list[str]:
-    """Names in `__all__` whose object comes from a not-surface module."""
+    """Names in `__all__` whose value comes from a not-surface module, or is one."""
     hidden = tuple(not_surface)
     return sorted(
         name
         for name in getattr(module, "__all__", ())
-        if covering(getattr(getattr(module, name), "__module__", None) or "", hidden)
+        if covering(origin(getattr(module, name)), hidden)
     )
 
 
@@ -105,11 +121,11 @@ def test_every_surface_module_imports() -> None:
 
 
 def test_every_surface_module_states_its_promise() -> None:
-    """A surface module with public definitions says which it promises, in `__all__`."""
+    """A surface module that binds any public name says which it promises, in `__all__`."""
     silent = [
         m
         for m in SURFACE_MODULES
-        if not hasattr(mod := importlib.import_module(m), "__all__") and public_definitions(mod)
+        if not hasattr(mod := importlib.import_module(m), "__all__") and public_bindings(mod)
     ]
     assert silent == [], f"surface modules with public names and no __all__: {silent}"
 
@@ -169,12 +185,16 @@ def test_an_entry_does_not_cover_a_name_it_merely_prefixes() -> None:
 def test_the_promise_checks_see_a_silent_module_and_a_back_door() -> None:
     """Both `__all__` checks watched failing, on modules built for them."""
     hidden = ModuleType("tannen.hidden")
-    exec("class Transport: pass", hidden.__dict__)
+    exec("class Transport: pass\ndef connect(): pass\nCLIENT = Transport()", hidden.__dict__)
     silent = ModuleType("tannen.silent")
-    exec("class Thing: pass", silent.__dict__)
-    assert public_definitions(silent) == ["Thing"]
+    exec("LIMIT = 3", silent.__dict__)
+    assert public_bindings(silent) == ["LIMIT"]
+    package = ModuleType("tannen.pkg")
+    package.sub = ModuleType("tannen.pkg.sub")
+    assert public_bindings(package) == []
     front = ModuleType("tannen.front")
-    front.Transport = hidden.Transport
-    front.__all__ = ["Transport"]
-    assert leaks(front, ("tannen.hidden",)) == ["Transport"]
+    front.Transport, front.connect, front.CLIENT = hidden.Transport, hidden.connect, hidden.CLIENT
+    front.hidden = hidden
+    front.__all__ = ["Transport", "connect", "CLIENT", "hidden"]
+    assert leaks(front, ("tannen.hidden",)) == ["CLIENT", "Transport", "connect", "hidden"]
     assert leaks(front, ("tannen.elsewhere",)) == []
