@@ -1,0 +1,27 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0276
+title: "The owner affirms D0275 and rules that a record's immutability starts when it reaches origin"
+tier: A
+date: "2026-09-28"
+decision: >-
+  THE OWNER RULED IN CONVERSATION ON 2026-09-28, after four review rounds with a conferral
+  agent, agreeing with that reviewer. (1) D0275 AFFIRMED by the owner, not by silence: the
+  attention receipt has been stale since 2026-09-26, so silence could not consent. (2) A record
+  becomes immutable (D0045) when it reaches origin on ANY branch, since this repository is public.
+  Before that, an unpushed record commit may be rewritten; a signed record is never rewritten, even
+  locally. This is a WORKING RULE: check_decisions compares against HEAD's history and cannot
+  see origin, so nothing enforces it. Fix review findings by follow-up commits, and add the
+  record last. (3) Queued to the next sitting: a version-tag role in governance/tag-roles.yaml
+  whose note says a version tag attests the tree at that version, not a milestone gate; a bump
+  of pyproject.toml to 0.5.1; and signing v0.5.1, the first tag that carries the surface.
+  Renew the attention receipt there too. (4) The pitch to the first dependent is held until that
+  tag exists.
+rationale: >-
+  D0275 was rewritten twice before it left the machine, because the guard treats a local commit
+  as already added; the next builder should not have to decide where immutability starts.
+reversibility: "Reversible: a superseding record restates the rule; the queued items are not yet done."
+status: accepted
+bindings:
+  - {type: file, target: scripts/check_decisions.py, strength: documentary}
+  - {type: file, target: decisions/0275-the-import-surface-a-pinned-dependent-may-use-and-the-first-dependents-demand-read.yaml, strength: documentary}
+links: ["D0275", "D0045", "D0274"]
