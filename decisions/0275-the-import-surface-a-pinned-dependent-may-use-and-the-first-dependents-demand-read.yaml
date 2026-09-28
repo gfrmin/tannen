@@ -1,0 +1,32 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0275
+title: "The import surface a pinned dependent may use is data the tree checks, and the first dependent's plan is read for what it would ask"
+tier: B
+date: "2026-09-28"
+risk_flags: ["public-surface"]
+decision: >-
+  BRIEF §1.1 lets a sibling pin a signed tag but never said what it may import. `tannen.SURFACE`
+  names the modules a dependent may import, promising the names in each one's `__all__`;
+  `tannen.NOT_SURFACE` names the rest with a reason. Both are data in
+  src/tannen/__init__.py, promised per tag; tags through m5-close predate them and promise none.
+  tests/test_surface.py derives the module set from the tree and fails on an unclassified
+  module, an overlap, a stale entry, a surface module with public names and no `__all__`, or
+  an `__all__` name that comes from a not-surface module, each watched failing. CONTRIBUTING.md names the BRIEF §5
+  defaults that reach a dependent's process and says provenance atoms must be refs. The sibling
+  was read, code and plan; nothing of it is copied or named (D0268 ask 4), and
+  docs/proposals/2026-09-28-first-dependent-demand/ keeps only its demands on tannen: four gaps
+  and five Session-A candidates, none chartered.
+rationale: >-
+  The pin D0273 (5) expects had no stated boundary, and a list in prose drifts where a checked
+  list cannot. Tier B because the surface is external and pre-release (BRIEF §9.2).
+reversibility: "Reversible: edit the two lists or drop the section. A dependent that pinned a tag keeps that tag's lists."
+status: provisional
+veto_by: "2026-10-05"
+veto_procedure: "Say so at the next sitting or in the digest review; a superseding record reverts the lists and the section."
+bindings_count: 4
+bindings:
+  - {type: pytest, target: tests/test_surface.py, strength: enforced}
+  - {type: file, target: CONTRIBUTING.md, strength: documentary}
+  - {type: file, target: README.md, strength: documentary}
+  - {type: file, target: docs/proposals/2026-09-28-first-dependent-demand/README.md, strength: documentary}
+links: ["D0268", "D0269", "D0273", "D0240", "RT-M4-04"]

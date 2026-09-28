@@ -50,6 +50,44 @@ from one where the tags were deleted.
   owner's signature.
 - **Implement the Governor** (BRIEF §7). The seam and its wire schema only.
 
+## Depending on tannen from another repository
+
+- **Pin a signed tag.** Depend on an owner-signed `<milestone>-close` tag or a published
+  version, never a path, a submodule, a vendored copy or a moving branch (BRIEF §1.1). Under
+  uv: `tannen = { git = "https://github.com/gfrmin/tannen.git", tag = "<tag>" }`. uv does
+  not check the signature, so run `git verify-tag <tag>` against this repository's
+  `allowed_signers` once, and pin the tag's commit as `rev` if you want the pin to survive a
+  moved tag.
+- **Import only the surface.** `tannen.SURFACE` names the modules a dependent may import,
+  with their submodules. From each, the names in its `__all__` are promised; a name that is
+  merely reachable there is not, and a submodule whose name starts with an underscore is
+  private. `tannen.NOT_SURFACE` names every
+  other module and why. Both are data in `src/tannen/__init__.py` rather than a list here,
+  so the list you read is the list `tests/test_surface.py` checks, and a new module fails
+  that test until it is classified.
+- **Stability is per tag.** A tag's own copy of those lists is its promise. Tags up to and
+  including `m5-close` predate the lists and promise no surface. Between two tags anything
+  may change; 0.x makes no semver promise.
+- **What reaches your process.** These BRIEF §5 defaults are properties of the library, so
+  they hold in your code as in this repository's: a transform exists only through the
+  registering decorator (§5.1), raising inside a transform quarantines the row with its
+  provenance (§5.4), lineage is on unless you opt down (§5.5), an aggregate needs a
+  law-tested monoid or group (§5.6), keys refuse bare floats (§5.8), and a node's layer
+  defaults to the strictest that admits it (§5.9). Opt-in spending (§5.10) reaches you as
+  the oracles' replay default, not as the CLI's clamp. Golden hashes (§5.2), the no-IO
+  import contracts (§5.3), the absent wall clock (§5.7) and automatic law evidence (§5.11)
+  are this repository's guards and CI: they scan `tannen`, not your transforms, so a
+  transform of yours that reads a file or the clock is invisible to tannen. A value your
+  transform captures from its enclosing scope is not in its code address either
+  (`docs/redteam/LEDGER.yaml` RT-M4-04): pass the world in as an input ref.
+- **Provenance atoms are refs.** A `Why` atom must be a content-addressed ref; the kernel
+  refuses anything else. If your provenance names entries of your own (table rows, rules,
+  weights), store each entry and cite its ref.
+- **The governance stays here.** The library reads no governance file (D0240); your tests,
+  hooks and rulings are your own. Adopting a tannen *concept* still goes through BRIEF §2's
+  pin-and-conformance mechanism, and importing the code gives no permission to restate it.
+- **Python 3.13 or later**, as `pyproject.toml` requires.
+
 ## Reporting a problem with a guard
 
 The most useful contribution this repository can receive is a demonstration that one of
