@@ -4,8 +4,8 @@ The two lists in `src/tannen/__init__.py` are kept by hand, so this file derives
 cover from the tree: every module under the package is classified by exactly one entry, every
 entry names a module that exists, and every surface module imports. A new module fails here
 until it is classified, which is the point — nothing becomes a promise to a dependent by being
-added. Within a surface module the promise is its `__all__`, so a surface module that defines
-public names must declare one, and no name in it may come from a not-surface module.
+added. Within a surface module the promise is its `__all__`, so a surface module that binds a
+public name must declare one, and no name in it may come from a not-surface module.
 """
 
 from __future__ import annotations
