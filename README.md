@@ -51,11 +51,11 @@ indistinguishable from one where they were deleted. Clone with full history and 
 
 A sibling repository may depend on tannen only at an owner-signed `<milestone>-close` tag or a
 published version, never by path, submodule, vendoring or a moving branch (BRIEF §1.1, D0269).
-For example: `tannen @ git+https://github.com/gfrmin/tannen@m5-close`. Verify the tag first
+For example: `tannen @ git+https://github.com/gfrmin/tannen@v0.5.1`. Verify the tag first
 (`git verify-tag` against `allowed_signers`). Nothing promises that the API stays the same
 between close tags: pin one and move deliberately. What a dependent may import, and which
 defaults reach its own code, is in [`CONTRIBUTING.md`](./CONTRIBUTING.md#depending-on-tannen-from-another-repository);
-tags through `m5-close` predate that statement.
+tags through `m5-close` predate that statement, and `v0.5.1` is the first tag that carries it.
 
 ## Reading it
 
