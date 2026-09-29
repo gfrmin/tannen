@@ -1,0 +1,15 @@
+diff --git a/governance/tag-roles.yaml b/governance/tag-roles.yaml
+index c8b3831..04f0d3e 100644
+--- a/governance/tag-roles.yaml
++++ b/governance/tag-roles.yaml
+@@ -31,6 +31,10 @@ roles:
+   - pattern: "amendment-*"
+     signer: owner
+     note: "Constitution amendments (Tier-C door constitution-amendments)."
++  - pattern: "v[0-9]*"
++    signer: owner
++    note: "Version tag: attests the tree at the version pyproject.toml carries, not a milestone
++      gate. It matches no boundary pattern, so it neither starts nor ends a receipt clock (D0276)."
+   - pattern: "receipt-*"
+     signer: owner
+     note: "Reserved: receipts are files today, but the name is claimed so it cannot be squatted."

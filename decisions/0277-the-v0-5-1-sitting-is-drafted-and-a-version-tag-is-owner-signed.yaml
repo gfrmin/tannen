@@ -1,0 +1,22 @@
+# Decision record — validated against governance/schemas/decision-record.schema.json.
+id: D0277
+title: "The v0.5.1 sitting is drafted, and a version tag is owner-signed and is no milestone gate"
+tier: A
+date: "2026-09-29"
+decision: >-
+  This executes D0276 (3). pyproject.toml and uv.lock go to 0.5.1 in a builder commit ahead of
+  the sitting, as 2ec9ddb did for 0.5.0. docs/proposals/2026-09-29-v0.5.1-sitting/ holds the
+  chain. It applies the patches: tag-roles.yaml gains `v[0-9]*`, signed by the owner, and the
+  README pin becomes v0.5.1. It re-signs custody, renews the receipt and signs v0.5.1 last.
+  A version tag matches no pattern in BOUNDARY_TAG_RE (scripts/_gov.py), so it neither starts
+  nor ends a receipt clock. That is what the role's note means by "not a milestone gate".
+  tag-message.sh refuses a tree whose pyproject.toml carries another version.
+rationale: >-
+  D0276 queued these items and held the pitch until the tag exists. The owner signs, because a
+  version tag is what a dependent pins, the same authority a close tag carries.
+reversibility: "Reversible until the owner runs the chain. After that, a superseding record plus an owner custody patch."
+status: accepted
+bindings:
+  - {type: file, target: docs/proposals/2026-09-29-v0.5.1-sitting/README.md, strength: documentary}
+  - {type: file, target: pyproject.toml, strength: documentary}
+links: ["D0276", "D0275", "D0050"]
